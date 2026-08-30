@@ -205,7 +205,7 @@
                draft-name (r/atom nil)]
     [editable-field
      {:tr tr
-      :label "Palvelun nimi"
+      :label (tr :ptv/service-name)
       :editing? @editing?
       :on-edit (fn []
                  (reset! draft-name display-name)
@@ -251,7 +251,7 @@
        ;; Services
        [ptv-link-field
         {:tr tr
-         :label (str (tr :ptv/services) " PTV:ssä")
+         :label (tr :ptv/in-ptv (tr :ptv/services))
          :items (for [s linked-services]
                   {:id (:service-id s)
                    :name (:label s)
@@ -275,7 +275,7 @@
          ;; Already linked - show link with edit option
          [ptv-link-field
           {:tr tr
-           :label (str (tr :ptv/service-channel) " PTV:ssä")
+           :label (tr :ptv/in-ptv (tr :ptv/service-channel))
            :items [{:id channel-id
                     :name channel-name
                     :url (when-not archived?
@@ -687,7 +687,7 @@
                        {:value sync-all-enabled?
                         :on-change #(==> [::events/toggle-sync-all %2])}]}
                    #_{:key :auto-sync :label "Vie automaattisesti"}
-                   {:key :event-data :label "Integraatio" :sx {:textAlign "center"}}
+                   {:key :event-data :label (tr :ptv/integration) :sx {:textAlign "center"}}
                    {:key :audit :label (tr :ptv.audit/tab-label) :sx {:textAlign "center"}}
                    #_{:key :last-sync :label "Viety viimeksi"}
                    {:key :name :label (tr :general/name)}
@@ -925,7 +925,7 @@
      [:> Button
       {:onClick (fn [_e]
                   (rf/dispatch [::events/set-step 1]))}
-      "Seuraava"
+      (tr :actions/next)
       [:> Icon "arrow_forward"]]]))
 
 (r/defc service-preview
@@ -1142,7 +1142,7 @@
                [:> Button
                 {:onClick (fn [_e]
                             (rf/dispatch [::events/set-step 2]))}
-                "Seuraava"
+                (tr :actions/next)
                 [:> Icon "arrow_forward"]]]))
 
           [:div
@@ -1152,7 +1152,7 @@
                ^{:key sub-category-id}
                [layouts/expansion-panel
                 {:label (if linked?
-                          (str sub-category " (linkitetty)")
+                          (tr :ptv.wizard/linked-label sub-category)
                           sub-category)
                  :label-icon (cond
                                linked? [:> Icon {:color "info"} "link"]
@@ -1163,8 +1163,8 @@
                  [:> Tabs {:value service-details-tab
                            :indicatorColor "secondary"
                            :on-change #(==> [::events/select-service-details-tab %2])}
-                  [:> Tab {:value "descriptions" :label "Syötä kuvaukset"}]
-                  [:> Tab {:value "preview" :label "Esikatselu"}]]
+                  [:> Tab {:value "descriptions" :label (tr :ptv.wizard/enter-descriptions)}]
+                  [:> Tab {:value "preview" :label (tr :ptv.wizard/preview)}]]
 
                  ;; Enter descriptions form
                  (when (= "descriptions" service-details-tab)
@@ -1323,8 +1323,8 @@
         [:> Tabs {:value selected-tab2
                   :indicatorColor "secondary"
                   :on-change #(set-selected-tab2 %2)}
-         [:> Tab {:value "descriptions" :label "Syötä kuvaukset"}]
-         [:> Tab {:value "preview" :label "Esikatselu"}]]
+         [:> Tab {:value "descriptions" :label (tr :ptv.wizard/enter-descriptions)}]
+         [:> Tab {:value "preview" :label (tr :ptv.wizard/preview)}]]
 
         (when (= selected-tab2 "preview")
           [ptv-components/service-location-preview
@@ -1628,7 +1628,7 @@
         [:> Typography (tr :ptv.wizard/unselect-helper)]
 
         [:> Typography {:variant "body2" :sx #js{:mb 0 :mt 0}}
-         (str "Valittuna " sports-sites-count-sync "/" sports-sites-count " liikuntapaikkaa")]
+         (tr :ptv.wizard/selected-count sports-sites-count-sync sports-sites-count)]
 
         (let [{:keys [in-progress?
                       processed-count
@@ -1671,7 +1671,7 @@
           (tr :ptv.wizard/step3-instruction)]
 
          [:> Typography {:variant "body2"}
-          (str "Valittuna " sports-sites-count-sync "/" sports-sites-count " liikuntapaikkaa")]]
+          (tr :ptv.wizard/selected-count sports-sites-count-sync sports-sites-count)]]
 
         ;; Batch sync completion panel
         (let [{sync-in-progress? :in-progress?
@@ -1688,10 +1688,10 @@
                         :sx #js {:mb 2}}
               [:> AlertTitle
                (if sync-halt?
-                 "Vienti keskeytyi"
-                 "Vienti valmis")]
+                 (tr :ptv.wizard/export-halted)
+                 (tr :ptv.wizard/export-complete))]
               [:> Typography {:variant "body2"}
-               (str sync-processed-count "/" sync-total " liikuntapaikkaa viety PTV:hen.")]
+               (tr :ptv.wizard/export-result sync-processed-count sync-total)]
               (when sync-halt?
                 [:> Typography {:variant "body2" :sx #js {:mt 1}}
                  (tr :ptv.wizard/export-error-try-again)])
@@ -1700,17 +1700,17 @@
                 {:size "small" :variant "outlined"
                  :sx #js {:textTransform "none"}
                  :on-click #(==> [::events/reset-wizard])}
-                "Aloita uusi vienti"]
+                (tr :ptv.wizard/start-new-export)]
                [:> Button
                 {:size "small" :variant "outlined"
                  :sx #js {:textTransform "none"}
                  :on-click #(==> [::events/select-tab "sports-sites"])}
-                "Siirry Liikuntapaikat-välilehdelle"]
+                (tr :ptv.wizard/go-to-sports-sites-tab)]
                [:> Button
                 {:size "small" :variant "outlined"
                  :sx #js {:textTransform "none"}
                  :on-click #(==> [::events/select-tab "services"])}
-                "Siirry Palvelut-välilehdelle"]]])
+                (tr :ptv.wizard/go-to-services-tab)]]])
 
            [:> Stack
             (for [{:keys [lipas-id valid name-conflict sync-enabled service-ids service-channel-ids] :as site} sports-sites]
@@ -1808,7 +1808,7 @@
        [:> Stack {:direction "row" :spacing 1 :flex-wrap "wrap" :align-items "flex-start"}
         [:> Tooltip {:title (if has-lipas-data?
                               ""
-                              "Tekoälykuvauksia ei voi luoda muille kuin Lipaksen perustamille palveluille. Lipaksessa ei ole taustatietoa kuvausten pohjaksi.")}
+                              (tr :ptv.tools.ai/no-lipas-data))}
          [:span
           [:> Button
            {:variant "outlined" :size "small"
@@ -2102,7 +2102,7 @@
        [:> StepButton
         {:color "inherit"
          :onClick (partial set-step 0)}
-        "1. Valitse liikuntapaikat"]]
+        (str "1. " (tr :ptv.wizard/select-sports-sites))]]
       [:> Step
        {:key "2"
         :completed services-done?}

@@ -85,4 +85,7 @@
  :error-description-too-long "Description is too long (maximum 5000 characters)."
  :error-user-instruction-too-long "User instruction is too long (maximum 5000 characters)."
  :sync-failed-body-name-conflict "The name '{1}' is already used by another service location in the organization in PTV. PTV requires service location names to be unique. Attach the sports site to the existing service location or change the name, then try again."
- :saved-but-sync-failed-body-name-conflict "The name '{1}' is already used by another service location in the organization in PTV. PTV requires service location names to be unique. Attach the sports site to the existing service location or change the name, then save again."}
+ :saved-but-sync-failed-body-name-conflict "The name '{1}' is already used by another service location in the organization in PTV. PTV requires service location names to be unique. Attach the sports site to the existing service location or change the name, then save again.",
+ :in-ptv "{1} in PTV",
+ :service-name "Service name",
+ :integration "Integration"}

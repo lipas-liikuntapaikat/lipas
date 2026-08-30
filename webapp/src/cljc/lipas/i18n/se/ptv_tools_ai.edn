@@ -1,3 +1,4 @@
 {:canceling "Avbryter... Vänta ett ögonblick.",
  :start-helper
- "Du kan justera de förslag som genereras av AI i takt med att de färdigställs."}
+ "Du kan justera de förslag som genereras av AI i takt med att de färdigställs.",
+ :no-lipas-data "AI-beskrivningar kan endast skapas för tjänster som Lipas har skapat. Lipas har inga bakgrundsuppgifter att basera beskrivningarna på."}

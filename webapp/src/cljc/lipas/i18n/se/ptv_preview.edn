@@ -26,18 +26,18 @@
  :description-se "Beskrivning på svenska",
  :description-en "Beskrivning på engelska",
  :lang-disclaimer
- "Uppgiften fylls i endast om kommunen vid ibruktagandet av integrationen har meddelat att serviceställena ska beskrivas på detta språk. Kontakta lipasinfo@jyu.fi om du vill ändra språkvalen.",
+ "Uppgiften fylls i endast om kommunen vid ibruktagandet av integrationen har meddelat att servicepunkterna ska beskrivas på detta språk. Kontakta lipasinfo@jyu.fi om du vill ändra språkvalen.",
  :tt-summary
  "Sammandraget är en uppgift som integrationens användare har matat in. Den kan vara producerad med hjälp av artificiell intelligens.",
  :tt-service-description
  "Tjänstens beskrivning är en uppgift som integrationens användare har matat in. Den kan vara producerad med hjälp av artificiell intelligens.",
  :tt-service-location-description
- "Serviceställets beskrivning är en uppgift som integrationens användare har matat in. Den kan vara producerad med hjälp av artificiell intelligens.",
+ "Servicepunktens beskrivning är en uppgift som integrationens användare har matat in. Den kan vara producerad med hjälp av artificiell intelligens.",
 
  ;; ServiceLocation rows
  :languages "Språk",
  :tt-languages
- "De språk på vilka kommunen har meddelat att den vill beskriva tjänster och serviceställen när integrationen togs i bruk första gången. Kontakta lipasinfo@jyu.fi om du vill ändra språkvalen.",
+ "De språk på vilka kommunen har meddelat att den vill beskriva tjänster och servicepunkter när integrationen togs i bruk första gången. Kontakta lipasinfo@jyu.fi om du vill ändra språkvalen.",
  :tt-site-name-fi "Idrottsplatsens namn i Lipas.",
  :tt-site-name-se "Idrottsplatsens namn på svenska i Lipas.",
  :tt-site-name-en "Idrottsplatsens namn på engelska i Lipas.",
@@ -64,7 +64,7 @@
  :organization-id "Organisationens ID",
  :tt-organization-id "Organisationen (kommunen) som använder integrationen.",
  :service-ids "Tjänsternas ID:n",
- :tt-service-ids "De tjänster som servicestället kopplas till i PTV.",
+ :tt-service-ids "De tjänster som servicepunkten kopplas till i PTV.",
 
  ;; Service rows
  :tt-service-name
