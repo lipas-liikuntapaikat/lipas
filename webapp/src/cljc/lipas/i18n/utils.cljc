@@ -15,7 +15,6 @@
    :duration
    :error
    :general
-   :harrastuspassi
    :help
    :home-page
    :ice

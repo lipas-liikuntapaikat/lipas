@@ -286,7 +286,14 @@
                   [:retkikartta :boolean]
                   [:closeToMatch [:enum "start-point" "any-point"]]
                   [:closeToDistanceKm common/number]
-                  [:harrastuspassi :boolean]
+                  [:harrastuspassi
+                   [:boolean
+                    {:description (str "DEPRECATED: the Harrastuspassi.fi service has been "
+                                       "discontinued and the underlying "
+                                       "mayBeShownInHarrastuspassiFi property is no longer "
+                                       "maintained. The filter still works against the values "
+                                       "stored before the shutdown and is kept for backwards "
+                                       "compatibility.")}]]
                   [:cityCodes [:or
                                :int
                                #'location-schema/city-codes]]
