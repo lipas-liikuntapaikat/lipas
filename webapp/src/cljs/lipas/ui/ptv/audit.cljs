@@ -60,14 +60,18 @@
         ;; responded to a changes request (reviewable in Valmiit).
         changed? (contains? #{:stale :fixed} state)
 
-        ;; Format last audit information if available
+        ;; Format last audit information if available. The timestamp lives on
+        ;; the audit record, not on the individual field (see the :closed
+        ;; audit-field schema) — reading it off the field left the date blank
+        ;; on every item. Feedback is stored as "" for an approval, so only
+        ;; append it when there is something to show.
         last-audit-info (when field-audit
                           (str (tr :ptv.audit/last-audit) " "
-                               (some-> field-audit :timestamp (subs 0 10))
+                               (some-> audit-data :timestamp (subs 0 10))
                                (when-let [status (:status field-audit)]
                                  (str ", " (tr (keyword (str "ptv.audit.status/" status)))))
-                               (when-let [feedback (:feedback field-audit)]
-                                 (str ": " feedback ""))))]
+                               (when (seq (:feedback field-audit))
+                                 (str ": " (:feedback field-audit)))))]
 
     [:> Box {:key field}
      [:> Stack {:direction "row" :spacing 1 :alignItems "center" :sx #js{:mt 3 :mb 1}}

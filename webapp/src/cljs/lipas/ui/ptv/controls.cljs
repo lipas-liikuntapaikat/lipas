@@ -75,14 +75,15 @@
         ;; Get existing audit data for this field
         field-audit (get site-audit-data field)
 
-        ;; Format last audit information if available
+        ;; See lipas.ui.ptv.audit/content-panel: the timestamp is on the audit
+        ;; record, not the field, and an approval's feedback is "".
         last-audit-info (when field-audit
                           (str (tr :ptv.audit/last-audit) " "
-                               (some-> field-audit :timestamp (subs 0 10))
+                               (some-> site-audit-data :timestamp (subs 0 10))
                                (when-let [status (:status field-audit)]
                                  (str ", " (tr (keyword (str "ptv.audit.status/" status)))))
-                               (when-let [feedback (:feedback field-audit)]
-                                 (str ": " feedback ""))))
+                               (when (seq (:feedback field-audit))
+                                 (str ": " (:feedback field-audit)))))
 
         ;; If the user doesn't have audit privilege, just show previous audit info
         show-controls? has-privilege?]
