@@ -47,28 +47,9 @@
  :hint-up-to-date "Up to date"
 
  ;; Success modal
- :success-modal-title "Export successful!"
- :success-modal-message "Sports sites have been successfully exported to the Service Information Repository."
- :success-modal-close "Close"
-
  ;; Success summary details
- :success-summary-service-locations "{1} service locations created or updated"
- :success-summary-new-services "{1} new services created"
- :success-summary-organization "Organization: {1}"
-
  ;; Wizard - Services step
- :wizard-services-selection-count "Selected {1}/{2} services"
- :wizard-all-services-exist-title "All required services are in PTV"
- :wizard-all-services-exist-message "Great! You can proceed to the next step."
- :wizard-next-step "Next"
-
  ;; Wizard - Sports sites step
- :wizard-descriptions-missing-title "Descriptions missing"
- :wizard-descriptions-missing-message "Sports site descriptions must be created or filled in before export to the Service Information Repository."
- :wizard-sports-sites-selection-count "Selected {1} sports sites"
- :wizard-descriptions-generated-title "Service location descriptions created!"
- :wizard-descriptions-generated-message "Great! Now you can export the sports sites to the Service Information Repository."
-
  :integration-enabled "PTV integration is active"
  :integration-enabled-sync-off "PTV integration is active, but sync for this sports site is disabled."
  :will-be-archived-on-save "The sports site will be removed from PTV when you save"
