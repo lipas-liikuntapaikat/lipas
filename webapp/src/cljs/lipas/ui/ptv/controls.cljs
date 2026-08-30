@@ -1,22 +1,9 @@
 (ns lipas.ui.ptv.controls
   (:require
-   ;; clj-kondo false positive: `Box` collides with the cljs.core/Box deftype,
-   ;; so the [:> Box ...] hiccup uses below aren't recognized as uses of this
-   ;; alias.
-    #_{:clj-kondo/ignore [:unused-namespace]}
-    ["@mui/material/Box$default" :as Box]
-    ["@mui/material/Button$default" :as Button]
-    ["@mui/material/FormControl$default" :as FormControl]
-    ["@mui/material/FormControlLabel$default" :as FormControlLabel]
-    ["@mui/material/FormLabel$default" :as FormLabel]
-    ["@mui/material/Radio$default" :as Radio]
-    ["@mui/material/RadioGroup$default" :as RadioGroup]
     ["@mui/material/Tab$default" :as Tab]
     ["@mui/material/Tabs$default" :as Tabs]
-    ["@mui/material/TextField$default" :as TextField]
     ["@mui/material/Typography$default" :as Typography]
     [lipas.ui.components.autocompletes :refer [autocomplete2]]
-    [re-frame.core :as rf]
     [reagent.core :as r]
     [reagent.hooks :as hooks]))
 
@@ -63,89 +50,3 @@
      [:> Tab {:value "se" :label "SE"}])
    (when (or (nil? enabled-languages) (contains? enabled-languages "en"))
      [:> Tab {:value "en" :label "EN"}])])
-
-(r/defc audit-panel
-  [{:keys [tr field content lipas-id]}]
-  (let [has-privilege? @(rf/subscribe [:lipas.ui.ptv.subs/has-audit-privilege?])
-        audit-feedback @(rf/subscribe [:lipas.ui.ptv.subs/audit-feedback field])
-        audit-status @(rf/subscribe [:lipas.ui.ptv.subs/audit-status field])
-        saving? @(rf/subscribe [:lipas.ui.ptv.subs/saving-audit?])
-        site-audit-data @(rf/subscribe [:lipas.ui.ptv.subs/site-audit-data lipas-id])
-
-        ;; Get existing audit data for this field
-        field-audit (get site-audit-data field)
-
-        ;; See lipas.ui.ptv.audit/content-panel: the timestamp is on the audit
-        ;; record, not the field, and an approval's feedback is "".
-        last-audit-info (when field-audit
-                          (str (tr :ptv.audit/last-audit) " "
-                               (some-> site-audit-data :timestamp (subs 0 10))
-                               (when-let [status (:status field-audit)]
-                                 (str ", " (tr (keyword (str "ptv.audit.status/" status)))))
-                               (when (seq (:feedback field-audit))
-                                 (str ": " (:feedback field-audit)))))
-
-        ;; If the user doesn't have audit privilege, just show previous audit info
-        show-controls? has-privilege?]
-
-    [:> Box {:key field}
-     [:> Typography {:variant "h6" :sx #js{:mt 3 :mb 1}}
-      (tr (case field
-            :summary :ptv/summary
-            :description :ptv/description))]
-
-     ;; Content display (existing text to audit)
-     [:> Box {:sx #js {:mb 2 :border "1px solid #eee" :p 2}}
-      [:> Typography {:variant "body1" :whiteSpace "pre-wrap"}
-       content]]
-
-     ;; Previous audit info display
-     (when last-audit-info
-       [:> Typography {:variant "caption" :color "text.secondary" :sx #js{:mb 2}}
-        last-audit-info])
-
-     ;; Audit controls (only for users with audit privilege)
-     (when show-controls?
-       [:> Box
-        ;; Status selection
-        [:> FormControl {:component "fieldset" :sx #js{:mb 2}}
-         [:> FormLabel {:component "legend"} (tr :ptv.audit/status)]
-         [:> RadioGroup
-          {:row true
-           :value (or audit-status "")
-           :onChange (fn [e]
-                       (rf/dispatch [:lipas.ui.ptv.events/update-audit-status
-                                     field
-                                     (.. e -target -value)]))}
-          [:> FormControlLabel
-           {:value "approved"
-            :control (r/as-element [:> Radio])
-            :label (tr :ptv.audit.status/approved)}]
-          [:> FormControlLabel
-           {:value "changes-requested"
-            :control (r/as-element [:> Radio])
-            :label (tr :ptv.audit.status/changes-requested)}]]]
-
-        ;; Feedback field
-        [:> TextField
-         {:fullWidth true
-          :multiline true
-          :rows 3
-          :label (tr :ptv.audit/feedback)
-          :placeholder (tr :ptv.audit/feedback-placeholder)
-          :value (or audit-feedback "")
-          :onChange (fn [e]
-                      (rf/dispatch [:lipas.ui.ptv.events/update-audit-feedback
-                                    field
-                                    (.. e -target -value)]))}]
-
-        ;; Save button
-        [:> Button
-         {:variant "contained"
-          :color "primary"
-          :sx #js{:mt 2}
-          :disabled (or saving? (not audit-status))
-          :onClick (fn []
-                     (rf/dispatch [:lipas.ui.ptv.events/save-ptv-audit
-                                   lipas-id]))}
-         (tr :actions/save)]])]))

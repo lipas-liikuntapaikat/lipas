@@ -12,7 +12,6 @@
             ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/AlertTitle$default" :as AlertTitle]
             ["@mui/material/AppBar$default" :as AppBar]
-            ["@mui/material/Avatar$default" :as Avatar]
             ;; clj-kondo false positive: `Box` collides with the cljs.core/Box
             ;; deftype, so the [:> Box ...] hiccup use below isn't recognized
             ;; as a use of this alias.
@@ -2121,65 +2120,6 @@
        0 [set-types]
        1 [create-services]
        2 [integrate-service-locations])]))
-
-(defn site-list-item
-  [{:keys [site selected? on-select]}]
-  (let [audit-data (get-in site [:ptv :audit])
-        summary-status (get-in audit-data [:summary :status])
-        desc-status (get-in audit-data [:description :status])
-
-        ;; Calculate completion status
-        status-indicator (cond
-                           (and summary-status desc-status) "completed"
-                           (or summary-status desc-status) "partial"
-                           :else "todo")
-
-        ;; Style based on status
-        status-color (case status-indicator
-                       "completed" "success.main"
-                       "partial" "warning.main"
-                       "todo" "info.main")
-
-        ;; Last audit date or empty string
-        last-audit-date (when (or summary-status desc-status)
-                          (some-> audit-data :timestamp (subs 0 10)))]
-
-    [:div {:key (:lipas-id site)}
-     [:> Paper
-      {:sx #js{:p 2
-               :mb 2
-               :border (when selected? "2px solid")
-               :borderColor (when selected? "primary.main")
-               :cursor "pointer"}
-       :elevation (if selected? 3 1)
-       :onClick #(on-select site)}
-
-      [:> Stack {:direction "row" :spacing 2 :alignItems "center"}
-
-         ;; Status indicator
-       [:> Avatar
-        {:sx #js{:bgcolor status-color
-                 :color "white"
-                 :width 10
-                 :height 10}}]
-
-         ;; Site name and details
-       [:> Stack {:sx #js{:flex 1}}
-        [:> Typography
-         {:variant "subtitle1"
-          :component "div"
-          :sx #js {:fontWeight (when selected? "bold")}}
-         (:name site)]
-
-          ;; Show audit status if available
-        (when (or summary-status desc-status)
-          [:> Typography
-           {:variant "caption" :color "text.secondary"}
-           (str "Last audit: " last-audit-date)
-           (when summary-status
-             (str ", Summary: " summary-status))
-           (when desc-status
-             (str ", Description: " desc-status))])]]]]))
 
 (defn dialog
   [{:keys [tr]}]
