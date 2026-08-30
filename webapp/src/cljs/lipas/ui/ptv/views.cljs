@@ -660,10 +660,10 @@
                                                    (str "Hyväksytty " (or last-audit ""))
 
                                                    :partial
-                                                   (str "Osittain auditoitu " (or last-audit ""))
+                                                   (str "Osittain katselmoitu " (or last-audit ""))
 
                                                    :none
-                                                   "Ei auditoitu")]
+                                                   "Ei katselmoitu")]
 
                                 [:> TableCell {:sx #js{:textAlign "center"}}
                                  (when (not= audit-status :none)
