@@ -218,7 +218,7 @@
              (assoc-in [:ptv :audit :service-notification-sent?] false)
              ;; org data is refetched, discarding unsaved audit edits
              ;; and any selection from the previous org
-             (update-in [:ptv :audit] dissoc :site-dirty :service-dirty)
+             (update-in [:ptv :audit] dissoc :site-draft :service-draft)
              (update :ptv dissoc :selected-audit-site :selected-audit-service))
      :fx [[:dispatch [::fetch-ptv-org-data lipas-org]]]}))
 
@@ -1672,28 +1672,55 @@
         ;; keeping its form visible reads as the wrong tab's content.
         (update :ptv dissoc :selected-audit-site :selected-audit-service))))
 
-;; Audit edits mark the item dirty ([:ptv :audit :site-dirty/:service-dirty])
-;; — the save button requires actual input (or a stale verdict to
-;; re-confirm), because every save appends a revision and re-anchors the
-;; verdict snapshots to the current content.
+;; Audit edits go into a draft ([:ptv :audit :site-draft/:service-draft]),
+;; never into the fetched org data. The item lists and the whose-move bucket
+;; tabs read that org data, so writing verdicts straight into it re-coloured
+;; an item's status dot on the first radio click and could move the item to
+;; another tab while its form was still open — auditors read that as "already
+;; saved". The draft is seeded from the persisted record on the first edit
+;; (keeping :audited-content and the backend metadata), replaced wholesale by
+;; the server's response on save, and dropped on org switch.
+;;
+;; The draft's presence is also the dirty flag: every save appends a revision
+;; and re-anchors the verdict snapshots to the current content, so the save
+;; button requires actual input (or a stale verdict to re-confirm).
+
+(defn- -site-persisted-audit
+  [db lipas-id]
+  (get-in db [:ptv :org (-get-ptv-org-id db)
+              :data :sports-sites lipas-id :ptv :audit]))
+
+(defn- -service-persisted-audit
+  [db service-id]
+  (get-in db [:ptv :org (-get-ptv-org-id db)
+              :data :service-docs (str service-id) :document :audit]))
+
+(defn- -edit-audit-draft
+  "Apply `f` to the draft at `draft-path`, seeding it from `persisted` when
+  this is the first edit."
+  [db draft-path persisted f]
+  (assoc-in db draft-path (f (or (get-in db draft-path) persisted {}))))
+
+(defn- -put-status
+  [audit field status]
+  (-> audit
+      (assoc-in [field :status] status)
+      ;; Initialize feedback to empty string if not present (schema requires it)
+      (update-in [field :feedback] #(or % ""))))
 
 (rf/reg-event-db ::update-audit-feedback
   (fn [db [_ lipas-id field value]]
-    (let [org-id (-get-ptv-org-id db)
-          path [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field]]
-      (-> db
-          (assoc-in (conj path :feedback) value)
-          (assoc-in [:ptv :audit :site-dirty lipas-id] true)))))
+    (-edit-audit-draft db
+                       [:ptv :audit :site-draft lipas-id]
+                       (-site-persisted-audit db lipas-id)
+                       #(assoc-in % [field :feedback] value))))
 
 (rf/reg-event-db ::update-audit-status
   (fn [db [_ lipas-id field status]]
-    (let [org-id (-get-ptv-org-id db)
-          path [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field]]
-      (-> db
-          (assoc-in (conj path :status) status)
-                         ;; Initialize feedback to empty string if not present (schema requires it)
-          (update-in (conj path :feedback) #(or % ""))
-          (assoc-in [:ptv :audit :site-dirty lipas-id] true)))))
+    (-edit-audit-draft db
+                       [:ptv :audit :site-draft lipas-id]
+                       (-site-persisted-audit db lipas-id)
+                       #(-put-status % field status))))
 
 (defn- with-audited-content
   "Stamp the currently-shown content into each field that carries a verdict,
@@ -1739,7 +1766,7 @@
       {:db (-> db
                (assoc-in [:ptv :audit :saving?] false)
                (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit] resp)
-               (update-in [:ptv :audit :site-dirty] dissoc lipas-id)
+               (update-in [:ptv :audit :site-draft] dissoc lipas-id)
                ;; new audit activity re-arms the notification button
                (assoc-in [:ptv :audit :notification-sent?] false))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
@@ -1839,21 +1866,17 @@
 
 (rf/reg-event-db ::update-service-audit-status
   (fn [db [_ service-id field status]]
-    (let [org-id (-get-ptv-org-id db)
-          path [:ptv :org org-id :data :service-docs (str service-id) :document :audit field]]
-      (-> db
-          (assoc-in (conj path :status) status)
-          ;; Initialize feedback to empty string if not present (schema requires it)
-          (update-in (conj path :feedback) #(or % ""))
-          (assoc-in [:ptv :audit :service-dirty (str service-id)] true)))))
+    (-edit-audit-draft db
+                       [:ptv :audit :service-draft (str service-id)]
+                       (-service-persisted-audit db service-id)
+                       #(-put-status % field status))))
 
 (rf/reg-event-db ::update-service-audit-feedback
   (fn [db [_ service-id field value]]
-    (let [org-id (-get-ptv-org-id db)
-          path [:ptv :org org-id :data :service-docs (str service-id) :document :audit field]]
-      (-> db
-          (assoc-in (conj path :feedback) value)
-          (assoc-in [:ptv :audit :service-dirty (str service-id)] true)))))
+    (-edit-audit-draft db
+                       [:ptv :audit :service-draft (str service-id)]
+                       (-service-persisted-audit db service-id)
+                       #(assoc-in % [field :feedback] value))))
 
 (rf/reg-event-fx ::save-ptv-service-audit
   (fn [{:keys [db]} [_ {:keys [service-id source-id audit-data contents]}]]
@@ -1884,7 +1907,7 @@
       {:db (-> db
                (assoc-in [:ptv :audit :saving?] false)
                (assoc-in [:ptv :org org-id :data :service-docs service-id :document :audit] resp)
-               (update-in [:ptv :audit :service-dirty] dissoc service-id)
+               (update-in [:ptv :audit :service-draft] dissoc service-id)
                ;; new audit activity re-arms the notification button
                (assoc-in [:ptv :audit :service-notification-sent?] false))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))

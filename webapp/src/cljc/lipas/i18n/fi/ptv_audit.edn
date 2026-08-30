@@ -56,4 +56,5 @@
  :needing-fixes "korjattavaa",
  :notification-action-items "Korjauksia vaativat kohteet",
  :notification-approved-line "Lisäksi %1$s kohdetta on katselmoitu ilman muutospyyntöjä.",
- :notification-no-fixes "Ei avoimia korjauspyyntöjä. %1$s kohdetta on katselmoitu ja hyväksytty."}
+ :notification-no-fixes "Ei avoimia korjauspyyntöjä. %1$s kohdetta on katselmoitu ja hyväksytty.",
+ :unsaved-changes "Tallentamattomia muutoksia"}

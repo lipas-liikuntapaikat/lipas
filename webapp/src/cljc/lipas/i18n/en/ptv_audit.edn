@@ -56,4 +56,5 @@
  :needing-fixes "needing fixes",
  :notification-action-items "Items requiring corrections",
  :notification-approved-line "In addition, %1$s items have been reviewed with no change requests.",
- :notification-no-fixes "No open change requests. %1$s items have been reviewed and approved."}
+ :notification-no-fixes "No open change requests. %1$s items have been reviewed and approved.",
+ :unsaved-changes "Unsaved changes"}

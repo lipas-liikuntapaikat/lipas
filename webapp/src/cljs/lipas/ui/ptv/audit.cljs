@@ -376,7 +376,8 @@
 ;; Site list item component for the list of sites to audit
 (r/defc site-list-item
   [{:keys [tr site selected? on-select]}]
-  (let [audit-data (get-in site [:ptv :audit])
+  (let [dirty? @(rf/subscribe [:lipas.ui.ptv.subs/site-audit-dirty? (:lipas-id site)])
+        audit-data (get-in site [:ptv :audit])
         summary-status (get-in audit-data [:summary :status])
         desc-status (get-in audit-data [:description :status])
         field-states (ptv-data/audit-field-states
@@ -441,6 +442,13 @@
           [:> Chip {:label (tr :ptv.audit/fixed-after-audit)
                     :size "small"
                     :color "info"
+                    :variant "outlined"}])
+        (when dirty?
+          ;; The item lists show persisted state only, so this chip is the
+          ;; sole hint that this site carries edits the auditor has not saved.
+          [:> Chip {:label (tr :ptv.audit/unsaved-changes)
+                    :size "small"
+                    :color "secondary"
                     :variant "outlined"}])]
 
        ;; Show audit status if available
@@ -457,7 +465,8 @@
 ;; Service list item component for the list of services to audit
 (r/defc service-list-item
   [{:keys [tr service selected? on-select]}]
-  (let [audit-data (:audit service)
+  (let [dirty? @(rf/subscribe [:lipas.ui.ptv.subs/service-audit-dirty? (:service-id service)])
+        audit-data (:audit service)
         summary-status (get-in audit-data [:summary :status])
         desc-status (get-in audit-data [:description :status])
         ui-status (get-in audit-data [:user-instruction :status])
@@ -523,6 +532,13 @@
           [:> Chip {:label (tr :ptv.audit/fixed-after-audit)
                     :size "small"
                     :color "info"
+                    :variant "outlined"}])
+        (when dirty?
+          ;; The item lists show persisted state only, so this chip is the
+          ;; sole hint that this service carries edits the auditor has not saved.
+          [:> Chip {:label (tr :ptv.audit/unsaved-changes)
+                    :size "small"
+                    :color "secondary"
                     :variant "outlined"}])]
 
        ;; Show audit status if available

@@ -647,20 +647,36 @@
   (fn [audit [_ field]]
     (get-in audit [:status field])))
 
+;; Two views of an item's audit record. The *persisted* one is what the
+;; backend last stored; the *edited* one is the unsaved draft when the
+;; auditor has one, and the persisted record otherwise.
+;;
+;; Only the audit form reads the edited view. The item lists, their status
+;; dots and the whose-move bucket tabs all read persisted data, so a verdict
+;; the auditor is still working on never re-colours an item or moves it to
+;; another tab (see ::update-audit-status in the events ns).
+
+(defn- site-audit-persisted
+  [db lipas-id]
+  (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
+    (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit])))
+
+(defn- site-audit-edited
+  [db lipas-id]
+  (or (get-in db [:ptv :audit :site-draft lipas-id])
+      (site-audit-persisted db lipas-id)))
+
 (rf/reg-sub ::site-audit-data
   (fn [db [_ lipas-id]]
-    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
-      (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit]))))
+    (site-audit-edited db lipas-id)))
 
 (rf/reg-sub ::site-audit-field-feedback
   (fn [db [_ lipas-id field]]
-    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
-      (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field :feedback]))))
+    (get-in (site-audit-edited db lipas-id) [field :feedback])))
 
 (rf/reg-sub ::site-audit-field-status
   (fn [db [_ lipas-id field]]
-    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
-      (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field :status]))))
+    (get-in (site-audit-edited db lipas-id) [field :status])))
 
 (rf/reg-sub ::site-audit-field-display
   ;; Audit field verdict + its whose-move state against the persisted site
@@ -791,21 +807,23 @@
   (fn [audit _]
     (:notification-dialog audit)))
 
-;; Dirty tracking: every save appends a revision and re-anchors verdict
-;; snapshots, so the save button requires actual input since the last
-;; save (set by the ::update-*-audit-* events, cleared on save success
-;; and org switch). Stale verdicts are the exception — re-confirming one
-;; without touching the form is a meaningful save (see site-form).
+;; Dirty tracking: an item is dirty exactly while it holds an unsaved draft
+;; (written by the ::update-*-audit-* events, dropped on save success and org
+;; switch). Every save appends a revision and re-anchors verdict snapshots, so
+;; the save button requires actual input since the last save. Stale verdicts
+;; are the exception — re-confirming one without touching the form is a
+;; meaningful save (see site-form). Also drives the list items' unsaved-changes
+;; chip, the only trace of a draft the item lists show.
 
 (rf/reg-sub ::site-audit-dirty?
   :<- [::audit]
   (fn [audit [_ lipas-id]]
-    (boolean (get-in audit [:site-dirty lipas-id]))))
+    (contains? (:site-draft audit) lipas-id)))
 
 (rf/reg-sub ::service-audit-dirty?
   :<- [::audit]
   (fn [audit [_ service-id]]
-    (boolean (get-in audit [:service-dirty (str service-id)]))))
+    (contains? (:service-draft audit) (str service-id))))
 
 (rf/reg-sub ::site-audit-notification-counts
   ;; {:action-count n :approved-count n} for the send-notification button:
@@ -830,20 +848,29 @@
   (fn [db [_ org-id]]
     (get-in db [:ptv :org org-id :data :service-docs])))
 
+;; Persisted vs. edited, exactly as on the site side above.
+
+(defn- service-audit-persisted
+  [db service-id]
+  (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
+    (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit])))
+
+(defn- service-audit-edited
+  [db service-id]
+  (or (get-in db [:ptv :audit :service-draft (str service-id)])
+      (service-audit-persisted db service-id)))
+
 (rf/reg-sub ::service-audit-data
   (fn [db [_ service-id]]
-    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
-      (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit]))))
+    (service-audit-edited db service-id)))
 
 (rf/reg-sub ::service-audit-field-status
   (fn [db [_ service-id field]]
-    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
-      (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit field :status]))))
+    (get-in (service-audit-edited db service-id) [field :status])))
 
 (rf/reg-sub ::service-audit-field-feedback
   (fn [db [_ service-id field]]
-    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
-      (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit field :feedback]))))
+    (get-in (service-audit-edited db service-id) [field :feedback])))
 
 (rf/reg-sub ::service-audit-field
   ;; Full audit field map (incl. :audited-content snapshot) — the caller
