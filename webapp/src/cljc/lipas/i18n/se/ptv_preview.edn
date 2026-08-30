@@ -1,0 +1,95 @@
+;; Se fi/ptv_preview.edn för vad varje nyckel används till.
+{;; Table chrome
+ :record "PTV-uppgift",
+ :value "Värde",
+ :tooltip-missing "Beskrivning saknas",
+
+ ;; Section headers / intros
+ :integration-content "PTV-integrationens innehåll",
+ :service-location-intro
+ "Visar hur idrottsplatsen är integrerad i PTV-systemet. För muspekaren över en rad för att se var uppgiften kommer ifrån.",
+ :service-intro
+ "Förhandsgranskningen visar tjänstens basuppgifter före publicering i PTV. För muspekaren över en rad för att se var uppgiften kommer ifrån.",
+
+ ;; Shared rows
+ :status "Status",
+ :not-yet-exported " (förhandsgranskning, inte ännu överförd)",
+ :tt-status
+ "Objekt som integrationen överför till PTV publiceras automatiskt. Överföring som utkast stöds inte.",
+ :name-fi "Namn på finska",
+ :name-se "Namn på svenska",
+ :name-en "Namn på engelska",
+ :summary-fi "Sammandrag på finska",
+ :summary-se "Sammandrag på svenska",
+ :summary-en "Sammandrag på engelska",
+ :description-fi "Beskrivning på finska",
+ :description-se "Beskrivning på svenska",
+ :description-en "Beskrivning på engelska",
+ :lang-disclaimer
+ "Uppgiften fylls i endast om kommunen vid ibruktagandet av integrationen har meddelat att serviceställena ska beskrivas på detta språk. Kontakta lipasinfo@jyu.fi om du vill ändra språkvalen.",
+ :tt-summary
+ "Sammandraget är en uppgift som integrationens användare har matat in. Den kan vara producerad med hjälp av artificiell intelligens.",
+ :tt-service-description
+ "Tjänstens beskrivning är en uppgift som integrationens användare har matat in. Den kan vara producerad med hjälp av artificiell intelligens.",
+ :tt-service-location-description
+ "Serviceställets beskrivning är en uppgift som integrationens användare har matat in. Den kan vara producerad med hjälp av artificiell intelligens.",
+
+ ;; ServiceLocation rows
+ :languages "Språk",
+ :tt-languages
+ "De språk på vilka kommunen har meddelat att den vill beskriva tjänster och serviceställen när integrationen togs i bruk första gången. Kontakta lipasinfo@jyu.fi om du vill ändra språkvalen.",
+ :tt-site-name-fi "Idrottsplatsens namn i Lipas.",
+ :tt-site-name-se "Idrottsplatsens namn på svenska i Lipas.",
+ :tt-site-name-en "Idrottsplatsens namn på engelska i Lipas.",
+ :alternative-name "Alternativt namn",
+ :tt-alternative-name "Idrottsplatsens marknadsföringsnamn i Lipas.",
+ :primary-name-type "Primär namnuppgift",
+ :tt-primary-name-type "Detta värde är alltid \"Name\".",
+ :country "Land",
+ :tt-country "Detta värde är alltid \"FI\"",
+ :street-address "Gatuadress",
+ :tt-street-address "Idrottsplatsens gatuadress i Lipas.",
+ :postal-code "Postnummer",
+ :tt-postal-code "Idrottsplatsens postnummer i Lipas.",
+ :coordinates "Koordinater",
+ :tt-coordinates
+ "Koordinaterna för idrottsplatsens geometri i Lipas, omvandlade till koordinatsystemet ETRS-TM35FIN som PTV använder. För områdesformade idrottsplatser väljs mittpunkten, för rutter startpunkten.",
+ :emails "E-postadresser",
+ :tt-emails "Idrottsplatsens e-postadress i Lipas.",
+ :web-pages "Webbsidor",
+ :tt-web-pages "Idrottsplatsens webbadress i Lipas.",
+ :phone-numbers "Telefonnummer",
+ :tt-phone-numbers "Idrottsplatsens telefonnummer i Lipas.",
+ :finnish-service-number " (finländskt servicenummer)",
+ :organization-id "Organisationens ID",
+ :tt-organization-id "Organisationen (kommunen) som använder integrationen.",
+ :service-ids "Tjänsternas ID:n",
+ :tt-service-ids "De tjänster som servicestället kopplas till i PTV.",
+
+ ;; Service rows
+ :tt-service-name
+ "Lipas klassificering (huvudgrupp → undergrupp → idrottsplatstyp) bestämmer tjänstens namn. PTV-tjänsten skapas enligt undergruppsnivån och får undergruppens namn.",
+ :type "Typ",
+ :tt-type "Tjänstens typ är alltid \"Service\".",
+ :service-classes "Serviceklasser",
+ :tt-service-classes
+ "Serviceklasserna enligt PTV:s anvisningar är definierade för varje undergrupp av Lipas idrottsplatstyper och kommer med i tjänstens uppgifter automatiskt.",
+ :target-groups "Målgrupper",
+ :tt-target-groups "Tjänstens målgrupp är alltid \"Medborgare\"",
+ :ontology-terms "Ontologibegrepp",
+ :tt-ontology-terms
+ "Ontologibegreppen, dvs. nyckelorden enligt PTV:s anvisningar, är definierade för varje huvud- och undergrupp i Lipas idrottsplatsklassificering och läggs till i tjänstens uppgifter automatiskt.",
+ :funding "Finansiering",
+ :tt-funding "Finansieringstypen är alltid \"Offentligt finansierad\".",
+ :service-producers "Serviceproducenter",
+ :tt-service-producers
+ "Serviceproducenten är den organisation (kommun) som har tagit integrationen i bruk.",
+ :provision-type "Produktionssätt",
+ :tt-provision-type "Tjänstens produktionssätt är alltid \"Egen produktion\".",
+ :main-organization "Ansvarig organisation",
+ :tt-main-organization "Organisationen (kommunen) som använder integrationen.",
+ :area-type "Områdets typ",
+ :tt-area-type "Områdets typ är alltid \"Kommun\".",
+ :area-codes "Områdeskoder",
+ :tt-area-codes
+ "Områdeskoden är kommunnumret för den organisation (kommun) som har tagit integrationen i bruk."}

@@ -63,6 +63,7 @@
    :ptv.double-link
    :ptv.drift
    :ptv.name-conflict
+   :ptv.preview
    :ptv.service
    :ptv.tools.ai
    :ptv.tools.generate-services

@@ -930,7 +930,8 @@
 
 (r/defc service-preview
   [{:keys [source-id sub-category-id]}]
-  (let [preview @(rf/subscribe [::subs/service-preview source-id sub-category-id])
+  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
+        preview @(rf/subscribe [::subs/service-preview source-id sub-category-id])
         row (fn [{:keys [label value tooltip]}]
               [:> Tooltip {:title tooltip}
                [:> TableRow
@@ -950,96 +951,96 @@
                                      join)
                                 "-"))
 
-        tt-name "Lipaksen luokittelu (pääryhmä → alaryhmä → liikuntapaikkatyyppi) määrittää palvelun nimen. PTV-palvelu luodaan alaryhmätason mukaan ja se saa nimekseen alaryhmän nimen."
-        tt-summary "Tiivistelmä on integraation käyttäjän syöttämä tieto. Mahdollisesti tekoälyn avulla tuotettu."
-        tt-description "Palvelun kuvaus on integraation käyttäjän syöttämä tieto. Mahdollisesti tekoälyn avulla tuotettu."
-        lang-disclaimer "Tieto täytetään vain mikäli integraation käyttöönoton yhteydessä on ilmoitettu että palvelupaikat halutaan kuvata tällä kielellä. Ota yhteyttä lipasinfo@jyu.fi mikäli haluat muuttaa kielivalintoja."]
+        tt-name (tr :ptv.preview/tt-service-name)
+        tt-summary (tr :ptv.preview/tt-summary)
+        tt-description (tr :ptv.preview/tt-service-description)
+        lang-disclaimer (tr :ptv.preview/lang-disclaimer)]
 
     [:> Stack {:spacing 2}
      [:> Paper {:sx #js{:p 2 :bgcolor mui/gray3}}
-      [:> Typography "Esikatselu näyttää palvelun perustiedot ennen PTV-julkaisua. Vie hiiren osoitin rivin päälle nähdäksesi tiedon alkuperän."]]
+      [:> Typography (tr :ptv.preview/service-intro)]]
 
      [:> Table {:variant "dense"}
       [:> TableHead
        [:> TableRow
-        [:> TableCell "PTV-tietue"]
-        [:> TableCell "Arvo"]]]
+        [:> TableCell (tr :ptv.preview/record)]
+        [:> TableCell (tr :ptv.preview/value)]]]
 
-      (row {:label "Tila"
+      (row {:label (tr :ptv.preview/status)
             :value (:publishingStatus preview)
-            :tooltip "Integraation PTV:hen viemät kohteet julkaistaan automaattisesti. Vedokseksi vieminen ei ole tuettu."})
+            :tooltip (tr :ptv.preview/tt-status)})
 
-      (row {:label "Nimi suomeksi" :value (get-name "fi") :tooltip tt-name})
+      (row {:label (tr :ptv.preview/name-fi) :value (get-name "fi") :tooltip tt-name})
 
-      (row {:label "Nimi ruotsiksi"
+      (row {:label (tr :ptv.preview/name-se)
             :value (get-name "sv")
             :tooltip (str tt-name " " lang-disclaimer)})
 
-      (row {:label "Nimi englanniksi"
+      (row {:label (tr :ptv.preview/name-en)
             :value (get-name "en")
             :tooltip (str tt-name " " lang-disclaimer)})
 
-      (row {:label "Tyyppi"
+      (row {:label (tr :ptv.preview/type)
             :value (:type preview)
-            :tooltip "Palvelun tyyppi on aina \"Service\"."})
+            :tooltip (tr :ptv.preview/tt-type)})
 
-      (row {:label "Palveluluokat"
+      (row {:label (tr :ptv.preview/service-classes)
             :value (join (:serviceClasses preview))
-            :tooltip "PTV:n ohjeistuksen mukaiset palveluluokat on määritelty jokaiselle Lipaksen liikuntapaikkatyypin alaryhmälle ja ne tulevat palvelun tietoihin automaattisesti."})
+            :tooltip (tr :ptv.preview/tt-service-classes)})
 
-      (row {:label "Kohderyhmät"
+      (row {:label (tr :ptv.preview/target-groups)
             :value (join (:targetGroups preview))
-            :tooltip "Palvelun kohderyhmä on aina \"Kansalaiset\""})
+            :tooltip (tr :ptv.preview/tt-target-groups)})
 
-      (row {:label "Ontologiatermit"
+      (row {:label (tr :ptv.preview/ontology-terms)
             :value (join (:ontologyTerms preview))
-            :tooltip "Ontologiatermit, eli PTV:n ohjeistuksen mukaiset avainsanat, on määritetty jokaiselle Lipaksen liikuntapaikkaluokittelun pää- ja alaryhmälle, ja ne lisätään palvelun tietoihin automaattisesti."})
+            :tooltip (tr :ptv.preview/tt-ontology-terms)})
 
-      (row {:label "Rahoitus"
+      (row {:label (tr :ptv.preview/funding)
             :value (:fundingType preview)
-            :tooltip "Rahoitustyyppi on aina \"Julkisesti rahoitettu\"."})
+            :tooltip (tr :ptv.preview/tt-funding)})
 
-      (row {:label "Palveluntuottajat"
+      (row {:label (tr :ptv.preview/service-producers)
             :value (join (:organizations (first (:serviceProducers preview))))
-            :tooltip "Palveluntuottaja on se organisaatio (kunta), joka on ottanut integraation käyttöön."})
+            :tooltip (tr :ptv.preview/tt-service-producers)})
 
-      (row {:label "Tuotantotapa"
+      (row {:label (tr :ptv.preview/provision-type)
             :value (:provisionType (first (:serviceProducers preview)))
-            :tooltip "Palvelun tuotantotapa on aina \"Itse tuotettu\"."})
+            :tooltip (tr :ptv.preview/tt-provision-type)})
 
-      (row {:label "Vastuuorganisaatio"
+      (row {:label (tr :ptv.preview/main-organization)
             :value (:mainResponsibleOrganization preview)
-            :tooltip "Organisaatio (kunta) joka käyttää integraatiota."})
+            :tooltip (tr :ptv.preview/tt-main-organization)})
 
-      (row {:label "Alueen tyyppi"
+      (row {:label (tr :ptv.preview/area-type)
             :value (-> preview :areas first :type)
-            :tooltip "Alueen tyyppi on aina \"Kunta\"."})
+            :tooltip (tr :ptv.preview/tt-area-type)})
 
-      (row {:label "Alueen koodit"
+      (row {:label (tr :ptv.preview/area-codes)
             :value (join (-> preview :areas first :areaCodes))
-            :tooltip "Alueen koodi on integraation käyttöön ottaneen organisaation (kunnan) kuntanumero."})
+            :tooltip (tr :ptv.preview/tt-area-codes)})
 
-      (row {:label "Tiivistelmä suomeksi"
+      (row {:label (tr :ptv.preview/summary-fi)
             :value (get-desc "Summary" "fi")
             :tooltip tt-summary})
 
-      (row {:label "Tiivistelmä ruotsiksi"
+      (row {:label (tr :ptv.preview/summary-se)
             :value (get-desc "Summary" "sv")
             :tooltip (str tt-summary " " lang-disclaimer)})
 
-      (row {:label "Tiivistelmä englanniksi"
+      (row {:label (tr :ptv.preview/summary-en)
             :value (get-desc "Summary" "en")
             :tooltip (str tt-summary " " lang-disclaimer)})
 
-      (row {:label "Kuvaus suomeksi"
+      (row {:label (tr :ptv.preview/description-fi)
             :value (get-desc "Description" "fi")
             :tooltip tt-description})
 
-      (row {:label "Kuvaus ruotsiksi"
+      (row {:label (tr :ptv.preview/description-se)
             :value (get-desc "Description" "sv")
             :tooltip (str tt-description " " lang-disclaimer)})
 
-      (row {:label "Kuvaus ruotsiksi"
+      (row {:label (tr :ptv.preview/description-en)
             :value (get-desc "Description" "en")
             :tooltip (str tt-description " " lang-disclaimer)})]]))
 

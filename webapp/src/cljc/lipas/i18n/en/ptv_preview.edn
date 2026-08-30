@@ -1,0 +1,95 @@
+;; See fi/ptv_preview.edn for what each key is used for.
+{;; Table chrome
+ :record "PTV field",
+ :value "Value",
+ :tooltip-missing "Description missing",
+
+ ;; Section headers / intros
+ :integration-content "PTV integration content",
+ :service-location-intro
+ "Shows how the sports facility is integrated into the PTV system. Hover over a row to see where the value comes from.",
+ :service-intro
+ "The preview shows the service's basic details before publishing to PTV. Hover over a row to see where the value comes from.",
+
+ ;; Shared rows
+ :status "Status",
+ :not-yet-exported " (preview, not yet exported)",
+ :tt-status
+ "Items exported to PTV by the integration are published automatically. Exporting as a draft is not supported.",
+ :name-fi "Name in Finnish",
+ :name-se "Name in Swedish",
+ :name-en "Name in English",
+ :summary-fi "Summary in Finnish",
+ :summary-se "Summary in Swedish",
+ :summary-en "Summary in English",
+ :description-fi "Description in Finnish",
+ :description-se "Description in Swedish",
+ :description-en "Description in English",
+ :lang-disclaimer
+ "This is filled in only if the municipality stated, when the integration was taken into use, that service locations should be described in this language. Contact lipasinfo@jyu.fi if you want to change the language selection.",
+ :tt-summary
+ "The summary is entered by the user of the integration. It may have been produced with the help of AI.",
+ :tt-service-description
+ "The service description is entered by the user of the integration. It may have been produced with the help of AI.",
+ :tt-service-location-description
+ "The service location description is entered by the user of the integration. It may have been produced with the help of AI.",
+
+ ;; ServiceLocation rows
+ :languages "Languages",
+ :tt-languages
+ "The languages in which the municipality stated it wants to describe services and service locations when the integration was first taken into use. Contact lipasinfo@jyu.fi if you want to change the language selection.",
+ :tt-site-name-fi "The name of the sports facility in LIPAS.",
+ :tt-site-name-se "The Swedish name of the sports facility in LIPAS.",
+ :tt-site-name-en "The English name of the sports facility in LIPAS.",
+ :alternative-name "Alternative name",
+ :tt-alternative-name "The marketing name of the sports facility in LIPAS.",
+ :primary-name-type "Primary name type",
+ :tt-primary-name-type "This value is always \"Name\".",
+ :country "Country",
+ :tt-country "This value is always \"FI\"",
+ :street-address "Street address",
+ :tt-street-address "The street address of the sports facility in LIPAS.",
+ :postal-code "Postal code",
+ :tt-postal-code "The postal code of the sports facility in LIPAS.",
+ :coordinates "Coordinates",
+ :tt-coordinates
+ "The coordinates of the sports facility's geometry in LIPAS, converted to the ETRS-TM35FIN coordinate system used by PTV. For area-shaped facilities the centre point is used, for routes the starting point.",
+ :emails "Email addresses",
+ :tt-emails "The email address of the sports facility in LIPAS.",
+ :web-pages "Web pages",
+ :tt-web-pages "The website address of the sports facility in LIPAS.",
+ :phone-numbers "Phone numbers",
+ :tt-phone-numbers "The phone number of the sports facility in LIPAS.",
+ :finnish-service-number " (Finnish service number)",
+ :organization-id "Organisation ID",
+ :tt-organization-id "The organisation (municipality) using the integration.",
+ :service-ids "Service IDs",
+ :tt-service-ids "The services the service location is attached to in PTV.",
+
+ ;; Service rows
+ :tt-service-name
+ "The LIPAS classification (main category → sub-category → facility type) determines the service name. The PTV service is created at the sub-category level and takes the sub-category's name.",
+ :type "Type",
+ :tt-type "The service type is always \"Service\".",
+ :service-classes "Service classes",
+ :tt-service-classes
+ "The service classes required by PTV's guidelines are defined for every LIPAS facility-type sub-category and are added to the service automatically.",
+ :target-groups "Target groups",
+ :tt-target-groups "The service's target group is always \"Citizens\"",
+ :ontology-terms "Ontology terms",
+ :tt-ontology-terms
+ "Ontology terms — the keywords required by PTV's guidelines — are defined for every main and sub-category of the LIPAS facility classification, and are added to the service automatically.",
+ :funding "Funding",
+ :tt-funding "The funding type is always \"Publicly funded\".",
+ :service-producers "Service producers",
+ :tt-service-producers
+ "The service producer is the organisation (municipality) that has taken the integration into use.",
+ :provision-type "Provision type",
+ :tt-provision-type "The service's provision type is always \"Self-produced\".",
+ :main-organization "Responsible organisation",
+ :tt-main-organization "The organisation (municipality) using the integration.",
+ :area-type "Area type",
+ :tt-area-type "The area type is always \"Municipality\".",
+ :area-codes "Area codes",
+ :tt-area-codes
+ "The area code is the municipality number of the organisation (municipality) that has taken the integration into use."}
