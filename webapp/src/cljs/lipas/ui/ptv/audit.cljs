@@ -25,6 +25,7 @@
             ["@mui/material/Typography$default" :as Typography]
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
+            [lipas.ui.components.selects :as selects]
             [lipas.ui.components.text-fields :as tf]
             [lipas.ui.ptv.components :as ptv-components]
             [lipas.ui.ptv.diff :as ptv-diff]
@@ -636,6 +637,7 @@
         lipas-org-id @(rf/subscribe [:lipas.ui.ptv.subs/selected-org-id])
         selected-section @(rf/subscribe [:lipas.ui.ptv.subs/selected-audit-section])
         selected-tab @(rf/subscribe [:lipas.ui.ptv.subs/selected-audit-tab])
+        sort-key @(rf/subscribe [:lipas.ui.ptv.subs/audit-sort])
         selected-site @(rf/subscribe [:lipas.ui.ptv.subs/selected-audit-site])
         selected-service @(rf/subscribe [:lipas.ui.ptv.subs/selected-audit-service])
 
@@ -762,6 +764,14 @@
                 "waiting-fixes" :ptv.audit/waiting-fixes-tab
                 "done" :ptv.audit/done-tab
                 :ptv.audit/waiting-audit-tab))]
+
+         ;; Ordering applies to both sections and every bucket tab
+         [selects/select
+          {:label (tr :ptv.audit/sort-by)
+           :value sort-key
+           :items [{:value :name :label (tr :ptv.audit/sort-alphabetically)}
+                   {:value :date :label (tr :ptv.audit/sort-by-date)}]
+           :on-change #(rf/dispatch [:lipas.ui.ptv.events/set-audit-sort %])}]
 
          ;; Item count or empty message
          (if (empty? display-items)

@@ -751,6 +751,40 @@
   (fn [ptv _]
     (get-in ptv [:audit :selected-tab] "waiting-audit")))
 
+;; Item ordering in the audit lists. Shared by both sections so the auditor
+;; sets it once; :name is the long-standing default.
+
+(rf/reg-sub ::audit-sort
+  :<- [::audit]
+  (fn [audit _]
+    (get audit :sort-by :name)))
+
+(defn- iso->epoch
+  "Millisecond epoch for an ISO-8601 timestamp, or nil when it won't parse.
+  LIPAS stamps nanosecond precision and PTV milliseconds, and js/Date only
+  parses three fractional digits reliably — so trim the rest first."
+  [s]
+  (when (string? s)
+    (let [t (.getTime (js/Date. (str/replace s #"(\.\d{3})\d+" "$1")))]
+      (when-not (js/isNaN t) t))))
+
+(defn- sort-audit-items
+  "Order one bucket's items.
+
+  :name — the long-standing order: items already in the audit sample first,
+  then alphabetically.
+
+  :date — newest activity first, activity being the item's last verdict when
+  it has one and the content's own modification date otherwise. Items with
+  neither date sort last."
+  [sort-key {:keys [name-fn audit-ts-fn content-ts-fn]} items]
+  (let [name-key #(or (name-fn %) "")]
+    (case sort-key
+      :date (sort-by (juxt #(- (or (iso->epoch (or (audit-ts-fn %) (content-ts-fn %))) 0))
+                           name-key)
+                     items)
+      (sort-by (juxt #(if (audit-ts-fn %) 0 1) name-key) items))))
+
 ;; Whose-move audit workflow (see lipas.data.ptv/audit-bucket):
 ;; an item is in the audit sample when it has an audit record; within the
 ;; sample it sits in exactly one bucket: :waiting-audit (auditor's move),
@@ -762,8 +796,9 @@
 
 (rf/reg-sub ::auditable-sites
   (fn [[_ _org-id _bucket]]
-    [(rf/subscribe [::ptv])])
-  (fn [[ptv] [_ org-id bucket]]
+    [(rf/subscribe [::ptv])
+     (rf/subscribe [::audit-sort])])
+  (fn [[ptv sort-key] [_ org-id bucket]]
     (->> (vals (get-in ptv [:org org-id :data :sports-sites] {}))
          (filter (fn [site]
                    (let [b (ptv-data/audit-bucket
@@ -776,10 +811,10 @@
                        (or (= :waiting-audit b)
                            (and (nil? b) (site-has-audit-content? site)))
                        (= bucket b)))))
-         ;; in-flight items (partially audited / changed since verdict) first
-         (sort-by (juxt (fn [site]
-                          (if (get-in site [:ptv :audit :timestamp]) 0 1))
-                        :name)))))
+         (sort-audit-items sort-key
+                           {:name-fn :name
+                            :audit-ts-fn #(get-in % [:ptv :audit :timestamp])
+                            :content-ts-fn :event-date}))))
 
 (rf/reg-sub ::audit-sample-sites
   ;; every site in the audit sample, regardless of bucket
@@ -920,8 +955,9 @@
 
 (rf/reg-sub ::auditable-services
   (fn [[_ org-id _bucket]]
-    (rf/subscribe [::services-with-audit org-id]))
-  (fn [services [_ _ bucket]]
+    [(rf/subscribe [::services-with-audit org-id])
+     (rf/subscribe [::audit-sort])])
+  (fn [[services sort-key] [_ _ bucket]]
     (->> services
          (filter (fn [svc]
                    (let [b (ptv-data/audit-bucket
@@ -934,10 +970,10 @@
                        (or (= :waiting-audit b)
                            (and (nil? b) (service-has-audit-content? svc)))
                        (= bucket b)))))
-         ;; in-flight items (partially audited / changed since verdict) first
-         (sort-by (juxt (fn [svc]
-                          (if (get-in svc [:audit :timestamp]) 0 1))
-                        :label)))))
+         (sort-audit-items sort-key
+                           {:name-fn :label
+                            :audit-ts-fn #(get-in % [:audit :timestamp])
+                            :content-ts-fn :last-modified}))))
 
 (rf/reg-sub ::audit-sample-services
   ;; every service in the audit sample, regardless of bucket

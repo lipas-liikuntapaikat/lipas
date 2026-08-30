@@ -1664,6 +1664,10 @@
 
 ;; PTV Audit events
 
+(rf/reg-event-db ::set-audit-sort
+  (fn [db [_ v]]
+    (assoc-in db [:ptv :audit :sort-by] v)))
+
 (rf/reg-event-db ::select-audit-tab
   (fn [db [_ v]]
     (-> db

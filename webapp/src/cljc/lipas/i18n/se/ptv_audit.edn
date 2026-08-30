@@ -57,4 +57,7 @@
  :notification-action-items "Objekt som kräver korrigeringar",
  :notification-approved-line "Dessutom har %1$s objekt granskats utan ändringsbegäranden.",
  :notification-no-fixes "Inga öppna ändringsbegäranden. %1$s objekt har granskats och godkänts.",
- :unsaved-changes "Osparade ändringar"}
+ :unsaved-changes "Osparade ändringar",
+ :sort-by "Sortering",
+ :sort-alphabetically "Alfabetisk",
+ :sort-by-date "Efter datum"}
