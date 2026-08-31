@@ -752,12 +752,13 @@
     (get-in ptv [:audit :selected-tab] "waiting-audit")))
 
 ;; Item ordering in the audit lists. Shared by both sections so the auditor
-;; sets it once; :name is the long-standing default.
+;; sets it once; newest activity first by default, which is the order
+;; auditors work in.
 
 (rf/reg-sub ::audit-sort
   :<- [::audit]
   (fn [audit _]
-    (get audit :sort-by :name)))
+    (get audit :sort-by :date)))
 
 (defn- iso->epoch
   "Millisecond epoch for an ISO-8601 timestamp, or nil when it won't parse.
