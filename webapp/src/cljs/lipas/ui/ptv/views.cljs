@@ -643,8 +643,8 @@
           audit-status-cell (fn [site]
                               (let [{:keys [audit-status]} site
 
-                                    audit-data (get-in site [:ptv :audit])
-                                    last-audit (some-> audit-data :timestamp (subs 0 10))
+                                    audit-data (:audit site)
+                                    last-audit (some-> audit-data :timestamp utils/->human-date)
                                     summary-status (get-in audit-data [:summary :status])
                                     desc-status (get-in audit-data [:description :status])
 

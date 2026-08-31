@@ -29,6 +29,7 @@
             [lipas.ui.components.text-fields :as tf]
             [lipas.ui.ptv.components :as ptv-components]
             [lipas.ui.ptv.diff :as ptv-diff]
+            [lipas.ui.utils :as utils]
             [re-frame.core :as rf]
             [reagent.core :as r]
             [reagent.hooks :as hooks]))
@@ -67,7 +68,7 @@
         ;; append it when there is something to show.
         last-audit-info (when field-audit
                           (str (tr :ptv.audit/last-audit) " "
-                               (some-> audit-data :timestamp (subs 0 10))
+                               (some-> audit-data :timestamp utils/->human-date)
                                (when-let [status (:status field-audit)]
                                  (str ", " (tr (keyword (str "ptv.audit.status/" status)))))
                                (when (seq (:feedback field-audit))
@@ -381,10 +382,10 @@
 
 (defn- audit-status-caption
   "One item's persisted verdicts as a caption, e.g. \"Edellinen katselmointi
-  2026-08-10, Tiivistelmä: Hyväksytty\". `fields` is a seq of [field status]
+  10.08.2026, Tiivistelmä: Hyväksytty\". `fields` is a seq of [field status]
   in display order; fields without a verdict are left out."
   [tr timestamp fields]
-  (str (tr :ptv.audit/last-audit) " " (some-> timestamp (subs 0 10))
+  (str (tr :ptv.audit/last-audit) " " (some-> timestamp utils/->human-date)
        (apply str
               (keep (fn [[field status]]
                       (when status

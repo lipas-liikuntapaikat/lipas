@@ -1215,6 +1215,10 @@
      ;; UUID it can no longer resolve to a name.
      :publishing-status (-> site :ptv :publishing-status)
 
+     ;; The audit record itself, so the listing can caption its status
+     ;; symbol (date + which field). This map replaces the site for the
+     ;; listing, so reading it back off :ptv there finds nothing.
+     :audit (-> site :ptv :audit)
      :audit-status (determine-audit-status (with-persisted-audit-content site))}))
 
 (defn sports-site->service-ids [types source-id->service sports-site]
