@@ -2,6 +2,7 @@
   (:require ["@mui/icons-material/CheckCircle$default" :as CheckCircleIcon]
             ["@mui/icons-material/Close$default" :as CloseIcon]
             ["@mui/icons-material/HourglassTop$default" :as PartialIcon]
+            ["@mui/icons-material/Message$default" :as MessageIcon]
             ["@mui/icons-material/Sync$default" :as Sync]
             ["@mui/icons-material/SyncDisabled$default" :as SyncDisabled]
             ["@mui/icons-material/SyncProblem$default" :as SyncProblem]
@@ -628,6 +629,35 @@
                 :missing-descriptions (not valid)
                 true)))))
 
+(defn- audit-feedback-text
+  "The auditor's comments on an item, one \"Tiivistelmä: …\" line per field
+   that has one."
+  [tr audit fields]
+  (->> fields
+       (keep (fn [field]
+               (when-let [feedback (not-empty (str/trim (str (get-in audit [field :feedback]))))]
+                 (str (tr (case field
+                            :summary :ptv/summary
+                            :description :ptv/description
+                            :user-instruction :ptv/user-instruction))
+                      ": " feedback))))
+       (str/join "\n")))
+
+(defn- audit-comment-marker
+  "Marker shown beside an approval symbol when the auditor approved the text
+   but left a comment. Deliberately grey: the colour vocabulary belongs to
+   the status symbol next to it, this one only says there is something to
+   read — which it carries in its own tooltip."
+  [{:keys [tr audit fields size]}]
+  (when-let [feedback (not-empty (audit-feedback-text tr audit fields))]
+    [:> Tooltip
+     {:title (r/as-element
+               ;; :color inherit — the tooltip paints its own light text on
+               ;; the dark surface, Typography's default would be near-black.
+               [:> Typography {:variant "body2" :sx #js {:whiteSpace "pre-line" :color "inherit"}}
+                (str (tr :ptv.audit/auditor-feedback) "\n" feedback)])}
+     [:> MessageIcon {:sx #js {:color "text.secondary" :width size :height size}}]]))
+
 (defn table []
   (r/with-let [expanded-rows (r/atom {})
                search-text (r/atom "")
@@ -657,7 +687,7 @@
                                                         (when (= desc-status "changes-requested")
                                                           (tr :ptv/description)))
 
-                                                   :approved
+                                                   (:approved :approved-with-feedback)
                                                    (str (tr :ptv.audit.status/approved) " " (or last-audit ""))
 
                                                    :partial
@@ -668,16 +698,23 @@
 
                                 [:> TableCell {:sx #js{:textAlign "center"}}
                                  (when (not= audit-status :none)
-                                   [:> Tooltip {:title tooltip-text}
-                                    (case audit-status
-                                      :changes-requested
-                                      [:> WarningIcon {:sx #js{:color "warning.main" :fontSize "large" :width "32px" :height "32px"}}]
+                                   [:> Stack {:direction "row" :spacing 0.5
+                                              :alignItems "center" :justifyContent "center"}
+                                    [:> Tooltip {:title tooltip-text}
+                                     (case audit-status
+                                       :changes-requested
+                                       [:> WarningIcon {:sx #js{:color "warning.main" :fontSize "large" :width "32px" :height "32px"}}]
 
-                                      :approved
-                                      [:> CheckCircleIcon {:sx #js{:color "success.main" :fontSize "large" :width "32px" :height "32px"}}]
+                                       (:approved :approved-with-feedback)
+                                       [:> CheckCircleIcon {:sx #js{:color "success.main" :fontSize "large" :width "32px" :height "32px"}}]
 
-                                      :partial
-                                      [:> PartialIcon {:sx #js{:color "info.main" :fontSize "large" :width "32px" :height "32px"}}])])]))
+                                       :partial
+                                       [:> PartialIcon {:sx #js{:color "info.main" :fontSize "large" :width "32px" :height "32px"}}])]
+                                    (when (= audit-status :approved-with-feedback)
+                                      [audit-comment-marker {:tr tr
+                                                             :audit audit-data
+                                                             :fields [:summary :description]
+                                                             :size "20px"}])])]))
 
           headers [{:key :expand :label "" :padding "checkbox"}
                    #_{:key :selected :label (tr :ptv.actions/export)
@@ -735,6 +772,7 @@
                                                       :partial 2 ; Needs completion
                                                       :none 3 ; Not audited
                                                       :approved 4 ; All good
+                                                      :approved-with-feedback 4 ; All good, with a remark
                                                       5)] ; Default/unknown
                                  [audit-priority (:type site)]))
                              filtered-sites)]
@@ -1973,17 +2011,22 @@
           ;; Audit state indicator so a pending change request is visible
           ;; in the listing without opening the service (tester finding #3)
           service-audit (<== [::subs/service-audit-data (:service-id service)])
-          audit-bucket (ptv-data/audit-bucket
-                         service-audit
-                         (ptv-data/service-audit-fields ptv-texts))
+          audit-fields (ptv-data/service-audit-fields ptv-texts)
+          audit-bucket (ptv-data/audit-bucket service-audit audit-fields)
           audit-icon (case audit-bucket
                        :waiting-fixes
                        [:> Tooltip {:title (tr :ptv.audit.status/changes-requested)}
                         [:> WarningIcon {:sx #js {:color "warning.main"}}]]
 
                        :done
-                       [:> Tooltip {:title (tr :ptv.audit.status/approved)}
-                        [:> CheckCircleIcon {:sx #js {:color "success.main"}}]]
+                       [:> Stack {:direction "row" :spacing 0.5 :alignItems "center"}
+                        [:> Tooltip {:title (tr :ptv.audit.status/approved)}
+                         [:> CheckCircleIcon {:sx #js {:color "success.main"}}]]
+                        (when (ptv-data/approved-with-feedback? service-audit audit-fields)
+                          [audit-comment-marker {:tr tr
+                                                 :audit service-audit
+                                                 :fields [:summary :description :user-instruction]
+                                                 :size "16px"}])]
 
                        :waiting-audit
                        [:> Tooltip {:title (tr :ptv.audit/audit-in-progress)}

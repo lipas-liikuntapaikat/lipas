@@ -922,6 +922,17 @@
       (is (= :approved (sut/determine-audit-status
                          (site {:timestamp "t" :auditor-id "a"
                                 :summary (approved {:fi "s"})
+                                :description (approved {:fi "d"})})))))
+    (testing "approved, but the auditor left a comment -> :approved-with-feedback"
+      (is (= :approved-with-feedback
+             (sut/determine-audit-status
+               (site {:timestamp "t" :auditor-id "a"
+                      :summary (assoc (approved {:fi "s"}) :feedback "hyvä, mutta")
+                      :description (approved {:fi "d"})})))))
+    (testing "a comment on a fix awaiting re-review is not an approval remark"
+      (is (= :approved (sut/determine-audit-status
+                         (site {:timestamp "t" :auditor-id "a"
+                                :summary (changes {:fi "vanha"})
                                 :description (approved {:fi "d"})})))))))
 
 (deftest with-persisted-audit-content-test
