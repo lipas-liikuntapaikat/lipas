@@ -3,6 +3,8 @@
             [clojure.set :as set]
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
+            [lipas.roles :as roles]
+            [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
@@ -149,18 +151,55 @@
   [db]
   (get-in db [:ptv :selected-org :ptv-data :org-id]))
 
+(defn- ptv-privilege-for-org?
+  "Does `user` hold a PTV privilege covering `lipas-org`? Auditors hold the
+  global :ptv/audit; managers hold :ptv/manage for at least one of the org's
+  PTV city-codes (same check as the ::has-manage-privilege? sub)."
+  [user lipas-org]
+  (or (roles/check-privilege user {} :ptv/audit)
+      (boolean
+        (some (fn [city-code]
+                (roles/check-privilege user {:city-code city-code} :ptv/manage))
+              (get-in lipas-org [:ptv-data :city-codes])))))
+
+(defn- auto-selectable-org
+  "The org to pre-select when the user has no real choice to make: exactly one
+  accessible org, PTV-configured, and covered by their PTV privileges. nil
+  otherwise — admins and auditors are served every org, so they still pick."
+  [db]
+  (let [orgs (get-in db [:user :orgs])]
+    (when (= 1 (count orgs))
+      (let [org (first orgs)]
+        (when (and (get-in org [:ptv-data :org-id])
+                   (ptv-privilege-for-org? (user-subs/user-data db) org))
+          org)))))
+
+;; Convenience for single-org municipalities: skip the one-item dropdown.
+;; No-op once an org is selected, so it is safe to fire on every dialog open.
+(rf/reg-event-fx ::maybe-auto-select-org
+  (fn [{:keys [db]} _]
+    (when-not (:selected-org (:ptv db))
+      (when-let [org (auto-selectable-org db)]
+        {:fx [[:dispatch [::select-org org]]]}))))
+
 (rf/reg-event-fx ::open-dialog
   (fn [{:keys [db]} [_ _]]
     (let [orgs-loaded? (seq (get-in db [:user :orgs]))]
       {:db (assoc-in db [:ptv :dialog :open?] true)
        :fx (cond-> []
              ;; Fetch organizations if not already loaded - /current-user-orgs now handles audit users
+             ;; Auto-select runs as the continuation, once the orgs have landed.
              (not orgs-loaded?)
-             (conj [:dispatch [:lipas.ui.org.events/get-user-orgs]])
+             (conj [:dispatch [:lipas.ui.org.events/get-user-orgs
+                               {:then [::maybe-auto-select-org]}]])
 
              ;; Select previously selected org if exists
              (:selected-org (:ptv db))
-             (conj [:dispatch [::select-org (:selected-org (:ptv db))]]))})))
+             (conj [:dispatch [::select-org (:selected-org (:ptv db))]])
+
+             ;; ...or the only one on offer, when nothing is selected yet
+             orgs-loaded?
+             (conj [:dispatch [::maybe-auto-select-org]]))})))
 
 (rf/reg-event-db ::close-dialog
   (fn [db [_ _]]
@@ -179,7 +218,7 @@
              (assoc-in [:ptv :audit :service-notification-sent?] false)
              ;; org data is refetched, discarding unsaved audit edits
              ;; and any selection from the previous org
-             (update-in [:ptv :audit] dissoc :site-dirty :service-dirty)
+             (update-in [:ptv :audit] dissoc :site-draft :service-draft)
              (update :ptv dissoc :selected-audit-site :selected-audit-service))
      :fx [[:dispatch [::fetch-ptv-org-data lipas-org]]]}))
 
@@ -1625,6 +1664,10 @@
 
 ;; PTV Audit events
 
+(rf/reg-event-db ::set-audit-sort
+  (fn [db [_ v]]
+    (assoc-in db [:ptv :audit :sort-by] v)))
+
 (rf/reg-event-db ::select-audit-tab
   (fn [db [_ v]]
     (-> db
@@ -1633,28 +1676,55 @@
         ;; keeping its form visible reads as the wrong tab's content.
         (update :ptv dissoc :selected-audit-site :selected-audit-service))))
 
-;; Audit edits mark the item dirty ([:ptv :audit :site-dirty/:service-dirty])
-;; — the save button requires actual input (or a stale verdict to
-;; re-confirm), because every save appends a revision and re-anchors the
-;; verdict snapshots to the current content.
+;; Audit edits go into a draft ([:ptv :audit :site-draft/:service-draft]),
+;; never into the fetched org data. The item lists and the whose-move bucket
+;; tabs read that org data, so writing verdicts straight into it re-coloured
+;; an item's status dot on the first radio click and could move the item to
+;; another tab while its form was still open — auditors read that as "already
+;; saved". The draft is seeded from the persisted record on the first edit
+;; (keeping :audited-content and the backend metadata), replaced wholesale by
+;; the server's response on save, and dropped on org switch.
+;;
+;; The draft's presence is also the dirty flag: every save appends a revision
+;; and re-anchors the verdict snapshots to the current content, so the save
+;; button requires actual input (or a stale verdict to re-confirm).
+
+(defn- -site-persisted-audit
+  [db lipas-id]
+  (get-in db [:ptv :org (-get-ptv-org-id db)
+              :data :sports-sites lipas-id :ptv :audit]))
+
+(defn- -service-persisted-audit
+  [db service-id]
+  (get-in db [:ptv :org (-get-ptv-org-id db)
+              :data :service-docs (str service-id) :document :audit]))
+
+(defn- -edit-audit-draft
+  "Apply `f` to the draft at `draft-path`, seeding it from `persisted` when
+  this is the first edit."
+  [db draft-path persisted f]
+  (assoc-in db draft-path (f (or (get-in db draft-path) persisted {}))))
+
+(defn- -put-status
+  [audit field status]
+  (-> audit
+      (assoc-in [field :status] status)
+      ;; Initialize feedback to empty string if not present (schema requires it)
+      (update-in [field :feedback] #(or % ""))))
 
 (rf/reg-event-db ::update-audit-feedback
   (fn [db [_ lipas-id field value]]
-    (let [org-id (-get-ptv-org-id db)
-          path [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field]]
-      (-> db
-          (assoc-in (conj path :feedback) value)
-          (assoc-in [:ptv :audit :site-dirty lipas-id] true)))))
+    (-edit-audit-draft db
+                       [:ptv :audit :site-draft lipas-id]
+                       (-site-persisted-audit db lipas-id)
+                       #(assoc-in % [field :feedback] value))))
 
 (rf/reg-event-db ::update-audit-status
   (fn [db [_ lipas-id field status]]
-    (let [org-id (-get-ptv-org-id db)
-          path [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field]]
-      (-> db
-          (assoc-in (conj path :status) status)
-                         ;; Initialize feedback to empty string if not present (schema requires it)
-          (update-in (conj path :feedback) #(or % ""))
-          (assoc-in [:ptv :audit :site-dirty lipas-id] true)))))
+    (-edit-audit-draft db
+                       [:ptv :audit :site-draft lipas-id]
+                       (-site-persisted-audit db lipas-id)
+                       #(-put-status % field status))))
 
 (defn- with-audited-content
   "Stamp the currently-shown content into each field that carries a verdict,
@@ -1700,7 +1770,7 @@
       {:db (-> db
                (assoc-in [:ptv :audit :saving?] false)
                (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit] resp)
-               (update-in [:ptv :audit :site-dirty] dissoc lipas-id)
+               (update-in [:ptv :audit :site-draft] dissoc lipas-id)
                ;; new audit activity re-arms the notification button
                (assoc-in [:ptv :audit :notification-sent?] false))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
@@ -1800,21 +1870,17 @@
 
 (rf/reg-event-db ::update-service-audit-status
   (fn [db [_ service-id field status]]
-    (let [org-id (-get-ptv-org-id db)
-          path [:ptv :org org-id :data :service-docs (str service-id) :document :audit field]]
-      (-> db
-          (assoc-in (conj path :status) status)
-          ;; Initialize feedback to empty string if not present (schema requires it)
-          (update-in (conj path :feedback) #(or % ""))
-          (assoc-in [:ptv :audit :service-dirty (str service-id)] true)))))
+    (-edit-audit-draft db
+                       [:ptv :audit :service-draft (str service-id)]
+                       (-service-persisted-audit db service-id)
+                       #(-put-status % field status))))
 
 (rf/reg-event-db ::update-service-audit-feedback
   (fn [db [_ service-id field value]]
-    (let [org-id (-get-ptv-org-id db)
-          path [:ptv :org org-id :data :service-docs (str service-id) :document :audit field]]
-      (-> db
-          (assoc-in (conj path :feedback) value)
-          (assoc-in [:ptv :audit :service-dirty (str service-id)] true)))))
+    (-edit-audit-draft db
+                       [:ptv :audit :service-draft (str service-id)]
+                       (-service-persisted-audit db service-id)
+                       #(assoc-in % [field :feedback] value))))
 
 (rf/reg-event-fx ::save-ptv-service-audit
   (fn [{:keys [db]} [_ {:keys [service-id source-id audit-data contents]}]]
@@ -1845,7 +1911,7 @@
       {:db (-> db
                (assoc-in [:ptv :audit :saving?] false)
                (assoc-in [:ptv :org org-id :data :service-docs service-id :document :audit] resp)
-               (update-in [:ptv :audit :service-dirty] dissoc service-id)
+               (update-in [:ptv :audit :service-draft] dissoc service-id)
                ;; new audit activity re-arms the notification button
                (assoc-in [:ptv :audit :service-notification-sent?] false))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))

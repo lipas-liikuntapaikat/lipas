@@ -37,4 +37,15 @@
  :select-sub-categories "Select type classes",
  :unselect-helper
  "If you don't want to export a specific site, you can open\n     the site on the right and turn off the toggle switch."
- :step3-instruction "Open a sports site from the list, create or write descriptions, and enable sync with the toggle switch."}
+ :step3-instruction "Open a sports site from the list, create or write descriptions, and enable sync with the toggle switch.",
+ :select-sports-sites "Select sports facilities",
+ :linked-label "{1} (linked)",
+ :enter-descriptions "Enter descriptions",
+ :preview "Preview",
+ :selected-count "{1}/{2} sports facilities selected",
+ :export-halted "Export interrupted",
+ :export-complete "Export complete",
+ :export-result "{1}/{2} sports facilities exported to PTV.",
+ :start-new-export "Start a new export",
+ :go-to-sports-sites-tab "Go to the Sports facilities tab",
+ :go-to-services-tab "Go to the Services tab"}

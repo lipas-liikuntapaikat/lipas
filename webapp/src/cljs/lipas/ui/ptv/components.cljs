@@ -232,14 +232,15 @@
 (r/defc service-location-preview
   "Preview component showing how a sports site will appear in PTV as a service location"
   [{:keys [org-id lipas-id]}]
-  (let [preview @(rf/subscribe [::subs/service-location-preview org-id lipas-id])
+  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
+        preview @(rf/subscribe [::subs/service-location-preview org-id lipas-id])
         sports-sites @(rf/subscribe [::subs/sports-sites org-id])
         site-data (some #(when (= lipas-id (:lipas-id %)) %) sports-sites)
         synced? (= :ok (:sync-status site-data))
         [expanded? set-expanded] (hooks/use-state false)
 
         row (fn [{:keys [label value tooltip]}]
-              [:> Tooltip {:title (or tooltip "Selite puuttuu")}
+              [:> Tooltip {:title (or tooltip (tr :ptv.preview/tooltip-missing))}
                [:> TableRow
                 [:> TableCell [:> Typography {:variant "caption"} label]]
                 [:> TableCell [:> Typography value]]]])
@@ -259,10 +260,9 @@
                                           join)
                                      "-"))
 
-        tt-summary "Tiivistelmä on integraation käyttäjän syöttämä tieto. Mahdollisesti tekoälyn avulla tuotettu."
-        tt-description "Palvelupaikan kuvaus on integraation käyttäjän syöttämä tieto. Mahdollisesti tekoälyn avulla tuotettu."
-
-        lang-disclaimer "Tieto täytetään vain mikäli integraation käyttöönoton yhteydessä on ilmoitettu että palvelupaikat halutaan kuvata tällä kielellä. Ota yhteyttä lipasinfo@jyu.fi mikäli haluat muuttaa kielivalintoja."]
+        tt-summary (tr :ptv.preview/tt-summary)
+        tt-description (tr :ptv.preview/tt-service-location-description)
+        lang-disclaimer (tr :ptv.preview/lang-disclaimer)]
 
     [:> Stack {:spacing 2}
      ;; Collapsible header with expand/collapse button
@@ -275,7 +275,7 @@
         :justifyContent "space-between"}
        [:> Typography
         {:variant "subtitle2" :fontWeight "medium"}
-        "PTV-integraation sisältö"]
+        (tr :ptv.preview/integration-content)]
        [:> IconButton
         {:size "small"
          :sx #js{:transform (if expanded? "rotate(180deg)" "rotate(0deg)")
@@ -287,115 +287,113 @@
       [:> Paper {:sx #js{:p 2 :bgcolor mui/gray3}}
        [:> Typography
         {:variant "body2" :mb 2}
-        "Näyttää kuinka liikuntapaikka on integroitu PTV-järjestelmään. Vie hiiren osoitin rivin päälle nähdäksesi tiedon alkuperän."]]
+        (tr :ptv.preview/service-location-intro)]]
 
       [:> Table {:variant "dense"}
        [:> TableHead
         [:> TableRow
-         [:> TableCell "PTV-tietue"]
-         [:> TableCell "Arvo"]]]
+         [:> TableCell (tr :ptv.preview/record)]
+         [:> TableCell (tr :ptv.preview/value)]]]
 
        [:> TableBody
-        (row {:label "Tila"
+        (row {:label (tr :ptv.preview/status)
               :value (if synced?
                        (:publishingStatus preview)
-                       (str (:publishingStatus preview) " (esikatselu, ei vielä viety)"))
-              :tooltip "Integraation PTV:hen viemät kohteet julkaistaan automaattisesti. Vedokseksi vieminen ei ole tuettu."})
+                       (str (:publishingStatus preview) (tr :ptv.preview/not-yet-exported)))
+              :tooltip (tr :ptv.preview/tt-status)})
 
-        (row {:label "Kielet"
+        (row {:label (tr :ptv.preview/languages)
               :value (join (:languages preview))
-              :tooltip "Kielet, joilla kunta on ilmoittanut haluavansa kuvata palvelut ja palvelupaikat kun integraatio on otettu käyttöön ensimmäisen kerran. Ota yhteyttä lipasinfo@jyu.fi mikäli haluat muuttaa kielivalintoja."})
+              :tooltip (tr :ptv.preview/tt-languages)})
 
-        (row {:label "Nimi suomeksi"
+        (row {:label (tr :ptv.preview/name-fi)
               :value (get-name "Name" "fi")
-              :tooltip "Liikuntapaikan nimi Lipaksessa."})
+              :tooltip (tr :ptv.preview/tt-site-name-fi)})
 
-        (row {:label "Nimi ruotsiksi"
+        (row {:label (tr :ptv.preview/name-se)
               :value (get-name "Name" "sv")
-              :tooltip (str "Liikuntapaikan nimi ruotsiksi Lipaksessa."
-                            " "
-                            lang-disclaimer)})
+              :tooltip (str (tr :ptv.preview/tt-site-name-se) " " lang-disclaimer)})
 
-        (row {:label "Nimi englanniksi"
+        (row {:label (tr :ptv.preview/name-en)
               :value (get-name "Name" "en")
-              :tooltip (str "Liikuntapaikan nimi englanniksi Lipaksessa."
-                            " "
-                            lang-disclaimer)})
+              :tooltip (str (tr :ptv.preview/tt-site-name-en) " " lang-disclaimer)})
 
-        (row {:label "Vaihtoehtoinen nimi"
+        (row {:label (tr :ptv.preview/alternative-name)
               :value (get-name "AlternativeName" "fi")
-              :tooltip "Liikuntapaikan markkinointinimi Lipaksessa."})
+              :tooltip (tr :ptv.preview/tt-alternative-name)})
 
-        (row {:label "Ensisijainen nimitieto"
+        (row {:label (tr :ptv.preview/primary-name-type)
               :value (->> preview :displayNameType first :type)
-              :tooltip "Tämä arvo on aina \"Name\"."})
+              :tooltip (tr :ptv.preview/tt-primary-name-type)})
 
-        (row {:label "Maa"
+        (row {:label (tr :ptv.preview/country)
               :value (->> preview :addresses first :country)
-              :tooltip "Tämä arvo on aina \"FI\""})
+              :tooltip (tr :ptv.preview/tt-country)})
 
-        (row {:label "Katuosoite"
+        (row {:label (tr :ptv.preview/street-address)
               :value (-> preview :addresses first :streetAddress :street first :value)
-              :tooltip "Liikuntapaikan katuosoite Lipaksessa."})
+              :tooltip (tr :ptv.preview/tt-street-address)})
 
-        (row {:label "Postinumero"
+        (row {:label (tr :ptv.preview/postal-code)
               :value (-> preview :addresses first :streetAddress :postalCode)
-              :tooltip "Liikuntapaikan postinumero Lipaksessa."})
+              :tooltip (tr :ptv.preview/tt-postal-code)})
 
-        (row {:label "Koordinaatit"
+        (row {:label (tr :ptv.preview/coordinates)
               :value (str "(E) "
                           (-> preview :addresses first :streetAddress :longitude)
                           " (N) "
                           (-> preview :addresses first :streetAddress :latitude))
-              :tooltip "Liikuntapaikan geometrian koordinaatit Lipaksessa muutettuna PTV:n käyttämään ETRS-TM35FIN koordinaatistoon. Aluemaisissa liikuntapaikoissa valitaan keskipiste, reiteissä aloituspiste."})
+              :tooltip (tr :ptv.preview/tt-coordinates)})
 
-        (row {:label "Sähköpostiosoitteet"
+        (row {:label (tr :ptv.preview/emails)
               :value (->> preview :emails (map :value) join)
-              :tooltip "Liikuntapaikan sähköpostiosoite Lipaksessa."})
+              :tooltip (tr :ptv.preview/tt-emails)})
 
-        (row {:label "Web-sivut"
+        (row {:label (tr :ptv.preview/web-pages)
               :value (->> preview :webPages (map :url) join)
-              :tooltip "Liikuntapaikan www-osoite Lipaksessa."})
+              :tooltip (tr :ptv.preview/tt-web-pages)})
 
-        (row {:label "Puhelinnumerot"
+        (row {:label (tr :ptv.preview/phone-numbers)
               :value (->> preview
                           :phoneNumbers
                           (map (fn [{:keys [number prefixNumber isFinnishServiceNumber]}]
-                                 (str prefixNumber " " number (when isFinnishServiceNumber " (suomalainen palvelunumero)"))))
+                                 (str prefixNumber " " number
+                                      (when isFinnishServiceNumber
+                                        (tr :ptv.preview/finnish-service-number)))))
                           join)
-              :tooltip "Liikuntapaikan puhelinnumero Lipaksessa."})
+              :tooltip (tr :ptv.preview/tt-phone-numbers)})
 
-        (row {:label "Tiivistelmä suomeksi"
+        (row {:label (tr :ptv.preview/summary-fi)
               :value (get-desc "Summary" "fi")
               :tooltip tt-summary})
 
-        (row {:label "Tiivistelmä ruotsiksi"
+        (row {:label (tr :ptv.preview/summary-se)
               :value (get-desc "Summary" "sv")
               :tooltip (str tt-summary " " lang-disclaimer)})
 
-        (row {:label "Tiivistelmä englanniksi"
+        (row {:label (tr :ptv.preview/summary-en)
               :value (get-desc "Summary" "en")
               :tooltip (str tt-summary " " lang-disclaimer)})
 
-        (row {:label "Kuvaus suomeksi"
+        (row {:label (tr :ptv.preview/description-fi)
               :value (get-desc "Description" "fi")
               :tooltip tt-description})
 
-        (row {:label "Kuvaus ruotsiksi"
+        (row {:label (tr :ptv.preview/description-se)
               :value (get-desc "Description" "sv")
               :tooltip (str tt-description " " lang-disclaimer)})
 
-        (row {:label "Kuvaus englanniksi"
+        (row {:label (tr :ptv.preview/description-en)
               :value (get-desc "Description" "en")
               :tooltip (str tt-description " " lang-disclaimer)})
 
-        (row {:label "Organisaation ID"
+        (row {:label (tr :ptv.preview/organization-id)
               :value (:organizationId preview)
-              :tooltip "Organisaatio (kunta) joka käyttää integraatiota."})
+              :tooltip (tr :ptv.preview/tt-organization-id)})
 
-        (row {:label "Palveluiden ID:t"
+        (row {:label (tr :ptv.preview/service-ids)
               :value (join (:services preview))
-              :tooltip "Palvelut joihin palvelupaikka liitetään PTV:ssä."})]]]]))
+              :tooltip (tr :ptv.preview/tt-service-ids)})]]]]))
 
 (defn add-service-create-form
   "Form for creating a new PTV service for a sub-category.

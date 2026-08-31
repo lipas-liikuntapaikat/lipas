@@ -50,7 +50,7 @@
 
    :ptv/manage {:doc "Oikeus nähdä PTV dialogi ja PTV välilehti paikoilla"}
 
-   :ptv/audit {:doc "Oikeus auditoida PTV integraatiossa olevien liikuntapaikkojen kuvauksia"}
+   :ptv/audit {:doc "Oikeus katselmoida PTV integraatiossa olevien liikuntapaikkojen kuvauksia"}
    :jobs/manage {:doc "Oikeus hallita taustaprosesseja"}
 
    :itrs/edit {:doc "Oikeus muokata ITRS-luokitustietoja"}})

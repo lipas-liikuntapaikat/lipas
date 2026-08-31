@@ -1,3 +1,4 @@
 {:canceling "Peruutetaan... Odota hetki",
  :start-helper
- "Voit muokata tekoälyn tekemiä luonnoksia sitä mukaa kuin ne valmistuvat."}
+ "Voit muokata tekoälyn tekemiä luonnoksia sitä mukaa kuin ne valmistuvat.",
+ :no-lipas-data "Tekoälykuvauksia ei voi luoda muille kuin Lipaksen perustamille palveluille. Lipaksessa ei ole taustatietoa kuvausten pohjaksi."}

@@ -647,20 +647,36 @@
   (fn [audit [_ field]]
     (get-in audit [:status field])))
 
+;; Two views of an item's audit record. The *persisted* one is what the
+;; backend last stored; the *edited* one is the unsaved draft when the
+;; auditor has one, and the persisted record otherwise.
+;;
+;; Only the audit form reads the edited view. The item lists, their status
+;; dots and the whose-move bucket tabs all read persisted data, so a verdict
+;; the auditor is still working on never re-colours an item or moves it to
+;; another tab (see ::update-audit-status in the events ns).
+
+(defn- site-audit-persisted
+  [db lipas-id]
+  (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
+    (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit])))
+
+(defn- site-audit-edited
+  [db lipas-id]
+  (or (get-in db [:ptv :audit :site-draft lipas-id])
+      (site-audit-persisted db lipas-id)))
+
 (rf/reg-sub ::site-audit-data
   (fn [db [_ lipas-id]]
-    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
-      (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit]))))
+    (site-audit-edited db lipas-id)))
 
 (rf/reg-sub ::site-audit-field-feedback
   (fn [db [_ lipas-id field]]
-    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
-      (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field :feedback]))))
+    (get-in (site-audit-edited db lipas-id) [field :feedback])))
 
 (rf/reg-sub ::site-audit-field-status
   (fn [db [_ lipas-id field]]
-    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
-      (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field :status]))))
+    (get-in (site-audit-edited db lipas-id) [field :status])))
 
 (rf/reg-sub ::site-audit-field-display
   ;; Audit field verdict + its whose-move state against the persisted site
@@ -735,6 +751,41 @@
   (fn [ptv _]
     (get-in ptv [:audit :selected-tab] "waiting-audit")))
 
+;; Item ordering in the audit lists. Shared by both sections so the auditor
+;; sets it once; newest activity first by default, which is the order
+;; auditors work in.
+
+(rf/reg-sub ::audit-sort
+  :<- [::audit]
+  (fn [audit _]
+    (get audit :sort-by :date)))
+
+(defn- iso->epoch
+  "Millisecond epoch for an ISO-8601 timestamp, or nil when it won't parse.
+  LIPAS stamps nanosecond precision and PTV milliseconds, and js/Date only
+  parses three fractional digits reliably — so trim the rest first."
+  [s]
+  (when (string? s)
+    (let [t (.getTime (js/Date. (str/replace s #"(\.\d{3})\d+" "$1")))]
+      (when-not (js/isNaN t) t))))
+
+(defn- sort-audit-items
+  "Order one bucket's items.
+
+  :name — the long-standing order: items already in the audit sample first,
+  then alphabetically.
+
+  :date — newest activity first, activity being the item's last verdict when
+  it has one and the content's own modification date otherwise. Items with
+  neither date sort last."
+  [sort-key {:keys [name-fn audit-ts-fn content-ts-fn]} items]
+  (let [name-key #(or (name-fn %) "")]
+    (case sort-key
+      :date (sort-by (juxt #(- (or (iso->epoch (or (audit-ts-fn %) (content-ts-fn %))) 0))
+                           name-key)
+                     items)
+      (sort-by (juxt #(if (audit-ts-fn %) 0 1) name-key) items))))
+
 ;; Whose-move audit workflow (see lipas.data.ptv/audit-bucket):
 ;; an item is in the audit sample when it has an audit record; within the
 ;; sample it sits in exactly one bucket: :waiting-audit (auditor's move),
@@ -746,8 +797,9 @@
 
 (rf/reg-sub ::auditable-sites
   (fn [[_ _org-id _bucket]]
-    [(rf/subscribe [::ptv])])
-  (fn [[ptv] [_ org-id bucket]]
+    [(rf/subscribe [::ptv])
+     (rf/subscribe [::audit-sort])])
+  (fn [[ptv sort-key] [_ org-id bucket]]
     (->> (vals (get-in ptv [:org org-id :data :sports-sites] {}))
          (filter (fn [site]
                    (let [b (ptv-data/audit-bucket
@@ -760,10 +812,10 @@
                        (or (= :waiting-audit b)
                            (and (nil? b) (site-has-audit-content? site)))
                        (= bucket b)))))
-         ;; in-flight items (partially audited / changed since verdict) first
-         (sort-by (juxt (fn [site]
-                          (if (get-in site [:ptv :audit :timestamp]) 0 1))
-                        :name)))))
+         (sort-audit-items sort-key
+                           {:name-fn :name
+                            :audit-ts-fn #(get-in % [:ptv :audit :timestamp])
+                            :content-ts-fn :event-date}))))
 
 (rf/reg-sub ::audit-sample-sites
   ;; every site in the audit sample, regardless of bucket
@@ -791,21 +843,23 @@
   (fn [audit _]
     (:notification-dialog audit)))
 
-;; Dirty tracking: every save appends a revision and re-anchors verdict
-;; snapshots, so the save button requires actual input since the last
-;; save (set by the ::update-*-audit-* events, cleared on save success
-;; and org switch). Stale verdicts are the exception — re-confirming one
-;; without touching the form is a meaningful save (see site-form).
+;; Dirty tracking: an item is dirty exactly while it holds an unsaved draft
+;; (written by the ::update-*-audit-* events, dropped on save success and org
+;; switch). Every save appends a revision and re-anchors verdict snapshots, so
+;; the save button requires actual input since the last save. Stale verdicts
+;; are the exception — re-confirming one without touching the form is a
+;; meaningful save (see site-form). Also drives the list items' unsaved-changes
+;; chip, the only trace of a draft the item lists show.
 
 (rf/reg-sub ::site-audit-dirty?
   :<- [::audit]
   (fn [audit [_ lipas-id]]
-    (boolean (get-in audit [:site-dirty lipas-id]))))
+    (contains? (:site-draft audit) lipas-id)))
 
 (rf/reg-sub ::service-audit-dirty?
   :<- [::audit]
   (fn [audit [_ service-id]]
-    (boolean (get-in audit [:service-dirty (str service-id)]))))
+    (contains? (:service-draft audit) (str service-id))))
 
 (rf/reg-sub ::site-audit-notification-counts
   ;; {:action-count n :approved-count n} for the send-notification button:
@@ -830,20 +884,29 @@
   (fn [db [_ org-id]]
     (get-in db [:ptv :org org-id :data :service-docs])))
 
+;; Persisted vs. edited, exactly as on the site side above.
+
+(defn- service-audit-persisted
+  [db service-id]
+  (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
+    (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit])))
+
+(defn- service-audit-edited
+  [db service-id]
+  (or (get-in db [:ptv :audit :service-draft (str service-id)])
+      (service-audit-persisted db service-id)))
+
 (rf/reg-sub ::service-audit-data
   (fn [db [_ service-id]]
-    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
-      (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit]))))
+    (service-audit-edited db service-id)))
 
 (rf/reg-sub ::service-audit-field-status
   (fn [db [_ service-id field]]
-    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
-      (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit field :status]))))
+    (get-in (service-audit-edited db service-id) [field :status])))
 
 (rf/reg-sub ::service-audit-field-feedback
   (fn [db [_ service-id field]]
-    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
-      (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit field :feedback]))))
+    (get-in (service-audit-edited db service-id) [field :feedback])))
 
 (rf/reg-sub ::service-audit-field
   ;; Full audit field map (incl. :audited-content snapshot) — the caller
@@ -893,8 +956,9 @@
 
 (rf/reg-sub ::auditable-services
   (fn [[_ org-id _bucket]]
-    (rf/subscribe [::services-with-audit org-id]))
-  (fn [services [_ _ bucket]]
+    [(rf/subscribe [::services-with-audit org-id])
+     (rf/subscribe [::audit-sort])])
+  (fn [[services sort-key] [_ _ bucket]]
     (->> services
          (filter (fn [svc]
                    (let [b (ptv-data/audit-bucket
@@ -907,10 +971,10 @@
                        (or (= :waiting-audit b)
                            (and (nil? b) (service-has-audit-content? svc)))
                        (= bucket b)))))
-         ;; in-flight items (partially audited / changed since verdict) first
-         (sort-by (juxt (fn [svc]
-                          (if (get-in svc [:audit :timestamp]) 0 1))
-                        :label)))))
+         (sort-audit-items sort-key
+                           {:name-fn :label
+                            :audit-ts-fn #(get-in % [:audit :timestamp])
+                            :content-ts-fn :last-modified}))))
 
 (rf/reg-sub ::audit-sample-services
   ;; every service in the audit sample, regardless of bucket
