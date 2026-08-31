@@ -2166,22 +2166,25 @@
                 :gap 2}}
 
       [:> Stack {:direction "row" :align-items "center" :spacing 2}
-       (when (and org-data (not loading?))
-         [:> Tabs
-          {:value selected-tab
-           :on-change #(==> [::events/select-tab %2])
-           :textColor "primary"
-           :indicatorColor "secondary"
-           :sx #js {:flex 1}}
+       ;; The tabs slot takes the row's slack whether or not the tabs are
+       ;; rendered yet, so the org selector stays in the top right corner
+       ;; instead of jumping there once an org has been picked.
+       [:> Box {:sx #js {:flex 1}}
+        (when (and org-data (not loading?))
+          [:> Tabs
+           {:value selected-tab
+            :on-change #(==> [::events/select-tab %2])
+            :textColor "primary"
+            :indicatorColor "secondary"}
 
-          (when has-manage-privilege?
-            [:> Tab {:value "wizard" :label (tr :ptv/wizard)}])
-          (when has-manage-privilege?
-            [:> Tab {:value "services" :label (tr :ptv/services)}])
-          (when has-manage-privilege?
-            [:> Tab {:value "sports-sites" :label (tr :ptv/sports-sites)}])
-          (when has-audit-privilege?
-            [:> Tab {:value "audit" :label (tr :ptv.audit/tab-label)}])])
+           (when has-manage-privilege?
+             [:> Tab {:value "wizard" :label (tr :ptv/wizard)}])
+           (when has-manage-privilege?
+             [:> Tab {:value "services" :label (tr :ptv/services)}])
+           (when has-manage-privilege?
+             [:> Tab {:value "sports-sites" :label (tr :ptv/sports-sites)}])
+           (when has-audit-privilege?
+             [:> Tab {:value "audit" :label (tr :ptv.audit/tab-label)}])])]
        (when admin?
          [:> Tooltip {:title (tr :ptv.actions/refresh-data)}
           [:span
