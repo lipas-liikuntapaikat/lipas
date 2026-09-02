@@ -11,6 +11,7 @@
     [clojure.string :as str]
     [clojure.test :refer [deftest is testing]]
     [lipas.backend.api.v1.handlers :as v1-handlers]
+    [lipas.backend.kb :as kb]
     [lipas.data.bulk-operations :as bulk-ops]
     [lipas.data.prop-types :as prop-types]
     [lipas.data.types :as types]
@@ -57,8 +58,13 @@
     (testing (str k " is not in prop-types/active")
       (is (not (contains? prop-types/active k))))
 
-    (testing (str k " is not offered as a report column")
-      (is (not (contains? reports/visible-fields (str "properties." (name k))))))
+    (testing (str k " is not named by any knowledge base document")
+      ;; The assistant grounds answers on these docs, so a deprecated prop
+      ;; named here contradicts `lookup_type_code`, which filters it out.
+      (let [prop-name (get-in prop-types/all [k :name :fi])
+            docs (kb/code-data->docs)]
+        (is (not-any? #(= (str "prop:" (name k) ":fi") (:id %)) docs))
+        (is (not-any? #(str/includes? (str (:body %)) prop-name) docs))))
 
     (testing (str k " is not offered as a bulk-edit field")
       (doseq [type-code (keys (filter #(contains? (:props (val %)) k) types/all))]
@@ -67,8 +73,10 @@
 (deftest deprecated-props-are-still-accepted-by-the-apis
   (doseq [k (keys prop-types/deprecated)]
     (testing (str k " remains an exportable report field")
-      ;; `reports/fields` backs the API's report-field enum. A client that has
-      ;; always exported this column keeps getting it.
+      ;; `reports/fields` backs both the API's report-field enum and the
+      ;; column picker in the UI (`lipas.ui.reports.db/default-db`). Reports
+      ;; export data that already exists, so a client — or a saved report
+      ;; template — that has always exported this column keeps getting it.
       (is (contains? reports/fields (str "properties." (name k)))))
 
     (testing (str k " remains in the legacy v1 type definitions")

@@ -278,12 +278,6 @@
     meta-fields
     prop-fields))
 
-(def visible-fields
-  "`fields` minus the deprecated props. The API still accepts every key in
-  `fields` — a client that has always exported a now-deprecated column keeps
-  getting it — but the UI only offers these."
-  (apply dissoc fields (map #(str "properties." (name %)) (keys prop-types/deprecated))))
-
 (def default-fields
   (select-keys fields ["lipas-id"
                        "name"

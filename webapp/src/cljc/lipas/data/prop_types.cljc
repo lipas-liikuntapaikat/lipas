@@ -2197,8 +2197,12 @@
   (into {} (filter (comp #{"deprecated"} :status val)) all))
 
 (def active
-  "`all` minus the deprecated prop types — what the UI offers for editing,
-  filtering and reporting.
+  "`all` minus the deprecated prop types — what the UI offers for editing and
+  filtering, and what the assistant's knowledge base is built from.
+
+  Reports are deliberately not filtered: they export data that already exists,
+  so a deprecated column stays selectable and keeps working in saved report
+  templates.
 
   Note this is \"not deprecated\" rather than `lipas.data.types/active`'s
   \"explicitly active\": every entry carries a `:status` today, but a new one
