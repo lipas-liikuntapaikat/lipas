@@ -30,6 +30,11 @@
    :supporting-structures materials/supporting-structures
    :ceiling-structures    materials/ceiling-structures
    :base-floor-structures materials/base-floor-structures
+   ;; Deliberately narrower than the full surface-materials enum: carpet
+   ;; and resin are floorball field concepts and natural-surface is a
+   ;; deprecated duplicate of soil — none may be offered for the
+   ;; site-level prop. Legacy stored values outside this list still
+   ;; render (the selector falls back to materials/all labels).
    :surface-materials     materials/sports-site-surface-materials
 
    :delete-dialog

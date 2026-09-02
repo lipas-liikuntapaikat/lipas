@@ -158,8 +158,14 @@
                     "sand-infilled-artificial-turf" "resin" "natural-surface"
                     "carpet"]))
 
+;; Deliberately narrower than the full enum. carpet and resin are
+;; floorball *field* surface materials (see field-surface-materials) — a
+;; carpet is a movable overlay, not a permanent surface in the LIPAS
+;; sense. natural-surface (2023 routes-era addition) is a deprecated
+;; near-duplicate of soil ("Maa/luonnonmukainen"); data is normalized to
+;; soil, but the value stays in the enum so historical revisions validate.
 (def sports-site-surface-materials
-  (dissoc surface-materials "carpet" "natural-surface" "resin"))
+  (dissoc surface-materials "carpet" "resin" "natural-surface"))
 
 (def field-surface-materials
   (select-keys surface-materials ["resin" "wood" "synthetic" "carpet"]))

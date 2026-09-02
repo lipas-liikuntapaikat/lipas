@@ -1,4 +1,7 @@
 {:headline "Olosuhteet"
+ :derive-button "Laske olosuhdetiedoista"
+ :derive-info
+ "Kohteelle on kirjattu kenttäkohtaiset olosuhdetiedot. Voit laskea niistä arvot osalle lisätiedoista. Kentät säilyvät muokattavina laskennan jälkeen."
  :disclaimer-1
  "Olosuhteet-välilehdellä olevat tiedot liittyvät liikuntapaikan lajiolosuhteisiin esim. ottelu- tai pelitapahtumien aikana. Tiedot täydentävät liikuntapaikan muuta tietosisältöä esim. lajiliiton ylläpitämällä tiedolla."
  :disclaimer-2

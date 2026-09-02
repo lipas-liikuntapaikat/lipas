@@ -1,57 +1,14 @@
 (ns lipas.ui.sports-sites.floorball.events
-  (:require [clojure.string :as str]
-            [lipas.data.materials :as materials]
-            [lipas.ui.sports-sites.events :as sports-sites.events]
-            [lipas.ui.sports-sites.floorball.db :as floorball]
+  (:require [lipas.ui.sports-sites.floorball.db :as floorball]
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
-(def surface-materials-set (into #{} (keys materials/sports-site-surface-materials)))
-
-(defn pos
-  [x]
-  (when (pos? x) x))
-
-(def prop-k->derive-fn
-  {:field-length-m         (fn [sports-site]
-                             (->> sports-site :fields first second :length-m))
-   :field-width-m          (fn [sports-site]
-                             (->> sports-site :fields first second :width-m))
-   :height-m               (fn [sports-site]
-                             (->> sports-site :fields first second :minimum-height-m))
-   :area-m2                (fn [sports-site]
-                             (->> sports-site :fields vals
-                                  (keep :surface-area-m2)
-                                  (apply +)
-                                  pos))
-   :surface-material       (fn [sports-site]
-                             (->> sports-site
-                                  :fields
-                                  vals
-                                  (keep :surface-material)
-                                  distinct
-                                  (filter surface-materials-set)))
-   :surface-material-info  (fn [sports-site]
-                             (->> sports-site :fields vals (keep :surface-material-product)
-                                  (str/join ", ")))
-   :floorball-fields-count (fn [sports-site]
-                             (->> sports-site :fields count))
-   :stand-capacity-person (fn [sports-site]
-                            (->> sports-site :fields vals
-                                 (keep :stands-total-capacity-person)
-                                 (apply +)
-                                 pos))})
-
-(defmethod sports-sites.events/calc-derived-fields-for-type 2240
-  [sports-site]
-  (-> sports-site
-      (update :properties (fn [props]
-                            (reduce-kv
-                              (fn [props prop-k derive-fn]
-                                (let [v (derive-fn sports-site)]
-                                  (assoc props prop-k v)))
-                              props
-                              prop-k->derive-fn)))))
+;; NOTE: props derivation from :fields used to happen here automatically on
+;; every edit (calc-derived-fields-for-type 2240). It stamped nil/""/0 over
+;; the props whenever :fields was empty, which both blocked saving (schema
+;; rejects nil props) and wiped legacy hand-entered values. Derivation is
+;; now an explicit one-off action in the properties form, backed by
+;; lipas.data.floorball/derive-props.
 
 (rf/reg-event-db ::set-dialog-field
   (fn [db [_ dialog field value]]

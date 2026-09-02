@@ -1,0 +1,4 @@
+{:ns lipas.migrations.clean-invalid-surface-materials
+ :up-fn migrate-up
+ :down-fn migrate-down
+ :transaction? true}
