@@ -6,6 +6,7 @@
   return normally (job completed) or throw (job retried / dead-lettered
   by the worker)."
   (:require
+    [lipas.backend.address.core :as address]
     [lipas.backend.analysis.diversity :as diversity]
     [lipas.backend.config :as config]
     [lipas.backend.core :as core]
@@ -89,6 +90,14 @@
 
     ;; Default email handling
     (email/send! emailer payload)))
+
+(defmethod handle-job "fetch-paavo-areas"
+  [{:keys [db]} _job]
+  (address/refresh-paavo-areas! db))
+
+(defmethod handle-job "fetch-postal-data"
+  [{:keys [db]} _job]
+  (address/refresh-postal-data! db))
 
 (defmethod handle-job "gdpr-removals"
   [{:keys [db]} {:keys [payload]}]

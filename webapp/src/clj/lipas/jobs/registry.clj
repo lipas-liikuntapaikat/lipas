@@ -127,6 +127,27 @@
     :priority 95
     :max-attempts 3}
 
+   "fetch-paavo-areas"
+   {:doc "Import Tilastokeskus Paavo postal code area polygons."
+    :payload-schema [:map]
+    :lane :slow
+    ;; The whole layer is one ~3000-polygon GeoJSON download.
+    :timeout-min 30
+    :priority 20
+    :max-attempts 3
+    :dedup-key-fn (fn [_] "fetch-paavo-areas")}
+
+   "fetch-postal-data"
+   {:doc "Import Posti's latest PCF (postal codes) and BAF (street segments)."
+    :payload-schema [:map]
+    :lane :slow
+    ;; BAF is ~400k rows; the download plus the table swap dominate.
+    :timeout-min 30
+    :priority 20
+    :max-attempts 3
+    ;; The daily scheduler tick coalesces into a run that is still pending.
+    :dedup-key-fn (fn [_] "fetch-postal-data")}
+
    "gdpr-removals"
    {:doc "Anonymize users inactive for >5 years (GDPR retention)."
     :payload-schema [:map

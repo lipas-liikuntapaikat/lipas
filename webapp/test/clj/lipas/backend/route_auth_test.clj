@@ -62,6 +62,10 @@
     [:post "/api/actions/find-fields"]
     [:post "/api/actions/get-front-page-stats"]
     [:post "/api/actions/get-help-data"]
+    ;; Open data (Posti, Paavo, Digitransit) about a point the caller already
+    ;; knows; serves the public map's reverse lookup. Coordinates are bounded
+    ;; to Finland by the query schema.
+    [:get "/api/actions/reverse-geocode"]
 
     ;; --- Search & reporting over the open data ---------------------------
     ;; Bodies reaching Elasticsearch are validated by
