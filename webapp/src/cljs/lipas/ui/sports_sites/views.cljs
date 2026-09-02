@@ -451,9 +451,6 @@
 (defn retkikartta? [k]
   (= k :may-be-shown-in-excursion-map-fi?))
 
-(defn harrastuspassi? [k]
-  (= k :may-be-shown-in-harrastuspassi-fi?))
-
 (defn retkikartta-field
   [{:keys [tr on-change problems?] :as props}]
   (let [message (tr :retkikartta/disclaimer)
@@ -466,16 +463,6 @@
      (when problems?
        [:> Typography {:color "error"}
         (tr :map/retkikartta-problems-warning)])]))
-
-(defn harrastuspassi-field
-  [{:keys [tr on-change] :as props}]
-  (let [message (tr :harrastuspassi/disclaimer)
-        on-change* (fn [v]
-                     (if (true? v)
-                       (==> [:lipas.ui.events/confirm message (partial on-change v)])
-                       (on-change v)))]
-    [:<>
-     [checkboxes/checkbox (assoc props :on-change on-change*)]]))
 
 (defn route-length-km-field
   [{:keys [tr geoms on-change] :as props}]
@@ -643,12 +630,6 @@
                          :on-change on-change
                          :tooltip tooltip
                          :problems? problems?}]
-      (harrastuspassi? k) [harrastuspassi-field
-                           {:tr tr
-                            :value value
-                            :on-change on-change
-                            :tooltip tooltip}]
-
       (show-calc? k geom-type) [route-length-km-field
                                 {:tr tr
                                  :value value
@@ -800,12 +781,6 @@
                                   :on-change on-change
                                   :tooltip tooltip
                                   :problems? problems?}]
-               (harrastuspassi? k) [harrastuspassi-field
-                                    {:tr tr
-                                     :value value
-                                     :on-change on-change
-                                     :tooltip tooltip}]
-
                (show-calc? k geom-type) [route-length-km-field
                                          {:tr tr
                                           :value value

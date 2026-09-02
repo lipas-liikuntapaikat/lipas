@@ -30,6 +30,14 @@
 (def sub-category (m/schema (into [:enum] (keys types/sub-categories))))
 (def prop-type-key (m/schema (into [:enum] (keys prop-types/all))))
 
+(def prop-type-status
+  (m/schema
+    (into [:enum {:description (str "Lifecycle of the property. \"deprecated\" means it is no longer "
+                                    "maintained and is hidden in the LIPAS UI, but it is still "
+                                    "accepted and returned by the APIs so that values stored "
+                                    "before the deprecation are not lost.")}]
+          (keys prop-types/statuses))))
+
 (def type
   (m/schema
     [:map {:description "Metadata definition for a specific sports facility type in LIPAS"}
@@ -58,6 +66,7 @@
         [:name #'common/localized-string]
         [:description #'common/localized-string]
         [:data-type [:enum "numeric" "boolean" "enum" "enum-coll" "string"]]
+        [:status {:optional true} #'prop-type-status]
         [:opts {:optional true}
          [:map-of
           [:string {:min 2 :max 200}]

@@ -135,9 +135,11 @@
        (str "Unsupported type: " data-type)])))
 
 (defn- get-available-properties
-  "Returns a vector of all available properties with their metadata for autocomplete"
+  "Returns a vector of all available properties with their metadata for
+  autocomplete. Deprecated props are left out — they can still be queried
+  through the API, just not offered as a filter here."
   []
-  (->> prop-types/all
+  (->> prop-types/active
        (map (fn [[prop-key prop-def]]
               {:key prop-key
                :label (get-in prop-def [:name :fi] (name prop-key))

@@ -110,11 +110,13 @@
       (seq opts) (assoc :opts (normalize-opts opts)))))
 
 (defn property-fields
-  "Ordered property field specs common to ALL `type-codes` (their intersection).
-  Empty when the selection shares no property (or is empty). Sorted by Finnish
-  label for a stable, human-readable order."
+  "Ordered property field specs common to ALL `type-codes` (their intersection),
+  minus the deprecated props — those keep their stored values but are not
+  offered for editing. Empty when the selection shares no property (or is
+  empty). Sorted by Finnish label for a stable, human-readable order."
   [type-codes]
   (->> (types/common-prop-keys type-codes)
+       (remove prop-types/deprecated?)
        (map property-field)
        (sort-by (comp :fi :label))
        vec))

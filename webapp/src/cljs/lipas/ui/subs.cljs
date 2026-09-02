@@ -1,5 +1,6 @@
 (ns lipas.ui.subs
   (:require [clojure.string :refer [upper-case]]
+            [lipas.data.prop-types :as prop-types]
             [lipas.data.types :as types]
             [lipas.ui.lazy :as lazy]
             [re-frame.core :as rf]))
@@ -105,7 +106,12 @@
     [(rf/subscribe [:lipas.ui.sports-sites.subs/active-types])])
   (fn [[active-types] _]
     (for [[type-code type-data] active-types]
-      (types/->type (assoc type-data :type-code type-code)))))
+      (-> (assoc type-data :type-code type-code)
+          types/->type
+          ;; `types/->type` is shared with the API, which still lists
+          ;; deprecated props. The help explorer documents the UI, so it
+          ;; leaves them out.
+          (update :props #(remove (comp prop-types/deprecated? :key) %))))))
 
 (comment ((comp (fnil upper-case "?") first) ""))
 (comment ((comp (fnil upper-case "?") first) "kis"))

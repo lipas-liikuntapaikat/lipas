@@ -237,16 +237,18 @@
   (fn [sports-sites _]
     (-> sports-sites :prop-types)))
 
+;; Deprecated prop-types are dropped here (and only here) for the whole
+;; properties form: the values stay in the site data and are saved back
+;; untouched, they just have no field to edit or display them.
 (rf/reg-sub ::types-props
   :<- [::active-types]
   :<- [::prop-types]
-  (fn [[types prop-types] [_ type-code]]
-    (let [props (-> (types type-code) :props)]
-      (reduce (fn [res [k v]]
-                (let [prop-type (prop-types k)]
-                  (assoc res k (merge prop-type v))))
-              {}
-              props))))
+  (fn [[types prop-type-defs] [_ type-code]]
+    (->> (-> (types type-code) :props)
+         (remove (comp prop-types/deprecated? key))
+         (reduce (fn [res [k v]]
+                   (assoc res k (merge (prop-type-defs k) v)))
+                 {}))))
 
 (rf/reg-sub ::prop-type
   :<- [::prop-types]
