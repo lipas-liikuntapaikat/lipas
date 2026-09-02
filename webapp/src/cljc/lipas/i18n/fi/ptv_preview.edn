@@ -1,0 +1,97 @@
+;; Labels and tooltips for the two PTV preview tables: the Service preview
+;; (Palvelut tab) and the ServiceLocation preview (site view / audit form).
+;; Keys prefixed tt- are the row tooltips explaining where a value comes from.
+{;; Table chrome
+ :record "PTV-tietue",
+ :value "Arvo",
+ :tooltip-missing "Selite puuttuu",
+
+ ;; Section headers / intros
+ :integration-content "PTV-integraation sisältö",
+ :service-location-intro
+ "Näyttää kuinka liikuntapaikka on integroitu PTV-järjestelmään. Vie hiiren osoitin rivin päälle nähdäksesi tiedon alkuperän.",
+ :service-intro
+ "Esikatselu näyttää palvelun perustiedot ennen PTV-julkaisua. Vie hiiren osoitin rivin päälle nähdäksesi tiedon alkuperän.",
+
+ ;; Shared rows
+ :status "Tila",
+ :not-yet-exported " (esikatselu, ei vielä viety)",
+ :tt-status
+ "Integraation PTV:hen viemät kohteet julkaistaan automaattisesti. Vedokseksi vieminen ei ole tuettu.",
+ :name-fi "Nimi suomeksi",
+ :name-se "Nimi ruotsiksi",
+ :name-en "Nimi englanniksi",
+ :summary-fi "Tiivistelmä suomeksi",
+ :summary-se "Tiivistelmä ruotsiksi",
+ :summary-en "Tiivistelmä englanniksi",
+ :description-fi "Kuvaus suomeksi",
+ :description-se "Kuvaus ruotsiksi",
+ :description-en "Kuvaus englanniksi",
+ :lang-disclaimer
+ "Tieto täytetään vain mikäli integraation käyttöönoton yhteydessä on ilmoitettu että palvelupaikat halutaan kuvata tällä kielellä. Ota yhteyttä lipasinfo@jyu.fi mikäli haluat muuttaa kielivalintoja.",
+ :tt-summary
+ "Tiivistelmä on integraation käyttäjän syöttämä tieto. Mahdollisesti tekoälyn avulla tuotettu.",
+ :tt-service-description
+ "Palvelun kuvaus on integraation käyttäjän syöttämä tieto. Mahdollisesti tekoälyn avulla tuotettu.",
+ :tt-service-location-description
+ "Palvelupaikan kuvaus on integraation käyttäjän syöttämä tieto. Mahdollisesti tekoälyn avulla tuotettu.",
+
+ ;; ServiceLocation rows
+ :languages "Kielet",
+ :tt-languages
+ "Kielet, joilla kunta on ilmoittanut haluavansa kuvata palvelut ja palvelupaikat kun integraatio on otettu käyttöön ensimmäisen kerran. Ota yhteyttä lipasinfo@jyu.fi mikäli haluat muuttaa kielivalintoja.",
+ :tt-site-name-fi "Liikuntapaikan nimi Lipaksessa.",
+ :tt-site-name-se "Liikuntapaikan nimi ruotsiksi Lipaksessa.",
+ :tt-site-name-en "Liikuntapaikan nimi englanniksi Lipaksessa.",
+ :alternative-name "Vaihtoehtoinen nimi",
+ :tt-alternative-name "Liikuntapaikan markkinointinimi Lipaksessa.",
+ :primary-name-type "Ensisijainen nimitieto",
+ :tt-primary-name-type "Tämä arvo on aina \"Name\".",
+ :country "Maa",
+ :tt-country "Tämä arvo on aina \"FI\"",
+ :street-address "Katuosoite",
+ :tt-street-address "Liikuntapaikan katuosoite Lipaksessa.",
+ :postal-code "Postinumero",
+ :tt-postal-code "Liikuntapaikan postinumero Lipaksessa.",
+ :coordinates "Koordinaatit",
+ :tt-coordinates
+ "Liikuntapaikan geometrian koordinaatit Lipaksessa muutettuna PTV:n käyttämään ETRS-TM35FIN koordinaatistoon. Aluemaisissa liikuntapaikoissa valitaan keskipiste, reiteissä aloituspiste.",
+ :emails "Sähköpostiosoitteet",
+ :tt-emails "Liikuntapaikan sähköpostiosoite Lipaksessa.",
+ :web-pages "Web-sivut",
+ :tt-web-pages "Liikuntapaikan www-osoite Lipaksessa.",
+ :phone-numbers "Puhelinnumerot",
+ :tt-phone-numbers "Liikuntapaikan puhelinnumero Lipaksessa.",
+ :finnish-service-number " (suomalainen palvelunumero)",
+ :organization-id "Organisaation ID",
+ :tt-organization-id "Organisaatio (kunta) joka käyttää integraatiota.",
+ :service-ids "Palveluiden ID:t",
+ :tt-service-ids "Palvelut joihin palvelupaikka liitetään PTV:ssä.",
+
+ ;; Service rows
+ :tt-service-name
+ "Lipaksen luokittelu (pääryhmä → alaryhmä → liikuntapaikkatyyppi) määrittää palvelun nimen. PTV-palvelu luodaan alaryhmätason mukaan ja se saa nimekseen alaryhmän nimen.",
+ :type "Tyyppi",
+ :tt-type "Palvelun tyyppi on aina \"Service\".",
+ :service-classes "Palveluluokat",
+ :tt-service-classes
+ "PTV:n ohjeistuksen mukaiset palveluluokat on määritelty jokaiselle Lipaksen liikuntapaikkatyypin alaryhmälle ja ne tulevat palvelun tietoihin automaattisesti.",
+ :target-groups "Kohderyhmät",
+ :tt-target-groups "Palvelun kohderyhmä on aina \"Kansalaiset\"",
+ :ontology-terms "Ontologiatermit",
+ :tt-ontology-terms
+ "Ontologiatermit, eli PTV:n ohjeistuksen mukaiset avainsanat, on määritetty jokaiselle Lipaksen liikuntapaikkaluokittelun pää- ja alaryhmälle, ja ne lisätään palvelun tietoihin automaattisesti.",
+ :funding "Rahoitus",
+ :tt-funding "Rahoitustyyppi on aina \"Julkisesti rahoitettu\".",
+ :service-producers "Palveluntuottajat",
+ :tt-service-producers
+ "Palveluntuottaja on se organisaatio (kunta), joka on ottanut integraation käyttöön.",
+ :provision-type "Tuotantotapa",
+ :tt-provision-type "Palvelun tuotantotapa on aina \"Itse tuotettu\".",
+ :main-organization "Vastuuorganisaatio",
+ :tt-main-organization "Organisaatio (kunta) joka käyttää integraatiota.",
+ :area-type "Alueen tyyppi",
+ :tt-area-type "Alueen tyyppi on aina \"Kunta\".",
+ :area-codes "Alueen koodit",
+ :tt-area-codes
+ "Alueen koodi on integraation käyttöön ottaneen organisaation (kunnan) kuntanumero."}

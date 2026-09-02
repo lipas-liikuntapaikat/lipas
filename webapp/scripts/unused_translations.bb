@@ -3,42 +3,64 @@
 ;;
 ;; Usage:
 ;;   bb scripts/unused_translations.bb                     # Report unused keys
+;;   bb scripts/unused_translations.bb --lang en           # Compare against the en dictionary
 ;;   bb scripts/unused_translations.bb --edn               # Report as EDN
 ;;   bb scripts/unused_translations.bb --remove --dry-run  # Preview removal
 ;;   bb scripts/unused_translations.bb --remove            # Remove unused keys
+;;
+;; The reference language decides which keys exist at all: only keys defined in
+;; that language's EDN files are analysed. fi is the default because it is the
+;; fallback locale and the one that is always complete. Run it against en or se
+;; to catch keys that were added to one locale and never to fi — those are
+;; invisible to a fi-based run, and being absent from the fallback they cannot
+;; render for anyone.
 
 (require '[clojure.edn :as edn]
-         '[clojure.string :as str]
          '[clojure.java.io :as io]
+         '[clojure.string :as str]
          '[rewrite-clj.zip :as z])
 
 ;; === Configuration ===
 
 (def i18n-base "src/cljc/lipas/i18n")
-(def cljs-src "src/cljs")
+(def src-dirs ["src/cljs" "src/cljc"])
 (def utils-file "src/cljc/lipas/i18n/utils.cljc")
 (def langs ["fi" "se" "en"])
-(def ref-lang "fi")
 
-;; Namespaces where keys are known to be constructed dynamically at runtime.
-;; All keys in these namespaces are considered "used" regardless of static analysis.
-;; Additional dynamic namespaces are auto-detected by scanning for (keyword :ns expr)
-;; patterns where the key part is not a literal.
-;; Keep this set for namespaces that are hard to detect automatically (e.g. the key
-;; construction happens in data, not in a (keyword ...) call visible to regex).
+;; Keys constructed dynamically at runtime are considered "used" regardless of
+;; static analysis. The exemption map is ns -> :all | #{"key-prefix" ...}:
+;;
+;;   :all        the whole namespace is unanalysable, because some call builds a
+;;               key from an opaque expression — (keyword :accessibility f)
+;;   #{"pfx-"}   only keys starting with one of these prefixes are unanalysable,
+;;               because every call for that ns has a literal prefix —
+;;               (keyword "ptv" (str "filter-" (name status-filter))) can only
+;;               ever produce :ptv/filter-*, so the rest of :ptv stays checkable
+;;
+;; Both are auto-detected. Keep entries below only for namespaces that are hard
+;; to detect automatically (key construction happens in data, not in a
+;; (keyword ...) call visible to regex).
 (def hardcoded-exempt-namespaces
-  #{"pool-types"
-    "pool-structures"})
+  {"pool-types" :all
+   "pool-structures" :all})
 
-;; Will be set! after scanning source files
+;; Will be bound after scanning source files
 (def ^:dynamic *all-exempt-namespaces* hardcoded-exempt-namespaces)
 
-(defn exempt-ns?
-  "Check if a namespace is exempt (exact match or sub-namespace of an exempt ns)"
-  [ns-name]
-  (some #(or (= ns-name %)
-             (str/starts-with? ns-name (str % ".")))
-        *all-exempt-namespaces*))
+(defn exempt-key?
+  "Is this qualified key unreachable by static analysis? True when its namespace
+  is exempt wholesale, when it matches one of its namespace's dynamic prefixes,
+  or when it lives under a wholesale-exempt parent namespace (nested EDN maps
+  produce ns.sub-keys, which the parent's dynamic construction can reach)."
+  [k]
+  (let [ns-name (namespace k)
+        spec (get *all-exempt-namespaces* ns-name)]
+    (boolean
+      (or (= :all spec)
+          (and (set? spec) (some #(str/starts-with? (name k) %) spec))
+          (some (fn [[n sp]]
+                  (and (= :all sp) (str/starts-with? ns-name (str n "."))))
+                *all-exempt-namespaces*)))))
 
 ;; === CLI ===
 
@@ -47,6 +69,21 @@
 (def dry-run? (or (contains? cli-args "--dry-run")
                   (contains? cli-args "-n")))
 (def edn-output? (contains? cli-args "--edn"))
+
+(defn- parse-ref-lang
+  "--lang <code> or --lang=<code>, defaulting to fi."
+  [args]
+  (let [v (or (second (drop-while #(not= "--lang" %) args))
+              (some #(second (re-matches #"--lang=(.+)" %)) args))]
+    (cond
+      (nil? v) "fi"
+      (some #{v} langs) v
+      :else (binding [*out* *err*]
+              (println (format "Unknown --lang %s, expected one of %s"
+                               (pr-str v) (str/join ", " langs)))
+              (System/exit 1)))))
+
+(def ref-lang (parse-ref-lang *command-line-args*))
 
 ;; === Phase 1: Collect Defined Keys ===
 
@@ -103,35 +140,54 @@
 
 ;; === Phase 2: Collect Used Keys ===
 
-(defn find-cljs-files []
-  (->> (file-seq (io/file cljs-src))
-       (filter #(str/ends-with? (.getName %) ".cljs"))
+(defn find-cljs-files
+  "Frontend sources that may reference translation keys. .cljc is included
+  because shared namespaces reference them too; the i18n dictionaries
+  themselves are .edn and so never match."
+  []
+  (->> (mapcat #(file-seq (io/file %)) src-dirs)
+       (filter #(let [n (.getName ^java.io.File %)]
+                  (or (str/ends-with? n ".cljs") (str/ends-with? n ".cljc"))))
        vec))
 
+(defn- merge-exempt-spec
+  "Combine two exemption specs for the same namespace. :all wins over prefixes —
+  one opaque call site makes the whole namespace unanalysable."
+  [a b]
+  (cond (or (= :all a) (= :all b)) :all
+        (nil? a) b
+        (nil? b) a
+        :else (into a b)))
+
 (defn extract-dynamic-namespaces
-  "Extract namespaces where keywords are constructed dynamically at runtime.
-   These namespaces should be treated as fully used since we can't statically
-   determine which keys will be generated.
+  "Extract namespaces where keywords are constructed dynamically at runtime,
+   as ns -> :all | #{\"prefix\" ...}. See *all-exempt-namespaces*.
    Matches patterns like:
-     (keyword \"ns\" (str ...))  (keyword :ns some-var)  (keyword :ns (name ...))"
+     (keyword \"ns\" (str \"pfx-\" ...))  (keyword :ns some-var)  (keyword :ns (name ...))"
   [content]
   ;; Collapse whitespace so multiline (keyword ...) calls become single-line for regex
-  (let [flat (str/replace content #"\s+" " ")]
-    (into #{}
-          (concat
-            ;; (keyword "ns" <non-literal>) — string namespace with dynamic key
-            ;; Catches: (keyword "lipas.sports-site" (str "name-localized-" (name l)))
-            (->> (re-seq #"\(keyword\s+\"([^\"]+)\"\s+(?!\")" flat)
-                 (map second))
-            ;; (keyword :ns <non-literal>) — keyword namespace with dynamic key
-            ;; Matches :ns followed by something that is NOT a literal string or keyword
-            ;; Catches: (keyword :accessibility f)
-            (->> (re-seq #"\(keyword\s+:([\w.\-]+)\s+(?![:\"])[a-z(]" flat)
-                 (map second))
-            ;; (keyword (str "ns/" <expr>)) — fully dynamic with string concat
-            ;; Catches: (keyword (str "ptv.audit.status/" status))
-            (->> (re-seq #"\(keyword\s+\(str\s+\"([^\"]+)/" flat)
-                 (map second))))))
+  (let [flat (str/replace content #"\s+" " ")
+        add (fn [m [ns spec]] (update m ns merge-exempt-spec spec))]
+    (reduce add {}
+            (concat
+              ;; (keyword "ns" (str "literal-prefix" <expr>)) — only that prefix
+              ;; is unanalysable. Catches:
+              ;;   (keyword "ptv" (str "filter-" (name status-filter)))
+              ;;   (keyword "lipas.sports-site" (str "name-localized-" (name l)))
+              (->> (re-seq #"\(keyword\s+\"([^\"]+)\"\s+\(str\s+\"([^\"]+)\"" flat)
+                   (map (fn [[_ ns pfx]] [ns #{pfx}])))
+              ;; (keyword "ns" <non-literal, no literal prefix>) — whole namespace
+              (->> (re-seq #"\(keyword\s+\"([^\"]+)\"\s+(?!\"|\(str\s+\")" flat)
+                   (map (fn [[_ ns]] [ns :all])))
+              ;; (keyword :ns <non-literal>) — keyword namespace with dynamic key
+              ;; Matches :ns followed by something that is NOT a literal string or keyword
+              ;; Catches: (keyword :accessibility f)
+              (->> (re-seq #"\(keyword\s+:([\w.\-]+)\s+(?![:\"])[a-z(]" flat)
+                   (map (fn [[_ ns]] [ns :all])))
+              ;; (keyword (str "ns/" <expr>)) — fully dynamic with string concat
+              ;; Catches: (keyword (str "ptv.audit.status/" status))
+              (->> (re-seq #"\(keyword\s+\(str\s+\"([^\"]+)/" flat)
+                   (map (fn [[_ ns]] [ns :all])))))))
 
 (defn extract-used-keys
   "Extract translation keys referenced in a ClojureScript source string."
@@ -152,7 +208,7 @@
                (map (fn [[_ ns-part key-part]] (keyword ns-part key-part)))))))
 
 (defn collect-used-keys
-  "Scan .cljs files, return map of keyword -> #{files}"
+  "Scan sources, return map of keyword -> #{files}"
   []
   (reduce
     (fn [acc f]
@@ -162,26 +218,50 @@
                 acc (extract-used-keys content))))
     {} (find-cljs-files)))
 
+(defn extract-mentioned-keys
+  "Every qualified keyword literal in a source string. A translation key can be
+  referenced without sitting in (tr ...) position — it may be held in a lookup
+  map and translated later:
+
+    (def dialog-body-keys {:modified :ptv/sync-failed-body-ptv-modified ...})
+
+  Treating any literal mention as a use keeps such keys out of the unused
+  report. It errs towards under-reporting, which is the right direction for a
+  tool that can delete translations."
+  [content]
+  (into #{}
+        (comp (map second)
+              (keep #(try (read-string %) (catch Exception _ nil)))
+              (filter keyword?))
+        (re-seq #"(?<![\w:/.-])(:[\w.<>?*+!=-]+/[\w.<>?*+!=-]+)" content)))
+
+(defn collect-mentioned-keys
+  "Union of every qualified keyword literal across the frontend sources."
+  []
+  (reduce (fn [acc f] (into acc (extract-mentioned-keys (slurp f))))
+          #{} (find-cljs-files)))
+
 (defn collect-dynamic-namespaces
   "Scan .cljs files for namespaces where keywords are constructed dynamically."
   []
   (reduce
     (fn [acc f]
-      (let [content (slurp f)]
-        (into acc (extract-dynamic-namespaces content))))
-    #{} (find-cljs-files)))
+      (merge-with merge-exempt-spec acc (extract-dynamic-namespaces (slurp f))))
+    {} (find-cljs-files)))
 
 ;; === Phase 3 & 4: Analysis & Reporting ===
 
-(defn analyze [defined used-map]
-  (let [used-set (set (keys used-map))
-        exempt (into {} (filter #(exempt-ns? (namespace (key %)))) defined)
-        analyzable (into {} (remove #(exempt-ns? (namespace (key %)))) defined)
+(defn analyze [defined used-map mentioned]
+  (let [;; `used-map` is (tr ...) call sites and drives the undefined-reference
+        ;; report; `mentioned` additionally covers keys referenced as plain data.
+        used-set (into (set (keys used-map)) mentioned)
+        exempt (into {} (filter #(exempt-key? (key %))) defined)
+        analyzable (into {} (remove #(exempt-key? (key %))) defined)
         unused (into {} (remove #(contains? used-set (key %))) analyzable)
         defined-set (set (keys defined))
         undefined (into {}
                         (remove #(or (contains? defined-set (key %))
-                                     (exempt-ns? (namespace (key %)))))
+                                     (exempt-key? (key %))))
                         used-map)
         unused-by-ns (group-by (comp namespace key) unused)
         analyzable-by-ns (group-by (comp namespace key) analyzable)
@@ -214,6 +294,7 @@
   (println "=== LIPAS Unused Translation Keys ===")
   (println)
   (println "Summary:")
+  (printf "  Reference language: %s%n" ref-lang)
   (printf "  Defined:  %,d keys across %d namespaces%n" defined-count ns-count)
   (printf "  Used:     %,d keys (static analysis)%n" used-count)
   (printf "  Exempt:   %,d keys (%d dynamic namespaces)%n"
@@ -253,7 +334,8 @@
 (defn edn-report [{:keys [defined-count ns-count used-count exempt-count
                           unused-count exempt-by-ns fully-unused
                           partially-unused undefined]}]
-  (prn {:summary {:defined defined-count :namespaces ns-count
+  (prn {:summary {:ref-lang ref-lang
+                  :defined defined-count :namespaces ns-count
                   :used used-count :exempt exempt-count :unused unused-count}
         :exempt-namespaces exempt-by-ns
         :fully-unused (update-vals fully-unused #(sort (map key %)))
@@ -342,15 +424,22 @@
 
 ;; === Main ===
 
-(let [_ (binding [*out* *err*] (println "Scanning translations..."))
+(let [_ (binding [*out* *err*]
+          (println (format "Scanning translations (reference language: %s)..." ref-lang)))
       dynamic-nss (collect-dynamic-namespaces)
       _ (when (seq dynamic-nss)
           (binding [*out* *err*]
-            (println "Auto-detected dynamic namespaces:" (str/join ", " (sort dynamic-nss)))))]
-  (binding [*all-exempt-namespaces* (into hardcoded-exempt-namespaces dynamic-nss)]
+            (println "Auto-detected dynamic namespaces:"
+                     (str/join ", " (for [[ns spec] (sort-by key dynamic-nss)]
+                                      (if (= :all spec)
+                                        ns
+                                        (str ns "/" (str/join "|" (sort spec)) "*")))))))]
+  (binding [*all-exempt-namespaces*
+            (merge-with merge-exempt-spec hardcoded-exempt-namespaces dynamic-nss)]
     (let [defined (collect-defined-keys)
           used (collect-used-keys)
-          results (analyze defined used)]
+          mentioned (collect-mentioned-keys)
+          results (analyze defined used mentioned)]
       (if edn-output?
         (edn-report results)
         (print-report results))

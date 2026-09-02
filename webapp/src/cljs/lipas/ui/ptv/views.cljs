@@ -2,6 +2,7 @@
   (:require ["@mui/icons-material/CheckCircle$default" :as CheckCircleIcon]
             ["@mui/icons-material/Close$default" :as CloseIcon]
             ["@mui/icons-material/HourglassTop$default" :as PartialIcon]
+            ["@mui/icons-material/Message$default" :as MessageIcon]
             ["@mui/icons-material/Sync$default" :as Sync]
             ["@mui/icons-material/SyncDisabled$default" :as SyncDisabled]
             ["@mui/icons-material/SyncProblem$default" :as SyncProblem]
@@ -12,7 +13,6 @@
             ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/AlertTitle$default" :as AlertTitle]
             ["@mui/material/AppBar$default" :as AppBar]
-            ["@mui/material/Avatar$default" :as Avatar]
             ;; clj-kondo false positive: `Box` collides with the cljs.core/Box
             ;; deftype, so the [:> Box ...] hiccup use below isn't recognized
             ;; as a use of this alias.
@@ -206,7 +206,7 @@
                draft-name (r/atom nil)]
     [editable-field
      {:tr tr
-      :label "Palvelun nimi"
+      :label (tr :ptv/service-name)
       :editing? @editing?
       :on-edit (fn []
                  (reset! draft-name display-name)
@@ -252,7 +252,7 @@
        ;; Services
        [ptv-link-field
         {:tr tr
-         :label (str (tr :ptv/services) " PTV:ssä")
+         :label (tr :ptv/in-ptv (tr :ptv/services))
          :items (for [s linked-services]
                   {:id (:service-id s)
                    :name (:label s)
@@ -276,7 +276,7 @@
          ;; Already linked - show link with edit option
          [ptv-link-field
           {:tr tr
-           :label (str (tr :ptv/service-channel) " PTV:ssä")
+           :label (tr :ptv/in-ptv (tr :ptv/service-channel))
            :items [{:id channel-id
                     :name channel-name
                     :url (when-not archived?
@@ -629,6 +629,35 @@
                 :missing-descriptions (not valid)
                 true)))))
 
+(defn- audit-feedback-text
+  "The auditor's comments on an item, one \"Tiivistelmä: …\" line per field
+   that has one."
+  [tr audit fields]
+  (->> fields
+       (keep (fn [field]
+               (when-let [feedback (not-empty (str/trim (str (get-in audit [field :feedback]))))]
+                 (str (tr (case field
+                            :summary :ptv/summary
+                            :description :ptv/description
+                            :user-instruction :ptv/user-instruction))
+                      ": " feedback))))
+       (str/join "\n")))
+
+(defn- audit-comment-marker
+  "Marker shown beside an approval symbol when the auditor approved the text
+   but left a comment. Deliberately grey: the colour vocabulary belongs to
+   the status symbol next to it, this one only says there is something to
+   read — which it carries in its own tooltip."
+  [{:keys [tr audit fields size]}]
+  (when-let [feedback (not-empty (audit-feedback-text tr audit fields))]
+    [:> Tooltip
+     {:title (r/as-element
+               ;; :color inherit — the tooltip paints its own light text on
+               ;; the dark surface, Typography's default would be near-black.
+               [:> Typography {:variant "body2" :sx #js {:whiteSpace "pre-line" :color "inherit"}}
+                (str (tr :ptv.audit/auditor-feedback) "\n" feedback)])}
+     [:> MessageIcon {:sx #js {:color "text.secondary" :width size :height size}}]]))
+
 (defn table []
   (r/with-let [expanded-rows (r/atom {})
                search-text (r/atom "")
@@ -644,39 +673,48 @@
           audit-status-cell (fn [site]
                               (let [{:keys [audit-status]} site
 
-                                    audit-data (get-in site [:ptv :audit])
-                                    last-audit (some-> audit-data :timestamp (subs 0 10))
+                                    audit-data (:audit site)
+                                    last-audit (some-> audit-data :timestamp utils/->human-date)
                                     summary-status (get-in audit-data [:summary :status])
                                     desc-status (get-in audit-data [:description :status])
 
                                     tooltip-text (case audit-status
                                                    :changes-requested
-                                                   (str "Muutoksia pyydetty "
+                                                   (str (tr :ptv.audit.status/changes-requested) " "
                                                         (when last-audit (str last-audit " - "))
-                                                        (when (= summary-status "changes-requested") "Tiivistelmä ")
-                                                        (when (= desc-status "changes-requested") "Kuvaus"))
+                                                        (when (= summary-status "changes-requested")
+                                                          (str (tr :ptv/summary) " "))
+                                                        (when (= desc-status "changes-requested")
+                                                          (tr :ptv/description)))
 
-                                                   :approved
-                                                   (str "Hyväksytty " (or last-audit ""))
+                                                   (:approved :approved-with-feedback)
+                                                   (str (tr :ptv.audit.status/approved) " " (or last-audit ""))
 
                                                    :partial
-                                                   (str "Osittain auditoitu " (or last-audit ""))
+                                                   (str (tr :ptv.audit/partially-audited) " " (or last-audit ""))
 
                                                    :none
-                                                   "Ei auditoitu")]
+                                                   (tr :ptv.audit/not-audited))]
 
                                 [:> TableCell {:sx #js{:textAlign "center"}}
                                  (when (not= audit-status :none)
-                                   [:> Tooltip {:title tooltip-text}
-                                    (case audit-status
-                                      :changes-requested
-                                      [:> WarningIcon {:sx #js{:color "warning.main" :fontSize "large" :width "32px" :height "32px"}}]
+                                   [:> Stack {:direction "row" :spacing 0.5
+                                              :alignItems "center" :justifyContent "center"}
+                                    [:> Tooltip {:title tooltip-text}
+                                     (case audit-status
+                                       :changes-requested
+                                       [:> WarningIcon {:sx #js{:color "warning.main" :fontSize "large" :width "32px" :height "32px"}}]
 
-                                      :approved
-                                      [:> CheckCircleIcon {:sx #js{:color "success.main" :fontSize "large" :width "32px" :height "32px"}}]
+                                       (:approved :approved-with-feedback)
+                                       [:> CheckCircleIcon {:sx #js{:color "success.main" :fontSize "large" :width "32px" :height "32px"}}]
 
-                                      :partial
-                                      [:> PartialIcon {:sx #js{:color "info.main" :fontSize "large" :width "32px" :height "32px"}}])])]))
+                                       :partial
+                                       [:> PartialIcon {:sx #js{:color "info.main" :fontSize "large" :width "32px" :height "32px"}}])]
+                                    (when (= audit-status :approved-with-feedback)
+                                      [audit-comment-marker {:tr tr
+                                                             :audit audit-data
+                                                             :fields [:summary :description]
+                                                             :size "20px"}])])]))
 
           headers [{:key :expand :label "" :padding "checkbox"}
                    #_{:key :selected :label (tr :ptv.actions/export)
@@ -686,8 +724,8 @@
                        {:value sync-all-enabled?
                         :on-change #(==> [::events/toggle-sync-all %2])}]}
                    #_{:key :auto-sync :label "Vie automaattisesti"}
-                   {:key :event-data :label "Integraatio" :sx {:textAlign "center"}}
-                   {:key :audit :label "Audit" :sx {:textAlign "center"}}
+                   {:key :event-data :label (tr :ptv/integration) :sx {:textAlign "center"}}
+                   {:key :audit :label (tr :ptv.audit/tab-label) :sx {:textAlign "center"}}
                    #_{:key :last-sync :label "Viety viimeksi"}
                    {:key :name :label (tr :general/name)}
                    {:key :type :label (tr :general/type)}
@@ -734,6 +772,7 @@
                                                       :partial 2 ; Needs completion
                                                       :none 3 ; Not audited
                                                       :approved 4 ; All good
+                                                      :approved-with-feedback 4 ; All good, with a remark
                                                       5)] ; Default/unknown
                                  [audit-priority (:type site)]))
                              filtered-sites)]
@@ -924,12 +963,13 @@
      [:> Button
       {:onClick (fn [_e]
                   (rf/dispatch [::events/set-step 1]))}
-      "Seuraava"
+      (tr :actions/next)
       [:> Icon "arrow_forward"]]]))
 
 (r/defc service-preview
   [{:keys [source-id sub-category-id]}]
-  (let [preview @(rf/subscribe [::subs/service-preview source-id sub-category-id])
+  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
+        preview @(rf/subscribe [::subs/service-preview source-id sub-category-id])
         row (fn [{:keys [label value tooltip]}]
               [:> Tooltip {:title tooltip}
                [:> TableRow
@@ -949,96 +989,96 @@
                                      join)
                                 "-"))
 
-        tt-name "Lipaksen luokittelu (pääryhmä → alaryhmä → liikuntapaikkatyyppi) määrittää palvelun nimen. PTV-palvelu luodaan alaryhmätason mukaan ja se saa nimekseen alaryhmän nimen."
-        tt-summary "Tiivistelmä on integraation käyttäjän syöttämä tieto. Mahdollisesti tekoälyn avulla tuotettu."
-        tt-description "Palvelun kuvaus on integraation käyttäjän syöttämä tieto. Mahdollisesti tekoälyn avulla tuotettu."
-        lang-disclaimer "Tieto täytetään vain mikäli integraation käyttöönoton yhteydessä on ilmoitettu että palvelupaikat halutaan kuvata tällä kielellä. Ota yhteyttä lipasinfo@jyu.fi mikäli haluat muuttaa kielivalintoja."]
+        tt-name (tr :ptv.preview/tt-service-name)
+        tt-summary (tr :ptv.preview/tt-summary)
+        tt-description (tr :ptv.preview/tt-service-description)
+        lang-disclaimer (tr :ptv.preview/lang-disclaimer)]
 
     [:> Stack {:spacing 2}
      [:> Paper {:sx #js{:p 2 :bgcolor mui/gray3}}
-      [:> Typography "Esikatselu näyttää palvelun perustiedot ennen PTV-julkaisua. Vie hiiren osoitin rivin päälle nähdäksesi tiedon alkuperän."]]
+      [:> Typography (tr :ptv.preview/service-intro)]]
 
      [:> Table {:variant "dense"}
       [:> TableHead
        [:> TableRow
-        [:> TableCell "PTV-tietue"]
-        [:> TableCell "Arvo"]]]
+        [:> TableCell (tr :ptv.preview/record)]
+        [:> TableCell (tr :ptv.preview/value)]]]
 
-      (row {:label "Tila"
+      (row {:label (tr :ptv.preview/status)
             :value (:publishingStatus preview)
-            :tooltip "Integraation PTV:hen viemät kohteet julkaistaan automaattisesti. Vedokseksi vieminen ei ole tuettu."})
+            :tooltip (tr :ptv.preview/tt-status)})
 
-      (row {:label "Nimi suomeksi" :value (get-name "fi") :tooltip tt-name})
+      (row {:label (tr :ptv.preview/name-fi) :value (get-name "fi") :tooltip tt-name})
 
-      (row {:label "Nimi ruotsiksi"
+      (row {:label (tr :ptv.preview/name-se)
             :value (get-name "sv")
             :tooltip (str tt-name " " lang-disclaimer)})
 
-      (row {:label "Nimi englanniksi"
+      (row {:label (tr :ptv.preview/name-en)
             :value (get-name "en")
             :tooltip (str tt-name " " lang-disclaimer)})
 
-      (row {:label "Tyyppi"
+      (row {:label (tr :ptv.preview/type)
             :value (:type preview)
-            :tooltip "Palvelun tyyppi on aina \"Service\"."})
+            :tooltip (tr :ptv.preview/tt-type)})
 
-      (row {:label "Palveluluokat"
+      (row {:label (tr :ptv.preview/service-classes)
             :value (join (:serviceClasses preview))
-            :tooltip "PTV:n ohjeistuksen mukaiset palveluluokat on määritelty jokaiselle Lipaksen liikuntapaikkatyypin alaryhmälle ja ne tulevat palvelun tietoihin automaattisesti."})
+            :tooltip (tr :ptv.preview/tt-service-classes)})
 
-      (row {:label "Kohderyhmät"
+      (row {:label (tr :ptv.preview/target-groups)
             :value (join (:targetGroups preview))
-            :tooltip "Palvelun kohderyhmä on aina \"Kansalaiset\""})
+            :tooltip (tr :ptv.preview/tt-target-groups)})
 
-      (row {:label "Ontologiatermit"
+      (row {:label (tr :ptv.preview/ontology-terms)
             :value (join (:ontologyTerms preview))
-            :tooltip "Ontologiatermit, eli PTV:n ohjeistuksen mukaiset avainsanat, on määritetty jokaiselle Lipaksen liikuntapaikkaluokittelun pää- ja alaryhmälle, ja ne lisätään palvelun tietoihin automaattisesti."})
+            :tooltip (tr :ptv.preview/tt-ontology-terms)})
 
-      (row {:label "Rahoitus"
+      (row {:label (tr :ptv.preview/funding)
             :value (:fundingType preview)
-            :tooltip "Rahoitustyyppi on aina \"Julkisesti rahoitettu\"."})
+            :tooltip (tr :ptv.preview/tt-funding)})
 
-      (row {:label "Palveluntuottajat"
+      (row {:label (tr :ptv.preview/service-producers)
             :value (join (:organizations (first (:serviceProducers preview))))
-            :tooltip "Palveluntuottaja on se organisaatio (kunta), joka on ottanut integraation käyttöön."})
+            :tooltip (tr :ptv.preview/tt-service-producers)})
 
-      (row {:label "Tuotantotapa"
+      (row {:label (tr :ptv.preview/provision-type)
             :value (:provisionType (first (:serviceProducers preview)))
-            :tooltip "Palvelun tuotantotapa on aina \"Itse tuotettu\"."})
+            :tooltip (tr :ptv.preview/tt-provision-type)})
 
-      (row {:label "Vastuuorganisaatio"
+      (row {:label (tr :ptv.preview/main-organization)
             :value (:mainResponsibleOrganization preview)
-            :tooltip "Organisaatio (kunta) joka käyttää integraatiota."})
+            :tooltip (tr :ptv.preview/tt-main-organization)})
 
-      (row {:label "Alueen tyyppi"
+      (row {:label (tr :ptv.preview/area-type)
             :value (-> preview :areas first :type)
-            :tooltip "Alueen tyyppi on aina \"Kunta\"."})
+            :tooltip (tr :ptv.preview/tt-area-type)})
 
-      (row {:label "Alueen koodit"
+      (row {:label (tr :ptv.preview/area-codes)
             :value (join (-> preview :areas first :areaCodes))
-            :tooltip "Alueen koodi on integraation käyttöön ottaneen organisaation (kunnan) kuntanumero."})
+            :tooltip (tr :ptv.preview/tt-area-codes)})
 
-      (row {:label "Tiivistelmä suomeksi"
+      (row {:label (tr :ptv.preview/summary-fi)
             :value (get-desc "Summary" "fi")
             :tooltip tt-summary})
 
-      (row {:label "Tiivistelmä ruotsiksi"
+      (row {:label (tr :ptv.preview/summary-se)
             :value (get-desc "Summary" "sv")
             :tooltip (str tt-summary " " lang-disclaimer)})
 
-      (row {:label "Tiivistelmä englanniksi"
+      (row {:label (tr :ptv.preview/summary-en)
             :value (get-desc "Summary" "en")
             :tooltip (str tt-summary " " lang-disclaimer)})
 
-      (row {:label "Kuvaus suomeksi"
+      (row {:label (tr :ptv.preview/description-fi)
             :value (get-desc "Description" "fi")
             :tooltip tt-description})
 
-      (row {:label "Kuvaus ruotsiksi"
+      (row {:label (tr :ptv.preview/description-se)
             :value (get-desc "Description" "sv")
             :tooltip (str tt-description " " lang-disclaimer)})
 
-      (row {:label "Kuvaus ruotsiksi"
+      (row {:label (tr :ptv.preview/description-en)
             :value (get-desc "Description" "en")
             :tooltip (str tt-description " " lang-disclaimer)})]]))
 
@@ -1140,7 +1180,7 @@
                [:> Button
                 {:onClick (fn [_e]
                             (rf/dispatch [::events/set-step 2]))}
-                "Seuraava"
+                (tr :actions/next)
                 [:> Icon "arrow_forward"]]]))
 
           [:div
@@ -1150,7 +1190,7 @@
                ^{:key sub-category-id}
                [layouts/expansion-panel
                 {:label (if linked?
-                          (str sub-category " (linkitetty)")
+                          (tr :ptv.wizard/linked-label sub-category)
                           sub-category)
                  :label-icon (cond
                                linked? [:> Icon {:color "info"} "link"]
@@ -1161,8 +1201,8 @@
                  [:> Tabs {:value service-details-tab
                            :indicatorColor "secondary"
                            :on-change #(==> [::events/select-service-details-tab %2])}
-                  [:> Tab {:value "descriptions" :label "Syötä kuvaukset"}]
-                  [:> Tab {:value "preview" :label "Esikatselu"}]]
+                  [:> Tab {:value "descriptions" :label (tr :ptv.wizard/enter-descriptions)}]
+                  [:> Tab {:value "preview" :label (tr :ptv.wizard/preview)}]]
 
                  ;; Enter descriptions form
                  (when (= "descriptions" service-details-tab)
@@ -1321,8 +1361,8 @@
         [:> Tabs {:value selected-tab2
                   :indicatorColor "secondary"
                   :on-change #(set-selected-tab2 %2)}
-         [:> Tab {:value "descriptions" :label "Syötä kuvaukset"}]
-         [:> Tab {:value "preview" :label "Esikatselu"}]]
+         [:> Tab {:value "descriptions" :label (tr :ptv.wizard/enter-descriptions)}]
+         [:> Tab {:value "preview" :label (tr :ptv.wizard/preview)}]]
 
         (when (= selected-tab2 "preview")
           [ptv-components/service-location-preview
@@ -1626,7 +1666,7 @@
         [:> Typography (tr :ptv.wizard/unselect-helper)]
 
         [:> Typography {:variant "body2" :sx #js{:mb 0 :mt 0}}
-         (str "Valittuna " sports-sites-count-sync "/" sports-sites-count " liikuntapaikkaa")]
+         (tr :ptv.wizard/selected-count sports-sites-count-sync sports-sites-count)]
 
         (let [{:keys [in-progress?
                       processed-count
@@ -1669,7 +1709,7 @@
           (tr :ptv.wizard/step3-instruction)]
 
          [:> Typography {:variant "body2"}
-          (str "Valittuna " sports-sites-count-sync "/" sports-sites-count " liikuntapaikkaa")]]
+          (tr :ptv.wizard/selected-count sports-sites-count-sync sports-sites-count)]]
 
         ;; Batch sync completion panel
         (let [{sync-in-progress? :in-progress?
@@ -1686,10 +1726,10 @@
                         :sx #js {:mb 2}}
               [:> AlertTitle
                (if sync-halt?
-                 "Vienti keskeytyi"
-                 "Vienti valmis")]
+                 (tr :ptv.wizard/export-halted)
+                 (tr :ptv.wizard/export-complete))]
               [:> Typography {:variant "body2"}
-               (str sync-processed-count "/" sync-total " liikuntapaikkaa viety PTV:hen.")]
+               (tr :ptv.wizard/export-result sync-processed-count sync-total)]
               (when sync-halt?
                 [:> Typography {:variant "body2" :sx #js {:mt 1}}
                  (tr :ptv.wizard/export-error-try-again)])
@@ -1698,17 +1738,17 @@
                 {:size "small" :variant "outlined"
                  :sx #js {:textTransform "none"}
                  :on-click #(==> [::events/reset-wizard])}
-                "Aloita uusi vienti"]
+                (tr :ptv.wizard/start-new-export)]
                [:> Button
                 {:size "small" :variant "outlined"
                  :sx #js {:textTransform "none"}
                  :on-click #(==> [::events/select-tab "sports-sites"])}
-                "Siirry Liikuntapaikat-välilehdelle"]
+                (tr :ptv.wizard/go-to-sports-sites-tab)]
                [:> Button
                 {:size "small" :variant "outlined"
                  :sx #js {:textTransform "none"}
                  :on-click #(==> [::events/select-tab "services"])}
-                "Siirry Palvelut-välilehdelle"]]])
+                (tr :ptv.wizard/go-to-services-tab)]]])
 
            [:> Stack
             (for [{:keys [lipas-id valid name-conflict sync-enabled service-ids service-channel-ids] :as site} sports-sites]
@@ -1806,7 +1846,7 @@
        [:> Stack {:direction "row" :spacing 1 :flex-wrap "wrap" :align-items "flex-start"}
         [:> Tooltip {:title (if has-lipas-data?
                               ""
-                              "Tekoälykuvauksia ei voi luoda muille kuin Lipaksen perustamille palveluille. Lipaksessa ei ole taustatietoa kuvausten pohjaksi.")}
+                              (tr :ptv.tools.ai/no-lipas-data))}
          [:span
           [:> Button
            {:variant "outlined" :size "small"
@@ -1971,17 +2011,22 @@
           ;; Audit state indicator so a pending change request is visible
           ;; in the listing without opening the service (tester finding #3)
           service-audit (<== [::subs/service-audit-data (:service-id service)])
-          audit-bucket (ptv-data/audit-bucket
-                         service-audit
-                         (ptv-data/service-audit-fields ptv-texts))
+          audit-fields (ptv-data/service-audit-fields ptv-texts)
+          audit-bucket (ptv-data/audit-bucket service-audit audit-fields)
           audit-icon (case audit-bucket
                        :waiting-fixes
                        [:> Tooltip {:title (tr :ptv.audit.status/changes-requested)}
                         [:> WarningIcon {:sx #js {:color "warning.main"}}]]
 
                        :done
-                       [:> Tooltip {:title (tr :ptv.audit.status/approved)}
-                        [:> CheckCircleIcon {:sx #js {:color "success.main"}}]]
+                       [:> Stack {:direction "row" :spacing 0.5 :alignItems "center"}
+                        [:> Tooltip {:title (tr :ptv.audit.status/approved)}
+                         [:> CheckCircleIcon {:sx #js {:color "success.main"}}]]
+                        (when (ptv-data/approved-with-feedback? service-audit audit-fields)
+                          [audit-comment-marker {:tr tr
+                                                 :audit service-audit
+                                                 :fields [:summary :description :user-instruction]
+                                                 :size "16px"}])]
 
                        :waiting-audit
                        [:> Tooltip {:title (tr :ptv.audit/audit-in-progress)}
@@ -2100,7 +2145,7 @@
        [:> StepButton
         {:color "inherit"
          :onClick (partial set-step 0)}
-        "1. Valitse liikuntapaikat"]]
+        (str "1. " (tr :ptv.wizard/select-sports-sites))]]
       [:> Step
        {:key "2"
         :completed services-done?}
@@ -2119,65 +2164,6 @@
        0 [set-types]
        1 [create-services]
        2 [integrate-service-locations])]))
-
-(defn site-list-item
-  [{:keys [site selected? on-select]}]
-  (let [audit-data (get-in site [:ptv :audit])
-        summary-status (get-in audit-data [:summary :status])
-        desc-status (get-in audit-data [:description :status])
-
-        ;; Calculate completion status
-        status-indicator (cond
-                           (and summary-status desc-status) "completed"
-                           (or summary-status desc-status) "partial"
-                           :else "todo")
-
-        ;; Style based on status
-        status-color (case status-indicator
-                       "completed" "success.main"
-                       "partial" "warning.main"
-                       "todo" "info.main")
-
-        ;; Last audit date or empty string
-        last-audit-date (when (or summary-status desc-status)
-                          (some-> audit-data :timestamp (subs 0 10)))]
-
-    [:div {:key (:lipas-id site)}
-     [:> Paper
-      {:sx #js{:p 2
-               :mb 2
-               :border (when selected? "2px solid")
-               :borderColor (when selected? "primary.main")
-               :cursor "pointer"}
-       :elevation (if selected? 3 1)
-       :onClick #(on-select site)}
-
-      [:> Stack {:direction "row" :spacing 2 :alignItems "center"}
-
-         ;; Status indicator
-       [:> Avatar
-        {:sx #js{:bgcolor status-color
-                 :color "white"
-                 :width 10
-                 :height 10}}]
-
-         ;; Site name and details
-       [:> Stack {:sx #js{:flex 1}}
-        [:> Typography
-         {:variant "subtitle1"
-          :component "div"
-          :sx #js {:fontWeight (when selected? "bold")}}
-         (:name site)]
-
-          ;; Show audit status if available
-        (when (or summary-status desc-status)
-          [:> Typography
-           {:variant "caption" :color "text.secondary"}
-           (str "Last audit: " last-audit-date)
-           (when summary-status
-             (str ", Summary: " summary-status))
-           (when desc-status
-             (str ", Description: " desc-status))])]]]]))
 
 (defn dialog
   [{:keys [tr]}]
@@ -2223,22 +2209,25 @@
                 :gap 2}}
 
       [:> Stack {:direction "row" :align-items "center" :spacing 2}
-       (when (and org-data (not loading?))
-         [:> Tabs
-          {:value selected-tab
-           :on-change #(==> [::events/select-tab %2])
-           :textColor "primary"
-           :indicatorColor "secondary"
-           :sx #js {:flex 1}}
+       ;; The tabs slot takes the row's slack whether or not the tabs are
+       ;; rendered yet, so the org selector stays in the top right corner
+       ;; instead of jumping there once an org has been picked.
+       [:> Box {:sx #js {:flex 1}}
+        (when (and org-data (not loading?))
+          [:> Tabs
+           {:value selected-tab
+            :on-change #(==> [::events/select-tab %2])
+            :textColor "primary"
+            :indicatorColor "secondary"}
 
-          (when has-manage-privilege?
-            [:> Tab {:value "wizard" :label (tr :ptv/wizard)}])
-          (when has-manage-privilege?
-            [:> Tab {:value "services" :label (tr :ptv/services)}])
-          (when has-manage-privilege?
-            [:> Tab {:value "sports-sites" :label (tr :ptv/sports-sites)}])
-          (when has-audit-privilege?
-            [:> Tab {:value "audit" :label (tr :ptv.audit/tab-label)}])])
+           (when has-manage-privilege?
+             [:> Tab {:value "wizard" :label (tr :ptv/wizard)}])
+           (when has-manage-privilege?
+             [:> Tab {:value "services" :label (tr :ptv/services)}])
+           (when has-manage-privilege?
+             [:> Tab {:value "sports-sites" :label (tr :ptv/sports-sites)}])
+           (when has-audit-privilege?
+             [:> Tab {:value "audit" :label (tr :ptv.audit/tab-label)}])])]
        (when admin?
          [:> Tooltip {:title (tr :ptv.actions/refresh-data)}
           [:span

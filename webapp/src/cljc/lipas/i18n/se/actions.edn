@@ -39,5 +39,4 @@
  :select-year "Välj år",
  :show-account-menu "Öppna kontomeny",
  :submit "Skicka"
- :undo "Ångra"
- :update-n-sites "Uppdatera {1} sportplatser"}
+ :undo "Ångra"}

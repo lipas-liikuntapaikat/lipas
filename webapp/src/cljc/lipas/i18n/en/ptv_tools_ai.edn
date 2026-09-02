@@ -1,3 +1,4 @@
 {:canceling "Canceling... Please wait",
  :start-helper
- "You can edit the AI suggestions as they are completed."}
+ "You can edit the AI suggestions as they are completed.",
+ :no-lipas-data "AI descriptions can only be generated for services created by LIPAS. LIPAS has no background data to base the descriptions on."}

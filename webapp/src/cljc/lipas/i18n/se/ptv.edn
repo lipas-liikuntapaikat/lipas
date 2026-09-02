@@ -62,4 +62,7 @@
  :error-description-too-long "Beskrivningen är för lång (högst 5000 tecken)."
  :error-user-instruction-too-long "Användarinstruktionen är för lång (högst 5000 tecken)."
  :sync-failed-body-name-conflict "Namnet '{1}' används redan av ett annat serviceställe i organisationen i PTV. PTV kräver unika namn för serviceställen. Koppla idrottsanläggningen till det befintliga servicestället eller ändra namnet och försök igen."
- :saved-but-sync-failed-body-name-conflict "Namnet '{1}' används redan av ett annat serviceställe i organisationen i PTV. PTV kräver unika namn för serviceställen. Koppla idrottsanläggningen till det befintliga servicestället eller ändra namnet och spara igen."}
+ :saved-but-sync-failed-body-name-conflict "Namnet '{1}' används redan av ett annat serviceställe i organisationen i PTV. PTV kräver unika namn för serviceställen. Koppla idrottsanläggningen till det befintliga servicestället eller ändra namnet och spara igen.",
+ :in-ptv "{1} i PTV",
+ :service-name "Tjänstens namn",
+ :integration "Integration"}

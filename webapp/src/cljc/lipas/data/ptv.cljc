@@ -897,15 +897,32 @@
     {:action-items [] :approved-count 0}
     entries))
 
+(defn approved-with-feedback?
+  "True when every required field is approved as it stands (nothing fixed
+   and awaiting re-review) and the auditor still left a comment on at least
+   one of them. The listings give this its own symbol: the text passed, but
+   there is a remark worth reading."
+  [audit fields]
+  (let [states (audit-field-states audit fields)]
+    (and (seq states)
+         (every? #(= :approved %) (vals states))
+         (boolean (some #(not (str/blank? (get-in audit [% :feedback])))
+                        (keys states))))))
+
 (defn determine-audit-status
   "Audit indicator for a sports site row in the manager-facing listing.
    Derived from the whose-move field states so a municipality's fix clears
-   the changes-requested flag. Returns :approved (done), :changes-requested
-   (waiting for fixes), :partial (audit in progress) or :none."
+   the changes-requested flag. Returns :approved (done),
+   :approved-with-feedback (done, auditor left a comment),
+   :changes-requested (waiting for fixes), :partial (audit in progress) or
+   :none."
   [site]
-  (let [audit (get-in site [:ptv :audit])]
-    (case (audit-bucket audit (site-audit-fields site))
-      :done :approved
+  (let [audit (get-in site [:ptv :audit])
+        fields (site-audit-fields site)]
+    (case (audit-bucket audit fields)
+      :done (if (approved-with-feedback? audit fields)
+              :approved-with-feedback
+              :approved)
       :waiting-fixes :changes-requested
       :waiting-audit :partial
       :none)))
@@ -1215,6 +1232,10 @@
      ;; UUID it can no longer resolve to a name.
      :publishing-status (-> site :ptv :publishing-status)
 
+     ;; The audit record itself, so the listing can caption its status
+     ;; symbol (date + which field). This map replaces the site for the
+     ;; listing, so reading it back off :ptv there finds nothing.
+     :audit (-> site :ptv :audit)
      :audit-status (determine-audit-status (with-persisted-audit-content site))}))
 
 (defn sports-site->service-ids [types source-id->service sports-site]

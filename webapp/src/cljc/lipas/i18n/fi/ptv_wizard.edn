@@ -37,4 +37,15 @@
  :select-sub-categories "Valitse tyyppiluokat",
  :unselect-helper
  "Jos et halua viedä tiettyä kohdetta, voit avata\n     kohteen oikealta ja laittaa liukukytkimen pois päältä."
- :step3-instruction "Avaa liikuntapaikka listasta, laadi tai kirjoita kuvaukset ja kytke integraatio päälle liukukytkimellä."}
+ :step3-instruction "Avaa liikuntapaikka listasta, laadi tai kirjoita kuvaukset ja kytke integraatio päälle liukukytkimellä.",
+ :select-sports-sites "Valitse liikuntapaikat",
+ :linked-label "{1} (linkitetty)",
+ :enter-descriptions "Syötä kuvaukset",
+ :preview "Esikatselu",
+ :selected-count "Valittuna {1}/{2} liikuntapaikkaa",
+ :export-halted "Vienti keskeytyi",
+ :export-complete "Vienti valmis",
+ :export-result "{1}/{2} liikuntapaikkaa viety PTV:hen.",
+ :start-new-export "Aloita uusi vienti",
+ :go-to-sports-sites-tab "Siirry Liikuntapaikat-välilehdelle",
+ :go-to-services-tab "Siirry Palvelut-välilehdelle"}
