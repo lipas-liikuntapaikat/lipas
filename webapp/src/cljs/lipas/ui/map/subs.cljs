@@ -106,9 +106,11 @@
   ;; NOTE: This is JSON.parse result from the ajax call
   :<- [:lipas.ui.search.subs/search-results-fast]
   :<- [::editing-lipas-id]
-  (fn [[^js results lipas-id'] _]
+  :<- [:lipas.ui.subs/translator]
+  (fn [[^js results lipas-id' tr] _]
     (when results
-      (let [data (or (some-> results .-hits .-hits)
+      (let [locale-str (name (tr))
+            data (or (some-> results .-hits .-hits)
                      #js [])]
         (->> data
              (keep
@@ -129,7 +131,12 @@
                                                   (aget "features")))
                        type-code        (some-> obj (aget "type") (aget "type-code"))
                        lipas-id         (aget obj "lipas-id")
-                       name             (aget obj "name")
+                       ;; Localized name with mandatory Finnish :name as fallback
+                       name             (or (some-> obj
+                                                    (aget "name-localized")
+                                                    (aget locale-str)
+                                                    not-empty)
+                                            (aget obj "name"))
                        status           (aget obj "status")
                        travel-direction (aget obj "travel-direction")]
 

@@ -9,7 +9,8 @@
    these mapping changes - prune-es! empties docs but does not re-map an existing
    index, so the new analyzer/collation only appears on a recreated index. CI
    always starts fresh."
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [lipas.backend.core :as core]
             [lipas.test-utils :refer [<-json ->json] :as tu]
             [ring.mock.request :as mock]))
@@ -83,6 +84,59 @@
                            (mock/content-type "application/json")
                            (mock/body (->json body))))]
     (->> resp :body <-json :hits :hits (mapv (comp :name :_source)))))
+
+(defn- sorted-values
+  "Runs the production-shaped table sort (sort sub-field via the API) over the
+   'Kirjainkoko' test sites and returns `source-path` of each hit in order."
+  [sort-field order source-path]
+  (let [body {:size 50
+              :_source [(str/join "." (map name source-path))]
+              :sort [{sort-field {:order order}}]
+              :query {:simple_query_string {:query "Kirjainkoko*"
+                                            :fields ["name"]
+                                            :analyze_wildcard true}}}
+        resp (test-app (-> (mock/request :post "/api/actions/search")
+                           (mock/content-type "application/json")
+                           (mock/body (->json body))))]
+    (is (= 200 (:status resp)) (str "sorting by " sort-field " must not error"))
+    (->> resp :body <-json :hits :hits
+         (mapv #(get-in (:_source %) source-path)))))
+
+(deftest free-text-field-sort-test
+  ;; postal-office & co are user-entered free text with wildly mixed case.
+  ;; Raw keyword sort is code-point order, which puts every lowercase value
+  ;; after the entire uppercase alphabet (HELSINKI < VANTAA < espoo). The
+  ;; icu_collation_keyword `sort` sub-field orders case-insensitively (case
+  ;; only breaks ties, lowercase first). www/email/phone-number additionally
+  ;; used to be unindexed ({:enabled false}), so sorting them was an ES 400.
+  (doseq [[i [po www]] (map-indexed vector
+                                    [["VANTAA"   "www.d.fi"]
+                                     ["espoo"    "WWW.B.FI"]
+                                     ["Ähtäri"   "www.e.fi"]
+                                     ["HELSINKI" "www.a.fi"]
+                                     ["helsinki" "www.C.fi"]])]
+    (core/index! (test-search)
+                 (-> (tu/make-point-site (+ 980000 i) :name (str "Kirjainkoko " i))
+                     (assoc-in [:location :postal-office] po)
+                     (assoc :www www
+                            :email "info@example.fi"
+                            :phone-number "+358 40 123 4567"))
+                 :sync))
+
+  (testing "postal-office sorts case-insensitively in Finnish collation order"
+    (let [expected ["espoo" "helsinki" "HELSINKI" "VANTAA" "Ähtäri"]]
+      (is (= expected (sorted-values :location.postal-office.sort "asc"
+                                     [:location :postal-office])))
+      (is (= (reverse expected) (sorted-values :location.postal-office.sort "desc"
+                                               [:location :postal-office])))))
+
+  (testing "www sorts case-insensitively"
+    (is (= ["www.a.fi" "WWW.B.FI" "www.C.fi" "www.d.fi" "www.e.fi"]
+           (sorted-values :www.sort "asc" [:www]))))
+
+  (testing "email and phone-number sort without erroring"
+    (is (= 5 (count (sorted-values :email.sort "asc" [:email]))))
+    (is (= 5 (count (sorted-values :phone-number.sort "asc" [:phone-number]))))))
 
 (deftest locale-correct-name-sort-test
   ;; Finnish collation orders å, ä, ö after z (and å before ä). Raw code-point

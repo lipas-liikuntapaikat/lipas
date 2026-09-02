@@ -106,7 +106,10 @@
   (let [type-name (get-in m [:name lang])
         prop-names (->> (:props m)
                         keys
-                        (keep #(get-in prop-types/all [% :name lang]))
+                        ;; Deprecated props are hidden in the UI, so grounding
+                        ;; an answer on them would send users looking for a
+                        ;; field that isn't there.
+                        (keep #(get-in prop-types/active [% :name lang]))
                         sort)
         body (->> [(get-in m [:description lang])
                    ;; Colloquial synonyms — often the only bridge from how
@@ -254,7 +257,7 @@
     (for [lang langs, entry types/active
           :let [doc (type->doc lang entry)] :when doc]
       doc)
-    (for [lang langs, entry prop-types/all
+    (for [lang langs, entry prop-types/active
           :let [doc (prop->doc lang entry)] :when doc]
       doc)))
 

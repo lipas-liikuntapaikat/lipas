@@ -364,7 +364,10 @@
          :description (:description m)
          :geometry (:geometry-type m)
          :status (:status m)
+         ;; Deprecated props are hidden in the UI, so listing them here
+         ;; would only send users looking for a field that isn't there.
          :properties (->> (:props m) keys
+                          (remove prop-types/deprecated?)
                           (keep #(get-in prop-types/all [% :name :fi]))
                           sort vec)}
         {:candidates (kb/search-kb search {:query q :lang "fi" :limit 5})}))

@@ -43,8 +43,15 @@
              {}
              props-map))
 
+(def legacy-property-keys
+  "The legacy API publishes exactly these per property. Pinned here rather than
+  inherited from `prop-types/all`, so adding a key there (`:status`, say) can
+  never widen this frozen response shape."
+  [:name :description :data-type :opts])
+
 (defn fill-properties [m]
-  (assoc m :props (select-keys prop-types/all (keys (:props m)))))
+  (assoc m :props (-> (select-keys prop-types/all (keys (:props m)))
+                      (update-vals #(select-keys % legacy-property-keys)))))
 
 (defn localize-properties [m locale]
   (reduce (fn [acc k]

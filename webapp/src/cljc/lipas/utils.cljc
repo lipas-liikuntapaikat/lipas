@@ -257,3 +257,11 @@
         (not-empty (:fi m))
         (not-empty (:en m))
         (not-empty (:se m)))))
+
+(defn display-name
+  "Sports site name in `locale`, falling back to the mandatory Finnish
+  `:name` when a localized name doesn't exist. Unlike `localized` this
+  never falls back to another translation."
+  [site locale]
+  (or (not-empty (get-in site [:name-localized locale]))
+      (:name site)))
