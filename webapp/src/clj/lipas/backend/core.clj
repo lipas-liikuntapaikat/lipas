@@ -955,6 +955,17 @@
                                 distinct vec not-empty)
 
          search-meta {:name (utils/->sortable-name (:name sports-site))
+                      ;; Sort keys for the free-text columns the results table
+                      ;; offers. nil (→ field absent → sorts last) for values
+                      ;; that only look like content: blanks, and the "-" a
+                      ;; user types into a mandatory field they can't fill.
+                      ;; The document keeps whatever they entered.
+                      :sort {:marketing-name (utils/->sortable-text (:marketing-name sports-site))
+                             :www (utils/->sortable-text (:www sports-site))
+                             :email (utils/->sortable-text (:email sports-site))
+                             :phone-number (utils/->sortable-text (:phone-number sports-site))
+                             :address (utils/->sortable-text (-> sports-site :location :address))
+                             :postal-office (utils/->sortable-text (-> sports-site :location :postal-office))}
                       :admin {:name (-> sports-site :admin admins)}
                       :owner {:name (-> sports-site :owner owners)}
                       :owner-org-id owner-org-id
