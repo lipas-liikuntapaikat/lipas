@@ -272,8 +272,7 @@
   (r/with-let [open? (r/atom false)
                email (r/atom nil)]
     (let [tr (<== [:lipas.ui.subs/translator])
-          user (<== [:lipas.ui.user.subs/user-data])
-          _ (when user (reset! email (:email user)))]
+          user (<== [:lipas.ui.user.subs/user-data])]
       [:<>
 
        ;; Signup modal
@@ -320,7 +319,11 @@
        ;; Signup btn
        [:> Button
         {:color "secondary"
-         :on-click #(reset! open? true)}
+         :on-click (fn []
+                     ;; Prefill from logged in user, if any. Must not be done
+                     ;; during render or every keystroke gets overwritten.
+                     (reset! email (:email user))
+                     (reset! open? true))}
         (tr :newsletter/subscribe)]])))
 
 (defn newsletter []
