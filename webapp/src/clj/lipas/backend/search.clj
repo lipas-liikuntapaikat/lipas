@@ -8,6 +8,25 @@
 
 (def es-type "_doc") ; See https://bit.ly/2wslBqY
 
+(def max-result-window
+  "`index.max_result_window` for the sports-site index: the largest
+  `from + size` Elasticsearch will serve from a plain search.
+
+  ES defaults this to 10000. We raise it because the result table pages
+  through the whole corpus by page number (~57k active sites at the time of
+  writing), and `from + size` has to reach the last page. The frontend is
+  built around the same number: `lipas.ui.search.events/->es-search-body`
+  sends `:track_total_hits 60000` so the table's page count is exact all the
+  way out, and `lipas.backend.search-guard/max-from` caps untrusted paging
+  against this value.
+
+  Deep `from` paging makes every shard collect `from + size` hits in heap,
+  which is why ES caps it at all. The index has a single shard, so 60000 is
+  affordable — but the headroom over the corpus is only a few thousand
+  documents. Once it runs out the fix is `search_after` + a point-in-time,
+  not a bigger window."
+  60000)
+
 (def legacy-date-format "yyyy-MM-dd HH:mm:ss.SSS")
 
 (defn create-cli
@@ -282,7 +301,7 @@
                               disabled-fields)]
 
     {:settings
-     {:max_result_window 60000
+     {:max_result_window max-result-window
       :index {:mapping   {:total_fields {:limit total-fields-limit}}
               :analysis  folding-analysis}}
      :mappings
