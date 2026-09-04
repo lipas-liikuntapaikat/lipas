@@ -381,12 +381,16 @@
            (tr :ptv.audit/reaudit)]]))]))
 
 (defn- modified-caption
-  "One item's own last modification date, e.g. \"Muokattu viimeksi
-  10.08.2026\" — the site's latest LIPAS revision or the PTV service's
-  :modified. Printed on every item: it is the key the date ordering sorts on,
-  and naming it keeps it apart from the audit date on the line below."
-  [tr timestamp]
-  (when-let [d (some-> timestamp utils/->human-date)]
+  "When the audited content itself last changed, e.g. \"Muokattu viimeksi
+  10.08.2026\" — PTV's own :modified for the item, resolved by the
+  ::auditable-sites / ::auditable-services subs (see
+  attach-site-content-modified for why a site's :event-date is the wrong
+  source). Reading the same :content-modified the ordering sorts on keeps
+  the two honest about each other, and naming it keeps it apart from the
+  audit date on the line below. Nil for an item not in PTV yet — those get
+  no line rather than a misleading one."
+  [tr item]
+  (when-let [d (some-> (:content-modified item) utils/->human-date)]
     (str (tr :general/last-modified) " " d)))
 
 (defn- audit-status-caption
@@ -487,7 +491,7 @@
                     :variant "outlined"}])]
 
        ;; The content's own date, then the audit verdicts if any
-       (when-let [caption (modified-caption tr (:event-date site))]
+       (when-let [caption (modified-caption tr site)]
          [:> Typography
           {:variant "caption"
            :color "text.secondary"}
@@ -581,7 +585,7 @@
                     :variant "outlined"}])]
 
        ;; The content's own date, then the audit verdicts if any
-       (when-let [caption (modified-caption tr (:last-modified service))]
+       (when-let [caption (modified-caption tr service)]
          [:> Typography
           {:variant "caption"
            :color "text.secondary"}
