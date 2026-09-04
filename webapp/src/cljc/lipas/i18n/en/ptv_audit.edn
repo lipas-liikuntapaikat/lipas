@@ -60,7 +60,7 @@
  :unsaved-changes "Unsaved changes",
  :sort-by "Sort by",
  :sort-alphabetically "Alphabetical",
- :sort-by-date "By date",
+ :sort-by-modified "Last modified first",
  :service-location-preview "Service location preview",
  :partially-audited "Partially audited",
  :not-audited "Not audited"}

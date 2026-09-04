@@ -60,7 +60,7 @@
  :unsaved-changes "Osparade ändringar",
  :sort-by "Sortering",
  :sort-alphabetically "Alfabetisk",
- :sort-by-date "Efter datum",
+ :sort-by-modified "Senast ändrade först",
  :service-location-preview "Förhandsgranskning av serviceställe",
  :partially-audited "Delvis granskad",
  :not-audited "Inte granskad"}
