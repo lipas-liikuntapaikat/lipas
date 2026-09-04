@@ -752,13 +752,13 @@
     (get-in ptv [:audit :selected-tab] "waiting-audit")))
 
 ;; Item ordering in the audit lists. Shared by both sections so the auditor
-;; sets it once; newest activity first by default, which is the order
+;; sets it once; most recently edited first by default, which is the order
 ;; auditors work in.
 
 (rf/reg-sub ::audit-sort
   :<- [::audit]
   (fn [audit _]
-    (get audit :sort-by :date)))
+    (get audit :sort-by :modified)))
 
 (defn- iso->epoch
   "Millisecond epoch for an ISO-8601 timestamp, or nil when it won't parse.
@@ -775,15 +775,17 @@
   :name — the long-standing order: items already in the audit sample first,
   then alphabetically.
 
-  :date — newest activity first, activity being the item's last verdict when
-  it has one and the content's own modification date otherwise. Items with
-  neither date sort last."
+  :modified — most recently edited content first: the site's own last
+  modification (:event-date) or the PTV service's (:modified). This is the
+  date the list items print, so what the auditor reads is what the order is
+  built from. The last verdict only fills in for an item whose content
+  carries no date at all; items with neither sort last."
   [sort-key {:keys [name-fn audit-ts-fn content-ts-fn]} items]
   (let [name-key #(or (name-fn %) "")]
     (case sort-key
-      :date (sort-by (juxt #(- (or (iso->epoch (or (audit-ts-fn %) (content-ts-fn %))) 0))
-                           name-key)
-                     items)
+      :modified (sort-by (juxt #(- (or (iso->epoch (or (content-ts-fn %) (audit-ts-fn %))) 0))
+                               name-key)
+                         items)
       (sort-by (juxt #(if (audit-ts-fn %) 0 1) name-key) items))))
 
 ;; Whose-move audit workflow (see lipas.data.ptv/audit-bucket):

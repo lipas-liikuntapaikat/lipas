@@ -380,6 +380,15 @@
             :onClick #(set-reauditing true)}
            (tr :ptv.audit/reaudit)]]))]))
 
+(defn- modified-caption
+  "One item's own last modification date, e.g. \"Muokattu viimeksi
+  10.08.2026\" — the site's latest LIPAS revision or the PTV service's
+  :modified. Printed on every item: it is the key the date ordering sorts on,
+  and naming it keeps it apart from the audit date on the line below."
+  [tr timestamp]
+  (when-let [d (some-> timestamp utils/->human-date)]
+    (str (tr :general/last-modified) " " d)))
+
 (defn- audit-status-caption
   "One item's persisted verdicts as a caption, e.g. \"Edellinen katselmointi
   10.08.2026, Tiivistelmä: Hyväksytty\". `fields` is a seq of [field status]
@@ -477,7 +486,13 @@
                     :color "secondary"
                     :variant "outlined"}])]
 
-       ;; Show audit status if available
+       ;; The content's own date, then the audit verdicts if any
+       (when-let [caption (modified-caption tr (:event-date site))]
+         [:> Typography
+          {:variant "caption"
+           :color "text.secondary"}
+          caption])
+
        (when audit-caption
          [:> Typography
           {:variant "caption"
@@ -565,7 +580,13 @@
                     :color "secondary"
                     :variant "outlined"}])]
 
-       ;; Show audit status if available
+       ;; The content's own date, then the audit verdicts if any
+       (when-let [caption (modified-caption tr (:last-modified service))]
+         [:> Typography
+          {:variant "caption"
+           :color "text.secondary"}
+          caption])
+
        (when audit-caption
          [:> Typography
           {:variant "caption"
@@ -787,7 +808,7 @@
           {:label (tr :ptv.audit/sort-by)
            :value sort-key
            :items [{:value :name :label (tr :ptv.audit/sort-alphabetically)}
-                   {:value :date :label (tr :ptv.audit/sort-by-date)}]
+                   {:value :modified :label (tr :ptv.audit/sort-by-modified)}]
            :on-change #(rf/dispatch [:lipas.ui.ptv.events/set-audit-sort %])}]
 
          ;; Item count or empty message
