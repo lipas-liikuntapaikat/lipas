@@ -775,15 +775,15 @@
   :name — the long-standing order: items already in the audit sample first,
   then alphabetically.
 
-  :modified — most recently edited content first: the site's own last
-  modification (:event-date) or the PTV service's (:modified). This is the
-  date the list items print, so what the auditor reads is what the order is
-  built from. The last verdict only fills in for an item whose content
-  carries no date at all; items with neither sort last."
-  [sort-key {:keys [name-fn audit-ts-fn content-ts-fn]} items]
+  :modified — most recently edited content first, keyed on the
+  :content-modified the callers below attach. That is the same value the list
+  items print, so what the auditor reads is what the order is built from.
+  Items without one sort last (they are not in PTV yet, so PTV has no date
+  for them — see attach-site-content-modified)."
+  [sort-key {:keys [name-fn audit-ts-fn]} items]
   (let [name-key #(or (name-fn %) "")]
     (case sort-key
-      :modified (sort-by (juxt #(- (or (iso->epoch (or (content-ts-fn %) (audit-ts-fn %))) 0))
+      :modified (sort-by (juxt #(- (or (iso->epoch (:content-modified %)) 0))
                                name-key)
                          items)
       (sort-by (juxt #(if (audit-ts-fn %) 0 1) name-key) items))))
@@ -796,6 +796,28 @@
 (defn- site-has-audit-content? [site]
   (and (some-> site :ptv :summary :fi count (> 5))
        (some-> site :ptv :description :fi count (> 5))))
+
+(defn- attach-site-content-modified
+  "Attach :content-modified — when the audited content itself last changed.
+
+  Deliberately NOT the site's :event-date. Saving an audit appends a sports
+  site revision stamped with the audit's own timestamp (see
+  lipas.backend.ptv.core/save-ptv-audit), so on an audited site :event-date
+  is the auditor's last save, not the municipality's last edit — it would
+  print and sort as a duplicate of the katselmointi date.
+
+  PTV's own :modified on the site's service channel is the honest answer, and
+  it matches what the Palvelut list shows for a Service. It also catches
+  edits made straight in PTV, which :last-sync (the LIPAS-side push, used as
+  a fallback for a site whose channel PTV has not returned) cannot see.
+
+  Sites never pushed to PTV have neither; they get no date rather than a
+  misleading one."
+  [service-channels site]
+  (let [channel-id (-> site :ptv :service-channel-ids first)]
+    (assoc site :content-modified
+           (or (get-in service-channels [channel-id :modified])
+               (-> site :ptv :last-sync)))))
 
 (rf/reg-sub ::auditable-sites
   (fn [[_ _org-id _bucket]]
@@ -814,10 +836,11 @@
                        (or (= :waiting-audit b)
                            (and (nil? b) (site-has-audit-content? site)))
                        (= bucket b)))))
+         (map (partial attach-site-content-modified
+                       (get-in ptv [:org org-id :data :service-channels] {})))
          (sort-audit-items sort-key
                            {:name-fn :name
-                            :audit-ts-fn #(get-in % [:ptv :audit :timestamp])
-                            :content-ts-fn :event-date}))))
+                            :audit-ts-fn #(get-in % [:ptv :audit :timestamp])}))))
 
 (rf/reg-sub ::audit-sample-sites
   ;; every site in the audit sample, regardless of bucket
@@ -973,10 +996,13 @@
                        (or (= :waiting-audit b)
                            (and (nil? b) (service-has-audit-content? svc)))
                        (= bucket b)))))
+         ;; :last-modified is already PTV's own :modified for the Service,
+         ;; and a service audit writes a separate ptv_service revision rather
+         ;; than touching PTV — so unlike the site side it needs no repair.
+         (map #(assoc % :content-modified (:last-modified %)))
          (sort-audit-items sort-key
                            {:name-fn :label
-                            :audit-ts-fn #(get-in % [:audit :timestamp])
-                            :content-ts-fn :last-modified}))))
+                            :audit-ts-fn #(get-in % [:audit :timestamp])}))))
 
 (rf/reg-sub ::audit-sample-services
   ;; every service in the audit sample, regardless of bucket
