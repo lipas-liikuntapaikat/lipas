@@ -24,6 +24,8 @@
             ["@mui/material/Typography$default" :as Typography]
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-service-guidance :as service-guidance]
+            [lipas.data.ptv-site-guidance :as site-guidance]
             [lipas.data.types :as types]
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.mui :as mui]
@@ -64,6 +66,36 @@
          [:> Typography {:variant "body2" :color "text.secondary"}
           [:strong (str avoid-label " ")]
           avoid])]]]))
+
+(defn service-writing-guidance
+  "Guidance accordion for a PTV Service field, keyed by sub-category.
+   `field` is :description or :user-instruction. Body is Finnish-only by
+   source. Used by the wizard's service step, the Palvelut panel and the
+   \"Luo uusi palvelu\" form."
+  [{:keys [tr sub-category-id field]}]
+  [writing-guidance
+   {:title (case field
+             :description      (tr :ptv/writing-guidance-description)
+             :user-instruction (tr :ptv/writing-guidance-user-instruction))
+    :text (get-in service-guidance/guidance [sub-category-id field])}])
+
+(defn site-writing-guidance
+  "Guidance accordion for a PTV Service Location field, keyed by type-code.
+   `field` is :summary or :description; the description accordion also
+   carries the group's \"Vältä:\" line. Localized to the UI language rather
+   than the language tab being edited — this is instruction to the author,
+   not content. Used by the wizard's site step, the Liikuntapaikat panel
+   and the map-view PTV tab."
+  [{:keys [tr type-code field]}]
+  (let [locale (tr)]
+    [writing-guidance
+     {:title (case field
+               :summary     (tr :ptv/writing-guidance-summary)
+               :description (tr :ptv/writing-guidance-description))
+      :text (site-guidance/text type-code field locale)
+      :avoid (when (= :description field)
+               (site-guidance/text type-code :avoid locale))
+      :avoid-label (tr :ptv/writing-guidance-avoid)}]))
 
 (defn audit-feedback-alert
   "Auditor feedback for one field in the municipality-facing views.
@@ -581,6 +613,10 @@
                 :helperText (str (count v) "/" ptv-data/max-summary-length)
                 :error (> (count v) ptv-data/max-summary-length)}])
 
+            [service-writing-guidance
+             {:tr tr
+              :sub-category-id (ptv-data/parse-service-source-id @source-id)
+              :field :description}]
             (let [v (or (get-in desc [:description @selected-tab]) "")]
               [text-fields/text-field
                {:on-change #(rf/dispatch [::events/set-service-candidate-description @source-id @selected-tab %])
@@ -590,6 +626,10 @@
                 :helperText (str (count v) "/" ptv-data/max-description-length)
                 :error (> (count v) ptv-data/max-description-length)}])
 
+            [service-writing-guidance
+             {:tr tr
+              :sub-category-id (ptv-data/parse-service-source-id @source-id)
+              :field :user-instruction}]
             (let [v (or (get-in desc [:user-instruction @selected-tab]) "")]
               [text-fields/text-field
                {:on-change #(rf/dispatch [::events/set-service-candidate-user-instruction @source-id @selected-tab %])
