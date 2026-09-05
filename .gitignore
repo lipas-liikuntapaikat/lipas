@@ -62,4 +62,11 @@ webapp/.eca/
 **/.claude/settings.local.json
 **/.claude/*.bak
 .git-rewrite/
-data/
+
+# The elasticdump service bind-mounts the repository-root ./data (see
+# docker-compose.yml "./data:/data:z") and writes index dumps into it.
+# LEADING SLASH IS LOAD-BEARING: written as `data/` this matched every
+# directory named data at any depth, so new files under
+# webapp/src/cljc/lipas/data/ and webapp/test/clj/lipas/data/ were
+# silently ignored and needed `git add -f` to commit.
+/data/

@@ -12,6 +12,7 @@
             ["@mui/material/Typography$default" :as Typography]
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-site-guidance :as site-guidance]
             [lipas.ui.components.autocompletes :refer [autocomplete2]]
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.ptv.components :as ptv-components]
@@ -437,6 +438,14 @@
           :on-change set-selected-tab
           :enabled-languages (set org-languages)}]
 
+        ;; Per-type-group authoring guidance (DVV). Shown in the user's UI
+        ;; language, not `selected-tab` — these are instructions to the
+        ;; author, who reads them in their own language while writing the
+        ;; text for whichever language tab is open.
+        [ptv-components/writing-guidance
+         {:title (tr :ptv/writing-guidance-summary)
+          :text (site-guidance/text type-code :summary (tr))}]
+
         ;; Summary
         (let [v (or (get-in edit-data [:ptv :summary selected-tab])
                     (get-in sports-site [:ptv :summary selected-tab])
@@ -459,6 +468,12 @@
          {:tr tr
           :lipas-id lipas-id
           :field-name :summary}]
+
+        [ptv-components/writing-guidance
+         {:title (tr :ptv/writing-guidance-description)
+          :text (site-guidance/text type-code :description (tr))
+          :avoid (site-guidance/text type-code :avoid (tr))
+          :avoid-label (tr :ptv/writing-guidance-avoid)}]
 
         ;; Description
         (let [v (or (get-in edit-data [:ptv :description selected-tab])

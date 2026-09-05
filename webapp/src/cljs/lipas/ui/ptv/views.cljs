@@ -149,18 +149,11 @@
    adopted services without a sub-category mapping). Guidance body is
    Finnish-only by source."
   [{:keys [tr sub-category-id field]}]
-  (when-let [text (get-in service-guidance/guidance [sub-category-id field])]
-    [:> Accordion {:disableGutters true :elevation 0 :variant "outlined"}
-     [:> AccordionSummary {:expandIcon (r/as-element [:> Icon "expand_more"])}
-      [:> Stack {:direction "row" :spacing 1 :align-items "center"}
-       [:> Icon {:fontSize "small" :color "action"} "help_outline"]
-       [:> Typography {:variant "body2"}
-        (case field
-          :description      (tr :ptv/writing-guidance-description)
-          :user-instruction (tr :ptv/writing-guidance-user-instruction))]]]
-     [:> AccordionDetails
-      [:> Typography {:variant "body2" :sx #js {:whiteSpace "pre-line"}}
-       text]]]))
+  [ptv-components/writing-guidance
+   {:title (case field
+             :description      (tr :ptv/writing-guidance-description)
+             :user-instruction (tr :ptv/writing-guidance-user-instruction))
+    :text (get-in service-guidance/guidance [sub-category-id field])}])
 
 (def ptv-link-field ptv-components/ptv-link-field)
 
