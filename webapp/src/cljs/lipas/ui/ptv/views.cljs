@@ -50,7 +50,6 @@
             [clojure.string :as str]
             [goog.string.format]
             [lipas.data.ptv :as ptv-data]
-            [lipas.data.ptv-service-guidance :as service-guidance]
             [lipas.data.types :as types]
             [lipas.ui.components.autocompletes :refer [autocomplete2]]
             [lipas.ui.components.checkboxes :as checkboxes]
@@ -142,18 +141,8 @@
       :field-audit field-audit
       :current-content current-content}]))
 
-(defn service-writing-guidance
-  "Collapsed accordion showing the DVV per-sub-category content guidance
-   for a Service field. `field` is :description or :user-instruction.
-   Renders nothing when no guidance exists for the sub-category (e.g.
-   adopted services without a sub-category mapping). Guidance body is
-   Finnish-only by source."
-  [{:keys [tr sub-category-id field]}]
-  [ptv-components/writing-guidance
-   {:title (case field
-             :description      (tr :ptv/writing-guidance-description)
-             :user-instruction (tr :ptv/writing-guidance-user-instruction))
-    :text (get-in service-guidance/guidance [sub-category-id field])}])
+(def service-writing-guidance ptv-components/service-writing-guidance)
+(def site-writing-guidance ptv-components/site-writing-guidance)
 
 (def ptv-link-field ptv-components/ptv-link-field)
 
@@ -487,6 +476,8 @@
           (tr :ptv.actions/load-texts-from-ptv)]])]
 
      ;; Summary
+     [site-writing-guidance
+      {:tr tr :type-code (:type-code site) :field :summary}]
      (let [v (or (get-in site [:summary @selected-tab]) "")]
        [text-fields/text-field
         {:disabled loading?
@@ -504,6 +495,8 @@
        :field-name :summary}]
 
      ;; Description
+     [site-writing-guidance
+      {:tr tr :type-code (:type-code site) :field :description}]
      (let [v (or (get-in site [:description @selected-tab]) "")]
        [text-fields/text-field
         {:disabled loading?
@@ -1457,6 +1450,8 @@
                 (tr :ptv.actions/load-texts-from-ptv)]])]
 
           ;; Summary
+           [site-writing-guidance
+            {:tr tr :type-code (:type-code site) :field :summary}]
            [text-fields/text-field
             {:multiline true
              :variant "outlined"
@@ -1465,6 +1460,8 @@
              :value (get-in site [:summary selected-tab])}]
 
           ;; Description
+           [site-writing-guidance
+            {:tr tr :type-code (:type-code site) :field :description}]
            [text-fields/text-field
             {:variant "outlined"
              :rows 7

@@ -12,7 +12,6 @@
             ["@mui/material/Typography$default" :as Typography]
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
-            [lipas.data.ptv-site-guidance :as site-guidance]
             [lipas.ui.components.autocompletes :refer [autocomplete2]]
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.ptv.components :as ptv-components]
@@ -442,9 +441,8 @@
         ;; language, not `selected-tab` — these are instructions to the
         ;; author, who reads them in their own language while writing the
         ;; text for whichever language tab is open.
-        [ptv-components/writing-guidance
-         {:title (tr :ptv/writing-guidance-summary)
-          :text (site-guidance/text type-code :summary (tr))}]
+        [ptv-components/site-writing-guidance
+         {:tr tr :type-code type-code :field :summary}]
 
         ;; Summary
         (let [v (or (get-in edit-data [:ptv :summary selected-tab])
@@ -469,11 +467,8 @@
           :lipas-id lipas-id
           :field-name :summary}]
 
-        [ptv-components/writing-guidance
-         {:title (tr :ptv/writing-guidance-description)
-          :text (site-guidance/text type-code :description (tr))
-          :avoid (site-guidance/text type-code :avoid (tr))
-          :avoid-label (tr :ptv/writing-guidance-avoid)}]
+        [ptv-components/site-writing-guidance
+         {:tr tr :type-code type-code :field :description}]
 
         ;; Description
         (let [v (or (get-in edit-data [:ptv :description selected-tab])
