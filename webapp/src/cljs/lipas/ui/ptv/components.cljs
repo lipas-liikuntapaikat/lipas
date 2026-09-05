@@ -1,6 +1,9 @@
 (ns lipas.ui.ptv.components
   "Shared PTV UI components to avoid circular dependencies"
   (:require ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
+            ["@mui/material/Accordion$default" :as Accordion]
+            ["@mui/material/AccordionDetails$default" :as AccordionDetails]
+            ["@mui/material/AccordionSummary$default" :as AccordionSummary]
             ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/AlertTitle$default" :as AlertTitle]
             ["@mui/material/Button$default" :as Button]
@@ -31,6 +34,36 @@
             [re-frame.core :as rf]
             [reagent.core :as r]
             [reagent.hooks :as hooks]))
+
+(defn writing-guidance
+  "Collapsed accordion showing authoring guidance for one PTV text field.
+   Shared by the Service panels (per sub-category, from
+   lipas.data.ptv-service-guidance) and the Service Location site view
+   (per type-code group, from lipas.data.ptv-site-guidance).
+
+   Props:
+     :title       - accordion header, e.g. \"Mitä kuvaukseen kannattaa kirjoittaa?\"
+     :text        - guidance body; newlines are preserved
+     :avoid       - optional short \"what not to write\" line under the body
+     :avoid-label - label for that line, e.g. \"Vältä:\"
+
+   Renders nothing when :text is blank, so callers can pass a lookup that
+   may miss (a type or sub-category with no guidance)."
+  [{:keys [title text avoid avoid-label]}]
+  (when-not (str/blank? text)
+    [:> Accordion {:disableGutters true :elevation 0 :variant "outlined"}
+     [:> AccordionSummary {:expandIcon (r/as-element [:> Icon "expand_more"])}
+      [:> Stack {:direction "row" :spacing 1 :align-items "center"}
+       [:> Icon {:fontSize "small" :color "action"} "help_outline"]
+       [:> Typography {:variant "body2"} title]]]
+     [:> AccordionDetails
+      [:> Stack {:spacing 1}
+       [:> Typography {:variant "body2" :sx #js {:whiteSpace "pre-line"}}
+        text]
+       (when-not (str/blank? avoid)
+         [:> Typography {:variant "body2" :color "text.secondary"}
+          [:strong (str avoid-label " ")]
+          avoid])]]]))
 
 (defn audit-feedback-alert
   "Auditor feedback for one field in the municipality-facing views.

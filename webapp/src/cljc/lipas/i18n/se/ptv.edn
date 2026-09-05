@@ -28,7 +28,9 @@
  :not-yet-synced "Vald för export, ännu inte synkroniserad till PTV",
  :summary "Sammanfattning",
  :user-instruction "Handlingsanvisning",
+ :writing-guidance-avoid "Undvik:",
  :writing-guidance-description "Vad bör beskrivningen innehålla?",
+ :writing-guidance-summary "Vad bör sammanfattningen innehålla?",
  :writing-guidance-user-instruction "Vad bör handlingsanvisningen innehålla?",
  :tooltip "Skicka till PTV",
  :wizard "Idrifttagning"
