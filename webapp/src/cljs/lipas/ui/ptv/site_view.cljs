@@ -437,6 +437,13 @@
           :on-change set-selected-tab
           :enabled-languages (set org-languages)}]
 
+        ;; Per-type-group authoring guidance (DVV). Shown in the user's UI
+        ;; language, not `selected-tab` — these are instructions to the
+        ;; author, who reads them in their own language while writing the
+        ;; text for whichever language tab is open.
+        [ptv-components/site-writing-guidance
+         {:tr tr :type-code type-code :field :summary}]
+
         ;; Summary
         (let [v (or (get-in edit-data [:ptv :summary selected-tab])
                     (get-in sports-site [:ptv :summary selected-tab])
@@ -459,6 +466,9 @@
          {:tr tr
           :lipas-id lipas-id
           :field-name :summary}]
+
+        [ptv-components/site-writing-guidance
+         {:tr tr :type-code type-code :field :description}]
 
         ;; Description
         (let [v (or (get-in edit-data [:ptv :description selected-tab])
