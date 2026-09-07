@@ -1,5 +1,10 @@
-(ns user
-  "Utilities for reloaded workflow using `integrant.repl`."
+(ns ^{:clj-reload/no-unload true} user
+  "Utilities for reloaded workflow using `integrant.repl`.
+
+  `:clj-reload/no-unload` keeps vars def'd interactively at the REPL alive
+  across `(user/reset)`. Without it, the `lipas.backend.system` dependency
+  below makes this ns a dependent of the reloaded set, so every reset would
+  wipe the session's scratch defs. The file is still re-evaluated on change."
   (:require
     [clojure.core.async :as async]
     ;; `go` is meant to be typed directly at the REPL (`(go)`), mirroring
@@ -10,6 +15,11 @@
     #_{:clj-kondo/ignore [:unused-referred-var]}
     [integrant.repl :refer [reset-all go]]
     [integrant.repl.state]
+    ;; Required for its side effects: `lipas.backend.system` defines every
+    ;; `ig/init-key`/`halt-key!` method. Without it a cold JVM has only
+    ;; `:default` methods, so `(go)`/`(reset)` "succeeds" while building a
+    ;; system of raw config maps and no Jetty on 8091.
+    [lipas.backend.system]
     [migratus.core :as migratus]
     [taoensso.timbre :as log]))
 
