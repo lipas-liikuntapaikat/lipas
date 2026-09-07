@@ -1,10 +1,5 @@
-(ns ^{:clj-reload/no-unload true} user
-  "Utilities for reloaded workflow using `integrant.repl`.
-
-  `:clj-reload/no-unload` keeps vars def'd interactively at the REPL alive
-  across `(user/reset)`. Without it, the `lipas.backend.system` dependency
-  below makes this ns a dependent of the reloaded set, so every reset would
-  wipe the session's scratch defs. The file is still re-evaluated on change."
+(ns user
+  "Utilities for reloaded workflow using `integrant.repl`."
   (:require
     [clojure.core.async :as async]
     ;; `go` is meant to be typed directly at the REPL (`(go)`), mirroring
@@ -15,11 +10,6 @@
     #_{:clj-kondo/ignore [:unused-referred-var]}
     [integrant.repl :refer [reset-all go]]
     [integrant.repl.state]
-    ;; Required for its side effects: `lipas.backend.system` defines every
-    ;; `ig/init-key`/`halt-key!` method. Without it a cold JVM has only
-    ;; `:default` methods, so `(go)`/`(reset)` "succeeds" while building a
-    ;; system of raw config maps and no Jetty on 8091.
-    [lipas.backend.system]
     [migratus.core :as migratus]
     [taoensso.timbre :as log]))
 
@@ -27,7 +17,22 @@
 (log/swap-config! assoc :min-level [["org.eclipse.jetty.*" :error]
                                     ["*" :debug]])
 
+;; Everything here loads lazily, at prep time, and that is load-bearing: this
+;; file sits at the classpath root of the `dev` extra-path, so Clojure's RT
+;; init auto-loads it in EVERY JVM started with the `:dev` alias — including
+;; `clojure -M:frontend:dev ... release app` in CI, which has none of the
+;; backend's env vars. `lipas.backend.config` calls `env!` in a top-level
+;; `def`, so requiring it from the `ns` form above would abort the frontend
+;; release build with "Environment variable not set: :gemini-api-key".
+;;
+;; `lipas.backend.system` is required for its side effects: it defines every
+;; `ig/init-key`/`halt-key!` method. Without it a cold JVM has only `:default`
+;; methods, so `(go)`/`(reset)` "succeeds" while building a system of raw
+;; config maps with no Jetty on 8091. Both `go` and `reset` (via `resume`)
+;; run this preparer before `init`, so the methods are always registered in
+;; time.
 (integrant.repl/set-prep! (fn []
+                            (require 'lipas.backend.system)
                             (dissoc @(requiring-resolve 'lipas.backend.config/system-config) :lipas/nrepl)))
 
 (def ^:private valid-log-levels
