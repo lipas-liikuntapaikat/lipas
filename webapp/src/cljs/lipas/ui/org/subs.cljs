@@ -2,6 +2,7 @@
   (:require [clojure.string :as str]
             [lipas.roles :as roles]
             [lipas.schema.org :as org-schema]
+            [lipas.ui.utils :as utils]
             [malli.core :as m]
             [re-frame.core :as rf]))
 
@@ -79,14 +80,31 @@
   (fn [user _]
     (roles/check-privilege user {} :users/manage)))
 
+;; True iff the user holds :org/member in ANY org, i.e. belongs to at least
+;; one organization. Reads the roles projected from org membership at login
+;; (lipas.backend.org/member->roles), so it answers immediately — no wait for
+;; the ::user-orgs fetch. Note :admin deliberately does NOT carry :org/member
+;; (see lipas.roles/roles), hence the separate ::is-lipas-admin check above.
+(rf/reg-sub ::is-any-org-member?
+  :<- [:lipas.ui.user.subs/user-data]
+  (fn [user _]
+    (roles/check-privilege user {:org-id ::roles/any} :org/member)))
+
 ;; Rollout gate for the org-management UI as a whole (nav links, profile
 ;; page, routes) — distinct from the in-app capability gating in ::can?
-;; below. Rollout sequence: 1) admin-only silent release (current), 2) opened
-;; to a pilot set of orgs, 3) GA to all org members.
+;; below. Rollout sequence: 1) admin-only silent release, 2) org members on
+;; non-prod (current — lipas-dev dogfooding, memberships assigned by hand),
+;; 3) GA = drop the `prod?` clause.
+;;
+;; Visibility only, never a security boundary: every org endpoint enforces
+;; its own :org/member | :org/manage | :site/create-edit gate server-side,
+;; and /actions/get-current-user-orgs already returns only the caller's orgs.
 (rf/reg-sub ::can-access-org-management?
   :<- [::is-lipas-admin]
-  (fn [admin? _]
-    admin?))
+  :<- [::is-any-org-member?]
+  (fn [[admin? org-member?] _]
+    (or admin?
+        (and org-member? (not (utils/prod?))))))
 
 (rf/reg-sub ::is-org-admin?
   (fn [[_ org-id] _]
