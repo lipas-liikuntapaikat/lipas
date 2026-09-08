@@ -62,4 +62,7 @@
  :error-description-too-long "Kuvaus on liian pitkä (enintään 5000 merkkiä)."
  :error-user-instruction-too-long "Toimintaohje on liian pitkä (enintään 5000 merkkiä)."
  :sync-failed-body-name-conflict "Nimi '{1}' on jo käytössä organisaation toisella palvelupaikalla PTV:ssä. PTV vaatii palvelupaikoille uniikit nimet. Liitä liikuntapaikka olemassa olevaan palvelupaikkaan tai muuta nimeä, ja yritä uudelleen."
- :saved-but-sync-failed-body-name-conflict "Nimi '{1}' on jo käytössä organisaation toisella palvelupaikalla PTV:ssä. PTV vaatii palvelupaikoille uniikit nimet. Liitä liikuntapaikka olemassa olevaan palvelupaikkaan tai muuta nimeä, ja tallenna uudelleen."}
+ :saved-but-sync-failed-body-name-conflict "Nimi '{1}' on jo käytössä organisaation toisella palvelupaikalla PTV:ssä. PTV vaatii palvelupaikoille uniikit nimet. Liitä liikuntapaikka olemassa olevaan palvelupaikkaan tai muuta nimeä, ja tallenna uudelleen.",
+ :in-ptv "{1} PTV:ssä",
+ :service-name "Palvelun nimi",
+ :integration "Integraatio"}

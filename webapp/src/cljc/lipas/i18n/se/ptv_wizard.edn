@@ -38,4 +38,15 @@
  :select-sub-categories "Välj typklasser",
  :unselect-helper
  "Om du inte vill exportera ett visst objekt kan du öppna det i panelen till höger och inaktivera reglaget."
- :step3-instruction "Öppna en idrottsanläggning från listan, skapa eller skriv beskrivningar och aktivera synkronisering med reglaget."}
+ :step3-instruction "Öppna en idrottsanläggning från listan, skapa eller skriv beskrivningar och aktivera synkronisering med reglaget.",
+ :select-sports-sites "Välj idrottsplatser",
+ :linked-label "{1} (länkad)",
+ :enter-descriptions "Mata in beskrivningar",
+ :preview "Förhandsgranskning",
+ :selected-count "{1}/{2} idrottsplatser valda",
+ :export-halted "Överföringen avbröts",
+ :export-complete "Överföringen klar",
+ :export-result "{1}/{2} idrottsplatser överförda till PTV.",
+ :start-new-export "Börja en ny överföring",
+ :go-to-sports-sites-tab "Gå till fliken Idrottsplatser",
+ :go-to-services-tab "Gå till fliken Tjänster"}

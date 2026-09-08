@@ -38,5 +38,4 @@
  :select-year "Select year",
  :show-account-menu "Open account menu",
  :submit "Submit",
- :undo "Undo",
- :update-n-sites "Update {1} sports sites"}
+ :undo "Undo"}

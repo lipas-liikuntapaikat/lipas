@@ -376,7 +376,7 @@
                                  (println "Example: bb test-var lipas.backend.gis-test/centroid-test")
                                  (println "Example: bb test-var lipas.backend.gis-test/centroid-test lipas.roles-test/admin-test"))))}
 
-         i18n-unused {:doc "Find unused translation keys. Use --remove to delete them, --dry-run to preview."
+         i18n-unused {:doc "Find unused translation keys. --lang fi|se|en picks the reference dictionary (default fi). Use --remove to delete them, --dry-run to preview."
                       :task (apply shell "bb" "scripts/unused_translations.bb" *command-line-args*)}
 
          test-watch {:doc "Run tests in watch mode (re-runs on file changes)"

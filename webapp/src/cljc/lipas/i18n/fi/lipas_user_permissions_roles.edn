@@ -20,7 +20,7 @@
   :ptv-manager "PTV-käyttäjä",
   :admin "Admin",
   :analysis-user "Analyysityökalukäyttäjä",
-  :ptv-auditor "PTV-auditoija",
+  :ptv-auditor "PTV-katselmoija",
   :org-admin "Organisaation pääkäyttäjä",
   :type-manager "Tyyppikäyttäjä",
   :itrs-assessor "ITRS-arvioija",
@@ -63,7 +63,7 @@
   :org.admin "Uusien organisaatioiden luonti",
   :help.manage "Ohjeiden sisällön muokkaus",
   :ptv.manage "PTV-tietojen hallinta",
-  :ptv.audit "PTV-kuvausten auditointi",
+  :ptv.audit "PTV-kuvausten katselmointi",
   :jobs.manage "Taustaprosessien hallinta",
   :itrs.edit "ITRS-luokitustietojen muokkaus"},
  :roles "Roolit"}

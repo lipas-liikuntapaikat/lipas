@@ -11,7 +11,7 @@
   {"wizard" "Käyttöönotto (ohjattu vienti PTV:hen)"
    "services" "Palvelut"
    "sports-sites" "Liikuntapaikat"
-   "audit" "Auditointi"})
+   "audit" "Katselmointi"})
 
 (def ^:private assistant-wizard-step-labels
   ["1. Valitse liikuntapaikat"

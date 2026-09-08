@@ -25,9 +25,11 @@
             ["@mui/material/Typography$default" :as Typography]
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
+            [lipas.ui.components.selects :as selects]
             [lipas.ui.components.text-fields :as tf]
             [lipas.ui.ptv.components :as ptv-components]
             [lipas.ui.ptv.diff :as ptv-diff]
+            [lipas.ui.utils :as utils]
             [re-frame.core :as rf]
             [reagent.core :as r]
             [reagent.hooks :as hooks]))
@@ -59,14 +61,18 @@
         ;; responded to a changes request (reviewable in Valmiit).
         changed? (contains? #{:stale :fixed} state)
 
-        ;; Format last audit information if available
+        ;; Format last audit information if available. The timestamp lives on
+        ;; the audit record, not on the individual field (see the :closed
+        ;; audit-field schema) — reading it off the field left the date blank
+        ;; on every item. Feedback is stored as "" for an approval, so only
+        ;; append it when there is something to show.
         last-audit-info (when field-audit
                           (str (tr :ptv.audit/last-audit) " "
-                               (some-> field-audit :timestamp (subs 0 10))
+                               (some-> audit-data :timestamp utils/->human-date)
                                (when-let [status (:status field-audit)]
                                  (str ", " (tr (keyword (str "ptv.audit.status/" status)))))
-                               (when-let [feedback (:feedback field-audit)]
-                                 (str ": " feedback ""))))]
+                               (when (seq (:feedback field-audit))
+                                 (str ": " (:feedback field-audit)))))]
 
     [:> Box {:key field}
      [:> Stack {:direction "row" :spacing 1 :alignItems "center" :sx #js{:mt 3 :mb 1}}
@@ -256,7 +262,8 @@
 
      ;; Service Location Preview Section
      [:> Box {:sx #js{:mt 3 :mb 3}}
-      [:> Typography {:variant "h6" :sx #js{:mb 2}} "PTV-palvelupaikan esikatselu"]
+      [:> Typography {:variant "h6" :sx #js{:mb 2}}
+       (tr :ptv.audit/service-location-preview)]
       [ptv-components/service-location-preview
        {:org-id org-id
         :lipas-id lipas-id}]]
@@ -373,10 +380,42 @@
             :onClick #(set-reauditing true)}
            (tr :ptv.audit/reaudit)]]))]))
 
+(defn- modified-caption
+  "When the audited content itself last changed, e.g. \"Muokattu viimeksi
+  10.08.2026\" — PTV's own :modified for the item, resolved by the
+  ::auditable-sites / ::auditable-services subs (see
+  attach-site-content-modified for why a site's :event-date is the wrong
+  source). Reading the same :content-modified the ordering sorts on keeps
+  the two honest about each other, and naming it keeps it apart from the
+  audit date on the line below. Nil for an item not in PTV yet — those get
+  no line rather than a misleading one."
+  [tr item]
+  (when-let [d (some-> (:content-modified item) utils/->human-date)]
+    (str (tr :general/last-modified) " " d)))
+
+(defn- audit-status-caption
+  "One item's persisted verdicts as a caption, e.g. \"Edellinen katselmointi
+  10.08.2026, Tiivistelmä: Hyväksytty\". `fields` is a seq of [field status]
+  in display order; fields without a verdict are left out."
+  [tr timestamp fields]
+  (str (tr :ptv.audit/last-audit) " " (some-> timestamp utils/->human-date)
+       (apply str
+              (keep (fn [[field status]]
+                      (when status
+                        (str ", "
+                             (tr (case field
+                                   :summary :ptv/summary
+                                   :description :ptv/description
+                                   :user-instruction :ptv/user-instruction))
+                             ": "
+                             (tr (keyword "ptv.audit.status" status)))))
+                    fields))))
+
 ;; Site list item component for the list of sites to audit
 (r/defc site-list-item
   [{:keys [tr site selected? on-select]}]
-  (let [audit-data (get-in site [:ptv :audit])
+  (let [dirty? @(rf/subscribe [:lipas.ui.ptv.subs/site-audit-dirty? (:lipas-id site)])
+        audit-data (get-in site [:ptv :audit])
         summary-status (get-in audit-data [:summary :status])
         desc-status (get-in audit-data [:description :status])
         field-states (ptv-data/audit-field-states
@@ -399,9 +438,10 @@
                        "partial" "warning.main"
                        "todo" "info.main")
 
-        ;; Last audit date or empty string
-        last-audit-date (when (or summary-status desc-status)
-                          (some-> audit-data :timestamp (subs 0 10)))]
+        audit-caption (when (or summary-status desc-status)
+                        (audit-status-caption tr (:timestamp audit-data)
+                                              [[:summary summary-status]
+                                               [:description desc-status]]))]
 
     [:> Paper
      {:sx #js{:p 2
@@ -441,23 +481,33 @@
           [:> Chip {:label (tr :ptv.audit/fixed-after-audit)
                     :size "small"
                     :color "info"
+                    :variant "outlined"}])
+        (when dirty?
+          ;; The item lists show persisted state only, so this chip is the
+          ;; sole hint that this site carries edits the auditor has not saved.
+          [:> Chip {:label (tr :ptv.audit/unsaved-changes)
+                    :size "small"
+                    :color "secondary"
                     :variant "outlined"}])]
 
-       ;; Show audit status if available
-       (when (or summary-status desc-status)
+       ;; The content's own date, then the audit verdicts if any
+       (when-let [caption (modified-caption tr site)]
          [:> Typography
           {:variant "caption"
            :color "text.secondary"}
-          (str "Last audit: " last-audit-date)
-          (when summary-status
-            (str ", Summary: " summary-status))
-          (when desc-status
-            (str ", Description: " desc-status))])]]]))
+          caption])
+
+       (when audit-caption
+         [:> Typography
+          {:variant "caption"
+           :color "text.secondary"}
+          audit-caption])]]]))
 
 ;; Service list item component for the list of services to audit
 (r/defc service-list-item
   [{:keys [tr service selected? on-select]}]
-  (let [audit-data (:audit service)
+  (let [dirty? @(rf/subscribe [:lipas.ui.ptv.subs/service-audit-dirty? (:service-id service)])
+        audit-data (:audit service)
         summary-status (get-in audit-data [:summary :status])
         desc-status (get-in audit-data [:description :status])
         ui-status (get-in audit-data [:user-instruction :status])
@@ -481,9 +531,11 @@
                        "partial" "warning.main"
                        "todo" "info.main")
 
-        ;; Last audit date or empty string
-        last-audit-date (when (or summary-status desc-status ui-status)
-                          (some-> audit-data :timestamp (subs 0 10)))]
+        audit-caption (when (or summary-status desc-status ui-status)
+                        (audit-status-caption tr (:timestamp audit-data)
+                                              [[:summary summary-status]
+                                               [:description desc-status]
+                                               [:user-instruction ui-status]]))]
 
     [:> Paper
      {:sx #js{:p 2
@@ -523,20 +575,27 @@
           [:> Chip {:label (tr :ptv.audit/fixed-after-audit)
                     :size "small"
                     :color "info"
+                    :variant "outlined"}])
+        (when dirty?
+          ;; The item lists show persisted state only, so this chip is the
+          ;; sole hint that this service carries edits the auditor has not saved.
+          [:> Chip {:label (tr :ptv.audit/unsaved-changes)
+                    :size "small"
+                    :color "secondary"
                     :variant "outlined"}])]
 
-       ;; Show audit status if available
-       (when (or summary-status desc-status ui-status)
+       ;; The content's own date, then the audit verdicts if any
+       (when-let [caption (modified-caption tr service)]
          [:> Typography
           {:variant "caption"
            :color "text.secondary"}
-          (str "Last audit: " last-audit-date)
-          (when summary-status
-            (str ", Summary: " summary-status))
-          (when desc-status
-            (str ", Description: " desc-status))
-          (when ui-status
-            (str ", UserInstruction: " ui-status))])]]]))
+          caption])
+
+       (when audit-caption
+         [:> Typography
+          {:variant "caption"
+           :color "text.secondary"}
+          audit-caption])]]]))
 
 ;; Confirmation dialog for the audit notification: shows who receives the
 ;; email (the org's PTV managers) and the derived contents — which items
@@ -620,6 +679,7 @@
         lipas-org-id @(rf/subscribe [:lipas.ui.ptv.subs/selected-org-id])
         selected-section @(rf/subscribe [:lipas.ui.ptv.subs/selected-audit-section])
         selected-tab @(rf/subscribe [:lipas.ui.ptv.subs/selected-audit-tab])
+        sort-key @(rf/subscribe [:lipas.ui.ptv.subs/audit-sort])
         selected-site @(rf/subscribe [:lipas.ui.ptv.subs/selected-audit-site])
         selected-service @(rf/subscribe [:lipas.ui.ptv.subs/selected-audit-service])
 
@@ -746,6 +806,14 @@
                 "waiting-fixes" :ptv.audit/waiting-fixes-tab
                 "done" :ptv.audit/done-tab
                 :ptv.audit/waiting-audit-tab))]
+
+         ;; Ordering applies to both sections and every bucket tab
+         [selects/select
+          {:label (tr :ptv.audit/sort-by)
+           :value sort-key
+           :items [{:value :name :label (tr :ptv.audit/sort-alphabetically)}
+                   {:value :modified :label (tr :ptv.audit/sort-by-modified)}]
+           :on-change #(rf/dispatch [:lipas.ui.ptv.events/set-audit-sort %])}]
 
          ;; Item count or empty message
          (if (empty? display-items)
