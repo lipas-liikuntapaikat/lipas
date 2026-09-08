@@ -185,6 +185,19 @@
     :masked (mask-email email)
     nil))
 
+(defn co-member-ids
+  "Account ids (as strings) that share at least one org with `user-id`.
+
+  These are exactly the people whose addresses the user ALREADY sees unmasked
+  in that org's Jäsenet tab (`get-org-users` is gated at `org-member-or-admin?`
+  and returns full `:email`), so masking them elsewhere protects nothing while
+  making the same person look different in two tabs. One query — the same
+  reverse jsonb-containment `user-orgs` uses."
+  [db user-id]
+  (if-let [uid (utils/->uuid-safe user-id)]
+    (->> (user-orgs db uid) (mapcat :members) (keep :user-id) (map str) set)
+    #{}))
+
 (defn resolve-account-names
   "Batch-resolve account ids → display label in one query. Returns a map keyed
   by string id (nil when `ids` is empty); ids absent from `account` are simply

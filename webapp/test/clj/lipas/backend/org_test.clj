@@ -1598,11 +1598,19 @@
                             :owner-org-id (str org-id))
                      (assoc-in [:location :city :city-code] city)
                      (assoc-in [:type :type-code] 1530))
-        _        (core/upsert-sports-site!* db admin site)]
+        _        (core/upsert-sports-site!* db admin site)
+        ;; a direct editor who is ALSO a member of the owning org: the viewer's
+        ;; colleague, whose address they already see in the Jäsenet tab
+        colleague (test-utils/gen-city-manager-user city :db-component db)
+        _         (backend-org/add-member! db org-id (:id colleague) {:roles []} nil)
+        ;; ...and a revision authored by them, so the history has a co-member author
+        _         (core/upsert-sports-site!* db colleague
+                                             (assoc site :event-date "2026-02-02T00:00:00.000Z"))]
     {:db     db
      :lid    lid
      :admin  admin
-     ;; the one person entry the who-can-edit list should carry
+     :colleague colleague
+     ;; a direct editor in no org at all — the outsider who must stay masked
      :direct (test-utils/gen-city-manager-user city :db-component db)
      :oadmin (test-utils/gen-org-admin-user org-id :db-component db)
      :member (test-utils/gen-org-user org-id :db-component db :permissions {:roles []})
@@ -1621,7 +1629,7 @@
   (testing "Who-can-edit renders person entries at the viewer's tier (PM rule
             2026-09-07): full email for LIPAS/org admins, masked for org
             members, dropped for viewers unrelated to the site"
-    (let [{:keys [lid admin direct oadmin member outsider]} (pii-fixture)
+    (let [{:keys [lid admin direct colleague oadmin member outsider]} (pii-fixture)
           real   (:email direct)
           masked (backend-org/mask-email real)
           call   #(post-json "/api/actions/get-site-editors" {:lipas-id lid} %)
@@ -1636,10 +1644,19 @@
 
       (testing "plain org member"
         (let [body (call member)]
-          (is (contains? (emails body) masked) "sees the masked address")
-          (is (not (contains? (emails body) real)) "never the real one")
+          (is (contains? (emails body) masked) "sees an outsider's address masked")
+          (is (not (contains? (emails body) real)) "never the outsider's real one")
           (is (not (str/includes? (pr-str body) real))
               "and it appears nowhere else in the payload either")))
+
+      (testing "org member sees their OWN org's members in full"
+        ;; the Jäsenet tab already shows them these addresses unmasked; masking
+        ;; the same colleague here would differ between two tabs for nothing
+        (let [body (call member)]
+          (is (contains? (emails body) (:email colleague))
+              "a co-member's address is not masked")
+          (is (not (contains? (emails body) (backend-org/mask-email (:email colleague))))
+              "and is not ALSO present in masked form")))
 
       (testing "viewer unrelated to the site"
         (let [body (call outsider)]
@@ -1657,7 +1674,7 @@
 (deftest site-edit-history-pii-tier-test
   (testing "Site edit history follows the same three tiers; the unrelated viewer
             keeps the coarse role label (F38) rather than gaining a masked email"
-    (let [{:keys [lid admin oadmin member outsider]} (pii-fixture)
+    (let [{:keys [lid admin colleague oadmin member outsider]} (pii-fixture)
           real    (:email admin)
           masked  (backend-org/mask-email real)
           call    #(post-json "/api/actions/get-site-edit-history" {:lipas-id lid} %)
@@ -1668,8 +1685,11 @@
           "Org admin of the owning org sees the author's full address")
 
       (let [body (call member)]
-        (is (contains? (authors body) masked) "Plain org member sees it masked")
-        (is (not (str/includes? (pr-str body) real)) "never the real address"))
+        (is (contains? (authors body) masked)
+            "Plain org member sees an outsider author masked")
+        (is (not (str/includes? (pr-str body) real)) "never that real address")
+        (is (contains? (authors body) (:email colleague))
+            "but a co-member author stays in full"))
 
       (let [body (call outsider)]
         (is (every? :author-role body) "Unrelated viewer gets coarse role labels")
