@@ -279,11 +279,17 @@
                      {:impersonator-id (str (:id admin))})
     (add-user-event! db admin "impersonated-user"
                      {:target-id (str (:id target))})
-    (merge (dissoc target :password)
-           {:token (jwt/create-token target
-                                     :valid-seconds impersonation-token-valid-seconds
-                                     :extra-claims {:impersonator impersonator})
-            :impersonator impersonator})))
+    ;; Same projection login and refresh apply (org/enrich-org-roles): org
+    ;; membership confers NO stored role, so a token minted from the raw
+    ;; account silently lacks :org/member and :org/manage. An impersonated org
+    ;; member would read as belonging to no organization at all — org endpoints
+    ;; 403, and the org UI does not render.
+    (let [target (org/enrich-org-roles db target)]
+      (merge (dissoc target :password)
+             {:token (jwt/create-token target
+                                       :valid-seconds impersonation-token-valid-seconds
+                                       :extra-claims {:impersonator impersonator})
+              :impersonator impersonator}))))
 
 ;;; Reminders ;;;
 
@@ -1203,17 +1209,25 @@
   "Returns `(fn [subject-id email] -> string|nil)` rendering ONE person at the
   viewer's tier.
 
-  At `:masked`, people who share an org with the viewer are still shown in
-  full: the viewer already sees those exact addresses unmasked in that org's
-  Jäsenet tab, so masking them here would make the same colleague look
-  different in two tabs while protecting nothing. Outsiders — typically the
-  legacy direct editors, who are usually in no org at all — stay masked. The
-  co-member lookup costs one query and runs ONLY at the `:masked` tier."
-  [db viewer tier]
+  At `:masked`, the viewer themselves and anyone sharing one of `org-ids` with
+  them are still shown in full: the viewer already sees those exact addresses
+  unmasked in that org's Jäsenet tab, so masking them here would make the same
+  colleague look different in two tabs while protecting nothing. Outsiders —
+  typically the legacy direct editors, who are usually in no org at all — stay
+  masked.
+
+  `org-ids` is the SITE's orgs (owner + grantees), never every org the viewer
+  happens to belong to: sharing an unrelated org with someone must not unmask
+  them on a site neither org is connected to.
+
+  The co-member lookup costs one query and runs ONLY at the `:masked` tier."
+  [db viewer tier org-ids]
   (if (= :masked tier)
-    (let [co-members (org/co-member-ids db (:id viewer))]
+    (let [co-members (org/co-member-ids db (:id viewer) org-ids)
+          self       (str (:id viewer))]
       (fn [subject-id email]
-        (if (contains? co-members (str subject-id))
+        (if (or (= self (str subject-id))
+                (contains? co-members (str subject-id)))
           email
           (org/mask-email email))))
     (fn [_subject-id email] (org/apply-pii-tier tier email))))
@@ -1238,7 +1252,8 @@
   [db lipas-id viewer]
   (let [site         (get-sports-site db lipas-id)
         pii          (site-pii-tier viewer site)
-        render       (pii-renderer db viewer pii)
+        render       (pii-renderer db viewer pii
+                                   (:org-id (roles/site-roles-context site)))
         owner-org-id (some-> site :owner-org-id str)
         grant-ids    (->> (:edit-grants site) (map str) set)
         orgs         (orgs-relevant-to-site db (cons owner-org-id grant-ids))
@@ -1326,7 +1341,8 @@
   the history rows themselves still carry no documents."
   ([db lipas-id] (site-edit-history db lipas-id nil))
   ([db lipas-id viewer]
-   (let [pii        (site-pii-tier viewer (get-sports-site db lipas-id))
+   (let [site       (get-sports-site db lipas-id)
+         pii        (site-pii-tier viewer site)
          rows       (db/get-sports-site-edit-history db lipas-id)
          author-ids (map :author_id rows)]
      (if (= :none pii)
@@ -1337,7 +1353,8 @@
                   :author-role (get labels (str (:author_id r)) "other")})
                rows))
        (let [names  (org/resolve-account-names db author-ids true)
-             render (pii-renderer db viewer pii)]
+             render (pii-renderer db viewer pii
+                                  (:org-id (roles/site-roles-context site)))]
          (mapv (fn [r]
                  {:event-date (str (:event_date r))
                   :status     (:status r)
