@@ -151,14 +151,6 @@
                     :search-meta.type.name.se "sv"
                     :search-meta.admin.name.fi "fi"
                     :search-meta.owner.name.se "sv"
-                    ;; Free-text user-entered sortable columns: mixed-case data
-                    ;; (HELSINKI / helsinki) must sort case-insensitively
-                    :marketing-name "fi"
-                    :www "fi"
-                    :email "fi"
-                    :phone-number "fi"
-                    :location.address "fi"
-                    :location.postal-office "fi"
                     ;; Localized sortable columns
                     :search-meta.type.main-category.name.fi "fi"
                     :search-meta.type.main-category.name.se "sv"
@@ -174,6 +166,21 @@
               (str field " should collate in " lang))
           ;; keep the plain keyword sub-field for exact match / aggregations
           (is (= "keyword" (get-in properties [field :fields :keyword :type])))))))
+
+  (testing "free-text columns sort on a collated search-meta key, not the field itself"
+    (let [properties (get-in (:sports-site search/mappings) [:mappings :properties])]
+      ;; The field itself can't carry the sort key: "-" is legal content that
+      ;; has to come back as-is, but must not sort above the real values.
+      (doseq [field [:search-meta.sort.marketing-name
+                     :search-meta.sort.www
+                     :search-meta.sort.email
+                     :search-meta.sort.phone-number
+                     :search-meta.sort.address
+                     :search-meta.sort.postal-office]]
+        (is (= "icu_collation_keyword" (:type (get properties field)))
+            (str field " should be a collation keyword"))
+        (is (= "fi" (:language (get properties field)))
+            (str field " should collate in fi")))))
 
   (testing "sortable table columns are indexed - sorting an unmapped field is an ES 400"
     (let [properties (get-in (:sports-site search/mappings) [:mappings :properties])]

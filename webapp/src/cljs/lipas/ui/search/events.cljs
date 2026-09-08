@@ -14,23 +14,27 @@
   (update-in m [:query :function_score :query :bool :filter] conj filter))
 
 (defn ->sort-key [k locale]
-  ;; Text fields sort on the `.sort` sub-field (icu_collation_keyword), which
-  ;; orders mixed-case and accented values in the locale's collation order
-  ;; instead of raw Unicode code-point order (where every lowercase value
-  ;; sorts after the entire uppercase alphabet). See
-  ;; lipas.backend.search/text-with-sort.
+  ;; Text columns never sort on the field itself, always on an
+  ;; icu_collation_keyword built from it, which orders mixed-case and accented
+  ;; values in the locale's collation order instead of raw Unicode code-point
+  ;; order (where every lowercase value sorts after the entire uppercase
+  ;; alphabet). Name and category fields get it as a `.sort` sub-field
+  ;; (lipas.backend.search/text-with-sort); the free-text fields below get it
+  ;; as a separate search-meta key so placeholder values can be excluded.
   (case k
     (:lipas-id) :lipas-id
     (:name) :search-meta.name.sort
     (:name-localized.se
       :name-localized.en) (-> k name (str ".sort") keyword)
-    ;; Free-text user-entered fields: single value, Finnish collation
+    ;; Free-text user-entered fields sort on a derived search-meta key, which
+    ;; is absent for values with nothing sortable in them — blanks, and the "-"
+    ;; users type into a mandatory field. See lipas.utils/->sortable-text.
     (:marketing-name
       :www
       :email
-      :phone-number
-      :location.address
-      :location.postal-office) (keyword (str (name k) ".sort"))
+      :phone-number) (keyword (str "search-meta.sort." (name k)))
+    (:location.address) :search-meta.sort.address
+    (:location.postal-office) :search-meta.sort.postal-office
     (:location.city.name
       :type.name
       :admin.name
@@ -69,8 +73,23 @@
               [(cond
                  (= sort-fn :score) :_score
                  sort-fn {(->sort-key sort-fn locale)
-                          {:order (if asc? "asc" "desc")}}
-                 :else nil)])}))
+                          (cond-> {:order (if asc? "asc" "desc")
+                                   ;; Sites with no value for the column go to
+                                   ;; the bottom in both directions. This is
+                                   ;; also ES's default, but pin it so the
+                                   ;; behaviour is stated rather than inherited.
+                                   :missing "_last"}
+                            ;; Int array: ES sorts arrays by min asc and max
+                            ;; desc by default, so [1990 2010] would sort on
+                            ;; 1990 one way and 2010 the other.
+                            (= sort-fn :renovation-years) (assoc :mode "min"))}
+                 :else nil)
+               ;; Deterministic tiebreaker. Without it, docs sharing a sort key
+               ;; -- which is *every* site missing the sorted column, up to 97%
+               ;; of them for e.g. marketing-name -- come back in Lucene doc-id
+               ;; order, which changes whenever segments merge. Paging through
+               ;; that block then shows some sites twice and skips others.
+               (when sort-fn {:lipas-id {:order "asc"}})])}))
 
 (defn resolve-pagination [{:keys [page page-size]} decay?]
   (if decay?
