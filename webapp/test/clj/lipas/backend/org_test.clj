@@ -1409,7 +1409,7 @@
                                           :edit-grants  [(str grantee-id)]
                                           :activities   {:melonta {}}))
           _                    (core/upsert-sports-site!* (test-db) admin site)
-          editors              (core/site-editors (test-db) lid)]
+          editors              (core/site-editors (test-db) lid admin)]
       (is (= (str owner-id) (:id (:owner-org editors))) "Owner org resolved")
       (is (contains? (set (map :id (:grantee-orgs editors))) (str grantee-id)) "Grantee org listed")
       (is (contains? (set (map :id (:activity-editor-orgs editors))) (str grantee-id))
@@ -1428,7 +1428,7 @@
           editor (test-utils/gen-city-manager-user city :db-component (test-db)) ; direct edit role for the city
           other  (test-utils/gen-city-manager-user 91 :db-component (test-db))   ; different city
           admin2 (test-utils/gen-admin-user :db-component (test-db))             ; admin (must be excluded)
-          emails (set (map :email (:legacy-users (core/site-editors (test-db) lid))))
+          emails (set (map :email (:legacy-users (core/site-editors (test-db) lid admin))))
           ;; exhaustive oracle: scan every active user with the exact matcher
           rc     (roles/site-roles-context (core/get-sports-site (test-db) lid))
           naive  (->> (core/get-users (test-db))
@@ -1466,7 +1466,7 @@
                           :activities {:melonta {}})
                    (assoc-in [:location :city :city-code] city))
           _       (core/upsert-sports-site!* (test-db) admin site)
-          editors (core/site-editors (test-db) lid)]
+          editors (core/site-editors (test-db) lid admin)]
       (is (contains? (set (map :id (:catalog-editor-orgs editors))) (str cm-org-id))
           "Org whose catalog grants city-manager for the site's city is a (full) editor
            (old code never found catalog city/type/site-managers — fails on old)")
@@ -1496,7 +1496,7 @@
                       (assoc-in [:type :type-code] 4412)
                       (dissoc :activities))
           _       (core/upsert-sports-site!* (test-db) admin site)
-          editors (core/site-editors (test-db) lid)]
+          editors (core/site-editors (test-db) lid admin)]
       (is (contains? (set (map :id (:activity-editor-orgs editors))) (str org-id))
           "Org whose catalog grants activities-manager(cycling) is listed even though
            the document has no UTP data yet (fails on old: :activity ctx was nil)")
@@ -1515,7 +1515,7 @@
                                            :db-component (test-db)
                                            :permissions {:roles [{:role "activities-manager"
                                                                   :activity ["cycling"]}]}})
-            editors' (core/site-editors (test-db) lid)]
+            editors' (core/site-editors (test-db) lid admin)]
         (is (contains? (set (map :email (:legacy-activity-users editors')))
                        (:email direct))
             "Direct activity-only user listed as activity editor (fails on old: key absent)")
@@ -1548,7 +1548,10 @@
                                            [city-auth  "2026-01-03T00:00:00.000Z"]
                                            [org-auth   "2026-01-04T00:00:00.000Z"]]]
                         (core/upsert-sports-site!* db author (assoc base :event-date ts)))
-          regular     (test-utils/gen-regular-user :db-component db)
+          ;; roles pinned empty: gen-user generates RANDOM permissions, and a
+          ;; generated city/type role that happened to match this site would
+          ;; lift the viewer out of the :none tier and flake this test
+          regular     (test-utils/gen-regular-user :db-component db :permissions {:roles []})
           admin       (test-utils/gen-admin-user :db-component db)
           call        (fn [user]
                         (let [resp (test-app (-> (mock/request :post "/api/actions/get-site-edit-history")
@@ -1577,6 +1580,115 @@
           ":users/manage caller keeps the person view (emails) — unchanged")
       (is (not-any? :author-role body2)
           "Admin rows are the person view, not role labels"))))
+
+(defn- pii-fixture
+  "An org-owned site plus one legacy direct editor, and the four viewer tiers
+  that look at it. Returns everything the PII tests need."
+  []
+  (let [db       (test-db)
+        admin    (test-utils/gen-admin-user :db-component db)
+        [org1 _] (create-test-orgs)
+        org-id   (:id org1)
+        city     837
+        lid      9992090
+        site     (-> (test-utils/gen-sports-site)
+                     (assoc :event-date (utils/timestamp) :status "active" :lipas-id lid
+                            :owner-org-id (str org-id))
+                     (assoc-in [:location :city :city-code] city)
+                     (assoc-in [:type :type-code] 1530))
+        _        (core/upsert-sports-site!* db admin site)]
+    {:db     db
+     :lid    lid
+     :admin  admin
+     ;; the one person entry the who-can-edit list should carry
+     :direct (test-utils/gen-city-manager-user city :db-component db)
+     :oadmin (test-utils/gen-org-admin-user org-id :db-component db)
+     :member (test-utils/gen-org-user org-id :db-component db :permissions {:roles []})
+     ;; no relationship to the site at all; roles pinned so a randomly
+     ;; generated city/type match can't lift them out of the :none tier
+     :outsider (test-utils/gen-regular-user :db-component db :permissions {:roles []})}))
+
+(defn- post-json [uri body user]
+  (-> (test-app (-> (mock/request :post uri)
+                    (mock/content-type "application/json")
+                    (mock/body (test-utils/->json body))
+                    (test-utils/token-header (jwt/create-token user))))
+      test-utils/safe-parse-json))
+
+(deftest site-editors-pii-tier-test
+  (testing "Who-can-edit renders person entries at the viewer's tier (PM rule
+            2026-09-07): full email for LIPAS/org admins, masked for org
+            members, dropped for viewers unrelated to the site"
+    (let [{:keys [lid admin direct oadmin member outsider]} (pii-fixture)
+          real   (:email direct)
+          masked (backend-org/mask-email real)
+          call   #(post-json "/api/actions/get-site-editors" {:lipas-id lid} %)
+          emails #(set (map :email (:legacy-users %)))]
+      (is (not= real masked) "sanity: the mask actually changes the address")
+
+      (testing "LIPAS admin"
+        (is (contains? (emails (call admin)) real) "sees the full address"))
+
+      (testing "org admin of the owning org"
+        (is (contains? (emails (call oadmin)) real) "sees the full address"))
+
+      (testing "plain org member"
+        (let [body (call member)]
+          (is (contains? (emails body) masked) "sees the masked address")
+          (is (not (contains? (emails body) real)) "never the real one")
+          (is (not (str/includes? (pr-str body) real))
+              "and it appears nowhere else in the payload either")))
+
+      (testing "viewer unrelated to the site"
+        (let [body (call outsider)]
+          (is (empty? (:legacy-users body)) "gets no person entries at all")
+          (is (empty? (:legacy-activity-users body)))
+          (is (some? (:owner-org body))
+              "but still sees the orgs — an org name is not personal data")))
+
+      (testing ":username is gone from every tier"
+        ;; it is an email address for ~25% of accounts, so returning it beside a
+        ;; masked :email would have handed back the identifier the mask removes
+        (doseq [[who body] [[:admin (call admin)] [:member (call member)]]]
+          (is (not (str/includes? (pr-str body) ":username")) (str who))))))) 
+
+(deftest site-edit-history-pii-tier-test
+  (testing "Site edit history follows the same three tiers; the unrelated viewer
+            keeps the coarse role label (F38) rather than gaining a masked email"
+    (let [{:keys [lid admin oadmin member outsider]} (pii-fixture)
+          real    (:email admin)
+          masked  (backend-org/mask-email real)
+          call    #(post-json "/api/actions/get-site-edit-history" {:lipas-id lid} %)
+          authors #(set (map :author %))]
+      (is (contains? (authors (call admin)) real)
+          "LIPAS admin sees the author's full address")
+      (is (contains? (authors (call oadmin)) real)
+          "Org admin of the owning org sees the author's full address")
+
+      (let [body (call member)]
+        (is (contains? (authors body) masked) "Plain org member sees it masked")
+        (is (not (str/includes? (pr-str body) real)) "never the real address"))
+
+      (let [body (call outsider)]
+        (is (every? :author-role body) "Unrelated viewer gets coarse role labels")
+        (is (not-any? :author body) "and no person identifier")
+        (is (not (str/includes? (pr-str body) "@"))
+            "no email-shaped string anywhere — masked or otherwise")))))
+
+(deftest mask-email-test
+  (testing "mask-email keeps first/last of the local part and the whole domain"
+    (is (= "v................n@gmail.com"
+           (backend-org/mask-email "valtteri.harmainen@gmail.com")))
+    (is (= "s........a@saarijarvi.fi"
+           (backend-org/mask-email "suvi.puura@saarijarvi.fi")))
+    (is (= "a.c@x.fi" (backend-org/mask-email "abc@x.fi"))))
+  (testing "short local parts keep nothing — there is no recognisable middle"
+    (is (= "..@x.fi" (backend-org/mask-email "ab@x.fi")))
+    (is (= ".@x.fi" (backend-org/mask-email "a@x.fi"))))
+  (testing "input it does not understand is masked whole, never passed through"
+    (is (= "............" (backend-org/mask-email "not-an-email")))
+    (is (nil? (backend-org/mask-email "")))
+    (is (nil? (backend-org/mask-email nil)))))
 
 (deftest enrich-denormalizes-owner-org-name-test
   (testing "Enriched ES doc carries the owner org's name in search-meta (F15)"

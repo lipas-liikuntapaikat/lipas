@@ -498,7 +498,10 @@
                       {:status 200
                        :body (org-takeover/preview db (-> req :parameters :body :org-id))})}}]
 
-      ;; --- "Who can edit site Z" (Q2) — transparency, any authenticated user ---
+      ;; --- "Who can edit site Z" (Q2) — transparency, any authenticated user.
+      ;; Person entries are rendered at the caller's core/site-pii-tier: full
+      ;; email for LIPAS/org admins, masked for org members and the site's own
+      ;; editors, dropped for everyone else. ---
         ["/actions/get-site-editors"
          {:post
           {:no-doc true
@@ -507,12 +510,15 @@
            :parameters {:body [:map [:lipas-id #'sports-site-schema/lipas-id]]}
            :handler (fn [req]
                       {:status 200
-                       :body (core/site-editors db (-> req :parameters :body :lipas-id))})}}]
+                       :body (core/site-editors db
+                                                 (-> req :parameters :body :lipas-id)
+                                                 (:identity req))})}}]
 
       ;; --- Site edit history — any authenticated user, surfaced in the org
-      ;; Kohteet drawer for the members maintaining the data. The author is a
-      ;; person identifier (email) ONLY for :users/manage holders; everyone
-      ;; else gets timestamp + a coarse role label (GDPR, F38). ---
+      ;; Kohteet drawer for the members maintaining the data. Same three tiers
+      ;; as get-site-editors: full author email for LIPAS/org admins, masked for
+      ;; org members and the site's own editors, and timestamp + a coarse role
+      ;; label for anyone else (GDPR, F38). ---
         ["/actions/get-site-edit-history"
          {:post
           {:no-doc true
@@ -523,7 +529,7 @@
                       {:status 200
                        :body (core/site-edit-history
                                db (-> req :parameters :body :lipas-id)
-                               {:emails? (roles/check-privilege (:identity req) {} :users/manage)})})}}]
+                               (:identity req))})}}]
 
       ;; --- Commands --------------------------------------------------------
 
