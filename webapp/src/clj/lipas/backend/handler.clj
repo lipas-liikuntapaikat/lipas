@@ -478,15 +478,21 @@
         ["/actions/get-org-history"
          {:post
           {:no-doc true
-         ;; History/audit is admin-only (lipas-admin or org-admin), not members.
-         ;; Author identity (email) only for :users/manage; org admins get a
-         ;; coarse role label instead (same GDPR rule as site edit history).
+         ;; History/audit is admin-only (lipas-admin or org-admin), not members —
+         ;; so every caller who gets this far is already at the `:full` tier of
+         ;; the PM PII rule (2026-09-07: "org admin and LIPAS admin see the full
+         ;; emails"). Hence `true` unconditionally.
+         ;;
+         ;; NOTE this REPLACES the earlier F38 behaviour, where org admins saw a
+         ;; coarse :author-role and only :users/manage saw :author-name. That was
+         ;; the conservative placeholder taken "pending data-protection guidance"
+         ;; (docs/organizations.md); this is that guidance. Reverting is a
+         ;; one-word change back to the check-privilege call.
            :require-privilege [org-scope-from-body :org/manage]
            :parameters {:body [:map [:org-id org-schema/org-id]]}
            :handler (fn [req]
                       {:status 200
-                       :body (org/get-history db (-> req :parameters :body :org-id)
-                                              (roles/check-privilege (:identity req) {} :users/manage))})}}]
+                       :body (org/get-history db (-> req :parameters :body :org-id) true)})}}]
 
       ;; --- Bulk contact update candidates (org-only). Read-only candidate
       ;; listing is member-visible (same gate as /actions/get-org-sites) so the
@@ -513,7 +519,10 @@
                       {:status 200
                        :body (org-takeover/preview db (-> req :parameters :body :org-id))})}}]
 
-      ;; --- "Who can edit site Z" (Q2) — transparency, any authenticated user ---
+      ;; --- "Who can edit site Z" (Q2) — transparency, any authenticated user.
+      ;; Person entries are rendered at the caller's core/site-pii-tier: full
+      ;; email for LIPAS/org admins, masked for org members and the site's own
+      ;; editors, dropped for everyone else. ---
         ["/actions/get-site-editors"
          {:post
           {:no-doc true
@@ -522,12 +531,15 @@
            :parameters {:body [:map [:lipas-id #'sports-site-schema/lipas-id]]}
            :handler (fn [req]
                       {:status 200
-                       :body (core/site-editors db (-> req :parameters :body :lipas-id))})}}]
+                       :body (core/site-editors db
+                                                 (-> req :parameters :body :lipas-id)
+                                                 (:identity req))})}}]
 
       ;; --- Site edit history — any authenticated user, surfaced in the org
-      ;; Kohteet drawer for the members maintaining the data. The author is a
-      ;; person identifier (email) ONLY for :users/manage holders; everyone
-      ;; else gets timestamp + a coarse role label (GDPR, F38). ---
+      ;; Kohteet drawer for the members maintaining the data. Same three tiers
+      ;; as get-site-editors: full author email for LIPAS/org admins, masked for
+      ;; org members and the site's own editors, and timestamp + a coarse role
+      ;; label for anyone else (GDPR, F38). ---
         ["/actions/get-site-edit-history"
          {:post
           {:no-doc true
@@ -538,7 +550,7 @@
                       {:status 200
                        :body (core/site-edit-history
                                db (-> req :parameters :body :lipas-id)
-                               {:emails? (roles/check-privilege (:identity req) {} :users/manage)})})}}]
+                               (:identity req))})}}]
 
       ;; --- Commands --------------------------------------------------------
 

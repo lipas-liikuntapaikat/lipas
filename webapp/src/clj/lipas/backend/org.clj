@@ -151,6 +151,40 @@
 
 ;;; account-name resolution (shared by org history + site edit history) ;;;
 
+(defn mask-email
+  "Partially redact an email for viewers who may learn THAT someone has access
+  without learning WHO: `matti.meikalainen@example.fi` becomes
+  `m...............n@example.fi`.
+
+  First and last character of the local part survive so a colleague who already
+  knows the address can still recognise it; the domain is kept whole because it
+  identifies the organisation, not the individual. Local parts of 1-2 characters
+  carry no recognisable middle, so they are masked entirely. Anything without a
+  domain part is masked whole rather than passed through — this function must
+  never return an unredacted identifier for input it does not understand."
+  [email]
+  (when-let [s (some-> email str str/trim not-empty)]
+    (let [[local domain] (str/split s #"@" 2)
+          dots           #(apply str (repeat % \.))]
+      (if (str/blank? domain)
+        (dots (count s))
+        (str (if (<= (count local) 2)
+               (dots (count local))
+               (str (first local) (dots (- (count local) 2)) (last local)))
+             "@" domain)))))
+
+(defn apply-pii-tier
+  "Render one account's person identifier at the viewer's `tier`:
+  `:full` → the email, `:masked` → `mask-email` of it, anything else → nil.
+  Callers MUST drop the surrounding entry when this returns nil rather than
+  falling back to another field — `:username` is an email for ~25% of accounts,
+  so it is not a safe stand-in for a redacted address."
+  [tier email]
+  (case tier
+    :full   email
+    :masked (mask-email email)
+    nil))
+
 (defn resolve-account-names
   "Batch-resolve account ids → display label in one query. Returns a map keyed
   by string id (nil when `ids` is empty); ids absent from `account` are simply
