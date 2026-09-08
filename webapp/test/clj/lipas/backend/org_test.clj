@@ -1762,6 +1762,29 @@
       (is (not (contains? authors (:email author)))
           "and the real address is absent"))))
 
+(deftest impersonation-projects-org-roles-test
+  (testing "An impersonated session carries the target's ORG roles.
+
+            Org membership confers no stored role — it is projected at login
+            (org/enrich-org-roles). impersonate! minted its token from the raw
+            account, so an impersonated org member silently belonged to no
+            organization: org endpoints 403, and with the rollout gate the org
+            UI does not render at all."
+    (let [db       (test-db)
+          [org1 _] (create-test-orgs)
+          org-id   (:id org1)
+          admin    (test-utils/gen-admin-user :db-component db)
+          member   (test-utils/gen-org-user org-id :db-component db :permissions {:roles []})
+          ;; the route passes the id as a JSON string; get-user! lowercases
+          ;; its argument, which blows up on a raw uuid
+          body     (core/impersonate! db admin (str (:id member)))
+          claims   (jwt/unsign (:token body))
+          roles    (update-in claims [:permissions :roles] roles/conform-roles)]
+      (is (= (:email member) (:email claims)) "sanity: impersonating the right user")
+      (is (roles/check-privilege roles {:org-id #{(str org-id)}} :org/member)
+          "the impersonated token grants :org/member on the target's org")
+      (is (some? (:impersonator body)) "and still records the impersonator"))))
+
 (deftest mask-email-test
   (testing "mask-email keeps first/last of the local part and the whole domain"
     (is (= "v................n@gmail.com"

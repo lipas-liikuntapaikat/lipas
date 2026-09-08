@@ -279,11 +279,17 @@
                      {:impersonator-id (str (:id admin))})
     (add-user-event! db admin "impersonated-user"
                      {:target-id (str (:id target))})
-    (merge (dissoc target :password)
-           {:token (jwt/create-token target
-                                     :valid-seconds impersonation-token-valid-seconds
-                                     :extra-claims {:impersonator impersonator})
-            :impersonator impersonator})))
+    ;; Same projection login and refresh apply (org/enrich-org-roles): org
+    ;; membership confers NO stored role, so a token minted from the raw
+    ;; account silently lacks :org/member and :org/manage. An impersonated org
+    ;; member would read as belonging to no organization at all — org endpoints
+    ;; 403, and the org UI does not render.
+    (let [target (org/enrich-org-roles db target)]
+      (merge (dissoc target :password)
+             {:token (jwt/create-token target
+                                       :valid-seconds impersonation-token-valid-seconds
+                                       :extra-claims {:impersonator impersonator})
+              :impersonator impersonator}))))
 
 ;;; Reminders ;;;
 

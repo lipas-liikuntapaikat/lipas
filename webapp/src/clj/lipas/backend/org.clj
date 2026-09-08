@@ -607,6 +607,29 @@
   [db user-id]
   (derive-org-roles user-id (user-orgs db user-id)))
 
+(defn enrich-org-roles
+  "Project the user's org-derived roles and merge them into the user's roles.
+  Both existing and derived roles are conformed to the same (keyword/set) shape
+  and deduped, so a legacy account org role and its derived twin collapse.
+  Derived roles live only in the resulting token — never persisted.
+
+  Lives here rather than in `lipas.backend.auth` because `auth` requires
+  `core`, so `core` (which mints impersonation tokens) could never call it
+  there. `auth/enrich-org-roles` delegates to this.
+
+  EVERY path that mints a session token must run this. Org membership confers
+  no stored role — skip it and the session silently loses :org/member and
+  :org/manage, which reads as \"this user is in no organization\" rather than as
+  an error."
+  [db user]
+  (update-in user [:permissions :roles]
+             (fn [roles]
+               (->> (derive-user-org-roles db (:id user))
+                    (concat roles)
+                    roles/conform-roles
+                    distinct
+                    vec))))
+
 (comment
   (all-orgs (:lipas/db integrant.repl.state/system))
   (get-org (:lipas/db integrant.repl.state/system) #uuid "d068ec10-0928-4ed1-883a-f40f3c698f32")
