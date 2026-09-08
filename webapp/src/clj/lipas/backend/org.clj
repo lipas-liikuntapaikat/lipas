@@ -186,17 +186,30 @@
     nil))
 
 (defn co-member-ids
-  "Account ids (as strings) that share at least one org with `user-id`.
+  "Account ids (as strings) that share one of `org-ids` with `user-id`.
 
-  These are exactly the people whose addresses the user ALREADY sees unmasked
-  in that org's Jäsenet tab (`get-org-users` is gated at `org-member-or-admin?`
-  and returns full `:email`), so masking them elsewhere protects nothing while
-  making the same person look different in two tabs. One query — the same
-  reverse jsonb-containment `user-orgs` uses."
-  [db user-id]
-  (if-let [uid (utils/->uuid-safe user-id)]
-    (->> (user-orgs db uid) (mapcat :members) (keep :user-id) (map str) set)
-    #{}))
+  These are the people whose addresses the user ALREADY sees unmasked in that
+  org's Jäsenet tab (`get-org-users` is gated at `org-member-or-admin?` and
+  returns full `:email`), so masking them elsewhere protects nothing while
+  making the same person look different in two tabs.
+
+  `org-ids` MUST be scoped to the resource being viewed — for a site, its owner
+  org plus any grantees. An earlier version collected members of every org the
+  viewer belonged to, which meant sharing some entirely unrelated org with
+  someone unmasked them on a site neither org had anything to do with. The
+  Jäsenet argument technically still held, but the result was baffling in the
+  UI. Empty `org-ids` ⇒ nobody. One query, the same reverse jsonb-containment
+  `user-orgs` uses."
+  [db user-id org-ids]
+  (let [wanted (set (map str org-ids))]
+    (if-let [uid (and (seq wanted) (utils/->uuid-safe user-id))]
+      (->> (user-orgs db uid)
+           (filter (fn [o] (contains? wanted (str (:id o)))))
+           (mapcat :members)
+           (keep :user-id)
+           (map str)
+           set)
+      #{})))
 
 (defn resolve-account-names
   "Batch-resolve account ids → display label in one query. Returns a map keyed

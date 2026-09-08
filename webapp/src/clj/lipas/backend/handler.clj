@@ -149,6 +149,24 @@
                                {:org-id #{(str (-> req :parameters :body :org-id))}}
                                :org/member))))
 
+(defn- site-org-member-or-admin?
+  "Boolean privilege fn for POST /actions/get-site-editors: LIPAS admin, or
+  `:org/member` on an org tied to the site named in the body — its owner org or
+  one it has granted edit to.
+
+  That set is exactly `search-meta.editor-org-ids`, which is what the Kohteet
+  tab queries to build its list, so every row a member can see there can also
+  open its drawer, and nothing else can. Before this the route was
+  `:require-privilege nil`: ANY authenticated user could ask who edits ANY
+  lipas-id."
+  [db req]
+  (let [user (:identity req)]
+    (or (roles/check-role user :admin)
+        (let [site    (core/get-sports-site db (-> req :parameters :body :lipas-id))
+              org-ids (:org-id (roles/site-roles-context site))]
+          (boolean (and (seq org-ids)
+                        (roles/check-privilege user {:org-id org-ids} :org/member)))))))
+
 (defn- utp-image-upload-access?
   "Boolean privilege fn for POST /actions/upload-utp-image.
 
@@ -504,15 +522,15 @@
                       {:status 200
                        :body (org-takeover/preview db (-> req :parameters :body :org-id))})}}]
 
-      ;; --- "Who can edit site Z" (Q2) — transparency, any authenticated user.
-      ;; Person entries are rendered at the caller's core/site-pii-tier: full
-      ;; email for LIPAS/org admins, masked for org members and the site's own
-      ;; editors, dropped for everyone else. ---
+      ;; --- "Who can edit site Z" (Q2) — scoped to the site's own orgs: LIPAS
+      ;; admins, plus members of the org that owns the site or has been granted
+      ;; edit on it. Person entries within that are still rendered at the
+      ;; caller's core/site-pii-tier (full email for admins, masked for plain
+      ;; members). ---
         ["/actions/get-site-editors"
          {:post
           {:no-doc true
-           :require-privilege nil
-           :middleware [mw/token-auth mw/auth]
+           :require-privilege (fn [req] (site-org-member-or-admin? db req))
            :parameters {:body [:map [:lipas-id #'sports-site-schema/lipas-id]]}
            :handler (fn [req]
                       {:status 200

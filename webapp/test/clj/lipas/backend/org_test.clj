@@ -1658,12 +1658,14 @@
           (is (not (contains? (emails body) (backend-org/mask-email (:email colleague))))
               "and is not ALSO present in masked form")))
 
-      (testing "viewer unrelated to the site"
-        (let [body (call outsider)]
-          (is (empty? (:legacy-users body)) "gets no person entries at all")
-          (is (empty? (:legacy-activity-users body)))
-          (is (some? (:owner-org body))
-              "but still sees the orgs — an org name is not personal data")))
+      (testing "viewer unrelated to the site is refused outright"
+        ;; the route is no longer :require-privilege nil — it is scoped to the
+        ;; site's own orgs, so there is no redacted body to hand back
+        (let [resp (test-app (-> (mock/request :post "/api/actions/get-site-editors")
+                                 (mock/content-type "application/json")
+                                 (mock/body (test-utils/->json {:lipas-id lid}))
+                                 (test-utils/token-header (jwt/create-token outsider))))]
+          (is (= 403 (:status resp)))))
 
       (testing ":username is gone from every tier"
         ;; it is an email address for ~25% of accounts, so returning it beside a
@@ -1784,6 +1786,69 @@
       (is (roles/check-privilege roles {:org-id #{(str org-id)}} :org/member)
           "the impersonated token grants :org/member on the target's org")
       (is (some? (:impersonator body)) "and still records the impersonator"))))
+
+(deftest co-membership-is-scoped-to-the-site-test
+  (testing "Sharing an UNRELATED org with someone does not unmask them.
+
+            Reported from lipas-dev: a tester saw a LIPAS admin's full address
+            on a site owned by an org the admin had nothing to do with, because
+            the two happened to share a different org."
+    (let [db          (test-db)
+          [org-a org-b] (create-test-orgs)
+          city        843
+          lid         9992099
+          site        (-> (test-utils/gen-sports-site)
+                          (assoc :status "active" :lipas-id lid
+                                 :owner-org-id (str (:id org-a)))
+                          (assoc-in [:location :city :city-code] city)
+                          (assoc-in [:type :type-code] 1530))
+          ;; author edits the site and shares ONLY org-b with the viewer
+          author      (test-utils/gen-city-manager-user city :db-component db)
+          _           (backend-org/add-member! db (:id org-b) (:id author) {:roles []} nil)
+          _           (core/upsert-sports-site!* db author
+                                                 (assoc site :event-date "2026-05-01T00:00:00.000Z"))
+          ;; viewer is a plain member of BOTH orgs; only org-a owns the site
+          viewer      (test-utils/gen-org-user (:id org-a) :db-component db :permissions {:roles []})
+          _           (backend-org/add-member! db (:id org-b) (:id viewer) {:roles []} nil)
+          viewer      (assoc-in viewer [:permissions :roles]
+                                (backend-org/derive-user-org-roles db (:id viewer)))
+          authors     (set (map :author (post-json "/api/actions/get-site-edit-history"
+                                                   {:lipas-id lid} viewer)))]
+      (is (contains? authors (backend-org/mask-email (:email author)))
+          "masked: the shared org (org-b) has nothing to do with this site")
+      (is (not (contains? authors (:email author)))
+          "the real address does not appear")))
+
+  (testing "sharing the site's OWN org still unmasks"
+    (let [db       (test-db)
+          [org1 _] (create-test-orgs)
+          city     845
+          lid      9992100
+          site     (-> (test-utils/gen-sports-site)
+                       (assoc :status "active" :lipas-id lid :owner-org-id (str (:id org1)))
+                       (assoc-in [:location :city :city-code] city)
+                       (assoc-in [:type :type-code] 1530))
+          author   (test-utils/gen-city-manager-user city :db-component db)
+          _        (backend-org/add-member! db (:id org1) (:id author) {:roles []} nil)
+          _        (core/upsert-sports-site!* db author
+                                              (assoc site :event-date "2026-05-02T00:00:00.000Z"))
+          viewer   (test-utils/gen-org-user (:id org1) :db-component db :permissions {:roles []})
+          authors  (set (map :author (post-json "/api/actions/get-site-edit-history"
+                                                {:lipas-id lid} viewer)))]
+      (is (contains? authors (:email author))
+          "unmasked: they are a colleague in the org that owns this site"))))
+
+(deftest get-site-editors-scope-test
+  (testing "get-site-editors is scoped to the site's own orgs"
+    (let [{:keys [lid admin member outsider]} (pii-fixture)
+          call (fn [user]
+                 (:status (test-app (-> (mock/request :post "/api/actions/get-site-editors")
+                                        (mock/content-type "application/json")
+                                        (mock/body (test-utils/->json {:lipas-id lid}))
+                                        (test-utils/token-header (jwt/create-token user))))))]
+      (is (= 200 (call admin)) "LIPAS admin: unrestricted")
+      (is (= 200 (call member)) "member of the owning org: allowed")
+      (is (= 403 (call outsider)) "no relationship to the site: refused"))))
 
 (deftest mask-email-test
   (testing "mask-email keeps first/last of the local part and the whole domain"
