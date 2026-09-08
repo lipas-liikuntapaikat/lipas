@@ -1728,6 +1728,40 @@
       (is (not (contains? authors (:email admin-outside)))
           "and their real address does not appear"))))
 
+(deftest site-edit-history-sole-member-test
+  (testing "Exact lipas-dev scenario: an org whose ONLY member is a plain
+            org-user, a site it owns, and a LIPAS admin author who is not a
+            member of anything. The admin's address must be masked."
+    (let [db       (test-db)
+          [org1 _] (create-test-orgs)
+          org-id   (:id org1)
+          city     841
+          lid      9992097
+          site     (-> (test-utils/gen-sports-site)
+                       (assoc :status "active" :lipas-id lid :owner-org-id (str org-id))
+                       (assoc-in [:location :city :city-code] city)
+                       (assoc-in [:type :type-code] 1530))
+          author   (test-utils/gen-admin-user :db-component db)
+          _        (core/upsert-sports-site!* db author
+                                              (assoc site :event-date "2026-04-01T00:00:00.000Z"))
+          ;; the one and only member, a plain org-user (no reserved "admin" role)
+          member   (test-utils/gen-org-user org-id :db-component db :permissions {:roles []})
+          members  (:members (backend-org/get-org db org-id))
+          ;; conform as the token path does (auth/enrich-org-roles and the
+          ;; token-auth backend both do) — raw generator output carries org-id
+          ;; as a vector, which the set-intersection matcher will not match
+          tier     (core/site-pii-tier
+                     (update-in member [:permissions :roles] roles/conform-roles)
+                     (core/get-sports-site db lid))
+          authors  (set (map :author (post-json "/api/actions/get-site-edit-history"
+                                                {:lipas-id lid} member)))]
+      (is (= 1 (count members)) "sanity: the org has exactly one member")
+      (is (= :masked tier) "a plain sole member resolves to the :masked tier")
+      (is (contains? authors (backend-org/mask-email (:email author)))
+          "the admin author's address is masked")
+      (is (not (contains? authors (:email author)))
+          "and the real address is absent"))))
+
 (deftest mask-email-test
   (testing "mask-email keeps first/last of the local part and the whole domain"
     (is (= "v................n@gmail.com"
