@@ -1671,7 +1671,7 @@
         ;; it is an email address for ~25% of accounts, so returning it beside a
         ;; masked :email would have handed back the identifier the mask removes
         (doseq [[who body] [[:admin (call admin)] [:member (call member)]]]
-          (is (not (str/includes? (pr-str body) ":username")) (str who))))))) 
+          (is (not (str/includes? (pr-str body) ":username")) (str who)))))))
 
 (deftest site-edit-history-pii-tier-test
   (testing "Site edit history follows the same three tiers; the unrelated viewer

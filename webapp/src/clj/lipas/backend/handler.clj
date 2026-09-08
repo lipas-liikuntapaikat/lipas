@@ -550,8 +550,8 @@
            :handler (fn [req]
                       {:status 200
                        :body (core/site-editors db
-                                                 (-> req :parameters :body :lipas-id)
-                                                 (:identity req))})}}]
+                                                (-> req :parameters :body :lipas-id)
+                                                (:identity req))})}}]
 
       ;; --- Site edit history — any authenticated user, surfaced in the org
       ;; Kohteet drawer for the members maintaining the data. Same three tiers
