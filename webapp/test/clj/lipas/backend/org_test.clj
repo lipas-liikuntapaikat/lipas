@@ -1697,6 +1697,37 @@
         (is (not (str/includes? (pr-str body) "@"))
             "no email-shaped string anywhere — masked or otherwise")))))
 
+(deftest site-edit-history-admin-author-test
+  (testing "A LIPAS admin author is not special: what unmasks them for a plain
+            member is ORG MEMBERSHIP, nothing about being an admin"
+    (let [db       (test-db)
+          [org1 _] (create-test-orgs)
+          org-id   (:id org1)
+          city     839
+          lid      9992095
+          site     (-> (test-utils/gen-sports-site)
+                       (assoc :status "active" :lipas-id lid :owner-org-id (str org-id))
+                       (assoc-in [:location :city :city-code] city)
+                       (assoc-in [:type :type-code] 1530))
+          ;; two LIPAS admins author a revision each; one is ALSO a member of
+          ;; the org whose member is doing the viewing, the other is not
+          admin-member  (test-utils/gen-admin-user :db-component db)
+          _             (backend-org/add-member! db org-id (:id admin-member) {:roles []} nil)
+          admin-outside (test-utils/gen-admin-user :db-component db)
+          _             (core/upsert-sports-site!* db admin-member
+                                                   (assoc site :event-date "2026-03-01T00:00:00.000Z"))
+          _             (core/upsert-sports-site!* db admin-outside
+                                                   (assoc site :event-date "2026-03-02T00:00:00.000Z"))
+          member  (test-utils/gen-org-user org-id :db-component db :permissions {:roles []})
+          authors (set (map :author (post-json "/api/actions/get-site-edit-history"
+                                               {:lipas-id lid} member)))]
+      (is (contains? authors (:email admin-member))
+          "admin who IS a member of the viewer's org: shown in full (co-member rule)")
+      (is (contains? authors (backend-org/mask-email (:email admin-outside)))
+          "admin who is NOT a member: masked like anyone else")
+      (is (not (contains? authors (:email admin-outside)))
+          "and their real address does not appear"))))
+
 (deftest mask-email-test
   (testing "mask-email keeps first/last of the local part and the whole domain"
     (is (= "v................n@gmail.com"
