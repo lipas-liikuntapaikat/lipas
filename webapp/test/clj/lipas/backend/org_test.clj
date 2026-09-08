@@ -1228,9 +1228,14 @@
       (is (= 403 (:status (call regular-tok))) "Non-member may not see history"))))
 
 (deftest org-history-author-privacy-test
-  (testing "Org admins see a coarse role label for revision authors, never the
-            author's email; LIPAS admins (:users/manage) keep the person view
-            (same GDPR rule as site edit history, F38)"
+  (testing "Org admins AND LIPAS admins both see revision authors by email.
+
+            This REVERSES the earlier F38 behaviour, where an org admin saw only
+            a coarse :author-role. That was the conservative placeholder taken
+            \"pending data-protection guidance\" (docs/organizations.md); the PM
+            rule of 2026-09-07 is that guidance — org admins are a `:full` tier
+            viewer. The org history tab is already :org/manage-gated, so nobody
+            below that tier can reach this endpoint at all."
     (let [org-id      (catalog-org! editor+ptv-catalog)
           lipas-admin (test-utils/gen-admin-user :db-component (test-db))
           ;; an authored revision: the lipas-admin adds a member
@@ -1247,14 +1252,11 @@
           oadmin-hist (call (jwt/create-token oadmin))
           admin-hist  (call (jwt/create-token lipas-admin))
           authored    (fn [rows k] (->> rows (keep k) set))]
-      ;; org-admin mode: role labels only, no author identifiers anywhere
-      (is (contains? (authored oadmin-hist :author-role) "admin")
-          "Org admin sees the author's coarse role label")
-      (is (empty? (authored oadmin-hist :author-name))
-          "Org admin response carries no :author-name")
-      (is (not-any? #(str/includes? (str %) (:email lipas-admin))
-                    (map :author-name oadmin-hist))
-          "The lipas-admin author's email never appears for org admins")
+      ;; org-admin mode: person view, same as lipas-admin (PM rule 2026-09-07)
+      (is (contains? (authored oadmin-hist :author-name) (:email lipas-admin))
+          "Org admin sees the author's email")
+      (is (empty? (authored oadmin-hist :author-role))
+          "Org admin response carries no :author-role any more")
       ;; member references in change summaries stay readable (own-org members)
       (is (some (fn [rev] (some #(str/includes? % (:email member)) (:changes rev)))
                 oadmin-hist)

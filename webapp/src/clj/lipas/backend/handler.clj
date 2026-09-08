@@ -463,15 +463,21 @@
         ["/actions/get-org-history"
          {:post
           {:no-doc true
-         ;; History/audit is admin-only (lipas-admin or org-admin), not members.
-         ;; Author identity (email) only for :users/manage; org admins get a
-         ;; coarse role label instead (same GDPR rule as site edit history).
+         ;; History/audit is admin-only (lipas-admin or org-admin), not members —
+         ;; so every caller who gets this far is already at the `:full` tier of
+         ;; the PM PII rule (2026-09-07: "org admin and LIPAS admin see the full
+         ;; emails"). Hence `true` unconditionally.
+         ;;
+         ;; NOTE this REPLACES the earlier F38 behaviour, where org admins saw a
+         ;; coarse :author-role and only :users/manage saw :author-name. That was
+         ;; the conservative placeholder taken "pending data-protection guidance"
+         ;; (docs/organizations.md); this is that guidance. Reverting is a
+         ;; one-word change back to the check-privilege call.
            :require-privilege [org-scope-from-body :org/manage]
            :parameters {:body [:map [:org-id org-schema/org-id]]}
            :handler (fn [req]
                       {:status 200
-                       :body (org/get-history db (-> req :parameters :body :org-id)
-                                              (roles/check-privilege (:identity req) {} :users/manage))})}}]
+                       :body (org/get-history db (-> req :parameters :body :org-id) true)})}}]
 
       ;; --- Bulk contact update candidates (org-only). Read-only candidate
       ;; listing is member-visible (same gate as /actions/get-org-sites) so the
