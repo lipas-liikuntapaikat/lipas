@@ -17,12 +17,13 @@
   :<- [::user]
   :<- [::dev-overrides]
   (fn [[user overrides] _]
-    (assoc (:login user) :dev/overrides overrides)))
-
-(defn user-data
-  "Same as ::user-data, but for use in effects"
-  [db]
-  (assoc (:login (:user db)) :dev/overrides (:lipas.ui.project-devtools/privilege-override db)))
+    ;; nil when logged out. Guard the assoc: `(assoc nil :dev/overrides nil)`
+    ;; returns a truthy `{:dev/overrides nil}`, which made every
+    ;; `(when user ...)` check on this sub fire for anonymous visitors too.
+    ;; `roles/check-privilege` reads nil as the :default role, which is what
+    ;; an anonymous visitor should get.
+    (when-let [login (:login user)]
+      (assoc login :dev/overrides overrides))))
 
 (rf/reg-sub ::permission-to-cities
   :<- [::user-data]
