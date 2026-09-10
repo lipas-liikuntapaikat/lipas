@@ -165,6 +165,20 @@
    "Myönnetty avustus tuhatta e" :amount
    "Avustuksen selite" :description})
 
+;; Issuer names are normalized to the *current* agency. The regional
+;; sports administration has been reorganized twice: ELY centres
+;; (until 2013) -> AVI (2014-2025) -> LVV, Lupa- ja valvontavirasto
+;; (2026-). Historical rows are folded into the current name so the
+;; UI shows one continuous issuer series instead of three that each
+;; end abruptly. Same for the ministry rename OPM -> OKM.
+(def subsidy-issuer-normalization
+  {"ELY" "LVV"
+   "AVI" "LVV"
+   "OPM" "OKM"})
+
+(defn normalize-subsidy-issuer [issuer]
+  (get subsidy-issuer-normalization issuer issuer))
+
 (defn ->subsidy-db-entry [m]
   (-> m
       (assoc :city-code (-> m :city-name city-lookup))
@@ -172,10 +186,7 @@
       (update :year utils/->int)
       (update :lipas-ids #(-> % (str/split #";") (->> (mapv utils/->int) (remove nil?))))
       (update :owner owner-lookup)
-      (update :issuer #(condp = %
-                         "ELY" "AVI"
-                         "OPM" "OKM"
-                         %))
+      (update :issuer normalize-subsidy-issuer)
       (update :amount utils/->number)))
 
 ;; Subsidies reference the municipality at grant time, so abolished
@@ -190,26 +201,37 @@
    [:city-code subsidy-city-code-schema]
    [:type-codes types-schema/type-codes-with-legacy]
    [:owner sports-site-schema/owner]
-   [:issuer [:enum "AVI" "OKM"]]
+   [:issuer (into [:enum] (distinct (vals subsidy-issuer-normalization)))]
    [:receiver-name {:optional true} [:string]]
    [:description {:optional true} [:string]]
    [:lipas-ids {:optional true} [:sequential sports-site-schema/lipas-id]]])
 
 (def subsidy-db-entries-schema [:sequential subsidy-db-entry-schema])
 
+(defn- normalize-csv-header
+  "Excel exports tend to carry stray whitespace in header cells (e.g.
+  \"tuhatta  e\" with a double space), which would silently leave the
+  column unmatched in `subsidy-csv-headers`."
+  [s]
+  (-> s str/trim (str/replace #"\s+" " ")))
+
+(defn read-subsidies-csv
+  "Reads and parses a subsidies CSV into db entries. Pure; does not
+  touch the db, so it doubles as a dry run for validating a new sheet."
+  [csv-path]
+  (let [[header & rows] (->> csv-path slurp csv/read-csv)]
+    (->> (cons (map normalize-csv-header header) rows)
+         utils/csv-data->maps
+         (map #(set/rename-keys % subsidy-csv-headers))
+         (map ->subsidy-db-entry))))
+
 (defn add-subsidies-from-csv!
   [{:keys [db] :as system} csv-path]
 
   (log/info "Reading subsidies from csv" csv-path)
 
-  (let [ms (->> csv-path
-                slurp
-                csv/read-csv
-                utils/csv-data->maps
-                (map #(set/rename-keys % subsidy-csv-headers))
-                (map ->subsidy-db-entry))]
+  (let [ms (read-subsidies-csv csv-path)]
 
-    ;; TODO add malli schema or spec for entries
     (log/info "Validating" (count ms) "subsidy entries")
     ;; Validate that all columns names were matched
     ;; Note: :target (sports-site name) is not available in all sheets
@@ -329,8 +351,8 @@
                       (map walk/keywordize-keys))
         stats-map (->city-stats-map csv-data year)]
 
-    ;; Validate that all columns names were matched
     ;; TODO add malli schema or spec for entries
+    ;; Validate that all columns names were matched
     (log/info "Validating" (count csv-data) "city finance entries")
     (assert (= (into #{} (map keyword) city-finance-csv-headers)
                (into #{} (mapcat keys) csv-data)))

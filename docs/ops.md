@@ -339,17 +339,22 @@ curl -X POST "localhost:9209/_aliases?pretty" -H 'Content-Type: application/json
 
 ### Subsidies
 
-OKM and AVI are the two main sports facility related subsidy issuers in Finland. The data from both sources is combined manually to an Excel-file by the Lipas-team.
+OKM and LVV (Lupa- ja valvontavirasto, since 2026; before that AVI, and before 2014 the ELY centres) are the two main sports facility related subsidy issuers in Finland. The data from both sources is combined manually to an Excel-file by the Lipas-team.
 
 The data is updated yearly to Lipas. The updated data contains subsidies considering the current year.
 
 The data is stored to the db and indexed from db to elasticsearch.
 
+Issuer names are normalized to the *current* agency: every ELY and AVI row is stored as `"LVV"` (see `lipas.maintenance/subsidy-issuer-normalization`), so the stats UI shows one continuous regional issuer series. The grant year tells which agency actually issued a subsidy. When the issuer is reorganized again, add the old name to that map, add a migration that rewrites the existing rows (see `20260910120000-subsidy-issuer-avi-to-lvv`), update `lipas.reports/subsidies-issuers` and the default `:selected-issuers` in `lipas.ui.stats.subsidies.db`.
+
 - Acquire the Excel file from the team
-- Save Excel as CSV
+- Save Excel as CSV (UTF-8)
   - The CSV should contain only "new data" (no historical data)
+  - Column headers must match `lipas.maintenance/subsidy-csv-headers` (whitespace differences are tolerated). The sports-site name column is optional.
+- Dry run locally: `(lipas.maintenance/read-subsidies-csv "path.csv")` and validate with `lipas.maintenance/subsidy-db-entries-schema`. Typical failures are municipality names not matching `lipas.data.cities`, unknown type codes and unknown owner labels.
 - Upload the csv to prod server
 - Run `lipas.maintenance/add-subsidies-from-csv!` from the REPL
+  - Writes the rows to the `subsidy` table and rebuilds the whole subsidies ES index from the table
 - Enable current year in the stats -> subsidies UI
   - `lipas.ui.stats.subsidies.views` (year selector valid range)
   - `lipas.ui.stats.subsidies.db` (selected year default value)

@@ -5,8 +5,8 @@
   {:selected-view     "chart"
    :selected-cities   [] ; whole country
    :selected-types    [] ; all types
-   :selected-issuers  ["AVI" "OKM"]
-   :selected-years    [2025]
+   :selected-issuers  ["LVV" "OKM"]
+   :selected-years    [2026]
    :groupings         reports/subsidies-groupings
    :issuers           reports/subsidies-issuers
    :selected-grouping "avi"
