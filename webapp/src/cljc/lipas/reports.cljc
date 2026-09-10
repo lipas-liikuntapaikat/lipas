@@ -386,10 +386,12 @@
              :se "Typ"
              :en "Type"}}))
 
+;; Historical ELY and AVI subsidies are stored under "LVV" (see
+;; lipas.maintenance/subsidy-issuer-normalization), hence the hint.
 (def subsidies-issuers
-  {"AVI" {:fi "AVI"
-          :se "AVI"
-          :en "AVI"}
+  {"LVV" {:fi "LVV (ent. AVI)"
+          :se "LVV (f.d. RFV)"
+          :en "LVV (formerly AVI)"}
    "OKM" {:fi "OKM"
           :se "OKM"
           :en "OKM"}})
