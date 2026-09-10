@@ -112,7 +112,8 @@
                  (update-in [:lipas/search :pass] mask)
                  (update-in [:lipas/mailchimp :api-key] mask)
                  (update-in [:lipas/app :accessibility-register :secret-key] mask)
-                 (update-in [:lipas/app :mml-api :api-key] mask)))
+                 (update-in [:lipas/app :mml-api :api-key] mask)
+                 (update-in [:lipas/app :pelias :subscription-key] mask)))
      system)))
 
 (def current-system (atom nil))
