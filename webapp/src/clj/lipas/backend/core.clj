@@ -279,11 +279,17 @@
                      {:impersonator-id (str (:id admin))})
     (add-user-event! db admin "impersonated-user"
                      {:target-id (str (:id target))})
-    (merge (dissoc target :password)
-           {:token (jwt/create-token target
-                                     :valid-seconds impersonation-token-valid-seconds
-                                     :extra-claims {:impersonator impersonator})
-            :impersonator impersonator})))
+    ;; Same projection login and refresh apply (org/enrich-org-roles): org
+    ;; membership confers NO stored role, so a token minted from the raw
+    ;; account silently lacks :org/member and :org/manage. An impersonated org
+    ;; member would read as belonging to no organization at all — org endpoints
+    ;; 403, and the org UI does not render.
+    (let [target (org/enrich-org-roles db target)]
+      (merge (dissoc target :password)
+             {:token (jwt/create-token target
+                                       :valid-seconds impersonation-token-valid-seconds
+                                       :extra-claims {:impersonator impersonator})
+              :impersonator impersonator}))))
 
 ;;; Reminders ;;;
 
@@ -1151,6 +1157,70 @@
           uid [(assoc org :members [{:user-id uid :roles [(name template-key)]}])])
         roles/conform-roles)))
 
+(defn site-pii-tier
+  "How much of another person's identity this viewer may see on a given site.
+
+  The org-management PII rule (PM + LIPAS, 2026-09-07): org admins and LIPAS
+  admins see full email addresses; plain org members see them masked. \"Org\"
+  here means an org tied to THIS site — its owner org or an org it has granted
+  edit to — which is exactly the `:org-id` set `roles/site-roles-context`
+  builds, matched by the usual set-intersection.
+
+  - `:full`   `:users/manage` (LIPAS admin), or `:org/manage` on a related org
+  - `:masked` `:org/member` on a related org, or anyone who can edit the site
+              themselves. \"Masked\" is per-subject, not blanket — see
+              `pii-renderer`: co-members of the viewer's own org stay in full,
+              because the Jäsenet tab already shows the viewer those exact
+              addresses. The second clause is deliberate: a site can be
+              editable through a role-template catalog or a legacy direct
+              permission WITHOUT having an owner org at all (owner-org-id nil,
+              no grants), and such sites do show up in the Kohteet tab. Without
+              it those rows would silently lose every person entry for the very
+              people maintaining them.
+  - `:none`   everyone else. These endpoints are `:require-privilege nil`, so
+              this covers any authenticated LIPAS user asking about any site;
+              they are outside the PM rule and get the most conservative
+              treatment each surface can offer."
+  [user site]
+  (let [rc      (roles/site-roles-context site)
+        org-ids (:org-id rc)
+        in-org? (fn [privilege]
+                  (and (seq org-ids)
+                       (roles/check-privilege user {:org-id org-ids} privilege)))]
+    (cond
+      (roles/check-privilege user {} :users/manage)       :full
+      (in-org? :org/manage)                               :full
+      (in-org? :org/member)                               :masked
+      (roles/check-privilege user rc :site/create-edit)    :masked
+      :else                                               :none)))
+
+(defn pii-renderer
+  "Returns `(fn [subject-id email] -> string|nil)` rendering ONE person at the
+  viewer's tier.
+
+  At `:masked`, the viewer themselves and anyone sharing one of `org-ids` with
+  them are still shown in full: the viewer already sees those exact addresses
+  unmasked in that org's Jäsenet tab, so masking them here would make the same
+  colleague look different in two tabs while protecting nothing. Outsiders —
+  typically the legacy direct editors, who are usually in no org at all — stay
+  masked.
+
+  `org-ids` is the SITE's orgs (owner + grantees), never every org the viewer
+  happens to belong to: sharing an unrelated org with someone must not unmask
+  them on a site neither org is connected to.
+
+  The co-member lookup costs one query and runs ONLY at the `:masked` tier."
+  [db viewer tier org-ids]
+  (if (= :masked tier)
+    (let [co-members (org/co-member-ids db (:id viewer) org-ids)
+          self       (str (:id viewer))]
+      (fn [subject-id email]
+        (if (or (= self (str subject-id))
+                (contains? co-members (str subject-id)))
+          email
+          (org/mask-email email))))
+    (fn [_subject-id email] (org/apply-pii-tier tier email))))
+
 (defn site-editors
   "\"Who can edit site Z\" (Q2, design-spec §6): owner org + grantee orgs (off
   the site document) ∪ orgs whose role-template catalog grants editing on this
@@ -1159,9 +1229,20 @@
   roles/check-privilege in this site's context (F16) — so catalog
   city/type/site-manager grants are found, and city/type-scoped templates
   are only listed for matching sites. Legacy direct-user scan is the honest
-  unindexed caveat — deferred."
-  [db lipas-id]
+  unindexed caveat — deferred.
+
+  Person entries (the two legacy-user lists) are rendered at `viewer`'s
+  `site-pii-tier`, per subject via `pii-renderer`: full email, masked email
+  (except the viewer's own co-members, who stay full), or dropped entirely. `:username`
+  is NOT returned any more — it is an email address for ~25% of accounts, so
+  shipping it alongside a masked `:email` would have handed back the very
+  identifier the mask removes. Org entries are organisation names, not personal
+  data, and are unaffected."
+  [db lipas-id viewer]
   (let [site         (get-sports-site db lipas-id)
+        pii          (site-pii-tier viewer site)
+        render       (pii-renderer db viewer pii
+                                   (:org-id (roles/site-roles-context site)))
         owner-org-id (some-> site :owner-org-id str)
         grant-ids    (->> (:edit-grants site) (map str) set)
         orgs         (orgs-relevant-to-site db (cons owner-org-id grant-ids))
@@ -1205,16 +1286,18 @@
                                      :lipas-id   (:lipas-id rc)
                                      :activities (:activity rc)})
                                (remove (fn [u] (roles/check-role u :admin))))
+        person       (fn [u] (when-let [e (render (:id u) (:email u))]
+                               {:email e}))
         legacy-users (->> legacy-candidates
                           (filter (fn [u] (roles/check-privilege u rc :site/create-edit)))
-                          (mapv (fn [u] {:email (:email u) :username (:username u)})))
+                          (into [] (keep person)))
         ;; Direct activity-only users: may edit the site's UTP data but not the
         ;; site itself — listed separately so the drawer tags them with the
         ;; same Aktiviteetti label as activity-editor orgs.
         legacy-activity-users (->> legacy-candidates
                                    (remove (fn [u] (roles/check-privilege u rc :site/create-edit)))
                                    (filter (fn [u] (roles/check-privilege u rc :activity/edit)))
-                                   (mapv (fn [u] {:email (:email u) :username (:username u)})))]
+                                   (into [] (keep person)))]
     {:owner-org             owner-org
      :grantee-orgs          (vec grantee-orgs)
      :catalog-editor-orgs   (vec catalog-editor-orgs)
@@ -1227,31 +1310,44 @@
   Reads only event-date/author-id/status — no documents — so it stays light
   even for long-lived sites.
 
-  Two payload modes, branched on `:emails?` (the route gates it on
-  :users/manage), so the FE can branch on which key is present:
-  - :emails? true  → rows {:event-date :status :author} where :author is the
-    editor's email (lipas-admin person view)
-  - otherwise      → rows {:event-date :status :author-role} where
-    :author-role ∈ \"admin\"/\"municipality\"/\"organization\"/\"other\" — a
-    coarse role label, NO person identifier (GDPR, F38; supersedes the F5
-    username mode for this endpoint). The label reflects the author's CURRENT
-    permissions/org membership, not role-at-edit-time (not stored)."
-  ([db lipas-id] (site-edit-history db lipas-id {}))
-  ([db lipas-id {:keys [emails?]}]
-   (let [rows       (db/get-sports-site-edit-history db lipas-id)
+  Three payload modes, branched on `viewer`'s `site-pii-tier`, so the FE can
+  branch on which key is present:
+  - `:full`   → rows {:event-date :status :author} where :author is the
+    editor's email. LIPAS admins and org admins of a related org.
+  - `:masked` → the same {:author} shape, masked (`org/mask-email`) — except
+    when the author shares an org with the viewer, who then sees them in full
+    (`pii-renderer`). Plain org members and other editors of the site (PM rule,
+    2026-09-07).
+  - `:none`   → rows {:event-date :status :author-role} where :author-role ∈
+    \"admin\"/\"municipality\"/\"organization\"/\"other\" — a coarse role label, NO
+    person identifier (GDPR, F38; supersedes the F5 username mode). This route
+    is `:require-privilege nil`, so an authenticated user with no relationship
+    to the site still learns nothing about individuals. The label reflects the
+    author's CURRENT permissions/org membership, not role-at-edit-time (not
+    stored).
+
+  Needs the site document (one extra read) only to resolve the viewer's tier;
+  the history rows themselves still carry no documents."
+  ([db lipas-id] (site-edit-history db lipas-id nil))
+  ([db lipas-id viewer]
+   (let [site       (get-sports-site db lipas-id)
+         pii        (site-pii-tier viewer site)
+         rows       (db/get-sports-site-edit-history db lipas-id)
          author-ids (map :author_id rows)]
-     (if emails?
-       (let [names (org/resolve-account-names db author-ids true)]
-         (mapv (fn [r]
-                 {:event-date (str (:event_date r))
-                  :status     (:status r)
-                  :author     (get names (str (:author_id r)))})
-               rows))
+     (if (= :none pii)
        (let [labels (org/resolve-author-role-labels db author-ids)]
          (mapv (fn [r]
                  {:event-date  (str (:event_date r))
                   :status      (:status r)
                   :author-role (get labels (str (:author_id r)) "other")})
+               rows))
+       (let [names  (org/resolve-account-names db author-ids true)
+             render (pii-renderer db viewer pii
+                                  (:org-id (roles/site-roles-context site)))]
+         (mapv (fn [r]
+                 {:event-date (str (:event_date r))
+                  :status     (:status r)
+                  :author     (render (:author_id r) (get names (str (:author_id r))))})
                rows))))))
 
 (defn search-fields

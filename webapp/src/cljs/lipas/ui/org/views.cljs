@@ -789,11 +789,14 @@
 
 (defn site-edit-history-section
   "Per-revision edit history for the expanded site, lazily fetched on expand
-  and cached per lipas-id. Branches on which key the backend sent (GDPR, F38):
-  rows carry `:author` (email, lipas-admins with :users/manage only) OR
-  `:author-role` (coarse role label — admin/municipality/organization/other —
-  no person identifier, everyone else). Capped to the most recent revisions to
-  keep the accordion DOM bounded on long-lived sites."
+  and cached per lipas-id. Branches on which key the backend sent: rows carry
+  `:author` — already rendered at the viewer's tier server-side, a full email
+  for LIPAS/org admins and a masked one for org members and the site's own
+  editors — OR `:author-role` (coarse role label —
+  admin/municipality/organization/other, no person identifier) for viewers with
+  no relationship to the site (GDPR, F38). The FE never decides how much to
+  reveal. Capped to the most recent revisions to keep the accordion DOM bounded
+  on long-lived sites."
   [tr lipas-id]
   (let [history @(rf/subscribe [::subs/site-edit-history lipas-id])
         total   (count history)
@@ -859,14 +862,19 @@
                      {:key (str "act-" (:id a)) :label (:name a)
                       :tag (tr :lipas.org/role-activity)
                       :tooltip (tr :lipas.org/role-activity-tooltip)})
-                   (for [u (:legacy-users editors)]
-                     {:key (str "legacy-" (:email u)) :label (:email u)
+                   ;; Person rows. :email arrives already rendered at the
+                   ;; viewer's tier (full / masked / absent) — the FE never
+                   ;; decides how much to reveal. Keys are positional because a
+                   ;; masked address is not unique (two colleagues on the same
+                   ;; domain with same-length names collapse to one string).
+                   (for [[i u] (map-indexed vector (:legacy-users editors))]
+                     {:key (str "legacy-" i) :label (:email u)
                       :tag (tr :lipas.org/role-direct)
                       :tooltip (tr :lipas.org/role-direct-tooltip)})
                    ;; direct activity-only users: can edit the site's UTP data
                    ;; but not the site itself (same tag as activity orgs)
-                   (for [u (:legacy-activity-users editors)]
-                     {:key (str "legacy-act-" (:email u)) :label (:email u)
+                   (for [[i u] (map-indexed vector (:legacy-activity-users editors))]
+                     {:key (str "legacy-act-" i) :label (:email u)
                       :tag (tr :lipas.org/role-activity)
                       :tooltip (tr :lipas.org/role-direct-activity-tooltip)}))]
         [:> Box {:sx {:p 2 :bgcolor "action.hover"}}
