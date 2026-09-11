@@ -565,7 +565,8 @@
         [[:email (tr :lipas.user/email)]
          [:firstname (tr :lipas.user/firstname)]
          [:lastname (tr :lipas.user/lastname)]
-         [:roles (tr :lipas.user.permissions.roles/roles)]]
+         [:roles (tr :lipas.user.permissions.roles/roles)]
+         [:email-verified (tr :lipas.admin/email-verified)]]
         :sort-fn :email
         :items users
         :on-select #(==> [::events/set-user-to-edit %])}]]]))

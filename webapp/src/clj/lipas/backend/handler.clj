@@ -62,6 +62,8 @@
 (def exception-handlers
   {:username-conflict (exception-handler 409 :username-conflict)
    :email-conflict (exception-handler 409 :email-conflict)
+   ;; Registration link expired, tampered with, or not a registration token.
+   :invalid-registration-token (exception-handler 400 :invalid-registration-token)
    :no-permission (exception-handler 403 :no-permission)
    :impersonation-not-allowed (exception-handler 403 :impersonation-not-allowed)
    :user-not-found (exception-handler 404 :user-not-found)
@@ -889,21 +891,40 @@
              {:status 200
               :body (core/search-fields search body-params)})}}]
 
+        ["/actions/request-registration"
+         {:post
+          {:no-doc true
+           ;; Self-registration step 1: mails a registration link (or an
+           ;; "account exists" note) to the address. Unauthenticated mail to an
+           ;; address of the caller's choosing, so it gets the register budget.
+           ;; `:register-url` is host-whitelisted like every other emailed-link
+           ;; sink: the link carries the email-verification token.
+           :rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 5}
+           :parameters {:body [:map {:closed true}
+                               [:email users-schema/email-schema]
+                               [:register-url handler-schema/magic-link-login-url]
+                               [:lang {:optional true} users-schema/registration-lang]]}
+           :handler
+           (fn [req]
+             (core/request-registration! db emailer (-> req :parameters :body))
+             {:status 200
+              :body {:status "OK"}})}}]
+
         ["/actions/register"
          {:post
           {:no-doc true
-           ;; Creates an account and mails lipasinfo. Registering is a
-           ;; once-ever act per person, so this can be tighter than the
-           ;; password-reset budget.
+           ;; Self-registration step 2: creates the account and mails lipasinfo.
+           ;; Gated by the email-verification token from step 1; the email is
+           ;; read from the token, and only the coerced `:parameters` are used —
+           ;; never the raw body — so nothing the client adds (permissions,
+           ;; status, verification fields) reaches the account row.
            :rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 5}
+           :parameters {:body users-schema/registration-payload-schema}
            :handler
            (fn [req]
-             (let [user (-> req
-                            :body-params
-                            (dissoc :permissions))
-                   _ (core/register! db emailer user)]
-               {:status 201
-                :body {:status "OK"}}))}}]
+             (core/register! db emailer (-> req :parameters :body))
+             {:status 201
+              :body {:status "OK"}})}}]
 
         ["/actions/login"
          {:post
@@ -937,6 +958,12 @@
                        ;; the short expiry across refreshes so they can't be
                        ;; laundered into regular sessions.
                        impersonator (:impersonator identity)]
+                   ;; This is where an emailed magic link lands, so for an
+                   ;; unverified invite account it is the first proof of the
+                   ;; inbox. Never for an impersonation session — that's the
+                   ;; admin, not the owner.
+                   (when-not impersonator
+                     (core/mark-email-verified-by-login! db stored))
                    {:status 200
                     :body (merge (dissoc user :password)
                                  {:token (if impersonator
@@ -1087,7 +1114,11 @@
              (let [user (-> req :parameters :body :user)
                    variant (-> req :parameters :body :variant keyword)
                    user (or (core/get-user db (:email user))
-                            (do (core/add-user! db user)
+                            ;; No password from the client: an account made
+                            ;; here must only be reachable through the emailed
+                            ;; link, which is what lets its first login count as
+                            ;; email verification (core/mark-email-verified-by-login!).
+                            (do (core/add-user! db (dissoc user :password))
                                 (core/get-user db (:email user))))
                    url (-> req :parameters :body :login-url)
                    params {:user user :variant variant :login-url url}
@@ -1345,8 +1376,10 @@
            :parameters
            {:body feedback-schema/feedback-payload}
            :handler
-           (fn [{:keys [body-params]}]
-             (core/send-feedback! emailer body-params)
+           ;; The coerced body, not the raw one: only the schema's keys may
+           ;; reach the ops inbox.
+           (fn [{:keys [parameters]}]
+             (core/send-feedback! emailer (:body parameters))
              {:status 200
               :body {:status "OK"}})}}]
 

@@ -10,6 +10,18 @@
 (defn safe-slurp [path]
   (some-> (io/resource path) slurp))
 
+(defn escape-html
+  "Escapes `s` for HTML text AND quoted attribute values. Every value that
+  reaches an HTML body goes through this — user-typed text (names, feedback,
+  reminder messages, org names) and links alike."
+  [s]
+  (-> (str s)
+      (str/replace "&" "&amp;")
+      (str/replace "<" "&lt;")
+      (str/replace ">" "&gt;")
+      (str/replace "\"" "&quot;")
+      (str/replace "'" "&#39;")))
+
 (def templates
   {:fi
    {:permissions-updated
@@ -60,7 +72,7 @@
   (.send! emailer {:subject "Salasanan vaihtolinkki"
                    :to      to
                    :plain   (str link)
-                   :html    (str "<html><body>" link "</body></html>")}))
+                   :html    (str "<html><body>" (escape-html link) "</body></html>")}))
 
 (defn send-magic-login-email!
   [emailer to variant {:keys [link valid-days]}]
@@ -78,17 +90,39 @@
                                 :magic-link
                                 variant
                                 :html
-                                (str/replace "{{link}}" link)
+                                (str/replace "{{link}}" (escape-html link))
                                 (str/replace "{{valid-days}}" (str valid-days)))}))
 
 (defn send-register-notification!
-  [emailer to user]
-  (.send! emailer {:subject "Uusi rekisteröitynyt käyttäjä"
-                   :to      to
-                   :plain   (with-out-str (pprint/pprint user))
-                   :html    (str "<html><body>"
-                                 (with-out-str (pprint/pprint user))
-                                 "</body></html>")}))
+  "Tells the ops inbox that someone completed self-registration. By then the
+  address is verified — the account can't be created without the emailed link."
+  [emailer to {:keys [email username user-data]}]
+  (let [{:keys [firstname lastname permissions-request]} user-data
+        rows (->> [["Sähköposti" email]
+                   ["Käyttäjätunnus" username]
+                   ["Etunimi" firstname]
+                   ["Sukunimi" lastname]
+                   ["Käyttöoikeuspyyntö" permissions-request]]
+                  (remove (comp str/blank? second)))
+        intro "Uusi käyttäjä on rekisteröitynyt ja vahvistanut sähköpostiosoitteensa."
+        outro "Käyttöoikeudet myönnetään LIPAS-ylläpidon käyttäjähallinnassa."]
+    (.send! emailer {:subject "Uusi rekisteröitynyt käyttäjä"
+                     :to      to
+                     :plain   (str intro "\n\n"
+                                   (str/join "\n" (map (fn [[k v]] (str k ": " v)) rows))
+                                   "\n\n" outro "\n")
+                     :html    (str "<html><body>"
+                                   "<p>" intro "</p>"
+                                   "<table>"
+                                   (apply str
+                                          (map (fn [[k v]]
+                                                 (str "<tr><th align=\"left\">" k "</th>"
+                                                      "<td style=\"white-space:pre-wrap\">"
+                                                      (escape-html v) "</td></tr>"))
+                                               rows))
+                                   "</table>"
+                                   "<p>" outro "</p>"
+                                   "</body></html>")})))
 
 (defn send-permissions-updated-email!
   [emailer to {:keys [link valid-days]}]
@@ -104,7 +138,7 @@
                                 :fi
                                 :permissions-updated
                                 :html
-                                (str/replace "{{link}}" link)
+                                (str/replace "{{link}}" (escape-html link))
                                 (str/replace "{{valid-days}}" (str valid-days)))}))
 
 ;; --- "You've been added to an org" emails -----------------------------------
@@ -142,15 +176,17 @@
   "Build and send one of the trilingual (fi/se/en — the recipient's locale is
   unknown) org-membership emails; `variant` selects the action sentence."
   [emailer to variant {:keys [org-name link valid-days]}]
-  (let [fill  (fn [s] (-> s
-                          (str/replace "{{org-name}}" (str org-name))
-                          (str/replace "{{link}}" (str link))
-                          (str/replace "{{valid-days}}" (str valid-days))))
+  (let [fill  (fn [kind s]
+                (let [v (if (= :html kind) escape-html str)]
+                  (-> s
+                      (str/replace "{{org-name}}" (v org-name))
+                      (str/replace "{{link}}" (v link))
+                      (str/replace "{{valid-days}}" (str valid-days)))))
         langs [:fi :se :en]
         block (fn [kind lang]
-                (str (fill (get-in org-membership-intros [lang kind]))
+                (str (fill kind (get-in org-membership-intros [lang kind]))
                      ({:plain "\n" :html " "} kind)
-                     (fill (get-in org-membership-actions [variant lang kind]))))]
+                     (fill kind (get-in org-membership-actions [variant lang kind]))))]
     (.send! emailer
             {:subject "Sinut on lisätty organisaatioon LIPAS-palvelussa / Du har lagts till i en organisation / You've been added to an organization in LIPAS"
              :to      to
@@ -188,9 +224,74 @@
                                 :fi
                                 :reminder
                                 :html
-                                (str/replace "{{message}}" message)
-                                (str/replace "{{link}}" link)
+                                (str/replace "{{message}}" (escape-html message))
+                                (str/replace "{{link}}" (escape-html link))
                                 (str/replace "{{valid-days}}" (str valid-days)))}))
+
+;; --- Self-registration emails -------------------------------------------------
+;; Sent in the language the requester was using (they're on the page when they
+;; ask, unlike org invites whose recipient's locale is unknown). Copy is plain
+;; text with {{placeholders}}; `render-copy` derives the HTML part, escaping the
+;; copy and every value and turning URL placeholders into links.
+
+(def ^:private registration-copy
+  {:link
+   {:fi {:subject "Viimeistele rekisteröitymisesi LIPAS-palveluun"
+         :body    "Hei!\n\nViimeistele rekisteröitymisesi LIPAS-palveluun avaamalla alla oleva linkki. Linkki on voimassa {{valid-hours}} tuntia.\n\n{{link}}\n\nJos et pyytänyt tätä viestiä, voit jättää sen huomiotta. Tunnusta ei luoda, ellei linkkiä avata.\n\nTerveisin,\nLIPAS"}
+    :se {:subject "Slutför din registrering i LIPAS"
+         :body    "Hej!\n\nSlutför din registrering i LIPAS genom att öppna länken nedan. Länken är giltig i {{valid-hours}} timmar.\n\n{{link}}\n\nOm du inte har begärt detta meddelande kan du ignorera det. Inget konto skapas om länken inte öppnas.\n\nMed vänliga hälsningar,\nLIPAS"}
+    :en {:subject "Complete your LIPAS registration"
+         :body    "Hello!\n\nComplete your registration to LIPAS by opening the link below. The link is valid for {{valid-hours}} hours.\n\n{{link}}\n\nIf you didn't request this, you can ignore this message. No account is created unless the link is opened.\n\nBest regards,\nLIPAS"}}
+   :account-exists
+   {:fi {:subject "LIPAS-rekisteröityminen"
+         :body    "Hei!\n\nTälle sähköpostiosoitteelle pyydettiin rekisteröitymislinkkiä LIPAS-palveluun, mutta osoitteella on jo tunnus.\n\nKirjaudu sisään: {{login-url}}\nJos olet unohtanut salasanasi, voit vaihtaa sen: {{reset-url}}\n\nJos et pyytänyt tätä viestiä, voit jättää sen huomiotta.\n\nTerveisin,\nLIPAS"}
+    :se {:subject "Registrering i LIPAS"
+         :body    "Hej!\n\nEn registreringslänk till LIPAS begärdes för den här e-postadressen, men adressen har redan ett konto.\n\nLogga in: {{login-url}}\nOm du har glömt ditt lösenord kan du byta det: {{reset-url}}\n\nOm du inte har begärt detta meddelande kan du ignorera det.\n\nMed vänliga hälsningar,\nLIPAS"}
+    :en {:subject "LIPAS registration"
+         :body    "Hello!\n\nSomeone asked for a LIPAS registration link for this email address, but the address already has an account.\n\nLog in: {{login-url}}\nForgot your password? Reset it here: {{reset-url}}\n\nIf you didn't request this, you can ignore this message.\n\nBest regards,\nLIPAS"}}})
+
+(defn render-copy
+  "{:subject :plain :html} from copy `body` and placeholder `values`
+  ({:link \"https://…\" :valid-hours 24}). Values under `url-keys` become
+  anchors in the HTML part; everything is escaped there."
+  [subject body values url-keys]
+  (let [placeholder #(str "{{" (name %) "}}")
+        fill        (fn [s f] (reduce-kv (fn [acc k v] (str/replace acc (placeholder k) (f k v)))
+                                         s values))
+        html-value  (fn [k v]
+                      (let [v (escape-html v)]
+                        (if (contains? url-keys k) (str "<a href=\"" v "\">" v "</a>") v)))]
+    {:subject subject
+     :plain   (fill body (fn [_ v] (str v)))
+     :html    (str "<html><body>"
+                   (->> (str/split body #"\n\n")
+                        (map #(-> (escape-html %)
+                                  (fill html-value)
+                                  (str/replace "\n" "<br>")))
+                        (map #(str "<p>" % "</p>"))
+                        (apply str))
+                   "</body></html>")}))
+
+(defn- send-registration-copy!
+  [emailer to kind lang values url-keys]
+  (let [{:keys [subject body]} (get-in registration-copy [kind lang]
+                                       (get-in registration-copy [kind :fi]))]
+    (.send! emailer (assoc (render-copy subject body values url-keys) :to to))))
+
+(defn send-registration-link-email!
+  "Self-registration step 1: the link that proves the requester reads `to`."
+  [emailer to lang {:keys [link valid-hours]}]
+  (send-registration-copy! emailer to :link lang
+                           {:link link :valid-hours valid-hours} #{:link}))
+
+(defn send-registration-account-exists-email!
+  "Sent instead of a registration link when `to` already has an account. The
+  endpoint answers identically either way, so it can't be used to probe which
+  addresses are registered; the address owner learns what to do instead."
+  [emailer to lang {:keys [login-url reset-url]}]
+  (send-registration-copy! emailer to :account-exists lang
+                           {:login-url login-url :reset-url reset-url}
+                           #{:login-url :reset-url}))
 
 ;; --- PTV katselmointi notification -------------------------------------------
 ;; Sent to a municipality's PTV managers after DVV has reviewed
@@ -215,12 +316,6 @@
               :items-nom "palvelut"
               :items-part "palvelua"
               :tab "palvelut"}})
-
-(defn- escape-html [s]
-  (-> (str s)
-      (str/replace "&" "&amp;")
-      (str/replace "<" "&lt;")
-      (str/replace ">" "&gt;")))
 
 (defn ptv-audit-notification-message
   "Builds the katselmointi notification email as {:subject :plain :html}.
@@ -299,9 +394,9 @@
   (.send! emailer {:subject "LIPAS-palaute"
                    :to      to
                    :plain   (with-out-str (pprint/pprint feedback))
-                   :html    (str "<html><body>"
-                                 (with-out-str (pprint/pprint feedback))
-                                 "</body></html>")}))
+                   :html    (str "<html><body><pre>"
+                                 (escape-html (with-out-str (pprint/pprint feedback)))
+                                 "</pre></body></html>")}))
 
 (defrecord SMTPEmailer [config]
   Emailer
