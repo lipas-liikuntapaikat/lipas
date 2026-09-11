@@ -1,4 +1,5 @@
 {:headline "Admin",
+ :email-verified-change "At email change",
  :email-verified "Email verified",
  :email-verified-registration "At registration",
  :email-verified-login "At login",

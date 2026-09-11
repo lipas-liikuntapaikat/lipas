@@ -70,6 +70,12 @@
        (user/marshall)
        (user/insert-user! db-spec)))
 
+(defn change-user-email!
+  "Moves the account to its newly proven address; see
+  lipas.backend.core/confirm-email-change!."
+  [db-spec {:keys [id email username]}]
+  (user/change-user-email! db-spec {:id id :email email :username username}))
+
 (defn mark-user-email-verified!
   "Records that the user's email was proven `via` (\"registration\"/\"login\").
   No-op when the account is already verified — the first proof wins."

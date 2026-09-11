@@ -64,6 +64,9 @@
    :email-conflict (exception-handler 409 :email-conflict)
    ;; Registration link expired, tampered with, or not a registration token.
    :invalid-registration-token (exception-handler 400 :invalid-registration-token)
+   ;; Email-change link expired, tampered with, already used or superseded.
+   :invalid-email-change-token (exception-handler 400 :invalid-email-change-token)
+   :same-email (exception-handler 400 :same-email)
    :no-permission (exception-handler 403 :no-permission)
    :impersonation-not-allowed (exception-handler 403 :impersonation-not-allowed)
    :user-not-found (exception-handler 404 :user-not-found)
@@ -925,6 +928,71 @@
              (core/register! db emailer (-> req :parameters :body))
              {:status 201
               :body {:status "OK"}})}}]
+
+        ["/actions/request-email-change"
+         {:post
+          {:no-doc true
+           ;; Self-service email change, step 1. Any logged-in user: the
+           ;; always-true privilege makes privilege-middleware authenticate,
+           ;; which also runs it before the per-user rate limit (that needs
+           ;; :identity). Mails a confirmation link to the new address; nothing
+           ;; changes until it is opened (core/request-email-change!).
+           :require-privilege (fn [_req] true)
+           :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 5}
+           :parameters {:body [:map {:closed true}
+                               [:new-email users-schema/email-schema]
+                               [:confirm-url handler-schema/magic-link-login-url]
+                               [:lang {:optional true} users-schema/registration-lang]]}
+           :handler
+           (fn [{:keys [identity parameters]}]
+             (let [{:keys [new-email confirm-url lang]} (:body parameters)
+                   user (core/get-user! db (str (:id identity)))]
+               (core/request-email-change! db emailer {:user        user
+                                                       :new-email   new-email
+                                                       :confirm-url confirm-url
+                                                       :lang        lang
+                                                       :actor       (or (:impersonator identity) user)
+                                                       :admin?      false}))
+             {:status 200 :body {:status "OK"}})}}]
+
+        ["/actions/request-email-change-for-user"
+         {:post
+          {:no-doc true
+           ;; Admin-initiated email change. Same confirmation as self-service:
+           ;; the new address must open the link, so a typo can't hand an
+           ;; account to a stranger.
+           :require-privilege :users/manage
+           :parameters {:body [:map {:closed true}
+                               [:id :string]
+                               [:new-email users-schema/email-schema]
+                               [:confirm-url handler-schema/magic-link-login-url]
+                               [:lang {:optional true} users-schema/registration-lang]]}
+           :handler
+           (fn [{:keys [identity parameters]}]
+             (let [{:keys [id new-email confirm-url lang]} (:body parameters)]
+               (core/request-email-change! db emailer {:user        (core/get-user! db id)
+                                                       :new-email   new-email
+                                                       :confirm-url confirm-url
+                                                       :lang        lang
+                                                       :actor       identity
+                                                       :admin?      true}))
+             {:status 200 :body {:status "OK"}})}}]
+
+        ["/actions/confirm-email-change"
+         {:post
+          {:no-doc true
+           ;; Email change, step 2, from the link in the new inbox.
+           ;; Unauthenticated on purpose: the email-change token is the
+           ;; credential, and the link is typically opened in a mail client's
+           ;; browser, not the logged-in one. It mails the old address, hence
+           ;; the budget.
+           :rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 10}
+           :parameters {:body [:map {:closed true}
+                               [:token [:string {:min 1 :max 4096}]]]}
+           :handler
+           (fn [{:keys [parameters]}]
+             (core/confirm-email-change! db emailer (-> parameters :body :token))
+             {:status 200 :body {:status "OK"}})}}]
 
         ["/actions/login"
          {:post

@@ -90,6 +90,8 @@
     ;; by the emailed email-verification token in its body.
     [:post "/api/actions/request-registration"]
     [:post "/api/actions/register"]
+    ;; Gated by the email-change token in its body.
+    [:post "/api/actions/confirm-email-change"]
     [:post "/api/actions/request-password-reset"]
     [:post "/api/actions/order-magic-link"]
     [:post "/api/actions/send-feedback"]

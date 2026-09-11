@@ -124,9 +124,11 @@ stateDiagram-v2
     [*] --> registration: register! with a valid link token
     [*] --> unverified: org invite / admin magic link<br/>(random password)
     unverified --> login: first successful login<br/>(password or magic link, not impersonation)
-    legacy --> [*]
-    registration --> [*]
-    login --> [*]
+    legacy --> change: email change confirmed<br/>by the new address
+    registration --> change: email change confirmed
+    login --> change: email change confirmed
+    change --> change: another change
+    change --> [*]
 ```
 
 | `email_verified_via` | Meaning | `email_verified_at` |
@@ -134,7 +136,12 @@ stateDiagram-v2
 | `legacy` | Account predates verification. Trusted implicitly. | NULL (unknown) |
 | `registration` | Opened the emailed link before the account existed. | when registered |
 | `login` | Created *for* the address (org invite, admin magic link) and later logged in. | first login |
+| `change` | The address was changed, and the new address opened its confirmation link. See [email change](wip/email-change.md). | when changed |
 | NULL | Invite/admin-created, never logged in. | NULL |
+
+Email addresses are unique regardless of case: the unique index is on
+`lower(email)` (migration `20260911130000`), matching the case-insensitive
+lookups.
 
 Why a first login proves the address: after the migration, every unverified
 account was created with a random password nobody knows. The admin

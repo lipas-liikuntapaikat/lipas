@@ -1,4 +1,5 @@
 {:headline "Admin",
+ :email-verified-change "Osoitteenvaihdossa",
  :email-verified "Sähköposti vahvistettu",
  :email-verified-registration "Rekisteröityessä",
  :email-verified-login "Kirjautuessa",

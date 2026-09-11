@@ -80,7 +80,7 @@
 
 ;; How the email address was proven. See the account migration
 ;; 20260911120000-account-email-verification for the meaning of each value.
-(def email-verified-via (m/schema [:enum "legacy" "registration" "login"]))
+(def email-verified-via (m/schema [:enum "legacy" "registration" "login" "change"]))
 
 ;; User data schemas
 (def user-data-schema

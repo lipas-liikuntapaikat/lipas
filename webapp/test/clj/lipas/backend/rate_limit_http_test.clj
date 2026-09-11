@@ -46,6 +46,7 @@
     "/api/actions/order-magic-link"
     "/api/actions/request-registration"
     "/api/actions/register"
+    "/api/actions/confirm-email-change"
     "/api/actions/send-feedback"
     "/api/actions/subscribe-newsletter"})
 

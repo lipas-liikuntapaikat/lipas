@@ -172,6 +172,104 @@
     (email/send-register-notification! emailer "lipasinfo@jyu.fi" user)
     {:status "OK"}))
 
+;;; Email change ;;;
+;;
+;; The stored address is a credential, not contact data: magic links, password
+;; reset, invites and permission mails all trust whoever reads it. So a change —
+;; self-service or admin — takes effect only when a link sent to the NEW address
+;; is opened. See docs/wip/email-change.md.
+
+(defn mask-email
+  "n***@example.fi: enough for the owner to recognise, not enough to learn."
+  [email]
+  (let [[local domain] (str/split (str email) #"@" 2)]
+    (str (subs local 0 (min 1 (count local))) "***@" domain)))
+
+(defn- address-taken?
+  "Whether another account already uses `email` as its email OR its username.
+  Invite-created accounts have username = email, so an address can be claimed
+  either way; both lookups compare case-insensitively."
+  [db email except-id]
+  (some (fn [u] (and u (not= (str (:id u)) (str except-id))))
+        [(db/get-user-by-email db {:email email})
+         (db/get-user-by-username db {:username email})]))
+
+(defn request-email-change!
+  "Email change, step 1: mail a confirmation link to `new-email`. Nothing
+  changes yet; the link carries a signed email-change token (lipas.backend.jwt)
+  and the change happens in `confirm-email-change!`.
+
+  `actor` is who asked: the user, or the admin (also an impersonating one).
+  `admin?` changes the wording and how a taken address is reported. An admin
+  gets 409 :email-conflict, since they can list every account anyway. A user
+  gets the same 200 either way, and the address's owner gets a note instead,
+  so self-service can't be used to find out which addresses have accounts."
+  [db emailer {:keys [user new-email confirm-url lang actor admin?]}]
+  (let [lang (keyword (or lang "fi"))]
+    (when (= (str/lower-case new-email) (str/lower-case (:email user)))
+      (throw (ex-info "The new address is the current one" {:type :same-email})))
+    (if (address-taken? db new-email (:id user))
+      (if admin?
+        (throw (ex-info "Email is already in use!" {:type :email-conflict}))
+        (do
+          (email/send-email-change-in-use-email! emailer new-email lang)
+          (log/infof "Email change requested to an address that already has an account")))
+      (let [token (jwt/create-email-change-token {:account-id (str (:id user))
+                                                  :old-email  (:email user)
+                                                  :new-email  new-email
+                                                  :by         (str (:id actor))
+                                                  :lang       (name lang)})]
+        (email/send-email-change-link-email!
+          emailer new-email lang
+          {:link        (str confirm-url "?token=" token)
+           :valid-hours (quot jwt/email-change-valid-seconds 3600)
+           :admin?      admin?})
+        ;; Ids only, no addresses: history outlives GDPR removal (see the
+        ;; scrub-impersonation-emails-from-history migration).
+        (add-user-event! db user "email-change-requested" {:by (str (:id actor))})))
+    {:status "OK"}))
+
+(defn confirm-email-change!
+  "Email change, step 2: apply the change the emailed link confirms.
+
+  The token names the account and the address it had when the change was
+  requested. The account must still have that address, which makes a link
+  single-use and lets a newer request supersede an older one without storing
+  anything. In one transaction:
+  - move the email, and the username too when it equalled the old address
+    (invite accounts), so the old address stops working as a login name;
+  - record `email_verified_via = 'change'`;
+  - revoke every token. Sessions carry the old email, and links already sent
+    to the old inbox (7-day magic links, reset links) must die with it.
+  Afterwards, the old address is told where the account went (masked)."
+  [db emailer token]
+  (let [{:keys [account-id old-email new-email by lang] :as claims}
+        (jwt/unsign-email-change-token token)
+        invalid! #(throw (ex-info "Invalid, expired or already used email change link"
+                                  {:type :invalid-email-change-token}))]
+    (when-not claims (invalid!))
+    (let [user (jdbc/with-db-transaction [tx db]
+                 (let [user (db/get-user-by-id tx {:id account-id})]
+                   (when-not (and user
+                                  (= "active" (:status user))
+                                  (= (str/lower-case (str (:email user)))
+                                     (str/lower-case (str old-email))))
+                     (invalid!))
+                   (when (address-taken? tx new-email (:id user))
+                     (throw (ex-info "Email is already in use!" {:type :email-conflict})))
+                   (db/change-user-email! tx {:id       (:id user)
+                                              :email    new-email
+                                              :username (if (= (str/lower-case (str (:username user)))
+                                                               (str/lower-case (str old-email)))
+                                                          new-email
+                                                          (:username user))})
+                   (revocation/revoke! tx user)
+                   (add-user-event! tx user "email-changed" {:by by})
+                   user))]
+      (email/send-email-changed-notice! emailer (:email user) (keyword (or lang "fi"))
+                                        {:masked-email (mask-email new-email)})
+      {:status "OK"})))
+
 (defn publish-users-drafts! [db {:keys [id] :as user}]
   (let [drafts (->> (db/get-users-drafts db user)
                     (filter (fn [draft]

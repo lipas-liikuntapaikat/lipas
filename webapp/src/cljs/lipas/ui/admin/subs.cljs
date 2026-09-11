@@ -35,6 +35,7 @@
                      (str (tr (case (:email-verified-via user)
                                 "registration" :lipas.admin/email-verified-registration
                                 "login" :lipas.admin/email-verified-login
+                                "change" :lipas.admin/email-verified-change
                                 "legacy" :lipas.admin/email-verified-legacy
                                 :lipas.admin/email-not-verified))
                           (when (string? at) (str " " (subs at 0 (min 10 (count at)))))))})
@@ -157,3 +158,7 @@
 (rf/reg-sub ::site-history-error
   (fn [db _]
     (get-in db [:admin :site-history :error])))
+
+(rf/reg-sub ::email-change
+  (fn [db _]
+    (-> db :admin :email-change)))

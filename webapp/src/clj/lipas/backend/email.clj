@@ -42,10 +42,23 @@
      :html    (safe-slurp "email_templates/reminder_fi.html")
      :text    (safe-slurp "email_templates/reminder_fi.txt")}}})
 
+(defn postal-message
+  "The postal message map for `msg`. Both parts declare their charset: a bare
+  \"text/plain\" made JavaMail write Latin-1 bytes under a charset=UTF-8 label,
+  garbling ä/ö/å for every client that shows the text part."
+  [from {:keys [to subject plain html]}]
+  {:from    from
+   :to      to
+   :subject subject
+   :body    (cond-> [:alternative]
+              (not-empty plain) (conj {:type "text/plain;charset=utf-8" :content plain})
+              (not-empty html)  (conj {:type "text/html;charset=utf-8" :content html})
+              ;; Fallback if both are empty to avoid NPE
+              (and (empty? plain) (empty? html)) (conj {:type "text/plain;charset=utf-8" :content ""}))})
+
 (defn send*!
   "Thin wrapper for postal."
-  [{:keys [host port user pass from]}
-   {:keys [to subject plain html]}]
+  [{:keys [host port user pass from]} msg]
   (postal/send-message
     (merge
       {:host host
@@ -58,14 +71,7 @@
       (when port {:port port})
       (when (and (not-empty user) (not-empty pass))
         {:user user :pass pass :ssl true}))
-    {:from    from
-     :to      to
-     :subject subject
-     :body    (cond-> [:alternative]
-                (not-empty plain) (conj {:type "text/plain" :content plain})
-                (not-empty html)  (conj {:type "text/html;charset=utf-8" :content html})
-               ;; Fallback if both are empty to avoid NPE
-                (and (empty? plain) (empty? html)) (conj {:type "text/plain" :content ""}))}))
+    (postal-message from msg)))
 
 (defn send-reset-password-email!
   [emailer to {:keys [link]}]
@@ -228,13 +234,13 @@
                                 (str/replace "{{link}}" (escape-html link))
                                 (str/replace "{{valid-days}}" (str valid-days)))}))
 
-;; --- Self-registration emails -------------------------------------------------
+;; --- Self-registration and email-change emails -------------------------------
 ;; Sent in the language the requester was using (they're on the page when they
 ;; ask, unlike org invites whose recipient's locale is unknown). Copy is plain
 ;; text with {{placeholders}}; `render-copy` derives the HTML part, escaping the
 ;; copy and every value and turning URL placeholders into links.
 
-(def ^:private registration-copy
+(def ^:private copy-texts
   {:link
    {:fi {:subject "Viimeistele rekisteröitymisesi LIPAS-palveluun"
          :body    "Hei!\n\nViimeistele rekisteröitymisesi LIPAS-palveluun avaamalla alla oleva linkki. Linkki on voimassa {{valid-hours}} tuntia.\n\n{{link}}\n\nJos et pyytänyt tätä viestiä, voit jättää sen huomiotta. Tunnusta ei luoda, ellei linkkiä avata.\n\nTerveisin,\nLIPAS"}
@@ -248,7 +254,35 @@
     :se {:subject "Registrering i LIPAS"
          :body    "Hej!\n\nEn registreringslänk till LIPAS begärdes för den här e-postadressen, men adressen har redan ett konto.\n\nLogga in: {{login-url}}\nOm du har glömt ditt lösenord kan du byta det: {{reset-url}}\n\nOm du inte har begärt detta meddelande kan du ignorera det.\n\nMed vänliga hälsningar,\nLIPAS"}
     :en {:subject "LIPAS registration"
-         :body    "Hello!\n\nSomeone asked for a LIPAS registration link for this email address, but the address already has an account.\n\nLog in: {{login-url}}\nForgot your password? Reset it here: {{reset-url}}\n\nIf you didn't request this, you can ignore this message.\n\nBest regards,\nLIPAS"}}})
+         :body    "Hello!\n\nSomeone asked for a LIPAS registration link for this email address, but the address already has an account.\n\nLog in: {{login-url}}\nForgot your password? Reset it here: {{reset-url}}\n\nIf you didn't request this, you can ignore this message.\n\nBest regards,\nLIPAS"}}
+   :email-change-link-self
+   {:fi {:subject "Vahvista uusi sähköpostiosoitteesi"
+         :body    "Hei!\n\nOlet pyytänyt LIPAS-tunnuksesi sähköpostiosoitteen vaihtamista tähän osoitteeseen. Vahvista muutos avaamalla alla oleva linkki. Linkki on voimassa {{valid-hours}} tuntia.\n\n{{link}}\n\nOsoite vaihtuu vasta, kun linkki avataan. Jos et pyytänyt muutosta, voit jättää viestin huomiotta.\n\nTerveisin,\nLIPAS"}
+    :se {:subject "Bekräfta din nya e-postadress"
+         :body    "Hej!\n\nDu har begärt att e-postadressen för ditt LIPAS-konto ändras till den här adressen. Bekräfta ändringen genom att öppna länken nedan. Länken är giltig i {{valid-hours}} timmar.\n\n{{link}}\n\nAdressen ändras först när länken öppnas. Om du inte har begärt ändringen kan du ignorera meddelandet.\n\nMed vänliga hälsningar,\nLIPAS"}
+    :en {:subject "Confirm your new email address"
+         :body    "Hello!\n\nYou asked to change the email address of your LIPAS account to this address. Confirm the change by opening the link below. The link is valid for {{valid-hours}} hours.\n\n{{link}}\n\nThe address changes only once the link is opened. If you didn't ask for this, you can ignore this message.\n\nBest regards,\nLIPAS"}}
+   :email-change-link-admin
+   {:fi {:subject "Vahvista uusi sähköpostiosoitteesi"
+         :body    "Hei!\n\nLIPAS-ylläpitäjä on pyytänyt LIPAS-tunnuksesi sähköpostiosoitteen vaihtamista tähän osoitteeseen. Vahvista muutos avaamalla alla oleva linkki. Linkki on voimassa {{valid-hours}} tuntia.\n\n{{link}}\n\nOsoite vaihtuu vasta, kun linkki avataan. Jos et odottanut tätä viestiä, voit jättää sen huomiotta.\n\nTerveisin,\nLIPAS"}
+    :se {:subject "Bekräfta din nya e-postadress"
+         :body    "Hej!\n\nEn LIPAS-administratör har begärt att e-postadressen för ditt LIPAS-konto ändras till den här adressen. Bekräfta ändringen genom att öppna länken nedan. Länken är giltig i {{valid-hours}} timmar.\n\n{{link}}\n\nAdressen ändras först när länken öppnas. Om du inte väntade dig detta meddelande kan du ignorera det.\n\nMed vänliga hälsningar,\nLIPAS"}
+    :en {:subject "Confirm your new email address"
+         :body    "Hello!\n\nA LIPAS administrator asked to change the email address of your LIPAS account to this address. Confirm the change by opening the link below. The link is valid for {{valid-hours}} hours.\n\n{{link}}\n\nThe address changes only once the link is opened. If you weren't expecting this message, you can ignore it.\n\nBest regards,\nLIPAS"}}
+   :email-change-in-use
+   {:fi {:subject "LIPAS: sähköpostiosoitteen vaihto"
+         :body    "Hei!\n\nLIPAS-tunnuksen sähköpostiosoitetta yritettiin vaihtaa tähän osoitteeseen, mutta osoitteella on jo LIPAS-tunnus. Muutosta ei tehty.\n\nJos et pyytänyt tätä, voit jättää viestin huomiotta.\n\nTerveisin,\nLIPAS"}
+    :se {:subject "LIPAS: byte av e-postadress"
+         :body    "Hej!\n\nNågon försökte ändra e-postadressen för ett LIPAS-konto till den här adressen, men adressen har redan ett LIPAS-konto. Ingen ändring gjordes.\n\nOm du inte har begärt detta kan du ignorera meddelandet.\n\nMed vänliga hälsningar,\nLIPAS"}
+    :en {:subject "LIPAS: email address change"
+         :body    "Hello!\n\nSomeone tried to change a LIPAS account's email address to this address, but the address already has a LIPAS account. Nothing was changed.\n\nIf you didn't ask for this, you can ignore this message.\n\nBest regards,\nLIPAS"}}
+   :email-changed-notice
+   {:fi {:subject "LIPAS-tunnuksesi sähköpostiosoite on vaihdettu"
+         :body    "Hei!\n\nLIPAS-tunnuksesi sähköpostiosoite on vaihdettu osoitteeseen {{masked-email}}. Tähän osoitteeseen ei enää lähetetä LIPAS-viestejä, eikä sillä voi enää kirjautua sisään.\n\nJos et tehnyt tai pyytänyt muutosta, ota heti yhteyttä: lipasinfo@jyu.fi\n\nTerveisin,\nLIPAS"}
+    :se {:subject "E-postadressen för ditt LIPAS-konto har ändrats"
+         :body    "Hej!\n\nE-postadressen för ditt LIPAS-konto har ändrats till {{masked-email}}. Inga LIPAS-meddelanden skickas längre till den här adressen, och den kan inte längre användas för att logga in.\n\nOm du inte har gjort eller begärt ändringen, kontakta genast lipasinfo@jyu.fi\n\nMed vänliga hälsningar,\nLIPAS"}
+    :en {:subject "Your LIPAS email address was changed"
+         :body    "Hello!\n\nThe email address of your LIPAS account was changed to {{masked-email}}. LIPAS no longer sends messages to this address, and it can no longer be used to log in.\n\nIf you didn't make or request this change, contact lipasinfo@jyu.fi immediately.\n\nBest regards,\nLIPAS"}}})
 
 (defn render-copy
   "{:subject :plain :html} from copy `body` and placeholder `values`
@@ -272,26 +306,45 @@
                         (apply str))
                    "</body></html>")}))
 
-(defn- send-registration-copy!
+(defn- send-copy!
   [emailer to kind lang values url-keys]
-  (let [{:keys [subject body]} (get-in registration-copy [kind lang]
-                                       (get-in registration-copy [kind :fi]))]
+  (let [{:keys [subject body]} (get-in copy-texts [kind lang]
+                                       (get-in copy-texts [kind :fi]))]
     (.send! emailer (assoc (render-copy subject body values url-keys) :to to))))
 
 (defn send-registration-link-email!
   "Self-registration step 1: the link that proves the requester reads `to`."
   [emailer to lang {:keys [link valid-hours]}]
-  (send-registration-copy! emailer to :link lang
-                           {:link link :valid-hours valid-hours} #{:link}))
+  (send-copy! emailer to :link lang
+              {:link link :valid-hours valid-hours} #{:link}))
 
 (defn send-registration-account-exists-email!
   "Sent instead of a registration link when `to` already has an account. The
   endpoint answers identically either way, so it can't be used to probe which
   addresses are registered; the address owner learns what to do instead."
   [emailer to lang {:keys [login-url reset-url]}]
-  (send-registration-copy! emailer to :account-exists lang
-                           {:login-url login-url :reset-url reset-url}
-                           #{:login-url :reset-url}))
+  (send-copy! emailer to :account-exists lang
+              {:login-url login-url :reset-url reset-url}
+              #{:login-url :reset-url}))
+
+(defn send-email-change-link-email!
+  "Email change, step 1: the confirmation link, sent to the NEW address.
+  `admin?` only changes who the copy says asked for the change."
+  [emailer to lang {:keys [link valid-hours admin?]}]
+  (send-copy! emailer to (if admin? :email-change-link-admin :email-change-link-self) lang
+              {:link link :valid-hours valid-hours} #{:link}))
+
+(defn send-email-change-in-use-email!
+  "Sent to the new address instead of a link when it already has an account
+  (self-service only: the requester sees the same answer either way)."
+  [emailer to lang]
+  (send-copy! emailer to :email-change-in-use lang {} #{}))
+
+(defn send-email-changed-notice!
+  "Email change, step 2: tells the OLD address the account moved. The new
+  address is masked — the old mailbox may have passed to someone else."
+  [emailer to lang {:keys [masked-email]}]
+  (send-copy! emailer to :email-changed-notice lang {:masked-email masked-email} #{}))
 
 ;; --- PTV katselmointi notification -------------------------------------------
 ;; Sent to a municipality's PTV managers after DVV has reviewed

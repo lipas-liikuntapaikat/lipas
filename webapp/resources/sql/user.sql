@@ -195,3 +195,16 @@ SET    email_verified_at = now(),
        email_verified_via = :email_verified_via
 WHERE  id = :id ::uuid
   AND  email_verified_via IS NULL;
+
+-- :name change-user-email!
+-- :command :execute
+-- :result :affected
+-- :doc Moves the account to its newly proven address (email change). The
+--      username is passed explicitly: it moves along only when it equalled the
+--      old address. The confirmation link proved the new address.
+UPDATE account
+SET    email = :email,
+       username = :username,
+       email_verified_at = now(),
+       email_verified_via = 'change'
+WHERE  id = :id ::uuid;

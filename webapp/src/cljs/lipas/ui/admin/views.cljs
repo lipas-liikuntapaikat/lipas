@@ -48,6 +48,7 @@
             [lipas.ui.components.buttons :as buttons]
             [lipas.ui.components.checkboxes :as checkboxes]
             [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.email-change :as email-change]
             [lipas.ui.components.layouts :as layouts]
             [lipas.ui.components.selects :as selects]
             [lipas.ui.components.tables :as tables]
@@ -265,6 +266,15 @@
           [:> Icon {:sx #js{:mr 1}} "restore"]
           "Palauta"])
 
+       ;; Change email button (confirmed by the new address)
+       (when (and existing? (= "active" (:status user)))
+         [:> Button
+          {:variant "contained"
+           :color "secondary"
+           :on-click #(==> [::events/open-email-change-dialog])}
+          [:> Icon {:sx #js{:mr 1}} "alternate_email"]
+          (tr :lipas.user/change-email)])
+
        ;; Send magic link button
        [buttons/email-button
         {:label (tr :lipas.admin/magic-link)
@@ -292,6 +302,15 @@
      [:> Grid {:container true :spacing 1}
 
       [magic-link-dialog {:tr tr}]
+
+      [email-change/email-change-dialog
+       {:tr tr
+        :current-email (:email user)
+        :state (<== [::subs/email-change])
+        :help-text (tr :lipas.user/change-email-help-admin)
+        :on-change #(==> [::events/set-new-email %])
+        :on-submit #(==> [::events/request-email-change user %])
+        :on-close #(==> [::events/close-email-change-dialog])}]
 
       ;;; Contact info
       [layouts/card {:title (tr :lipas.user/contact-info)}
