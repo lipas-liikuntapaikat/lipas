@@ -190,3 +190,7 @@
                   (:name (second x)))
       :activity (get (:label x) locale)
       (get (:name x) locale))))
+
+(rf/reg-sub ::email-change
+  (fn [db _]
+    (-> db :user :email-change)))

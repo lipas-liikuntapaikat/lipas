@@ -1,4 +1,16 @@
 {:headline "Register",
  :link "Sign up here",
+ :email-step-intro
+ "Start by entering your email address. We'll send you a link to complete your registration.",
+ :send-link "Send link",
+ :link-sent
+ "We sent a link to {1}. Open it to complete your registration. The link is valid for 24 hours. If the message doesn't arrive within a few minutes, check your spam folder and the spelling of the address.",
+ :send-again "Enter the email address again",
+ :complete-headline "Complete registration",
+ :complete-intro
+ "Your email address has been verified. Please fill in the details below.",
+ :link-invalid "The registration link has expired or is invalid.",
+ :request-new-link "Request a new link",
+ :go-to-login "Log in",
  :thank-you-for-registering
- "Thank you for registering! You wil receive an email once we've updated your permissions."}
+ "Thank you for registering! Your account has been created and you can log in now. You will receive an email once you have been granted permissions."}
