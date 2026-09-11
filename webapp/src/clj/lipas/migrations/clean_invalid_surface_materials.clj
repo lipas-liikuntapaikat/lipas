@@ -87,7 +87,14 @@
     (when (seq fixes)
       ;; Looked up only when there is work to do — fresh databases (CI,
       ;; empty installs) have neither sports sites nor the robot user.
-      (let [user (db/get-user-by-email db {:email "robot@lipas.fi"})]
+      ;; Raw SQL with a pinned column list, not db/get-user-by-email: the
+      ;; app's user queries select the columns of TODAY's schema, which a
+      ;; database migrating from an older state doesn't have yet.
+      (let [user (first (jdbc/execute!
+                          db
+                          ["SELECT id, email, username FROM account WHERE email = ?"
+                           "robot@lipas.fi"]
+                          {:builder-fn rs/as-unqualified-maps}))]
         (when-not (:id user)
           (throw (ex-info "robot@lipas.fi user not found" {})))
         (doseq [{:keys [lipas-id name old new site]} fixes]
