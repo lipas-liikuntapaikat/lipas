@@ -28,7 +28,17 @@
    :roles (->> user :permissions :roles
                (map (fn [x]
                       (tr (keyword :lipas.user.permissions.roles.role-names (:role x)))))
-               (str/join ", "))})
+               (str/join ", "))
+   ;; How the address was proven — "legacy" is the implicit, pre-verification
+   ;; case. See the 20260911120000-account-email-verification migration.
+   :email-verified (let [at (:email-verified-at user)]
+                     (str (tr (case (:email-verified-via user)
+                                "registration" :lipas.admin/email-verified-registration
+                                "login" :lipas.admin/email-verified-login
+                                "change" :lipas.admin/email-verified-change
+                                "legacy" :lipas.admin/email-verified-legacy
+                                :lipas.admin/email-not-verified))
+                          (when (string? at) (str " " (subs at 0 (min 10 (count at)))))))})
 
 (rf/reg-sub ::users-list
   :<- [::users]
@@ -148,3 +158,7 @@
 (rf/reg-sub ::site-history-error
   (fn [db _]
     (get-in db [:admin :site-history :error])))
+
+(rf/reg-sub ::email-change
+  (fn [db _]
+    (-> db :admin :email-change)))

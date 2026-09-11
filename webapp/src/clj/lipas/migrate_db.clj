@@ -121,18 +121,25 @@
 (defn -main
   "Main entry point for command line usage"
   [& args]
-  (let [command (first args)]
-    (case command
-      "migrate" (migrate!)
-      "rollback" (rollback!)
-      "up" (up! (second args))
-      "down" (down! (second args))
-      "reset" (reset!)
-      "create" (create-migration! (second args))
-      "status" (migration-status)
-      ;; Default to migrate
-      (nil "") (migrate!)
-      (do
-        (println "Unknown command:" command)
-        (println "Available commands: migrate, rollback, up <id>, down <id>, reset, create <name>, status")
-        :failed))))
+  (let [command (first args)
+        result  (case command
+                  "migrate" (migrate!)
+                  "rollback" (rollback!)
+                  "up" (up! (second args))
+                  "down" (down! (second args))
+                  "reset" (reset!)
+                  "create" (create-migration! (second args))
+                  "status" (migration-status)
+                  ;; Default to migrate
+                  (nil "") (migrate!)
+                  (do
+                    (println "Unknown command:" command)
+                    (println "Available commands: migrate, rollback, up <id>, down <id>, reset, create <name>, status")
+                    :failed))]
+    ;; The commands catch their own exceptions and report :failed, so without
+    ;; this the process exited 0 on a failed migration — and
+    ;; scripts/deploy/install.sh (set -e) went on to restart the new backend
+    ;; against a half-migrated schema.
+    (when (= :failed result)
+      (System/exit 1))
+    result))

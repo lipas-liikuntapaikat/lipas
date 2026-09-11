@@ -4,7 +4,6 @@
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
             [lipas.roles :as roles]
-            [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
@@ -171,7 +170,7 @@
     (when (= 1 (count orgs))
       (let [org (first orgs)]
         (when (and (get-in org [:ptv-data :org-id])
-                   (ptv-privilege-for-org? (user-subs/user-data db) org))
+                   (ptv-privilege-for-org? (get-in db [:user :login]) org))
           org)))))
 
 ;; Convenience for single-org municipalities: skip the one-item dropdown.

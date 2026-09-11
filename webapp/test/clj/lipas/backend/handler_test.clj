@@ -325,21 +325,8 @@
   (t/run-test search-loi-by-status)
   (t/run-test search-lois-by-location))
 
-(deftest register-user-test
-  (let [user (tu/gen-user)
-        resp (test-app (-> (mock/request :post "/api/actions/register")
-                           (mock/content-type "application/json")
-                           (mock/body (->json user))))]
-    (is (= 201 (:status resp)))))
-
-(deftest register-user-conflict-test
-  (let [user (tu/gen-regular-user :db-component (test-db))
-        resp (test-app (-> (mock/request :post "/api/actions/register")
-                           (mock/content-type "application/json")
-                           (mock/body (->json user))))
-        body (<-json (:body resp))]
-    (is (= 409 (:status resp)))
-    (is (= "username-conflict" (:type body)))))
+;; Registration (request-registration + register) is covered in
+;; lipas.backend.registration-test.
 
 (deftest login-failure-test
   (let [resp (test-app (-> (mock/request :post "/api/actions/login")

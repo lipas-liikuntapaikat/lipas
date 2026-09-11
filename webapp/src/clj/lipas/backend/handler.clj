@@ -64,6 +64,11 @@
 (def exception-handlers
   {:username-conflict (exception-handler 409 :username-conflict)
    :email-conflict (exception-handler 409 :email-conflict)
+   ;; Registration link expired, tampered with, or not a registration token.
+   :invalid-registration-token (exception-handler 400 :invalid-registration-token)
+   ;; Email-change link expired, tampered with, already used or superseded.
+   :invalid-email-change-token (exception-handler 400 :invalid-email-change-token)
+   :same-email (exception-handler 400 :same-email)
    :no-permission (exception-handler 403 :no-permission)
    :impersonation-not-allowed (exception-handler 403 :impersonation-not-allowed)
    :user-not-found (exception-handler 404 :user-not-found)
@@ -951,21 +956,105 @@
              {:status 200
               :body (core/search-fields search body-params)})}}]
 
+        ["/actions/request-registration"
+         {:post
+          {:no-doc true
+           ;; Self-registration step 1: mails a registration link (or an
+           ;; "account exists" note) to the address. Unauthenticated mail to an
+           ;; address of the caller's choosing, so it gets the register budget.
+           ;; `:register-url` is host-whitelisted like every other emailed-link
+           ;; sink: the link carries the email-verification token.
+           :rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 5}
+           :parameters {:body [:map {:closed true}
+                               [:email users-schema/email-schema]
+                               [:register-url handler-schema/magic-link-login-url]
+                               [:lang {:optional true} users-schema/registration-lang]]}
+           :handler
+           (fn [req]
+             (core/request-registration! db emailer (-> req :parameters :body))
+             {:status 200
+              :body {:status "OK"}})}}]
+
         ["/actions/register"
          {:post
           {:no-doc true
-           ;; Creates an account and mails lipasinfo. Registering is a
-           ;; once-ever act per person, so this can be tighter than the
-           ;; password-reset budget.
+           ;; Self-registration step 2: creates the account and mails lipasinfo.
+           ;; Gated by the email-verification token from step 1; the email is
+           ;; read from the token, and only the coerced `:parameters` are used —
+           ;; never the raw body — so nothing the client adds (permissions,
+           ;; status, verification fields) reaches the account row.
            :rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 5}
+           :parameters {:body users-schema/registration-payload-schema}
            :handler
            (fn [req]
-             (let [user (-> req
-                            :body-params
-                            (dissoc :permissions))
-                   _ (core/register! db emailer user)]
-               {:status 201
-                :body {:status "OK"}}))}}]
+             (core/register! db emailer (-> req :parameters :body))
+             {:status 201
+              :body {:status "OK"}})}}]
+
+        ["/actions/request-email-change"
+         {:post
+          {:no-doc true
+           ;; Self-service email change, step 1. Any logged-in user: the
+           ;; always-true privilege makes privilege-middleware authenticate,
+           ;; which also runs it before the per-user rate limit (that needs
+           ;; :identity). Mails a confirmation link to the new address; nothing
+           ;; changes until it is opened (core/request-email-change!).
+           :require-privilege (fn [_req] true)
+           :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 5}
+           :parameters {:body [:map {:closed true}
+                               [:new-email users-schema/email-schema]
+                               [:confirm-url handler-schema/magic-link-login-url]
+                               [:lang {:optional true} users-schema/registration-lang]]}
+           :handler
+           (fn [{:keys [identity parameters]}]
+             (let [{:keys [new-email confirm-url lang]} (:body parameters)
+                   user (core/get-user! db (str (:id identity)))]
+               (core/request-email-change! db emailer {:user        user
+                                                       :new-email   new-email
+                                                       :confirm-url confirm-url
+                                                       :lang        lang
+                                                       :actor       (or (:impersonator identity) user)
+                                                       :admin?      false}))
+             {:status 200 :body {:status "OK"}})}}]
+
+        ["/actions/request-email-change-for-user"
+         {:post
+          {:no-doc true
+           ;; Admin-initiated email change. Same confirmation as self-service:
+           ;; the new address must open the link, so a typo can't hand an
+           ;; account to a stranger.
+           :require-privilege :users/manage
+           :parameters {:body [:map {:closed true}
+                               [:id :string]
+                               [:new-email users-schema/email-schema]
+                               [:confirm-url handler-schema/magic-link-login-url]
+                               [:lang {:optional true} users-schema/registration-lang]]}
+           :handler
+           (fn [{:keys [identity parameters]}]
+             (let [{:keys [id new-email confirm-url lang]} (:body parameters)]
+               (core/request-email-change! db emailer {:user        (core/get-user! db id)
+                                                       :new-email   new-email
+                                                       :confirm-url confirm-url
+                                                       :lang        lang
+                                                       :actor       identity
+                                                       :admin?      true}))
+             {:status 200 :body {:status "OK"}})}}]
+
+        ["/actions/confirm-email-change"
+         {:post
+          {:no-doc true
+           ;; Email change, step 2, from the link in the new inbox.
+           ;; Unauthenticated on purpose: the email-change token is the
+           ;; credential, and the link is typically opened in a mail client's
+           ;; browser, not the logged-in one. It mails the old address, hence
+           ;; the budget.
+           :rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 10}
+           :parameters {:body [:map {:closed true}
+                               [:token [:string {:min 1 :max 4096}]]]}
+           :handler
+           (fn [{:keys [parameters]}]
+             (core/confirm-email-change! db emailer (-> parameters :body :token))
+             {:status 200 :body {:status "OK"}})}}]
 
         ["/actions/login"
          {:post
@@ -999,6 +1088,12 @@
                        ;; the short expiry across refreshes so they can't be
                        ;; laundered into regular sessions.
                        impersonator (:impersonator identity)]
+                   ;; This is where an emailed magic link lands, so for an
+                   ;; unverified invite account it is the first proof of the
+                   ;; inbox. Never for an impersonation session — that's the
+                   ;; admin, not the owner.
+                   (when-not impersonator
+                     (core/mark-email-verified-by-login! db stored))
                    {:status 200
                     :body (merge (dissoc user :password)
                                  {:token (if impersonator
@@ -1149,7 +1244,11 @@
              (let [user (-> req :parameters :body :user)
                    variant (-> req :parameters :body :variant keyword)
                    user (or (core/get-user db (:email user))
-                            (do (core/add-user! db user)
+                            ;; No password from the client: an account made
+                            ;; here must only be reachable through the emailed
+                            ;; link, which is what lets its first login count as
+                            ;; email verification (core/mark-email-verified-by-login!).
+                            (do (core/add-user! db (dissoc user :password))
                                 (core/get-user db (:email user))))
                    url (-> req :parameters :body :login-url)
                    params {:user user :variant variant :login-url url}
@@ -1407,8 +1506,10 @@
            :parameters
            {:body feedback-schema/feedback-payload}
            :handler
-           (fn [{:keys [body-params]}]
-             (core/send-feedback! emailer body-params)
+           ;; The coerced body, not the raw one: only the schema's keys may
+           ;; reach the ops inbox.
+           (fn [{:keys [parameters]}]
+             (core/send-feedback! emailer (:body parameters))
              {:status 200
               :body {:status "OK"}})}}]
 

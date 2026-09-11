@@ -88,10 +88,14 @@
     [:post "/api/actions/create-analysis-report"]
 
     ;; --- Unauthenticated by necessity: you have no session yet -----------
-    ;; All four send mail, so all four carry an IP-keyed `:rate-limit` instead
-    ;; of an auth gate — see lipas.backend.rate-limit-http-test, which is what
-    ;; requires them to declare one.
+    ;; All of these send mail, so each carries an IP-keyed `:rate-limit`
+    ;; instead of an auth gate — see lipas.backend.rate-limit-http-test, which
+    ;; is what requires them to declare one. `register` is additionally gated
+    ;; by the emailed email-verification token in its body.
+    [:post "/api/actions/request-registration"]
     [:post "/api/actions/register"]
+    ;; Gated by the email-change token in its body.
+    [:post "/api/actions/confirm-email-change"]
     [:post "/api/actions/request-password-reset"]
     [:post "/api/actions/order-magic-link"]
     [:post "/api/actions/send-feedback"]

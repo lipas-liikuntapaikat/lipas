@@ -5,4 +5,5 @@
    :login-form             {}
    :magic-link-form        {}
    :registration-form      {}
+   :registration-request   {}
    :experimental-features? false})
