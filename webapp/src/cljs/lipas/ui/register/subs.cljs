@@ -16,3 +16,11 @@
 (rf/reg-sub ::registration-error
   (fn [db _]
     (-> db :user :registration-error)))
+
+(rf/reg-sub ::registration-request
+  (fn [db _]
+    (-> db :user :registration-request)))
+
+(rf/reg-sub ::registration-token
+  (fn [db _]
+    (-> db :user :registration-token)))

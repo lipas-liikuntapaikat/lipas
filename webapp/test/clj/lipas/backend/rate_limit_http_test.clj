@@ -44,7 +44,9 @@
    Each is free work for an anonymous caller, so each needs a ceiling."
   #{"/api/actions/request-password-reset"
     "/api/actions/order-magic-link"
+    "/api/actions/request-registration"
     "/api/actions/register"
+    "/api/actions/confirm-email-change"
     "/api/actions/send-feedback"
     "/api/actions/subscribe-newsletter"})
 

@@ -60,3 +60,44 @@
 (rf/reg-event-db ::toggle-experimental-features
   (fn [db _]
     (update-in db [:user :experimental-features?] not)))
+
+;;; Email change (self-service) ;;;
+
+(rf/reg-event-db ::open-email-change-dialog
+  (fn [db _]
+    (assoc-in db [:user :email-change] {:open? true})))
+
+(rf/reg-event-db ::close-email-change-dialog
+  (fn [db _]
+    (update db :user dissoc :email-change)))
+
+(rf/reg-event-db ::set-new-email
+  (fn [db [_ v]]
+    (-> db
+        (assoc-in [:user :email-change :new-email] v)
+        (update-in [:user :email-change] dissoc :error))))
+
+(rf/reg-event-fx ::request-email-change
+  (fn [{:keys [db]} [_ new-email]]
+    {:db (assoc-in db [:user :email-change :in-progress?] true)
+     :http-xhrio
+     {:method          :post
+      :uri             (str (:backend-url db) "/actions/request-email-change")
+      :headers         {:Authorization (str "Token " (-> db :user :login :token))}
+      :params          {:new-email   new-email
+                        :confirm-url (str (utils/base-url) "/vahvista-sahkoposti")
+                        :lang        (name ((:translator db)))}
+      :format          (ajax/json-request-format)
+      :response-format (ajax/json-response-format {:keywords? true})
+      :on-success      [::request-email-change-success new-email]
+      :on-failure      [::request-email-change-failure]}}))
+
+(rf/reg-event-db ::request-email-change-success
+  (fn [db [_ new-email _]]
+    (assoc-in db [:user :email-change] {:open? true :sent-to new-email})))
+
+(rf/reg-event-db ::request-email-change-failure
+  (fn [db [_ resp]]
+    (-> db
+        (assoc-in [:user :email-change :in-progress?] false)
+        (assoc-in [:user :email-change :error] (or (-> resp :response :type) "unknown")))))
