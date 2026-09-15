@@ -21,6 +21,7 @@
             [lipas.ui.loi.subs :as subs]
             [lipas.ui.map.events :as map-events]
             [lipas.ui.map.import :as import]
+            [lipas.ui.sports-sites.activities.views :as activities-views]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
 
@@ -378,6 +379,17 @@
                                :value-fn    first
                                :on-change   #(==> [::events/edit-loi-field k %])
                                :value       (get-in form-data [k])}]
+
+                    ;; Same structured table + dialog the activities form uses.
+                    ;; Its set-field is called with the whole updated vector.
+                    "contacts" [activities-views/contacts
+                                {:read-only?    read-only?
+                                 :locale        locale
+                                 :label         (get-in field [:label locale])
+                                 :description   (get-in field [:description locale])
+                                 :contact-props (:props field)
+                                 :set-field     #(==> [::events/edit-loi-field k %])
+                                 :value         (get form-data k)}]
 
                     ;; Fallback
                     [text-fields/text-field

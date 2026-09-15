@@ -1,5 +1,6 @@
 (ns lipas.data.loi
-  (:require [lipas.data.status :as status]))
+  (:require [lipas.data.activities :as activities]
+            [lipas.data.status :as status]))
 
 (def statuses status/statuses)
 
@@ -116,28 +117,23 @@
                    :se "Ankomst"
                    :en "Arrival to destination"}}}})
 
+;; Reused verbatim from activities so the two stay identical: same structured
+;; table + dialog (organization, role, email, web address, phone number) and the
+;; same contact roles.
 (def contact-props
-  {:contact-info
-   {:schema localized-string-schema
-    :field
-    {:type        "textarea"
-     :description {:fi "Kohteesta vastaavan tahon yhteystiedot, esim. puhelinnumero ja sähköpostiosoite."
-                   :se "Kontaktuppgifter till den part som ansvarar för platsen, t.ex. telefonnummer och e-postadress."
-                   :en "Contact information of the party responsible for the place, e.g. phone number and email address."}
-     :label       {:fi "Yhteystiedot"
-                   :se "Kontaktuppgifter"
-                   :en "Contact information"}}}
+  {:contacts (:contacts activities/common-props)})
 
-   :www
+(def additional-info-props
+  {:additional-info-link
    {:schema localized-string-schema
     :field
-    {:type        "textfield"
-     :description {:fi "Kohteen verkkosivun osoite (syötä vain yksi osoite)."
-                   :se "Adressen till platsens webbplats (ange endast en adress)."
-                   :en "Address of the website of the place (enter only one address)."}
-     :label       {:fi "WWW-osoite"
-                   :se "Webbadress"
-                   :en "Website"}}}})
+    {:type        "text-field"
+     :description {:fi "Linkki kohteen omille verkkosivuille tai laajempaan kohde-esittelyyn. Syötä vain yksi verkko-osoite."
+                   :se "Länk till platsens egen webbplats eller till en mer omfattande presentation av platsen. Ange endast en webbadress."
+                   :en "Link to the website of the place or to a more extensive presentation of it. Enter only one web address."}
+     :label       {:fi "Lisätietoa verkossa"
+                   :se "Mer information på webben"
+                   :en "More information online"}}}})
 
 (def fire-props
   {:use-structure-during-fire-warning
@@ -231,7 +227,8 @@
                common-props
                arrival-props
                accessibility-props
-               contact-props)}
+               contact-props
+               additional-info-props)}
 
      :parking-spot
      {:label {:fi "Pysäköintipaikka" :se "Parkeringsplats" :en "Parking spot"}
