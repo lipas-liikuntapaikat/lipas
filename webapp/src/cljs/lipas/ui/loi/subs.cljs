@@ -56,6 +56,11 @@
   (fn [categories [_ loi-category loi-type]]
     (get-in categories [loi-category :types (keyword loi-type) :props])))
 
+(rf/reg-sub ::field-sorter
+  :<- [::loi]
+  (fn [loi _]
+    (:field-sorter loi)))
+
 (rf/reg-sub ::geoms
   :<- [:lipas.ui.map.subs/new-geom]
   (fn [geoms _]

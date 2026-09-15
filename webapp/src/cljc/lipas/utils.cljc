@@ -247,6 +247,18 @@
 (defn reverse-cmp [a b]
   (compare b a))
 
+(defn make-field-sorter
+  "Builds a sort-key fn that orders map entries by the position of their
+  key in `ks`. Intended to be used with `reverse-cmp`:
+
+    (sort-by (make-field-sorter [:a :b]) reverse-cmp {:b 2 :a 1})
+
+  Keys missing from `ks` sort last."
+  [ks]
+  (let [lookup (->> ks (reverse) (map-indexed (fn [idx k] [k idx])) (into {}))]
+    (fn [[k _]]
+      (get lookup k -1))))
+
 (defn str-matches? [s x]
   (-> x str str/lower-case (str/includes? s)))
 

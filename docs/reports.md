@@ -77,7 +77,7 @@ Broader financial analysis across regions:
 Tracks government subsidies for sports facilities:
 
 - Subsidy amounts by region, type, and year
-- Filtering by issuer (AVI, OKM)
+- Filtering by issuer (LVV, OKM; historical ELY and AVI grants are stored under LVV)
 - Comparison and ranking views
 - Historical data from 2002 onwards
 
