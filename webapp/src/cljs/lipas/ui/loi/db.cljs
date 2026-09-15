@@ -11,8 +11,8 @@
    :arrival
    :accessible?
    :accessibility
-   :contact-info
-   :www
+   :contacts
+   :additional-info-link
    :use-structure-during-fire-warning
    :itrs-exposure
    :protected-area-specification])
