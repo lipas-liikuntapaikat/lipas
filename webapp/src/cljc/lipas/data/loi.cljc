@@ -104,6 +104,41 @@
                    :se "Tillgänglighet"
                    :en "Accessibility"}}}})
 
+(def arrival-props
+  {:arrival
+   {:schema localized-string-schema
+    :field
+    {:type        "textarea"
+     :description {:fi "Eri kulkumuodoilla kohteeseen pääsyyn liittyvää tietoa. Esim. pysäköintialueet ja joukkoliikenneyhteydet."
+                   :se "Information om olika transportsätt att ta sig till destinationen. T.ex. parkeringsplatser och kollektivtrafikförbindelser."
+                   :en "Information about how to get to the destination with different means of transport, e.g. parking areas and public transport."}
+     :label       {:fi "Saapuminen"
+                   :se "Ankomst"
+                   :en "Arrival to destination"}}}})
+
+(def contact-props
+  {:contact-info
+   {:schema localized-string-schema
+    :field
+    {:type        "textarea"
+     :description {:fi "Kohteesta vastaavan tahon yhteystiedot, esim. puhelinnumero ja sähköpostiosoite."
+                   :se "Kontaktuppgifter till den part som ansvarar för platsen, t.ex. telefonnummer och e-postadress."
+                   :en "Contact information of the party responsible for the place, e.g. phone number and email address."}
+     :label       {:fi "Yhteystiedot"
+                   :se "Kontaktuppgifter"
+                   :en "Contact information"}}}
+
+   :www
+   {:schema localized-string-schema
+    :field
+    {:type        "textfield"
+     :description {:fi "Kohteen verkkosivun osoite (syötä vain yksi osoite)."
+                   :se "Adressen till platsens webbplats (ange endast en adress)."
+                   :en "Address of the website of the place (enter only one address)."}
+     :label       {:fi "WWW-osoite"
+                   :se "Webbadress"
+                   :en "Website"}}}})
+
 (def fire-props
   {:use-structure-during-fire-warning
    {:schema [:boolean]
@@ -188,6 +223,15 @@
       :props (merge
                common-props
                accessibility-props)}
+
+     :nature-centre
+     {:label {:fi "Luontokeskus" :se "Naturcentrum" :en "Nature centre"}
+      :value "nature-centre"
+      :props (merge
+               common-props
+               arrival-props
+               accessibility-props
+               contact-props)}
 
      :parking-spot
      {:label {:fi "Pysäköintipaikka" :se "Parkeringsplats" :en "Parking spot"}
