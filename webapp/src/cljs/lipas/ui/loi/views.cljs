@@ -232,6 +232,7 @@
         loi-cat      (:loi-category edit-data)
         loi-type     (:loi-type edit-data)
         loi-props    (<== [::subs/props loi-cat loi-type])
+        field-sorter (<== [::subs/field-sorter])
         form-data    (if read-only? display-data edit-data)]
 
     [:> Grid {:container true :spacing 2 :style {:padding "1em"}}
@@ -336,7 +337,7 @@
      ;; Props
      (when loi-type
        (into [:<>]
-             (for [[k {:keys [field] :as v}] loi-props]
+             (for [[k {:keys [field] :as v}] (sort-by field-sorter utils/reverse-cmp loi-props)]
                (let [field-type (-> v :field :type)]
                  [:> Grid {:item true :xs 12}
                   (condp = field-type
