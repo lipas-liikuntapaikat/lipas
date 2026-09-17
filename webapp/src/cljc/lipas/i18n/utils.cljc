@@ -45,6 +45,7 @@
    :map.import
    :map.overlay
    :map.resolve-address
+   :map.reverse-lookup
    :map.tools
    :map.tools.simplify
    :menu
