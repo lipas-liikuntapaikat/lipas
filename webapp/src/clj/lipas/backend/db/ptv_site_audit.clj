@@ -48,7 +48,7 @@
 (defn get-all-current
   "Map of lipas-id -> latest audit map for every audited site (one small
    query; audited sites are a sample, hundreds at most). Resolved once per
-   index batch, see lipas.backend.core/index-context."
+   index batch, see lipas.backend.ptv.audit/current-site-audits."
   [db]
   (into {}
         (map (juxt :lipas-id :document))

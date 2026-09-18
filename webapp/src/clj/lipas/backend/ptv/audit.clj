@@ -17,11 +17,17 @@
 ;;; Sites ;;;
 
 (defn current-site-audits
-  "lipas-id -> current audit map for every audited site. One small query
-   (audited sites are a sample); resolved once per index batch, see
+  "lipas-id -> current audit map for every audited site, as one map: one
+   query for a whole (re)index batch (audited sites are a sample). See
    lipas.backend.core/index-context."
   [db]
   (ptv-site-audit-db/get-all-current db))
+
+(defn site-audit-lookup
+  "lipas-id -> current audit map, one indexed query per call. For the
+   single-site index paths, where fetching every audit would be waste."
+  [db]
+  (fn [lipas-id] (ptv-site-audit-db/get-current db lipas-id)))
 
 (defn strip-site-audit
   "Site without a [:ptv :audit] key. Clients round-trip the indexed
@@ -32,12 +38,13 @@
     (get-in site [:ptv :audit]) (update :ptv dissoc :audit)))
 
 (defn with-site-audit
-  "Site with its current audit (from `audit-by-lipas-id`, see
-   current-site-audits) joined in as [:ptv :audit] — the shape every
-   reader of the indexed document uses. Any audit already in the document
-   is a legacy copy and is replaced."
+  "Site with its current audit joined in as [:ptv :audit] — the shape
+   every reader of the indexed document uses. `audit-by-lipas-id` is a
+   lookup fn lipas-id -> audit (a map from current-site-audits or a fn
+   from site-audit-lookup). Any audit already in the document is a legacy
+   copy and is replaced."
   [site audit-by-lipas-id]
-  (let [audit (get audit-by-lipas-id (:lipas-id site))]
+  (let [audit (audit-by-lipas-id (:lipas-id site))]
     (cond-> (strip-site-audit site)
       audit (assoc-in [:ptv :audit] audit))))
 

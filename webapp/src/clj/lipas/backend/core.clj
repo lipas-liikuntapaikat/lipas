@@ -901,13 +901,21 @@
   (into {} (map (juxt (comp str :id) :name)) (org/all-orgs db)))
 
 (defn index-context
-  "Data denormalized into every indexed site document, resolved once per
-   (re)index batch — see `enrich*`. Pass it whenever a db handle is in
-   scope; without it the doc lacks the owner org's name (UUID shown until
-   the next full reindex) and the site's PTV audit."
-  [db]
-  {:org-name-by-id (org-names db)
-   :ptv-audit-by-lipas-id (ptv-audit/current-site-audits db)})
+  "Data denormalized into every indexed site document — see `enrich*`.
+   Pass it whenever a db handle is in scope; without it the doc lacks the
+   owner org's name (UUID shown until the next full reindex) and the
+   site's PTV audit.
+
+   :ptv-audit-by-lipas-id is a lookup, lipas-id -> current audit. The
+   single-site paths (every save) get one that queries per site; a
+   (re)index batch passes {:batch? true} to resolve every audit up front
+   in one query instead of one per site."
+  ([db] (index-context db nil))
+  ([db {:keys [batch?]}]
+   {:org-name-by-id (org-names db)
+    :ptv-audit-by-lipas-id (if batch?
+                             (ptv-audit/current-site-audits db)
+                             (ptv-audit/site-audit-lookup db))}))
 
 (defn enrich*
   "Enriches sports-site map with :search-meta key where we add data that
@@ -998,7 +1006,7 @@
      (-> sports-site
          (assoc :search-meta search-meta)
          ;; the site's PTV audit is joined in here, never read from the document
-         (ptv-audit/with-site-audit ptv-audit-by-lipas-id)))))
+         (ptv-audit/with-site-audit (or ptv-audit-by-lipas-id (constantly nil)))))))
 
 #_(defn enrich-ice-stadium [{:keys [envelope building] :as ice-stadium}]
     (let [smaterial (-> envelope :base-floor-structure)

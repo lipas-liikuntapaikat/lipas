@@ -273,7 +273,7 @@
               (let [idx (get-in search [:indices :sports-site :search])
                       ;; resolved once per batch — owner just changed, so the docs
                       ;; must carry the new owner org's name (F15)
-                    index-ctx (core/index-context db)]
+                    index-ctx (core/index-context db {:batch? true})]
                 (search/bulk-index-sync! (:client search)
                                          (search/->bulk idx :lipas-id
                                                         (map #(core/enrich % index-ctx) updated)))))
@@ -385,7 +385,7 @@
                                  (core/upsert-sports-site!* tx actor))))]
             (when (seq updated)
               (let [idx       (get-in search [:indices :sports-site :search])
-                    index-ctx (core/index-context db)]
+                    index-ctx (core/index-context db {:batch? true})]
                 (search/bulk-index-sync! (:client search)
                                          (search/->bulk idx :lipas-id
                                                         (map #(core/enrich % index-ctx) updated)))))
