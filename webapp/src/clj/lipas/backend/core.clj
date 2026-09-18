@@ -13,13 +13,13 @@
             [lipas.backend.api.v1.sports-place :as legacy-sports-place]
             [lipas.backend.api.v1.transform :as legacy-transform]
             [lipas.backend.db.db :as db]
-            [lipas.backend.db.ptv-site-audit :as ptv-site-audit-db]
             [lipas.backend.email :as email]
             [lipas.backend.geom-utils :refer [feature-coll->geom-coll]]
             [lipas.backend.gis :as gis]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.newsletter :as newsletter]
             [lipas.backend.org :as org]
+            [lipas.backend.ptv.audit :as ptv-audit]
             [lipas.backend.search :as search]
             [lipas.backend.token-revocation :as revocation]
             [lipas.data-model-export :as data-model-export]
@@ -651,13 +651,9 @@
                        (merge (select-keys stored [:owner-org-id :edit-grants])
                               sports-site)
                        sports-site)
-         ;; The PTV audit is not part of the document: it lives in
-         ;; ptv_site_audit and is only joined into the indexed doc (see
-         ;; index-context). Clients get it that way and round-trip it back
-         ;; with the rest of the site; drop it so it never lands in a
-         ;; revision — and so nobody can hand themselves an approval.
-         sports-site (cond-> sports-site
-                       (get-in sports-site [:ptv :audit]) (update :ptv dissoc :audit))]
+         ;; The PTV audit is not part of the document (see
+         ;; lipas.backend.ptv.audit): drop whatever the client sent back.
+         sports-site (ptv-audit/strip-site-audit sports-site)]
      ;; 1. Content-edit permission. For an existing site the privilege must hold
      ;;    for BOTH the stored revision (a scoped editor can't touch sites
      ;;    outside their scope, and org-owned-site editors keep edit rights via
@@ -911,7 +907,7 @@
    the next full reindex) and the site's PTV audit."
   [db]
   {:org-name-by-id (org-names db)
-   :ptv-audit-by-lipas-id (ptv-site-audit-db/get-all-current db)})
+   :ptv-audit-by-lipas-id (ptv-audit/current-site-audits db)})
 
 (defn enrich*
   "Enriches sports-site map with :search-meta key where we add data that
@@ -923,7 +919,6 @@
   ([sports-site] (enrich* sports-site nil))
   ([sports-site {:keys [org-name-by-id ptv-audit-by-lipas-id] :as _ctx}]
    (let [sports-site (fix-geoms sports-site)
-         audit (get ptv-audit-by-lipas-id (:lipas-id sports-site))
          fcoll (-> sports-site :location :geometries)
          geom (-> fcoll :features first :geometry)
          start-coords (case (:type geom)
@@ -1000,11 +995,10 @@
                       :fields
                       {:field-types field-types}
                       :activities activity-keys}]
-     (cond-> (assoc sports-site :search-meta search-meta)
-       ;; The site's PTV audit is joined in here, never read from the
-       ;; document (any [:ptv :audit] still present is a legacy copy).
-       (get-in sports-site [:ptv :audit]) (update :ptv dissoc :audit)
-       audit (assoc-in [:ptv :audit] audit)))))
+     (-> sports-site
+         (assoc :search-meta search-meta)
+         ;; the site's PTV audit is joined in here, never read from the document
+         (ptv-audit/with-site-audit ptv-audit-by-lipas-id)))))
 
 #_(defn enrich-ice-stadium [{:keys [envelope building] :as ice-stadium}]
     (let [smaterial (-> envelope :base-floor-structure)

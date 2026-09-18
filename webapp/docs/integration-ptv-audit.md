@@ -154,6 +154,12 @@ judge — the same shape on both sides:
 | revision the verdicts were given on | `site_revision_id` → `sports_site.id` | `service_revision_id` → `ptv_service.id` |
 | migrations | `20260918100000` DDL, `20260918100100` move | `20260918100200` DDL, `20260918100300` move |
 
+The business logic over both tables lives in `lipas.backend.ptv.audit`
+(a leaf namespace: db accessors + `lipas.data.ptv`), which
+`lipas.backend.core` (indexing, the generic site save) and
+`lipas.backend.ptv.core` (the PTV endpoints) call — `backend.core` itself
+knows nothing about the tables.
+
 `document` is the audit map. The revision reference is provenance only: the
 whose-move states compare the audited Finnish text, not revisions, so
 unrelated edits (address, phone) don't count as changes. A service audit on
