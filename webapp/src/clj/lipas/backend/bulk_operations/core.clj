@@ -257,7 +257,7 @@
         (let [search-index (get-in search [:indices :sports-site :search])
             ;; resolved once per batch; keeps :search-meta :owner-org-name
             ;; (F15) present on re-indexed org-owned docs
-              index-ctx (core/index-context db {:batch? true})
+              index-ctx (core/index-context db)
               enriched-sites (map #(core/enrich % index-ctx) saved-sites)
               bulk-data (search/->bulk search-index :lipas-id enriched-sites)]
           (log/debug "Bulk indexing" (count enriched-sites) "sports sites")

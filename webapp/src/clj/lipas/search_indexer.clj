@@ -71,7 +71,7 @@
    (let [type-code (first types)
          ;; resolved once per type batch; denormalizes the owner org's name
          ;; into :search-meta (F15)
-         index-ctx (when type-code (core/index-context db {:batch? true}))]
+         index-ctx (when type-code (core/index-context db))]
      (log/info "Starting to re-index type" type-code)
      (if type-code
        (->> type-code

@@ -901,31 +901,22 @@
   (into {} (map (juxt (comp str :id) :name)) (org/all-orgs db)))
 
 (defn index-context
-  "Data denormalized into every indexed site document — see `enrich*`.
-   Pass it whenever a db handle is in scope; without it the doc lacks the
-   owner org's name (UUID shown until the next full reindex) and the
-   site's PTV audit.
-
-   :ptv-audit-by-lipas-id is a lookup, lipas-id -> current audit. The
-   single-site paths (every save) get one that queries per site; a
-   (re)index batch passes {:batch? true} to resolve every audit up front
-   in one query instead of one per site."
-  ([db] (index-context db nil))
-  ([db {:keys [batch?]}]
-   {:org-name-by-id (org-names db)
-    :ptv-audit-by-lipas-id (if batch?
-                             (ptv-audit/current-site-audits db)
-                             (ptv-audit/site-audit-lookup db))}))
+  "Data denormalized into every indexed site document, resolved once per
+   (re)index batch — see `enrich*`. Pass it whenever a db handle is in
+   scope; without it the doc lacks the owner org's name (UUID shown until
+   the next full reindex)."
+  [db]
+  {:org-name-by-id (org-names db)})
 
 (defn enrich*
   "Enriches sports-site map with :search-meta key where we add data that
   is useful for searching. `ctx` (see `index-context`) carries the owner
-  org names, resolved into :search-meta :owner-org-name, and the sites'
-  PTV audits (ptv_site_audit), joined in as [:ptv :audit] — the shape the
-  UI has always read the audit from. Without ctx the indexed doc simply
-  lacks both until the next full reindex."
+  org names, resolved into :search-meta :owner-org-name; without it the
+  indexed doc simply lacks :owner-org-name until the next full reindex.
+  PTV audits are not indexed: the PTV views join them at read time (see
+  lipas.backend.ptv.audit), so a legacy in-document copy is dropped here."
   ([sports-site] (enrich* sports-site nil))
-  ([sports-site {:keys [org-name-by-id ptv-audit-by-lipas-id] :as _ctx}]
+  ([sports-site {:keys [org-name-by-id] :as _ctx}]
    (let [sports-site (fix-geoms sports-site)
          fcoll (-> sports-site :location :geometries)
          geom (-> fcoll :features first :geometry)
@@ -1005,8 +996,7 @@
                       :activities activity-keys}]
      (-> sports-site
          (assoc :search-meta search-meta)
-         ;; the site's PTV audit is joined in here, never read from the document
-         (ptv-audit/with-site-audit (or ptv-audit-by-lipas-id (constantly nil)))))))
+         ptv-audit/strip-site-audit))))
 
 #_(defn enrich-ice-stadium [{:keys [envelope building] :as ice-stadium}]
     (let [smaterial (-> envelope :base-floor-structure)
@@ -1042,9 +1032,9 @@
 #_(defmethod enrich 3130 [sports-site] (enrich-swimming-pool sports-site))
 
 (defn index!
-  "`ctx` (see `index-context`) denormalizes the owner org's name and the
-  site's PTV audit into the doc — pass it whenever a db handle is in scope;
-  without it the doc is indexed without them (until the next reindex)."
+  "`ctx` (see `index-context`) denormalizes the owner org's name into the
+  doc — pass it whenever a db handle is in scope; without it the doc is
+  indexed without :owner-org-name (UUID shown until the next reindex)."
   ([search sports-site]
    (index! search sports-site false))
   ([search sports-site sync?]

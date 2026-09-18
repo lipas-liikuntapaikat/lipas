@@ -7,6 +7,7 @@
             [lipas.backend.db.ptv-site-audit :as ptv-site-audit-db]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.org :as backend-org]
+            [lipas.backend.ptv.audit :as ptv-audit]
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.backend.ptv.integration :as ptv-integration]
             [lipas.data.ptv :as ptv-data]
@@ -28,6 +29,14 @@
 (defn test-app [req] ((:lipas/app @test-system) req))
 
 ;;; Helper Functions ;;;
+
+(defn- site-get
+  "The site as GET /sports-sites/:lipas-id serves it to the UI (ES doc +
+   the audit joined in at read time)."
+  [token lipas-id]
+  (tu/safe-parse-json
+    (test-app (-> (mock/request :get (str "/api/sports-sites/" lipas-id))
+                  (tu/token-header token)))))
 
 (defn- create-test-site-with-ptv
   "Creates a stable test sports site (yleisurheilukenttä) with basic PTV data for testing"
@@ -55,8 +64,10 @@
                                   :se "Test description"
                                   :en "Test description"}
                     :service-channel-ids []
-                    :service-ids []}}]
-    (core/upsert-sports-site!* (test-db) user site)))
+                    :service-ids []}}
+        saved (core/upsert-sports-site!* (test-db) user site)]
+    (core/index! (test-search) saved :sync)
+    saved))
 
 ;;; Tests ;;;
 
@@ -106,7 +117,8 @@
           stored (ptv-site-audit-db/get-current (test-db) lipas-id)
           db-site (core/get-sports-site (test-db) lipas-id)
           history (core/get-sports-site-history (test-db) lipas-id)
-          es-site (core/get-sports-site2 (test-search) lipas-id)]
+          es-site (core/get-sports-site2 (test-search) lipas-id)
+          served (site-get token lipas-id)]
 
       (is (= audit-data (:summary stored)))
       (is (some? (:timestamp stored)))
@@ -120,9 +132,12 @@
       (is (= (:event-date site) (:event-date db-site)))
       (is (nil? (get-in db-site [:ptv :audit])))
 
-      ;; ...but the indexed doc (what the UI reads) carries the audit
-      (is (= stored (get-in es-site [:ptv :audit])))
-      (is (= (:event-date site) (:event-date es-site))))))
+      ;; ...the index doesn't carry the audit either; the UI's site GET
+      ;; joins it in at read time
+      (is (nil? (get-in es-site [:ptv :audit])))
+      (is (= (:event-date site) (:event-date es-site)))
+      (is (= stored (get-in served [:ptv :audit])))
+      (is (= (:event-date site) (:event-date served))))))
 
 (deftest save-ptv-audit-requires-privilege-test
   (testing "Endpoint requires :ptv/audit privilege"
@@ -290,13 +305,13 @@
 
           body (tu/safe-parse-json resp)
           stored (ptv-site-audit-db/get-current (test-db) lipas-id)
-          es-site (core/get-sports-site2 (test-search) lipas-id)]
+          served (site-get token lipas-id)]
 
       (is (= 200 (:status resp)))
       (is (= second-audit (:summary body)))
       ;; append-only table, latest row wins everywhere
       (is (= second-audit (:summary stored)))
-      (is (= second-audit (get-in es-site [:ptv :audit :summary])))
+      (is (= second-audit (get-in served [:ptv :audit :summary])))
       (is (= 2 (count (ptv-site-audit-db/get-history (test-db) lipas-id)))))))
 
 (deftest save-ptv-audit-invalid-lipas-id-test
@@ -434,16 +449,16 @@
       (is (nil? (get-in (save! (assoc-in site [:ptv :audit] forged)) [:ptv :audit]))))
 
     (let [audit (ptv-core/save-ptv-audit
-                  (test-db) (test-search) auditor
+                  (test-db) auditor
                   {:lipas-id lipas-id
                    :audit {:summary {:status "changes-requested"
                                      :feedback "Tarkenna"
                                      :audited-content {:fi "Test summary"}}}})
-          ;; what the UI holds: the indexed site, audit included
-          client-copy (core/get-sports-site2 (test-search) lipas-id)]
+          ;; what the UI holds: the served site (ES doc + audit joined in)
+          client-copy (ptv-audit/with-site-audit (test-db) (core/get-sports-site2 (test-search) lipas-id))]
       (is (= audit (get-in client-copy [:ptv :audit])))
 
-      (testing "round-tripping the indexed site saves its content and leaves the audit where it is"
+      (testing "round-tripping the served site saves its content and leaves the audit where it is"
         (let [after (save! (-> client-copy
                                (dissoc :search-meta)
                                (assoc :name "Renamed")

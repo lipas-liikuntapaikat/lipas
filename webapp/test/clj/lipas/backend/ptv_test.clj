@@ -64,12 +64,12 @@
                     :summary {:fi "Tiivistelmä"}
                     :description {:fi "Kuvaus"}}}]
     (core/upsert-sports-site!* (test-db) user site)
-    ;; audits live in ptv_site_audit and get joined into the indexed doc
+    ;; audits live in ptv_site_audit; the candidates read joins them in
     (when audit
       (ptv-site-audit-db/insert-audit! (test-db) {:lipas-id lipas-id
                                                   :event-date (:timestamp audit)
                                                   :document audit}))
-    (core/index! (test-search) site true (core/index-context (test-db)))
+    (core/index! (test-search) site true)
     site))
 
 (defn- site-audit

@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [lipas.backend.core :as core]
             [lipas.backend.db.ptv-site-audit :as ptv-site-audit-db]
+            [lipas.backend.ptv.audit :as ptv-audit]
             [lipas.migrations.ptv-site-audit-move :as sut]
             [lipas.test-utils :as tu]
             [next.jdbc :as jdbc]
@@ -132,12 +133,13 @@
     (testing "the synced site's revision is left alone"
       (is (= t2 (:doc_event_date (current-row 9990102)))))
 
-    (testing "readers no longer see the in-document audit; the index context does"
+    (testing "readers no longer see the in-document audit; the read-side join serves the moved one"
       (is (nil? (get-in (core/get-sports-site (test-db) lipas-id) [:ptv :audit])))
       (is (= t0 (:event-date (core/get-sports-site (test-db) lipas-id))))
+      (is (nil? (get-in (core/enrich (core/get-sports-site (test-db) lipas-id)) [:ptv :audit]))
+          "not indexed")
       (is (= (audit t2 "approved")
-             (get-in (core/enrich (core/get-sports-site (test-db) lipas-id)
-                                  (core/index-context (test-db)))
+             (get-in (ptv-audit/with-site-audit (test-db) (core/get-sports-site (test-db) lipas-id))
                      [:ptv :audit]))))
 
     (testing "idempotent"

@@ -33,8 +33,11 @@
                     resp-body)})))
 
 (defn get-ptv-integration-candidates
-  [search criteria]
-  (ptv/get-eligible-sites search criteria))
+  "The org's PTV-eligible sites from the search index, each with its
+   current katselmointi joined in as [:ptv :audit] (audits are not
+   indexed, see lipas.backend.ptv.audit)."
+  [db search criteria]
+  (audit/with-site-audits db (ptv/get-eligible-sites search criteria)))
 
 (defn generate-ptv-descriptions
   [{:keys [client indices] :as _search}
@@ -701,14 +704,11 @@
 
 (defn save-ptv-audit
   "Saves DVV's katselmointi verdicts on a sports site (see
-   lipas.backend.ptv.audit/save-site-audit!) and reindexes the site so the
-   audit shows up under [:ptv :audit] of its ES document. Returns the
-   stored audit map, or nil for an unknown site."
-  [db search user {:keys [lipas-id audit]}]
+   lipas.backend.ptv.audit/save-site-audit!). Returns the stored audit
+   map, or nil for an unknown site."
+  [db user {:keys [lipas-id audit]}]
   (when-let [site (core/get-sports-site db lipas-id)]
-    (let [stored (audit/save-site-audit! db user site audit)]
-      (core/index! search site :sync (core/index-context db))
-      stored)))
+    (audit/save-site-audit! db user site audit)))
 
 (defn get-ptv-managers
   "Returns the org's members who hold the :ptv-manager role for any of the
@@ -758,7 +758,7 @@
   [db search org-id]
   (when-let [org (backend-org/get-org db org-id)]
     (->> (get-ptv-integration-candidates
-           search (select-keys (:ptv-data org) [:city-codes :owners]))
+           db search (select-keys (:ptv-data org) [:city-codes :owners]))
          (map (fn [site]
                 {:ref {:lipas-id (:lipas-id site) :name (:name site)}
                  :audit (get-in site [:ptv :audit])

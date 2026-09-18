@@ -216,7 +216,7 @@
       :handler
       (fn [req]
         {:status 200
-         :body (ptv-core/get-ptv-integration-candidates search (-> req :parameters :body))})}}]
+         :body (ptv-core/get-ptv-integration-candidates db search (-> req :parameters :body))})}}]
 
    ["/actions/generate-ptv-descriptions"
     {:post
@@ -543,7 +543,7 @@
       :handler
       (fn [req]
         (let [body (-> req :parameters :body)]
-          (if-let [result (ptv-core/save-ptv-audit db search (:identity req) body)]
+          (if-let [result (ptv-core/save-ptv-audit db (:identity req) body)]
             {:status 200 :body result}
             {:status 404 :body {:error "Sports site not found"}})))}}]
 

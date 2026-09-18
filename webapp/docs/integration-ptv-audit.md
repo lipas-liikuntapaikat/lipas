@@ -132,9 +132,7 @@ Backend Validation (audit-data schema)
     ↓
 Add :timestamp and :auditor-id
     ↓
-Append to ptv_site_audit (ptv-audit schema) — the site document is untouched
-    ↓
-Reindex the site: the audit is joined into its ES doc as [:ptv :audit]
+Append to ptv_site_audit (ptv-audit schema) — the site document and the index are untouched
     ↓
 Return to Frontend
     ↓
@@ -155,10 +153,10 @@ judge — the same shape on both sides:
 | migrations | `20260918100000` DDL, `20260918100100` move | `20260918100200` DDL, `20260918100300` move |
 
 The business logic over both tables lives in `lipas.backend.ptv.audit`
-(a leaf namespace: db accessors + `lipas.data.ptv`), which
-`lipas.backend.core` (indexing, the generic site save) and
-`lipas.backend.ptv.core` (the PTV endpoints) call — `backend.core` itself
-knows nothing about the tables.
+(a leaf namespace: db accessors + `lipas.data.ptv`), which the handlers
+and `lipas.backend.ptv.core` call for the read-side joins and the saves;
+`lipas.backend.core` only strips the audit from what it saves and indexes
+and knows nothing about the tables.
 
 `document` is the audit map. The revision reference is provenance only: the
 whose-move states compare the audited Finnish text, not revisions, so
@@ -170,19 +168,21 @@ the document used to append a `sports_site` revision per audit save, moving
 the site's `:event-date` although nothing changed — which the PTV views
 read as "out of sync" for every audited site.
 
-Readers still get the audits where they always did. Sites:
-`core/index-context` resolves every current audit once per (re)index and
-`core/enrich` joins it into the indexed document as `[:ptv :audit]`, so the
-PTV candidates endpoint, the single-site GET (ES-backed) and the
-notification data see it unchanged. Services: `get-ptv-service-docs`
-(`/actions/fetch-ptv-service-audits`) joins the current audit into each
-`ptv_service` row as `[:document :audit]`. The write side strips: the
-`ptv_service` accessors and `db/unmarshall` hide the in-document audits of
-pre-move revisions, `core/upsert-sports-site!` drops `[:ptv :audit]` from
-any submitted body (clients round-trip the indexed doc, and nobody can
-hand themselves an approval), and `save-ptv-audit` /
-`save-ptv-service-audit` are the only writers — neither appends a content
-revision any more.
+Readers still get the audits where they always did, joined in at read
+time — audits are not part of the search index. Sites: the PTV candidates
+endpoint (`get-ptv-integration-candidates`, one `WHERE lipas_id IN`
+query per response) and the single-site GET join the current audit into
+each site as `[:ptv :audit]` via `lipas.backend.ptv.audit/with-site-audits`;
+the notification data goes through the same candidates function.
+Services: `get-ptv-service-docs` (`/actions/fetch-ptv-service-audits`)
+joins the current audit into each `ptv_service` row as
+`[:document :audit]`. The write side strips: the `ptv_service` accessors
+and `db/unmarshall` hide the in-document audits of pre-move revisions,
+`core/enrich` drops any legacy copy before indexing,
+`core/upsert-sports-site!` drops `[:ptv :audit]` from any submitted body
+(clients round-trip the served doc, and nobody can hand themselves an
+approval), and `save-ptv-audit` / `save-ptv-service-audit` are the only
+writers — neither appends a content revision or touches the index.
 
 The code migrations (`lipas.migrations.ptv-site-audit-move` /
 `ptv-service-audit-move`, both with `compute-plan` for a dry run) copied
@@ -474,13 +474,10 @@ The `save-ptv-audit` function:
      ...)
    ```
 
-2. **Appends to ptv_site_audit**: the site document and its `:event-date`
-   are untouched (see "Storage")
+2. **Appends to ptv_site_audit**: the site document, its `:event-date`
+   and the search index are untouched (see "Storage")
 
-3. **Reindexes the site** (sync) so its ES document carries the new audit
-   under `[:ptv :audit]`
-
-4. **Returns Full Audit**: Returns audit data with timestamp and auditor-id
+3. **Returns Full Audit**: Returns audit data with timestamp and auditor-id
 
 ## Internationalization
 
