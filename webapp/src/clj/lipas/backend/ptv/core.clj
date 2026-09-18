@@ -6,6 +6,8 @@
             [lipas.backend.core :as core]
             [lipas.backend.db.db :as db]
             [lipas.backend.db.ptv-service :as ptv-service-db]
+            [lipas.backend.db.ptv-service-audit :as ptv-service-audit-db]
+            [lipas.backend.db.ptv-site-audit :as ptv-site-audit-db]
             [lipas.backend.email :as email]
             [lipas.backend.gis :as gis]
             [lipas.backend.org :as backend-org]
@@ -244,11 +246,10 @@
   #{:sourceId :serviceDescriptions :serviceNames :publishingStatus :languages})
 
 (defn persist-ptv-service-revision!
-  "Appends a ptv_service revision from a PTV Service API response.
-   Carries the previous revision's :audit forward so audits survive
-   content syncs. Never throws — the PTV write has already succeeded and
-   cannot be rolled back; a failed shadow write is only logged and the
-   next upsert self-heals."
+  "Appends a ptv_service revision from a PTV Service API response. Never
+   throws — the PTV write has already succeeded and cannot be rolled back;
+   a failed shadow write is only logged and the next upsert self-heals.
+   (Audits live apart in ptv_service_audit, nothing to carry forward.)"
   [db user ptv-org-id ptv-resp]
   (try
     (let [source-id (:sourceId ptv-resp)]
@@ -257,11 +258,8 @@
                    (:id ptv-resp))
         (if-let [org (backend-org/get-org-by-ptv-org-id db ptv-org-id)]
           (let [now (utils/timestamp)
-                prev (ptv-service-db/get-current db (:id org) source-id)
-                doc (cond-> (assoc (ptv-data/->service-document ptv-org-id ptv-resp)
-                                   :last-sync now)
-                      (-> prev :document :audit)
-                      (assoc :audit (-> prev :document :audit)))]
+                doc (assoc (ptv-data/->service-document ptv-org-id ptv-resp)
+                           :last-sync now)]
             (ptv-service-db/insert-service-rev!
               db
               {:org-id (:id org)
@@ -459,12 +457,7 @@
                          ;; duplicate that collides with PTV's unique-name rule.
                          ;; Clear only the one-shot :delete-existing flag.
                          (cond->
-                           archive? (dissoc :delete-existing)
-                           ;; :audit is server-owned, not in persisted-ptv-keys:
-                           ;; carry it over so a sync (e.g. the municipality's
-                           ;; fix) doesn't wipe the auditor's verdicts.
-                           (get-in site [:ptv :audit])
-                           (assoc :audit (get-in site [:ptv :audit]))))]
+                           archive? (dissoc :delete-existing)))]
 
     (log/infof "Upserted service-location %s (status: %s, update: %s, channel: %s)"
                (:lipas-id site) (:status site) (boolean id) (:id ptv-resp))
@@ -525,7 +518,7 @@
                                                   :event-date (:last-sync new-ptv-data)
                                                   :ptv new-ptv-data)
                                            false)]
-        (core/index! search resp :sync (core/org-names db)))
+        (core/index! search resp :sync (core/index-context db)))
 
       ;; No need to re-index for search after ptv change
 
@@ -655,7 +648,7 @@
                                                     :ptv new-ptv-data)
                                              false)]
 
-          (core/index! search resp :sync (core/org-names tx))
+          (core/index! search resp :sync (core/index-context tx))
           ;; Return both :ptv and :event-date so the caller's outer index!
           ;; reindexes the same revision we just wrote.
           {:ptv new-ptv-data :event-date (:event-date resp)})))
@@ -674,7 +667,7 @@
                                                  (assoc :event-date (utils/timestamp))
                                                  (assoc :ptv new-ptv-data))
                                              false)]
-          (core/index! search resp :sync (core/org-names tx))
+          (core/index! search resp :sync (core/index-context tx))
           ;; Failure path also wrote a new revision (with :error captured
           ;; on :ptv). Return the same :event-date so DB and ES match.
           {:ptv (:ptv resp) :event-date (:event-date resp)})))))
@@ -699,47 +692,38 @@
               new-ptv (-> (select-keys ptv persisted-ptv-keys)
                           (assoc :source-id          (:source-id old-ptv)
                                  :publishing-status  (:publishing-status old-ptv)
-                                 :previous-type-code (:previous-type-code old-ptv))
-                          ;; :audit is server-owned too — preserve the
-                          ;; auditor's verdicts across meta-saves.
-                          (cond->
-                            (:audit old-ptv) (assoc :audit (:audit old-ptv))))
+                                 :previous-type-code (:previous-type-code old-ptv)))
               site (assoc existing
                           :event-date (utils/timestamp)
                           :ptv new-ptv)]
           (core/upsert-sports-site! tx user site)
-          (core/index! search site :sync (core/org-names db))))))
+          (core/index! search site :sync (core/index-context db))))))
   {:status "OK"})
 
 (defn save-ptv-audit
-  "Saves PTV audit information for a sports site."
+  "Saves DVV's katselmointi verdicts on a sports site's PTV texts as a new
+   ptv_site_audit row (append-only; last write wins) and reindexes the
+   site so the audit shows up under [:ptv :audit] of its ES document, the
+   shape every reader uses. The site document itself is untouched: an
+   audit is information about the site, not a content change, so it must
+   not append a sports_site revision or move the site's :event-date (which
+   the PTV views compare against :last-sync). Returns the stored audit map,
+   or nil for an unknown site."
   [db search user {:keys [lipas-id audit]}]
-  (jdbc/with-db-transaction [tx db]
-    (when-let [site (core/get-sports-site tx lipas-id)]
-      ;; Add timestamp and auditor information to the audit data
-      (let [now (utils/timestamp)
-            user-id (str (or (:id user) (get-in user [:login :user :id])))
-
-            ;; Add timestamp and auditor-id to the audit data
-            audit-with-meta (assoc audit
-                                   :timestamp now
-                                   :auditor-id user-id)
-
-            ;; Update the site's PTV data with the audit info
-            ;; IMPORTANT: Preserve the original author when updating
-            updated-site (-> site
-                             (assoc :event-date now)
-                             (assoc-in [:ptv :audit] audit-with-meta))
-
-            ;; Use the original author for the database update
-            original-author {:id (:author-id (meta site))}]
-
-        ;; Save and index the updated site with original author preserved
-        (core/upsert-sports-site!* tx original-author updated-site)
-        (core/index! search updated-site :sync (core/org-names db))
-
-        ;; Return the updated audit data
-        (get-in updated-site [:ptv :audit])))))
+  (when-let [site (core/get-sports-site db lipas-id)]
+    (let [now (utils/timestamp)
+          user-id (str (or (:id user) (get-in user [:login :user :id])))
+          audit-with-meta (assoc audit
+                                 :timestamp now
+                                 :auditor-id user-id)]
+      (ptv-site-audit-db/insert-audit! db {:lipas-id lipas-id
+                                           ;; the revision the verdicts were given on
+                                           :site-revision-id (:id (meta site))
+                                           :auditor-id user-id
+                                           :event-date now
+                                           :document audit-with-meta})
+      (core/index! search (core/get-sports-site db lipas-id) :sync (core/index-context db))
+      audit-with-meta)))
 
 (defn get-ptv-managers
   "Returns the org's members who hold the :ptv-manager role for any of the
@@ -805,7 +789,7 @@
     (let [ptv-org-id (-> org :ptv-data :org-id)
           services (when ptv-org-id
                      (:itemList (fetch-ptv-services ptv ptv-org-id)))
-          audits (->> (ptv-service-db/get-current-by-org db (:id org))
+          audits (->> (ptv-service-audit-db/get-current-by-org db (:id org))
                       (utils/index-by (comp str :service-id)))]
       (->> services
            (filter #(some-> % :sourceId (str/starts-with? "lipas-")))
@@ -814,7 +798,7 @@
                                 (:serviceDescriptions svc))]
                     {:ref {:service-id (str (:id svc))
                            :name (ptv-data/select-service-name (:serviceNames svc))}
-                     :audit (get-in audits [(str (:id svc)) :document :audit])
+                     :audit (get-in audits [(str (:id svc)) :document])
                      :fields (ptv-data/service-audit-fields texts)})))
            (ptv-data/audit-notification-summary)))))
 
@@ -858,56 +842,67 @@
                              (site-audit-notification-data db search org-id)))
 
 (defn save-ptv-service-audit
-  "Saves auditor feedback for a PTV Service. org-id is the LIPAS org uuid.
-   Lazily creates the initial ptv_service revision from a live PTV fetch
-   when the service has never been persisted. Returns the stored audit
-   map, or nil when the org/service can't be resolved (handler -> 404).
-
-   Unlike save-ptv-audit (sports sites preserve the original author for
-   revision semantics), the revision author here is simply whoever caused
-   the revision — the auditor. Append-only inserts make concurrent audits
-   safe: last write wins in ptv_service_current, history keeps both."
+  "Saves auditor feedback for a PTV Service as a new ptv_service_audit row
+   (append-only; last write wins). org-id is the LIPAS org uuid. The audit
+   is anchored to the lineage's current ptv_service revision; when the
+   service has never been persisted, an initial content revision is first
+   taken from live PTV so the lineage — and the revision reference — exist.
+   Returns the stored audit map, or nil when the service can't be resolved
+   (unknown org, or a native never-adopted service without a sourceId)."
   [db ptv user {:keys [org-id service-id source-id audit]}]
   (when-let [org (backend-org/get-org db org-id)]
     (let [ptv-org-id (-> org :ptv-data :org-id)
           user-id (or (:id user) (get-in user [:login :user :id]))
+          now (utils/timestamp)
           current (or (ptv-service-db/get-current-by-service-id db (:id org) service-id)
                       (when source-id
-                        (ptv-service-db/get-current db (:id org) source-id)))
-          base-doc (or (:document current)
-                       ;; Lazy initial revision from live PTV. Only
-                       ;; sourceId-bearing (LIPAS-managed or adopted)
-                       ;; services form auditable lineages.
-                       (when ptv-org-id
-                         (let [svc (ptv/get-service ptv ptv-org-id (str service-id))]
-                           (when-not (str/blank? (:sourceId svc))
-                             (ptv-data/->service-document ptv-org-id svc)))))]
-      (when base-doc
-        (let [now (utils/timestamp)
-              audit* (assoc audit
+                        (ptv-service-db/get-current db (:id org) source-id))
+                      ;; Lazy initial revision from live PTV. Only
+                      ;; sourceId-bearing (LIPAS-managed or adopted)
+                      ;; services form auditable lineages.
+                      (when ptv-org-id
+                        (let [svc (ptv/get-service ptv ptv-org-id (str service-id))]
+                          (when-not (str/blank? (:sourceId svc))
+                            (let [doc (ptv-data/->service-document ptv-org-id svc)]
+                              (ptv-service-db/insert-service-rev!
+                                db
+                                {:org-id (:id org)
+                                 :source-id (:source-id doc)
+                                 :service-id service-id
+                                 :status "active"
+                                 :author-id user-id
+                                 :event-date now
+                                 :document doc}))))))]
+      (when current
+        (let [audit* (assoc audit
                             :timestamp now
                             :auditor-id (str user-id))]
-          (ptv-service-db/insert-service-rev!
+          (ptv-service-audit-db/insert-audit!
             db
             {:org-id (:id org)
-             :source-id (or (:source-id current) (:source-id base-doc))
+             :source-id (:source-id current)
              :service-id (or (:service-id current) service-id)
-             :status "active"
-             :author-id user-id
+             :service-revision-id (:id current)
+             :auditor-id user-id
              :event-date now
-             :document (assoc base-doc :audit audit*)})
+             :document audit*})
           audit*)))))
 
 (defn get-ptv-service-docs
-  "Current ptv_service revisions for a LIPAS org, shaped for the frontend
-   to join with the live PTV service list."
+  "Current ptv_service revisions for a LIPAS org with their current audit
+   joined in as [:document :audit] — the shape the frontend joins with the
+   live PTV service list."
   [db org-id]
-  (->> (ptv-service-db/get-current-by-org db org-id)
-       (mapv (fn [row]
-               (-> row
-                   (select-keys [:source-id :service-id :event-date :status :document])
-                   (update :service-id str)
-                   (update :event-date str))))))
+  (let [audits (->> (ptv-service-audit-db/get-current-by-org db org-id)
+                    (utils/index-by :source-id))]
+    (->> (ptv-service-db/get-current-by-org db org-id)
+         (mapv (fn [row]
+                 (cond-> (-> row
+                             (select-keys [:source-id :service-id :event-date :status :document])
+                             (update :service-id str)
+                             (update :event-date str))
+                   (get audits (:source-id row))
+                   (assoc-in [:document :audit] (get-in audits [(:source-id row) :document]))))))))
 
 (defn send-service-audit-notification!
   "Services-section counterpart of send-audit-notification!."

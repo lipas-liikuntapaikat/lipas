@@ -21,11 +21,21 @@
      utils/->snake-case-keywords
      (assoc :document (dissoc sports-site :acting-org-id)))))
 
-(defn unmarshall [{:keys [document author_id status acting_org_id] :as doc}]
+(defn- strip-legacy-audit
+  "Site audits moved to ptv_site_audit (migration 20260918100100); revisions
+   written before that still carry [:ptv :audit]. Hide it so no reader —
+   and no client round-tripping the document — sees a stale copy."
+  [document]
+  (cond-> document
+    (get-in document [:ptv :audit]) (update :ptv dissoc :audit)))
+
+(defn unmarshall [{:keys [id document author_id status acting_org_id] :as doc}]
   (when doc
-    (with-meta document {:author-id     author_id
-                         :doc-status    status
-                         :acting-org-id acting_org_id})))
+    (with-meta (strip-legacy-audit document)
+      {:id            id ; the revision's row id
+       :author-id     author_id
+       :doc-status    status
+       :acting-org-id acting_org_id})))
 
 (defn unmarshall-history-row
   "Like `unmarshall`, but also keeps the revision's own row id and
@@ -33,9 +43,10 @@
    (non-deduplicated) event log."
   [{:keys [id created_at document author_id status] :as doc}]
   (when doc
-    (with-meta document {:id id
-                         :created-at created_at
-                         :author-id author_id
-                         :doc-status status})))
+    (with-meta (strip-legacy-audit document)
+      {:id id
+       :created-at created_at
+       :author-id author_id
+       :doc-status status})))
 
 (hugsql/def-db-fns "sql/sports_site.sql")

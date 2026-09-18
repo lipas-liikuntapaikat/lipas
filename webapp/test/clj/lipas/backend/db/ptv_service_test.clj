@@ -59,13 +59,15 @@
                           :name {:fi "Pallokentät"}
                           :summary {:fi "Tiivistelmä"}
                           :description {:fi "Kuvaus"}
+                          ;; pre-move revisions carried the audit in the document
                           :audit {:summary {:status "approved" :feedback "ok"}}}})
           current (ptv-service-db/get-current (test-db) (:id org) source-id)]
       (is (some? current))
       (is (= "active" (:status current)))
       (is (= svc-id (:service-id current)))
       (is (= {:fi "Pallokentät"} (get-in current [:document :name])))
-      (is (= "approved" (get-in current [:document :audit :summary :status])))
+      ;; audits live in ptv_service_audit; a legacy in-document copy is hidden on read
+      (is (nil? (get-in current [:document :audit])))
       (is (= current (ptv-service-db/get-current-by-service-id (test-db) (:id org) svc-id))))))
 
 (deftest current-view-returns-latest-revision-test

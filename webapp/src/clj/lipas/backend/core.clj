@@ -13,6 +13,7 @@
             [lipas.backend.api.v1.sports-place :as legacy-sports-place]
             [lipas.backend.api.v1.transform :as legacy-transform]
             [lipas.backend.db.db :as db]
+            [lipas.backend.db.ptv-site-audit :as ptv-site-audit-db]
             [lipas.backend.email :as email]
             [lipas.backend.geom-utils :refer [feature-coll->geom-coll]]
             [lipas.backend.gis :as gis]
@@ -649,7 +650,14 @@
          sports-site (if stored
                        (merge (select-keys stored [:owner-org-id :edit-grants])
                               sports-site)
-                       sports-site)]
+                       sports-site)
+         ;; The PTV audit is not part of the document: it lives in
+         ;; ptv_site_audit and is only joined into the indexed doc (see
+         ;; index-context). Clients get it that way and round-trip it back
+         ;; with the rest of the site; drop it so it never lands in a
+         ;; revision — and so nobody can hand themselves an approval.
+         sports-site (cond-> sports-site
+                       (get-in sports-site [:ptv :audit]) (update :ptv dissoc :audit))]
      ;; 1. Content-edit permission. For an existing site the privilege must hold
      ;;    for BOTH the stored revision (a scoped editor can't touch sites
      ;;    outside their scope, and org-owned-site editors keep edit rights via
@@ -690,7 +698,7 @@
          (ensure-permission! db user resp))
        resp))))
 
-(declare index! org-names)
+(declare index! index-context)
 
 (defn- set-site-edit-grants!
   "Append a site revision setting :edit-grants to `grants`, acting on behalf of
@@ -706,7 +714,7 @@
                        :edit-grants (vec (distinct (map str grants)))
                        :acting-org-id (some-> acting-org-id str))
         resp    (upsert-sports-site!* db user updated)]
-    (index! search resp false (org-names db))
+    (index! search resp false (index-context db))
     resp))
 
 (defn- check-edit-grant-authorized!
@@ -896,15 +904,26 @@
   [db]
   (into {} (map (juxt (comp str :id) :name)) (org/all-orgs db)))
 
+(defn index-context
+  "Data denormalized into every indexed site document, resolved once per
+   (re)index batch — see `enrich*`. Pass it whenever a db handle is in
+   scope; without it the doc lacks the owner org's name (UUID shown until
+   the next full reindex) and the site's PTV audit."
+  [db]
+  {:org-name-by-id (org-names db)
+   :ptv-audit-by-lipas-id (ptv-site-audit-db/get-all-current db)})
+
 (defn enrich*
   "Enriches sports-site map with :search-meta key where we add data that
-  is useful for searching. `org-name-by-id` ({org-id-str → name}, see
-  `org-names`) resolves the owner org's display name; without it the
-  indexed doc simply lacks :search-meta :owner-org-name (FE falls back to
-  the UUID) until the next full reindex."
+  is useful for searching. `ctx` (see `index-context`) carries the owner
+  org names, resolved into :search-meta :owner-org-name, and the sites'
+  PTV audits (ptv_site_audit), joined in as [:ptv :audit] — the shape the
+  UI has always read the audit from. Without ctx the indexed doc simply
+  lacks both until the next full reindex."
   ([sports-site] (enrich* sports-site nil))
-  ([sports-site org-name-by-id]
+  ([sports-site {:keys [org-name-by-id ptv-audit-by-lipas-id] :as _ctx}]
    (let [sports-site (fix-geoms sports-site)
+         audit (get ptv-audit-by-lipas-id (:lipas-id sports-site))
          fcoll (-> sports-site :location :geometries)
          geom (-> fcoll :features first :geometry)
          start-coords (case (:type geom)
@@ -981,7 +1000,11 @@
                       :fields
                       {:field-types field-types}
                       :activities activity-keys}]
-     (assoc sports-site :search-meta search-meta))))
+     (cond-> (assoc sports-site :search-meta search-meta)
+       ;; The site's PTV audit is joined in here, never read from the
+       ;; document (any [:ptv :audit] still present is a legacy copy).
+       (get-in sports-site [:ptv :audit]) (update :ptv dissoc :audit)
+       audit (assoc-in [:ptv :audit] audit)))))
 
 #_(defn enrich-ice-stadium [{:keys [envelope building] :as ice-stadium}]
     (let [smaterial (-> envelope :base-floor-structure)
@@ -1001,32 +1024,32 @@
 
 (defn enrich-cycling-route
   ([sports-site] (enrich-cycling-route sports-site nil))
-  ([sports-site org-name-by-id]
+  ([sports-site ctx]
    (-> sports-site
        (update-in [:location :geometries] gis/sequence-features)
-       (enrich* org-name-by-id))))
+       (enrich* ctx))))
 
 (defmulti enrich (fn [sports-site & _] (-> sports-site :type :type-code)))
-(defmethod enrich :default [sports-site & [org-name-by-id]]
-  (enrich* sports-site org-name-by-id))
-(defmethod enrich 4412 [sports-site & [org-name-by-id]]
-  (enrich-cycling-route sports-site org-name-by-id))
+(defmethod enrich :default [sports-site & [ctx]]
+  (enrich* sports-site ctx))
+(defmethod enrich 4412 [sports-site & [ctx]]
+  (enrich-cycling-route sports-site ctx))
 #_(defmethod enrich 2510 [sports-site] (enrich-ice-stadium sports-site))
 #_(defmethod enrich 2520 [sports-site] (enrich-ice-stadium sports-site))
 #_(defmethod enrich 3110 [sports-site] (enrich-swimming-pool sports-site))
 #_(defmethod enrich 3130 [sports-site] (enrich-swimming-pool sports-site))
 
 (defn index!
-  "`org-name-by-id` (see `org-names`) denormalizes the owner org's name into
-  :search-meta — pass it whenever a db handle is in scope; without it the doc
-  is indexed without :owner-org-name (UUID shown until the next reindex)."
+  "`ctx` (see `index-context`) denormalizes the owner org's name and the
+  site's PTV audit into the doc — pass it whenever a db handle is in scope;
+  without it the doc is indexed without them (until the next reindex)."
   ([search sports-site]
    (index! search sports-site false))
   ([search sports-site sync?]
    (index! search sports-site sync? nil))
-  ([{:keys [indices client]} sports-site sync? org-name-by-id]
+  ([{:keys [indices client]} sports-site sync? ctx]
    (let [idx-name (get-in indices [:sports-site :search])
-         data (enrich sports-site org-name-by-id)]
+         data (enrich sports-site ctx)]
      (search/index! client idx-name :lipas-id data sync?))))
 
 (defn index-legacy-sports-place!
@@ -1387,7 +1410,7 @@
 
      ;; Phase 3: ES indexing after transaction has committed.
      (when-not draft?
-       (index! search resp :sync (org-names db))
+       (index! search resp :sync (index-context db))
        (if (should-be-in-legacy-index? resp)
          (index-legacy-sports-place! search resp :sync)
          (delete-from-legacy-index! search (:lipas-id resp))))

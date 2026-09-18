@@ -3,10 +3,16 @@
             [clojure.test :refer [deftest is use-fixtures testing]]
             [lipas.backend.core :as core]
             [lipas.backend.db.ptv-service :as ptv-service-db]
+            [lipas.backend.db.ptv-service-audit :as ptv-service-audit-db]
+            [lipas.backend.db.ptv-site-audit :as ptv-site-audit-db]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.org :as backend-org]
+            [lipas.backend.ptv.core :as ptv-core]
             [lipas.backend.ptv.integration :as ptv-integration]
+            [lipas.data.ptv :as ptv-data]
+            [lipas.data.types :as types]
             [lipas.test-utils :as tu]
+            [lipas.utils :as utils]
             [ring.mock.request :as mock]))
 
 (defonce test-system (atom nil))
@@ -82,7 +88,7 @@
       (is (= audit-data (get-in body [:description]))))))
 
 (deftest save-ptv-audit-updates-site-test
-  (testing "PTV audit is properly saved to sports site and indexed"
+  (testing "PTV audit is stored in ptv_site_audit and joined into the indexed site"
     (let [admin-user (tu/gen-admin-user :db-component (test-db))
           ptv-auditor (tu/gen-ptv-auditor :db-component (test-db))
           site (create-test-site-with-ptv admin-user)
@@ -97,21 +103,26 @@
                                                  :audit {:summary audit-data}}))
                           (tu/token-header token)))
 
-          ;; Verify the site was updated in database
-          updated-site (core/get-sports-site (test-db) lipas-id)
-
-          ;; Verify the site was updated in Elasticsearch
+          stored (ptv-site-audit-db/get-current (test-db) lipas-id)
+          db-site (core/get-sports-site (test-db) lipas-id)
+          history (core/get-sports-site-history (test-db) lipas-id)
           es-site (core/get-sports-site2 (test-search) lipas-id)]
 
-      (is (contains? updated-site :ptv))
-      (is (contains? (:ptv updated-site) :audit))
-      (is (= audit-data (get-in updated-site [:ptv :audit :summary])))
-      (is (some? (get-in updated-site [:ptv :audit :timestamp])))
-      (is (= (str (:id ptv-auditor)) (get-in updated-site [:ptv :audit :auditor-id])))
+      (is (= audit-data (:summary stored)))
+      (is (some? (:timestamp stored)))
+      (is (= (str (:id ptv-auditor)) (:auditor-id stored)))
+      ;; provenance: the audit points at the revision it was given on
+      (is (= (:id (meta db-site))
+             (:site-revision-id (first (ptv-site-audit-db/get-history (test-db) lipas-id)))))
 
-      ;; Verify Elasticsearch is in sync
-      (is (= (get-in updated-site [:ptv :audit])
-             (get-in es-site [:ptv :audit]))))))
+      ;; the site document is untouched: no revision, no event-date change
+      (is (= 1 (count history)))
+      (is (= (:event-date site) (:event-date db-site)))
+      (is (nil? (get-in db-site [:ptv :audit])))
+
+      ;; ...but the indexed doc (what the UI reads) carries the audit
+      (is (= stored (get-in es-site [:ptv :audit])))
+      (is (= (:event-date site) (:event-date es-site))))))
 
 (deftest save-ptv-audit-requires-privilege-test
   (testing "Endpoint requires :ptv/audit privilege"
@@ -278,13 +289,15 @@
                              (tu/token-header token)))
 
           body (tu/safe-parse-json resp)
-          updated-site (core/get-sports-site (test-db) lipas-id)]
+          stored (ptv-site-audit-db/get-current (test-db) lipas-id)
+          es-site (core/get-sports-site2 (test-search) lipas-id)]
 
       (is (= 200 (:status resp)))
       (is (= second-audit (:summary body)))
-      (is (= second-audit (get-in updated-site [:ptv :audit :summary])))
-      ;; Verify first audit is completely replaced
-      (is (not= first-audit (get-in updated-site [:ptv :audit :summary]))))))
+      ;; append-only table, latest row wins everywhere
+      (is (= second-audit (:summary stored)))
+      (is (= second-audit (get-in es-site [:ptv :audit :summary])))
+      (is (= 2 (count (ptv-site-audit-db/get-history (test-db) lipas-id)))))))
 
 (deftest save-ptv-audit-invalid-lipas-id-test
   (testing "Validates lipas-id parameter"
@@ -330,8 +343,52 @@
 
       (is (= 401 (:status resp))))))
 
-(deftest save-ptv-audit-updates-event-date-test
-  (testing "Updates the sports site event-date when audit is saved"
+(deftest audit-save-keeps-site-in-sync-test
+  ;; The DVV report behind the ptv_site_audit move: an audit save used to
+  ;; append a site revision with a new :event-date, which the PTV views
+  ;; compare against :last-sync — so every audited site read "out of date".
+  (testing "A synced site still reads :ok in the PTV candidates listing after an audit"
+    (let [admin (tu/gen-admin-user :db-component (test-db))
+          auditor (tu/gen-ptv-auditor :db-component (test-db))
+          synced-at "2026-05-14T15:34:16.385461Z"
+          site (core/upsert-sports-site!*
+                 (test-db) admin
+                 (-> (create-test-site-with-ptv admin)
+                     (assoc :event-date synced-at)
+                     (update :ptv assoc :last-sync synced-at :service-channel-ids ["chan-1"])))
+          lipas-id (:lipas-id site)
+          _ (core/index! (test-search) site :sync (core/index-context (test-db)))
+          candidates (fn []
+                       (let [resp (test-app (-> (mock/request :post "/api/actions/get-ptv-integration-candidates")
+                                                (mock/content-type "application/json")
+                                                (mock/body (tu/->json {:city-codes [91] :owners ["city"]}))
+                                                (tu/token-header (jwt/create-token auditor))))
+                             body (tu/safe-parse-json resp)]
+                         (is (= 200 (:status resp)))
+                         (some #(when (= lipas-id (:lipas-id %)) %) body)))
+          sync-status (fn [candidate]
+                        (:sync-status (ptv-data/sports-site->ptv-input
+                                        {:types types/all :org-id "test-org-id" :org-langs ["fi"]}
+                                        {} {} candidate)))
+          before (candidates)
+          _ (test-app (-> (mock/request :post "/api/actions/save-ptv-audit")
+                          (mock/content-type "application/json")
+                          (mock/body (tu/->json {:lipas-id lipas-id
+                                                 :audit {:summary {:status "approved" :feedback ""}}}))
+                          (tu/token-header (jwt/create-token auditor))))
+          after (candidates)]
+      (is (= :ok (sync-status before)))
+      (is (= :ok (sync-status after)))
+      (is (= synced-at (:event-date after)))
+      (is (= "approved" (get-in after [:ptv :audit :summary :status]))
+          "the listing carries the audit the UI derives its status symbols from"))))
+
+(deftest save-ptv-audit-keeps-event-date-test
+  ;; An audit is information about the site, not a content change: the
+  ;; PTV views compare :event-date with :last-sync to tell whether a site
+  ;; is in sync, so an audit save moving :event-date read as "out of date"
+  ;; on every audited site.
+  (testing "Does not touch the sports site event-date when audit is saved"
     (let [admin-user (tu/gen-admin-user :db-component (test-db))
           ptv-auditor (tu/gen-ptv-auditor :db-component (test-db))
           site (create-test-site-with-ptv admin-user)
@@ -349,11 +406,56 @@
                                                  :audit {:summary audit-data}}))
                           (tu/token-header token)))
 
-          updated-site (core/get-sports-site (test-db) lipas-id)]
+          updated-site (core/get-sports-site (test-db) lipas-id)
+          es-site (core/get-sports-site2 (test-search) lipas-id)]
 
-      (is (not= original-date (:event-date updated-site))))))
+      (is (= original-date (:event-date updated-site)))
+      (is (= original-date (:event-date es-site))))))
 
 ;;; PTV Audit Access Tests ;;;
+
+;; The UI reads the audit off the indexed site ([:ptv :audit]) and
+;; round-trips the whole document back on save, so the generic site save
+;; must drop it: the audit lives in ptv_site_audit, never in a revision.
+(deftest generic-site-save-drops-audit-test
+  (let [admin (tu/gen-admin-user :db-component (test-db))
+        auditor (tu/gen-ptv-auditor :db-component (test-db))
+        site (create-test-site-with-ptv admin)
+        lipas-id (:lipas-id site)
+        save! (fn [site]
+                (core/upsert-sports-site! (test-db) admin
+                                          (assoc site :event-date (utils/timestamp)))
+                (core/get-sports-site (test-db) lipas-id))
+        forged {:timestamp "2026-01-01T00:00:00.000Z"
+                :auditor-id "me"
+                :summary {:status "approved" :feedback ""}}]
+
+    (testing "a submitted audit never lands in the document"
+      (is (nil? (get-in (save! (assoc-in site [:ptv :audit] forged)) [:ptv :audit]))))
+
+    (let [audit (ptv-core/save-ptv-audit
+                  (test-db) (test-search) auditor
+                  {:lipas-id lipas-id
+                   :audit {:summary {:status "changes-requested"
+                                     :feedback "Tarkenna"
+                                     :audited-content {:fi "Test summary"}}}})
+          ;; what the UI holds: the indexed site, audit included
+          client-copy (core/get-sports-site2 (test-search) lipas-id)]
+      (is (= audit (get-in client-copy [:ptv :audit])))
+
+      (testing "round-tripping the indexed site saves its content and leaves the audit where it is"
+        (let [after (save! (-> client-copy
+                               (dissoc :search-meta)
+                               (assoc :name "Renamed")
+                               (assoc-in [:ptv :summary :fi] "Fixed summary")))]
+          (is (nil? (get-in after [:ptv :audit])))
+          (is (= "Renamed" (:name after)))
+          (is (= "Fixed summary" (get-in after [:ptv :summary :fi])))
+          (is (= audit (ptv-site-audit-db/get-current (test-db) lipas-id)))))
+
+      (testing "a forged audit in the body cannot replace the stored one"
+        (save! (assoc-in site [:ptv :audit] forged))
+        (is (= audit (ptv-site-audit-db/get-current (test-db) lipas-id)))))))
 
 (deftest ptv-audit-can-access-get-ptv-integration-candidates-test
   (testing "Users with :ptv/audit privilege can access get-ptv-integration-candidates"
@@ -676,11 +778,12 @@
           source-id (str "lipas-" ptv-org-id "-700001-2026-01-01T00-00-00.000Z")
           texts {:summary {:fi "Kesäkäyttöinen urheilukenttä."}
                  :description {:fi "Limingan keskustan urheilukenttä."}}
-          audit {:timestamp "2026-01-03T00:00:00.000Z"
-                 :auditor-id "auditor-1"
-                 :summary {:status "changes-requested"
-                           :feedback "Tarkenna tekstiä"
-                           :audited-content {:fi "Kesäkäyttöinen urheilukenttä."}}}
+          ;; a pre-move revision still carrying its audit in the document
+          legacy-audit {:timestamp "2026-01-03T00:00:00.000Z"
+                        :auditor-id "auditor-1"
+                        :summary {:status "changes-requested"
+                                  :feedback "Tarkenna tekstiä"
+                                  :audited-content {:fi "Kesäkäyttöinen urheilukenttä."}}}
           ;; A published, synced site carrying the full lifecycle meta.
           site (core/upsert-sports-site!*
                  (test-db) admin
@@ -703,7 +806,7 @@
                                :previous-type-code 1210
                                :service-ids []
                                :service-channel-ids [channel]
-                               :audit audit})})
+                               :audit legacy-audit})})
           lipas-id (:lipas-id site)
           resp (test-app (-> (mock/request :post "/api/actions/save-ptv-meta")
                              (mock/content-type "application/json")
@@ -723,8 +826,8 @@
       (is (= 1210 (:previous-type-code after)))
       ;; channel link preserved (frozen in PTV, not unlinked)
       (is (= [channel] (:service-channel-ids after)))
-      ;; auditor's verdicts preserved (server-owned like the lifecycle keys)
-      (is (= audit (:audit after))))))
+      ;; audits live in ptv_site_audit now; a legacy in-document copy is not rebuilt
+      (is (nil? (:audit after))))))
 
 (deftest save-ptv-service-location-rejects-double-link-test
   (testing "Syncing a service-location to a channel another site owns is rejected with 409 (before any PTV call)"
@@ -752,7 +855,7 @@
       (is (= "double-link" (:type body)))
       (is (contains? (set (map :lipas-id (:other-sites body))) rink-b)))))
 
-;;; PTV Service audits (ptv_service table) ;;;
+;;; PTV Service audits (ptv_service_audit table, anchored to ptv_service revisions) ;;;
 
 (def ^:private svc-ptv-org-id "8f1c2a3b-1111-4abc-9def-000000000010")
 
@@ -799,7 +902,7 @@
           token (jwt/create-token auditor)
           svc-id (str (java.util.UUID/randomUUID))
           source-id (str "lipas-" svc-ptv-org-id "-1300")
-          _ (seed-service-rev! org {:source-id source-id :service-id svc-id})
+          rev (seed-service-rev! org {:source-id source-id :service-id svc-id})
           audit-data {:status "approved" :feedback "Hyvä kuvaus"}
           resp (post-service-audit token {:org-id (str (:id org))
                                           :service-id svc-id
@@ -808,19 +911,20 @@
                                                   :description audit-data
                                                   :user-instruction audit-data}})
           body (tu/safe-parse-json resp)
+          stored (first (ptv-service-audit-db/get-history (test-db) (:id org) source-id))
           current (ptv-service-db/get-current (test-db) (:id org) source-id)]
       (is (= 200 (:status resp)))
       (is (contains? body :timestamp))
       (is (= (str (:id auditor)) (:auditor-id body)))
       (is (= audit-data (:summary body)))
       (is (= audit-data (:user-instruction body)))
-      (is (= "approved" (get-in current [:document :audit :user-instruction :status])))
-      ;; Audit persisted onto a new revision
-      (is (= "approved" (get-in current [:document :audit :summary :status])))
-      ;; Previous revision's content carried into the audit revision
-      (is (= {:fi "Tiivistelmä"} (get-in current [:document :summary])))
-      ;; History keeps both revisions (seed + audit)
-      (is (= 2 (count (ptv-service-db/get-history (test-db) (:id org) source-id)))))))
+      ;; Audit stored in ptv_service_audit, anchored to the revision it was given on
+      (is (= body (:document stored)))
+      (is (= (:id rev) (:service-revision-id stored)))
+      (is (= (parse-uuid svc-id) (:service-id stored)))
+      ;; The ptv_service lineage is untouched: no audit revision appended
+      (is (= 1 (count (ptv-service-db/get-history (test-db) (:id org) source-id))))
+      (is (nil? (get-in current [:document :audit]))))))
 
 (deftest save-ptv-service-audit-lazy-initial-revision-test
   (testing "Creates the initial revision from a live PTV fetch when none exists"
@@ -843,14 +947,17 @@
                                             :service-id svc-id
                                             :audit {:summary audit-data}}))
           body (tu/safe-parse-json resp)
-          current (ptv-service-db/get-current (test-db) (:id org) source-id)]
+          current (ptv-service-db/get-current (test-db) (:id org) source-id)
+          stored (first (ptv-service-audit-db/get-history (test-db) (:id org) source-id))]
       (is (= 200 (:status resp)))
       (is (= audit-data (:summary body)))
       (is (some? current))
       ;; Document extracted from the live PTV entity
       (is (= {:fi "Kuntosalit"} (get-in current [:document :name])))
       (is (= {:fi "Tiivistelmä"} (get-in current [:document :summary])))
-      (is (= "changes-requested" (get-in current [:document :audit :summary :status]))))))
+      ;; ...and the audit anchored to that initial revision
+      (is (= "changes-requested" (get-in stored [:document :summary :status])))
+      (is (= (:id current) (:service-revision-id stored))))))
 
 (deftest save-ptv-service-audit-scoping-test
   (testing "An empty audit marks the service as part of the audit sample"
@@ -864,14 +971,14 @@
                                           :service-id svc-id
                                           :audit {}})
           body (tu/safe-parse-json resp)
-          current (ptv-service-db/get-current (test-db) (:id org) source-id)]
+          stored (ptv-service-audit-db/get-current (test-db) (:id org) source-id)]
       (is (= 200 (:status resp)))
       (is (contains? body :timestamp))
       (is (= (str (:id auditor)) (:auditor-id body)))
       ;; No verdicts, just the scope stamp
       (is (nil? (:summary body)))
-      (is (some? (get-in current [:document :audit :timestamp])))
-      (is (nil? (get-in current [:document :audit :summary]))))))
+      (is (some? (:timestamp stored)))
+      (is (nil? (:summary stored))))))
 
 (deftest save-ptv-service-audit-snapshot-test
   (testing "Per-field :audited-content snapshots round-trip"
@@ -888,11 +995,11 @@
                                           :service-id svc-id
                                           :audit audit})
           body (tu/safe-parse-json resp)
-          current (ptv-service-db/get-current (test-db) (:id org) source-id)]
+          stored (ptv-service-audit-db/get-current (test-db) (:id org) source-id)]
       (is (= 200 (:status resp)))
       (is (= {:fi "Tiivistelmä"} (get-in body [:summary :audited-content])))
       (is (= {:fi "Tiivistelmä"}
-             (get-in current [:document :audit :summary :audited-content]))))))
+             (get-in stored [:summary :audited-content]))))))
 
 (deftest save-ptv-service-audit-not-found-test
   (testing "Returns 404 when the org is unknown"
@@ -961,10 +1068,12 @@
           _ (post-service-audit token {:org-id (str (:id org))
                                        :service-id svc-id
                                        :audit {:summary {:status "changes-requested" :feedback "Toka"}}})
-          current (ptv-service-db/get-current (test-db) (:id org) source-id)]
-      (is (= "changes-requested" (get-in current [:document :audit :summary :status])))
-      (is (= "Toka" (get-in current [:document :audit :summary :feedback])))
-      (is (= 3 (count (ptv-service-db/get-history (test-db) (:id org) source-id)))))))
+          stored (ptv-service-audit-db/get-current (test-db) (:id org) source-id)]
+      (is (= "changes-requested" (get-in stored [:summary :status])))
+      (is (= "Toka" (get-in stored [:summary :feedback])))
+      (is (= 2 (count (ptv-service-audit-db/get-history (test-db) (:id org) source-id))))
+      ;; audits never append ptv_service revisions
+      (is (= 1 (count (ptv-service-db/get-history (test-db) (:id org) source-id)))))))
 
 (deftest fetch-ptv-service-audits-test
   (testing "Returns stored service docs for the org to auditors"
@@ -983,6 +1092,27 @@
       (is (= 1 (count body)))
       (is (= source-id (-> body first :source-id)))
       (is (= svc-id (-> body first :service-id)))
+      (is (= "Kuvaus" (-> body first :document :description :fi)))
+      (is (nil? (-> body first :document :audit)) "no audit yet")))
+
+  (testing "The current audit is joined in as [:document :audit] (the shape the UI reads)"
+    (let [org (seed-service-org!)
+          auditor (tu/gen-ptv-auditor :db-component (test-db))
+          token (jwt/create-token auditor)
+          svc-id (str (java.util.UUID/randomUUID))
+          source-id (str "lipas-" svc-ptv-org-id "-1300")
+          _ (seed-service-rev! org {:source-id source-id :service-id svc-id})
+          audit (tu/safe-parse-json
+                  (post-service-audit token {:org-id (str (:id org))
+                                             :service-id svc-id
+                                             :audit {:summary {:status "approved" :feedback "Hyvä"}}}))
+          resp (test-app (-> (mock/request :post "/api/actions/fetch-ptv-service-audits")
+                             (mock/content-type "application/json")
+                             (mock/body (tu/->json {:org-id (str (:id org))}))
+                             (tu/token-header token)))
+          body (tu/safe-parse-json resp)]
+      (is (= 200 (:status resp)))
+      (is (= audit (-> body first :document :audit)))
       (is (= "Kuvaus" (-> body first :document :description :fi)))))
 
   (testing "Regular users get 403"
@@ -1021,8 +1151,8 @@
       (is (= {:fi "Tiivistelmä"} (get-in current [:document :summary])))
       (is (some? (get-in current [:document :last-sync]))))))
 
-(deftest save-ptv-service-carries-audit-forward-test
-  (testing "A content sync via save-ptv-service preserves the latest audit"
+(deftest save-ptv-service-keeps-audit-test
+  (testing "A content sync via save-ptv-service leaves the audit (stored apart) intact"
     (let [org (seed-service-org!)
           admin (tu/gen-admin-user :db-component (test-db))
           auditor (tu/gen-ptv-auditor :db-component (test-db))
@@ -1046,12 +1176,16 @@
                                                    :summary {:fi "Uusi tiivistelmä"}
                                                    :description {:fi "Uusi kuvaus"}}))
                             (tu/token-header (jwt/create-token admin)))))
-          current (ptv-service-db/get-current (test-db) (:id org) source-id)]
-      ;; Content updated by the sync...
+          current (ptv-service-db/get-current (test-db) (:id org) source-id)
+          stored (ptv-service-audit-db/get-current (test-db) (:id org) source-id)
+          docs (ptv-core/get-ptv-service-docs (test-db) (:id org))]
+      ;; Content updated by the sync, no audit in the document...
       (is (= {:fi "Uusi tiivistelmä"} (get-in current [:document :summary])))
-      ;; ...but the audit survives
-      (is (= "changes-requested" (get-in current [:document :audit :summary :status])))
-      (is (= "Korjaa" (get-in current [:document :audit :summary :feedback]))))))
+      (is (nil? (get-in current [:document :audit])))
+      ;; ...the audit survives in its own table and is still served joined in
+      (is (= "changes-requested" (get-in stored [:summary :status])))
+      (is (= "Korjaa" (get-in stored [:summary :feedback])))
+      (is (= stored (-> docs first :document :audit))))))
 
 (comment
   (clojure.test/run-tests *ns*)
