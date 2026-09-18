@@ -791,7 +791,8 @@
 ;; Whose-move audit workflow (see lipas.data.ptv/audit-bucket):
 ;; an item is in the audit sample when it has an audit record; within the
 ;; sample it sits in exactly one bucket: :waiting-audit (auditor's move),
-;; :waiting-fixes (municipality's move) or :done (all approved, unchanged).
+;; :waiting-fixes (municipality's move) or :done (all approved or fixed —
+;; later edits are flagged but never reopen an audit).
 
 (defn- site-has-audit-content? [site]
   (and (some-> site :ptv :summary :fi count (> 5))
