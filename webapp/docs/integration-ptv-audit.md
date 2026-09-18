@@ -153,8 +153,8 @@ judge — the same shape on both sides:
 | migrations | `20260918100000` DDL, `20260918100100` move | `20260918100200` DDL, `20260918100300` move |
 
 The business logic over both tables lives in `lipas.backend.ptv.audit`
-(a leaf namespace: db accessors + `lipas.data.ptv`), which the handlers
-and `lipas.backend.ptv.core` call for the read-side joins and the saves;
+(a leaf namespace: db accessors + `lipas.data.ptv`), which
+`lipas.backend.ptv.core` calls for the reads and the saves;
 `lipas.backend.core` only strips the audit from what it saves and indexes
 and knows nothing about the tables.
 
@@ -168,21 +168,29 @@ the document used to append a `sports_site` revision per audit save, moving
 the site's `:event-date` although nothing changed — which the PTV views
 read as "out of sync" for every audited site.
 
-Readers still get the audits where they always did, joined in at read
-time — audits are not part of the search index. Sites: the PTV candidates
-endpoint (`get-ptv-integration-candidates`, one `WHERE lipas_id IN`
-query per response) and the single-site GET join the current audit into
-each site as `[:ptv :audit]` via `lipas.backend.ptv.audit/with-site-audits`;
-the notification data goes through the same candidates function.
-Services: `get-ptv-service-docs` (`/actions/fetch-ptv-service-audits`)
-joins the current audit into each `ptv_service` row as
-`[:document :audit]`. The write side strips: the `ptv_service` accessors
-and `db/unmarshall` hide the in-document audits of pre-move revisions,
-`core/enrich` drops any legacy copy before indexing,
-`core/upsert-sports-site!` drops `[:ptv :audit]` from any submitted body
-(clients round-trip the served doc, and nobody can hand themselves an
-approval), and `save-ptv-audit` / `save-ptv-service-audit` are the only
-writers — neither appends a content revision or touches the index.
+Audits are a separate entity all the way to the frontend: the backend
+serves them from audit-only endpoints and the frontend merges them into
+the caches its audit readers already use, so the site and service
+listings, the whose-move buckets, the audit form and the site page's PTV
+tab keep reading `[:ptv :audit]` / a per-service audit as before.
+
+| | Sites | Services |
+|---|---|---|
+| content | `get-ptv-integration-candidates` (ES, no audit) | `fetch-ptv-services` (live PTV) |
+| audits | `fetch-ptv-site-audits` `{:lipas-ids [...]}` → `[{:lipas-id :audit}]` | `fetch-ptv-service-audits` `{:org-id}` → `[{:service-id :source-id :audit}]` |
+| FE merge | `::fetch-ptv-site-audits` (dispatched after the candidates load) writes each audit into the cached site as `[:ptv :audit]` | `[:ptv :org <id> :data :service-audits]` keyed by `(str service-id)`, joined by `::services-with-audit` |
+
+A sync/archive response replaces a cached site's `:ptv` but keeps the
+audit already in the cache (`-replace-ptv-keep-audit`). The notification
+data is the one backend reader of the merged view
+(`lipas.backend.ptv.audit/with-site-audits`). The write side strips: the
+`ptv_service` accessors and `db/unmarshall` hide the in-document audits
+of pre-move revisions, `core/enrich` drops any legacy copy before
+indexing, `core/upsert-sports-site!` drops `[:ptv :audit]` from any
+submitted body (clients round-trip cached sites, and nobody can hand
+themselves an approval), and `save-ptv-audit` / `save-ptv-service-audit`
+are the only writers — neither appends a content revision or touches the
+index.
 
 The code migrations (`lipas.migrations.ptv-site-audit-move` /
 `ptv-service-audit-move`, both with `compute-plan` for a dry run) copied
@@ -755,10 +763,9 @@ first, which assigns the adopted source-id.
    content revision is written. Concurrent audits are safe: append-only
    inserts, last-write-wins in the current view, full history retained.
 3. **Read.** `POST /actions/fetch-ptv-service-audits` (gated like other PTV
-   fetches: `:ptv/audit` globally or `:ptv/manage` per city) returns the org's
-   current revisions with their current audit joined in as
-   `[:document :audit]`, for the frontend to join with the live PTV service
-   list.
+   fetches: `:ptv/audit` globally or `:ptv/manage` per city) returns the
+   org's current service audits (`[{:service-id :source-id :audit}]`) for
+   the frontend to merge into the live PTV service list.
 4. **Notification.** `POST /actions/send-service-audit-notification` emails the
    org's PTV managers with service-audit counts (template
    `ptv_service_audit_complete_fi`).

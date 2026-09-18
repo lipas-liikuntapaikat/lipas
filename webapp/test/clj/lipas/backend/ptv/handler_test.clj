@@ -7,7 +7,6 @@
             [lipas.backend.db.ptv-site-audit :as ptv-site-audit-db]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.org :as backend-org]
-            [lipas.backend.ptv.audit :as ptv-audit]
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.backend.ptv.integration :as ptv-integration]
             [lipas.data.ptv :as ptv-data]
@@ -30,13 +29,15 @@
 
 ;;; Helper Functions ;;;
 
-(defn- site-get
-  "The site as GET /sports-sites/:lipas-id serves it to the UI (ES doc +
-   the audit joined in at read time)."
-  [token lipas-id]
-  (tu/safe-parse-json
-    (test-app (-> (mock/request :get (str "/api/sports-sites/" lipas-id))
-                  (tu/token-header token)))))
+(defn- fetch-site-audits
+  "/actions/fetch-ptv-site-audits as the UI calls it: lipas-id -> audit."
+  [token lipas-ids]
+  (let [resp (test-app (-> (mock/request :post "/api/actions/fetch-ptv-site-audits")
+                           (mock/content-type "application/json")
+                           (mock/body (tu/->json {:lipas-ids lipas-ids}))
+                           (tu/token-header token)))]
+    (is (= 200 (:status resp)))
+    (into {} (map (juxt :lipas-id :audit)) (tu/safe-parse-json resp))))
 
 (defn- create-test-site-with-ptv
   "Creates a stable test sports site (yleisurheilukenttä) with basic PTV data for testing"
@@ -118,7 +119,7 @@
           db-site (core/get-sports-site (test-db) lipas-id)
           history (core/get-sports-site-history (test-db) lipas-id)
           es-site (core/get-sports-site2 (test-search) lipas-id)
-          served (site-get token lipas-id)]
+          served (fetch-site-audits token [lipas-id])]
 
       (is (= audit-data (:summary stored)))
       (is (some? (:timestamp stored)))
@@ -132,12 +133,10 @@
       (is (= (:event-date site) (:event-date db-site)))
       (is (nil? (get-in db-site [:ptv :audit])))
 
-      ;; ...the index doesn't carry the audit either; the UI's site GET
-      ;; joins it in at read time
+      ;; ...nor the index; the UI fetches audits apart and merges them in
       (is (nil? (get-in es-site [:ptv :audit])))
       (is (= (:event-date site) (:event-date es-site)))
-      (is (= stored (get-in served [:ptv :audit])))
-      (is (= (:event-date site) (:event-date served))))))
+      (is (= stored (get served lipas-id))))))
 
 (deftest save-ptv-audit-requires-privilege-test
   (testing "Endpoint requires :ptv/audit privilege"
@@ -305,13 +304,13 @@
 
           body (tu/safe-parse-json resp)
           stored (ptv-site-audit-db/get-current (test-db) lipas-id)
-          served (site-get token lipas-id)]
+          served (fetch-site-audits token [lipas-id])]
 
       (is (= 200 (:status resp)))
       (is (= second-audit (:summary body)))
       ;; append-only table, latest row wins everywhere
       (is (= second-audit (:summary stored)))
-      (is (= second-audit (get-in served [:ptv :audit :summary])))
+      (is (= second-audit (get-in served [lipas-id :summary])))
       (is (= 2 (count (ptv-site-audit-db/get-history (test-db) lipas-id)))))))
 
 (deftest save-ptv-audit-invalid-lipas-id-test
@@ -395,8 +394,10 @@
       (is (= :ok (sync-status before)))
       (is (= :ok (sync-status after)))
       (is (= synced-at (:event-date after)))
-      (is (= "approved" (get-in after [:ptv :audit :summary :status]))
-          "the listing carries the audit the UI derives its status symbols from"))))
+      (is (nil? (get-in after [:ptv :audit])) "audits are a separate fetch")
+      (is (= "approved" (get-in (fetch-site-audits (jwt/create-token auditor) [lipas-id])
+                                [lipas-id :summary :status]))
+          "the UI merges this into the listing it derives its status symbols from"))))
 
 (deftest save-ptv-audit-keeps-event-date-test
   ;; An audit is information about the site, not a content change: the
@@ -454,11 +455,12 @@
                    :audit {:summary {:status "changes-requested"
                                      :feedback "Tarkenna"
                                      :audited-content {:fi "Test summary"}}}})
-          ;; what the UI holds: the served site (ES doc + audit joined in)
-          client-copy (ptv-audit/with-site-audit (test-db) (core/get-sports-site2 (test-search) lipas-id))]
-      (is (= audit (get-in client-copy [:ptv :audit])))
+          ;; what the UI holds: the site from the index with the separately
+          ;; fetched audit merged in
+          client-copy (-> (core/get-sports-site2 (test-search) lipas-id)
+                          (assoc-in [:ptv :audit] audit))]
 
-      (testing "round-tripping the served site saves its content and leaves the audit where it is"
+      (testing "round-tripping the cached site saves its content and leaves the audit where it is"
         (let [after (save! (-> client-copy
                                (dissoc :search-meta)
                                (assoc :name "Renamed")
@@ -1091,7 +1093,7 @@
       (is (= 1 (count (ptv-service-db/get-history (test-db) (:id org) source-id)))))))
 
 (deftest fetch-ptv-service-audits-test
-  (testing "Returns stored service docs for the org to auditors"
+  (testing "Returns the org's current service audits to auditors — nothing for unaudited services"
     (let [org (seed-service-org!)
           auditor (tu/gen-ptv-auditor :db-component (test-db))
           token (jwt/create-token auditor)
@@ -1101,16 +1103,11 @@
           resp (test-app (-> (mock/request :post "/api/actions/fetch-ptv-service-audits")
                              (mock/content-type "application/json")
                              (mock/body (tu/->json {:org-id (str (:id org))}))
-                             (tu/token-header token)))
-          body (tu/safe-parse-json resp)]
+                             (tu/token-header token)))]
       (is (= 200 (:status resp)))
-      (is (= 1 (count body)))
-      (is (= source-id (-> body first :source-id)))
-      (is (= svc-id (-> body first :service-id)))
-      (is (= "Kuvaus" (-> body first :document :description :fi)))
-      (is (nil? (-> body first :document :audit)) "no audit yet")))
+      (is (= [] (tu/safe-parse-json resp)))))
 
-  (testing "The current audit is joined in as [:document :audit] (the shape the UI reads)"
+  (testing "The current audit per service, keyed for the UI's merge"
     (let [org (seed-service-org!)
           auditor (tu/gen-ptv-auditor :db-component (test-db))
           token (jwt/create-token auditor)
@@ -1127,8 +1124,7 @@
                              (tu/token-header token)))
           body (tu/safe-parse-json resp)]
       (is (= 200 (:status resp)))
-      (is (= audit (-> body first :document :audit)))
-      (is (= "Kuvaus" (-> body first :document :description :fi)))))
+      (is (= [{:service-id svc-id :source-id source-id :audit audit}] body))))
 
   (testing "Regular users get 403"
     (let [org (seed-service-org!)
@@ -1193,14 +1189,14 @@
                             (tu/token-header (jwt/create-token admin)))))
           current (ptv-service-db/get-current (test-db) (:id org) source-id)
           stored (ptv-service-audit-db/get-current (test-db) (:id org) source-id)
-          docs (ptv-core/get-ptv-service-docs (test-db) (:id org))]
+          served (ptv-core/get-ptv-service-audits (test-db) (:id org))]
       ;; Content updated by the sync, no audit in the document...
       (is (= {:fi "Uusi tiivistelmä"} (get-in current [:document :summary])))
       (is (nil? (get-in current [:document :audit])))
-      ;; ...the audit survives in its own table and is still served joined in
+      ;; ...the audit survives in its own table and is still served
       (is (= "changes-requested" (get-in stored [:summary :status])))
       (is (= "Korjaa" (get-in stored [:summary :feedback])))
-      (is (= stored (-> docs first :document :audit))))))
+      (is (= [stored] (map :audit served))))))
 
 (comment
   (clojure.test/run-tests *ns*)

@@ -13,7 +13,6 @@
             [lipas.backend.middleware :as mw]
             [lipas.backend.org :as org]
             [lipas.backend.org-takeover :as org-takeover]
-            [lipas.backend.ptv.audit :as ptv-audit]
             [lipas.backend.ptv.handler :as ptv-handler]
             [lipas.backend.ptv.workbench :as workbench-handler]
             [lipas.backend.rate-limit :as rate-limit]
@@ -263,9 +262,7 @@
                    locale (or (-> req :parameters :query :lang keyword)
                               :none)]
                (if-let [res (core/get-sports-site2 search lipas-id locale)]
-                 ;; the site's PTV katselmointi is read-side data (not
-                 ;; indexed): joined in here for the site page's PTV tab
-                 {:status 200 :body (ptv-audit/with-site-audit db res)}
+                 {:status 200 :body res}
                  {:status 404 :body {:message "Not found"}})))}}]
 
         ["/sports-sites/history/:lipas-id"

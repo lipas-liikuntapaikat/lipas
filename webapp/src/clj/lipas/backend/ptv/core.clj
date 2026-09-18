@@ -33,11 +33,15 @@
                     resp-body)})))
 
 (defn get-ptv-integration-candidates
-  "The org's PTV-eligible sites from the search index, each with its
-   current katselmointi joined in as [:ptv :audit] (audits are not
-   indexed, see lipas.backend.ptv.audit)."
-  [db search criteria]
-  (audit/with-site-audits db (ptv/get-eligible-sites search criteria)))
+  "The org's PTV-eligible sites from the search index. Their audits are a
+   separate fetch (get-ptv-site-audits) the frontend merges in."
+  [search criteria]
+  (ptv/get-eligible-sites search criteria))
+
+(defn get-ptv-site-audits
+  "Current katselmointi of the given sites (see lipas.backend.ptv.audit/site-audits)."
+  [db lipas-ids]
+  (audit/site-audits db lipas-ids))
 
 (defn generate-ptv-descriptions
   [{:keys [client indices] :as _search}
@@ -758,7 +762,8 @@
   [db search org-id]
   (when-let [org (backend-org/get-org db org-id)]
     (->> (get-ptv-integration-candidates
-           db search (select-keys (:ptv-data org) [:city-codes :owners]))
+           search (select-keys (:ptv-data org) [:city-codes :owners]))
+         (audit/with-site-audits db)
          (map (fn [site]
                 {:ref {:lipas-id (:lipas-id site) :name (:name site)}
                  :audit (get-in site [:ptv :audit])
@@ -833,11 +838,11 @@
   (when-let [org (backend-org/get-org db org-id)]
     (audit/save-service-audit! db ptv user org m)))
 
-(defn get-ptv-service-docs
-  "Current ptv_service revisions for a LIPAS org with their current audit
-   joined in, shaped for the frontend (see lipas.backend.ptv.audit/service-docs)."
+(defn get-ptv-service-audits
+  "Current katselmointi of the org's services (see
+   lipas.backend.ptv.audit/service-audits)."
   [db org-id]
-  (audit/service-docs db org-id))
+  (audit/service-audits db org-id))
 
 (defn send-service-audit-notification!
   "Services-section counterpart of send-audit-notification!."

@@ -2,11 +2,12 @@
   "DVV's katselmointi verdicts on PTV texts — the business logic over the
    ptv_site_audit / ptv_service_audit tables. Audits are information about
    a site or service, not part of its document — and not part of the
-   search index either: they are stored apart, joined into the responses
-   of the PTV views (see with-site-audits / service-docs), and stripped
-   from whatever clients send back. This namespace is a leaf (db accessors
-   + lipas.data.ptv only) so both lipas.backend.core (the generic site
-   save) and lipas.backend.ptv.core (the PTV endpoints) can call it."
+   search index either: they are stored apart, served by audit-only
+   endpoints (site-audits / service-audits) that the frontend merges into
+   its site and service caches, and stripped from whatever clients send
+   back. This namespace is a leaf (db accessors + lipas.data.ptv only) so
+   both lipas.backend.core (the generic site save) and
+   lipas.backend.ptv.core (the PTV endpoints) can call it."
   (:require [clojure.string :as str]
             [lipas.backend.db.ptv-service :as ptv-service-db]
             [lipas.backend.db.ptv-service-audit :as ptv-service-audit-db]
@@ -25,11 +26,19 @@
   (cond-> site
     (get-in site [:ptv :audit]) (update :ptv dissoc :audit)))
 
+(defn site-audits
+  "Current audits of the given sites, [{:lipas-id n :audit map} ...] —
+   sites without one are absent. What /actions/fetch-ptv-site-audits
+   serves; the frontend merges it into its site cache as [:ptv :audit]."
+  [db lipas-ids]
+  (->> (ptv-site-audit-db/get-current-by-lipas-ids db lipas-ids)
+       (mapv (fn [[lipas-id audit]] {:lipas-id lipas-id :audit audit}))))
+
 (defn with-site-audits
-  "The sites with their current audit joined in as [:ptv :audit] — the
-   shape the PTV views read it from — resolved in one query for the whole
-   collection. Any audit already in a document is a legacy copy and is
-   replaced."
+  "The sites with their current audit joined in as [:ptv :audit], resolved
+   in one query for the whole collection — for backend readers that need
+   the merged view the frontend builds for itself (the notification data).
+   Any audit already in a document is a legacy copy and is replaced."
   [db sites]
   (let [audit-by-lipas-id (ptv-site-audit-db/get-current-by-lipas-ids db (map :lipas-id sites))]
     (mapv (fn [site]
@@ -37,11 +46,6 @@
               (cond-> (strip-site-audit site)
                 audit (assoc-in [:ptv :audit] audit))))
           sites)))
-
-(defn with-site-audit
-  "One site with its current audit joined in (see with-site-audits)."
-  [db site]
-  (first (with-site-audits db [site])))
 
 (defn save-site-audit!
   "Appends the auditor's verdicts on `site` (the current revision, as read
@@ -115,25 +119,19 @@
            :document audit*})
         audit*))))
 
+(defn service-audits
+  "Current audits of the org's audited services,
+   [{:service-id \"<uuid>\" :source-id s :audit map} ...]. What
+   /actions/fetch-ptv-service-audits serves; the frontend merges it into
+   the live PTV service list by service id."
+  [db org-id]
+  (->> (ptv-service-audit-db/get-current-by-org db org-id)
+       (mapv (fn [row] {:service-id (str (:service-id row))
+                        :source-id (:source-id row)
+                        :audit (:document row)}))))
+
 (defn current-service-audits
   "service-id (string) -> current audit map for the org's audited
    services."
   [db org-id]
-  (->> (ptv-service-audit-db/get-current-by-org db org-id)
-       (into {} (map (juxt (comp str :service-id) :document)))))
-
-(defn service-docs
-  "The org's current ptv_service revisions with their current audit joined
-   in as [:document :audit] — the shape the frontend joins with the live
-   PTV service list."
-  [db org-id]
-  (let [audit-by-source-id (->> (ptv-service-audit-db/get-current-by-org db org-id)
-                                (into {} (map (juxt :source-id :document))))]
-    (->> (ptv-service-db/get-current-by-org db org-id)
-         (mapv (fn [row]
-                 (let [audit (get audit-by-source-id (:source-id row))]
-                   (cond-> (-> row
-                               (select-keys [:source-id :service-id :event-date :status :document])
-                               (update :service-id str)
-                               (update :event-date str))
-                     audit (assoc-in [:document :audit] audit))))))))
+  (into {} (map (juxt :service-id :audit)) (service-audits db org-id)))

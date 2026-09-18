@@ -216,7 +216,16 @@
       :handler
       (fn [req]
         {:status 200
-         :body (ptv-core/get-ptv-integration-candidates db search (-> req :parameters :body))})}}]
+         :body (ptv-core/get-ptv-integration-candidates search (-> req :parameters :body))})}}]
+
+   ["/actions/fetch-ptv-site-audits"
+    {:post
+     {:require-privilege ptv-feature-read-access?
+      :parameters {:body #'lipas-ptv-schema/fetch-site-audits-body}
+      :handler
+      (fn [req]
+        {:status 200
+         :body (ptv-core/get-ptv-site-audits db (-> req :parameters :body :lipas-ids))})}}]
 
    ["/actions/generate-ptv-descriptions"
     {:post
@@ -583,7 +592,7 @@
       :handler
       (fn [req]
         {:status 200
-         :body (ptv-core/get-ptv-service-docs db (-> req :parameters :body :org-id))})}}]
+         :body (ptv-core/get-ptv-service-audits db (-> req :parameters :body :org-id))})}}]
 
    ["/actions/save-ptv-service-audit"
     {:post

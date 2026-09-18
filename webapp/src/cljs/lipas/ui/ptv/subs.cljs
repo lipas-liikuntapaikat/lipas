@@ -685,15 +685,14 @@
   ;; the alert renders resolved instead of staying red (tester finding #4).
   ;; The comparison must use the :ptv-persisted snapshot, not the cached
   ;; :ptv the text fields mutate on every keystroke — otherwise a single
-  ;; keypress flips the alert to "fixed" before anything is saved. Falls
-  ;; back to the sports-site document when the PTV org cache isn't loaded
-  ;; (site page outside the PTV dialog).
+  ;; keypress flips the alert to "fixed" before anything is saved. The
+  ;; audit is only in the PTV org cache (fetched apart from the sites and
+  ;; merged in, see ::fetch-ptv-site-audits) — the site page loads that
+  ;; cache too; the sports-site document itself never carries an audit.
   (fn [db [_ lipas-id field]]
     (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])
           cached-site (get-in db [:ptv :org org-id :data :sports-sites lipas-id])
-          site-ptv (or (:ptv cached-site)
-                       (let [latest (get-in db [:sports-sites lipas-id :latest])]
-                         (get-in db [:sports-sites lipas-id :history latest :ptv])))
+          site-ptv (:ptv cached-site)
           field-audit (get-in site-ptv [:audit field])
           content (if-let [persisted (:ptv-persisted cached-site)]
                     (get persisted field)
@@ -906,16 +905,17 @@
 
 ;; PTV Service audit subs
 
-(rf/reg-sub ::service-docs
+(rf/reg-sub ::service-audits
+  ;; (str service-id) -> current audit, from /actions/fetch-ptv-service-audits
   (fn [db [_ org-id]]
-    (get-in db [:ptv :org org-id :data :service-docs])))
+    (get-in db [:ptv :org org-id :data :service-audits])))
 
 ;; Persisted vs. edited, exactly as on the site side above.
 
 (defn- service-audit-persisted
   [db service-id]
   (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
-    (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit])))
+    (get-in db [:ptv :org org-id :data :service-audits (str service-id)])))
 
 (defn- service-audit-edited
   [db service-id]
@@ -940,7 +940,7 @@
   ;; it has at hand (see audit-feedback-alert call sites).
   (fn [db [_ service-id field]]
     (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
-      (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit field]))))
+      (get-in db [:ptv :org org-id :data :service-audits (str service-id) field]))))
 
 (rf/reg-sub ::service-audit-data-valid?
   (fn [[_ service-id]]
@@ -968,13 +968,12 @@
   ;; LIPAS-managed/adopted services joined with their stored audit
   (fn [[_ org-id]]
     [(rf/subscribe [::services org-id])
-     (rf/subscribe [::service-docs org-id])])
-  (fn [[services docs] _]
+     (rf/subscribe [::service-audits org-id])])
+  (fn [[services audits] _]
     (->> services
          (filter #(some-> % :source-id (str/starts-with? "lipas-")))
          (map (fn [svc]
-                (assoc svc :audit
-                       (get-in docs [(str (:service-id svc)) :document :audit])))))))
+                (assoc svc :audit (get audits (str (:service-id svc)))))))))
 
 (defn- service-has-audit-content? [svc]
   (and (some-> svc :summary :fi count (> 5))

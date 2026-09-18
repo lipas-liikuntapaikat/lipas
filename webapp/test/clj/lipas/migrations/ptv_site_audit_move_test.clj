@@ -138,9 +138,8 @@
       (is (= t0 (:event-date (core/get-sports-site (test-db) lipas-id))))
       (is (nil? (get-in (core/enrich (core/get-sports-site (test-db) lipas-id)) [:ptv :audit]))
           "not indexed")
-      (is (= (audit t2 "approved")
-             (get-in (ptv-audit/with-site-audit (test-db) (core/get-sports-site (test-db) lipas-id))
-                     [:ptv :audit]))))
+      (is (= [{:lipas-id lipas-id :audit (audit t2 "approved")}]
+             (ptv-audit/site-audits (test-db) [lipas-id]))))
 
     (testing "idempotent"
       (let [{:keys [audits repairs]} (sut/compute-plan (test-db))]
