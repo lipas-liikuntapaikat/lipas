@@ -273,10 +273,10 @@
               (let [idx (get-in search [:indices :sports-site :search])
                       ;; resolved once per batch — owner just changed, so the docs
                       ;; must carry the new owner org's name (F15)
-                    org-names (core/org-names db)]
+                    index-ctx (core/index-context db)]
                 (search/bulk-index-sync! (:client search)
                                          (search/->bulk idx :lipas-id
-                                                        (map #(core/enrich % org-names) updated)))))
+                                                        (map #(core/enrich % index-ctx) updated)))))
             (count updated)))]
     {:status        "approved"
      :org-id        (str org-id)
@@ -385,10 +385,10 @@
                                  (core/upsert-sports-site!* tx actor))))]
             (when (seq updated)
               (let [idx       (get-in search [:indices :sports-site :search])
-                    org-names (core/org-names db)]
+                    index-ctx (core/index-context db)]
                 (search/bulk-index-sync! (:client search)
                                          (search/->bulk idx :lipas-id
-                                                        (map #(core/enrich % org-names) updated)))))
+                                                        (map #(core/enrich % index-ctx) updated)))))
             (count updated)))]
     {:org-id         (str org-id)
      :sites-released released-count

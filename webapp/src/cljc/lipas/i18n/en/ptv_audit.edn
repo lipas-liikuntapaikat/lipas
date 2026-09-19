@@ -45,8 +45,6 @@
  :changed-since-audit "Changed since audit",
  :fixed-after-audit "Fixed after audit",
  :auditor-feedback-fixed "Auditor feedback — fixed",
- :auditor-feedback-stale "Auditor feedback — content changed since audit",
- :audit-in-progress "Audit in progress",
  :reaudit "Re-audit",
  :done-item-info "This item has been audited. You can re-audit it if needed.",
  :notification-dialog-title "Send audit notification",
@@ -62,5 +60,4 @@
  :sort-alphabetically "Alphabetical",
  :sort-by-modified "Last modified first",
  :service-location-preview "Service location preview",
- :partially-audited "Partially audited",
  :not-audited "Not audited"}

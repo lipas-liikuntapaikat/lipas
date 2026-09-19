@@ -100,8 +100,8 @@
 (defn audit-feedback-alert
   "Auditor feedback for one field in the municipality-facing views.
    Severity follows the whose-move state so a red changes-requested alert
-   resolves once the municipality has edited the text (:fixed), and an
-   approval whose content changed afterwards shows as a warning (:stale).
+   resolves once the municipality has edited the text (:fixed). An
+   approval stands even after the text was edited (:stale).
    Props: :tr, :field-audit (full audit field map incl. :audited-content
    and optionally a precomputed :state), :current-content (localized map
    to compare the verdict snapshot against; omit when :state is given)."
@@ -114,14 +114,11 @@
                            :changes-requested
                            ["error" (tr :ptv.audit/auditor-feedback-changes-requested)]
 
-                           :approved
+                           (:approved :stale)
                            ["success" (tr :ptv.audit/auditor-feedback-approved)]
 
                            :fixed
                            ["info" (tr :ptv.audit/auditor-feedback-fixed)]
-
-                           :stale
-                           ["warning" (tr :ptv.audit/auditor-feedback-stale)]
 
                            ;; no state (no verdict/content info): raw status
                            (case status

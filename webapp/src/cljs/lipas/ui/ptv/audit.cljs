@@ -424,11 +424,12 @@
         changed? (boolean (some #{:stale} states))
         fixed? (boolean (some #{:fixed} states))
 
-        ;; Calculate completion status (stale verdicts count as incomplete,
-        ;; fixed ones as complete — the municipality has responded)
+        ;; Calculate completion status: every field has a verdict. Stale
+        ;; and fixed verdicts both count — edits after the audit don't
+        ;; reopen it (they're flagged separately).
         status-indicator (cond
                            (and (seq states)
-                                (every? #{:approved :changes-requested :fixed} states)) "completed"
+                                (not-any? #{:pending} states)) "completed"
                            (or summary-status desc-status) "partial"
                            :else "todo")
 
@@ -517,11 +518,12 @@
         changed? (boolean (some #{:stale} states))
         fixed? (boolean (some #{:fixed} states))
 
-        ;; Calculate completion status (stale verdicts count as incomplete,
-        ;; fixed ones as complete — the municipality has responded)
+        ;; Calculate completion status: every field has a verdict. Stale
+        ;; and fixed verdicts both count — edits after the audit don't
+        ;; reopen it (they're flagged separately).
         status-indicator (cond
                            (and (seq states)
-                                (every? #{:approved :changes-requested :fixed} states)) "completed"
+                                (not-any? #{:pending} states)) "completed"
                            (some some? [summary-status desc-status ui-status]) "partial"
                            :else "todo")
 

@@ -646,7 +646,9 @@
    "postal_code"
    "postal_street_segment"
    "paavo_area"
-   "postal_data_source"])
+   "postal_data_source"
+   "ptv_site_audit"
+   "ptv_service_audit"])
 
 ;; For all other tests except the legacy WFS compatibility layer
 ;; Enhanced database utilities that accept db parameter
