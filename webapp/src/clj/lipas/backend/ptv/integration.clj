@@ -451,7 +451,7 @@
                                              (-> (dissoc site :ptv)
                                                  (assoc :event-date (utils/timestamp)))
                                              false)]
-          (core/index! search resp :sync (core/org-names db))))
+          (core/index! search resp :sync (core/index-context db))))
       (println "Removing PTV data from LIPAS... DONE!"))
 
     (defn wipe-all! [ptv db search robot {:keys [org-id city-codes label]}]

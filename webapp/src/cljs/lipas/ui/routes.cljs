@@ -1,6 +1,7 @@
 (ns lipas.ui.routes
   (:require [clojure.string :as str]
             [lipas.ui.admin.routes :as admin]
+            [lipas.ui.email-change.routes :as email-change]
             [lipas.ui.forgot-password.routes :as forgot-password]
             [lipas.ui.front-page.routes :as front-page]
             [lipas.ui.lazy :as lazy]
@@ -39,6 +40,7 @@
      org/routes
      forgot-password/routes
      register/routes
+     email-change/routes
      lmap/routes
      admin/routes
      stats/routes]

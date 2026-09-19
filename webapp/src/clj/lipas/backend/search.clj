@@ -60,6 +60,11 @@
    :fields {:keyword {:type "keyword"}
             :sort    (collation-field language)}})
 
+(def ^:private text-with-keyword
+  "Full-text searchable, with a `keyword` sub-field for exact match /
+  aggregations."
+  {:type "text" :fields {:keyword {:type "keyword"}}})
+
 ;; Helper functions for generating explicit ES mappings from prop-types
 
 (defn- prop-type->es-mapping
@@ -118,24 +123,20 @@
          :name-localized.se (text-with-sort "sv")
          :name-localized.en (text-with-sort "en")
          ;; Free-text user-entered fields the results table offers as sort
-         ;; columns. The data is a case mess (HELSINKI / helsinki / Helsinki),
-         ;; so sorting on the plain keyword sub-field puts every lowercase
-         ;; value after the entire uppercase alphabet. The collation `sort`
-         ;; sub-field orders them case-insensitively. Single-value fields with
-         ;; no per-locale variants, hence one Finnish collation like
-         ;; search-meta.name.
-         :marketing-name (text-with-sort "fi")
-         :www (text-with-sort "fi")
-         :email (text-with-sort "fi")  ; simple_query_string queries this
-         :phone-number (text-with-sort "fi")  ; simple_query_string queries this
+         ;; columns. They sort on search-meta.sort.* rather than a `sort`
+         ;; sub-field of their own — see the search-meta-sort-fields comment.
+         :marketing-name text-with-keyword
+         :www text-with-keyword
+         :email text-with-keyword  ; simple_query_string queries this
+         :phone-number text-with-keyword  ; simple_query_string queries this
          :renovation-years {:type "integer"}  ; sortable column (array; asc sorts by min)
          :comment {:type "text" :fields {:keyword {:type "keyword"}}}
          ;; Location fields that ARE QUERIED
          :location.city.city-code {:type "integer"}  ; queried by V2 API filter
          :location.city.neighborhood {:type "text" :fields {:keyword {:type "keyword"}}}
-         :location.address (text-with-sort "fi")
+         :location.address text-with-keyword
          :location.postal-code {:type "keyword"}
-         :location.postal-office (text-with-sort "fi")}
+         :location.postal-office text-with-keyword}
 
         ;; Geographic fields
         geo-fields
@@ -145,8 +146,24 @@
          :search-meta.location.geometries {:type "geo_shape"}}
 
         ;; Search-meta enrichment fields (multilingual and computed)
-        ;; Name fields use text for case-insensitive search + keyword subfield for sorting
-        text-with-keyword {:type "text" :fields {:keyword {:type "keyword"}}}
+        ;;
+        ;; Sort-only keys for the free-text columns of the results table
+        ;; (lipas.utils/->sortable-text). The payload fields themselves can't
+        ;; carry these: a value like "-" — what users type into a mandatory
+        ;; field they have nothing to put in — is legal content that must be
+        ;; returned as-is, but sorting on it puts a block of apparently empty
+        ;; rows at the top in ascending order, above the real data, while rows
+        ;; with no value at all sort to the bottom. ->sortable-text yields nil
+        ;; for those, so the field is absent here and both kinds of empty sort
+        ;; to the same end. Single-value, no locale variants, hence one Finnish
+        ;; collation like search-meta.name.
+        search-meta-sort-fields
+        {:search-meta.sort.marketing-name (collation-field "fi")
+         :search-meta.sort.www (collation-field "fi")
+         :search-meta.sort.email (collation-field "fi")
+         :search-meta.sort.phone-number (collation-field "fi")
+         :search-meta.sort.address (collation-field "fi")
+         :search-meta.sort.postal-office (collation-field "fi")}
 
         ;; Name fields the UI offers as sort columns get an icu_collation_keyword
         ;; `sort` sub-field (see text-with-sort). LIPAS locale `se` is Swedish,
@@ -258,6 +275,7 @@
         ;; Combine all mappings
         all-properties (merge core-fields
                               geo-fields
+                              search-meta-sort-fields
                               search-meta-fields
                               property-mappings
                               legacy-property-mappings

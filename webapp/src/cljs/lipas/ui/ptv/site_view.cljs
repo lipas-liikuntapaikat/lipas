@@ -27,9 +27,9 @@
   "Displays a summary notification if there are unresolved audit issues.
    A field the municipality has already fixed (whose-move state :fixed)
    no longer counts as an issue."
-  [{:keys [tr lipas-id]}]
-  (let [summary-audit @(rf/subscribe [::subs/site-audit-field-display lipas-id :summary])
-        desc-audit @(rf/subscribe [::subs/site-audit-field-display lipas-id :description])
+  [{:keys [tr org-id lipas-id]}]
+  (let [summary-audit @(rf/subscribe [::subs/site-audit-field-display org-id lipas-id :summary])
+        desc-audit @(rf/subscribe [::subs/site-audit-field-display org-id lipas-id :description])
 
         has-issues? (fn [{:keys [feedback state]}]
                       (and feedback
@@ -57,8 +57,8 @@
 (r/defc audit-feedback-component
   "Displays audit feedback for a specific field (summary or description).
    Renders resolved (info) once the municipality has fixed the text."
-  [{:keys [tr lipas-id field-name]}]
-  (let [field-audit @(rf/subscribe [::subs/site-audit-field-display lipas-id field-name])]
+  [{:keys [tr org-id lipas-id field-name]}]
+  (let [field-audit @(rf/subscribe [::subs/site-audit-field-display org-id lipas-id field-name])]
     [ptv-components/audit-feedback-alert
      {:tr tr
       :field-audit field-audit}]))
@@ -378,7 +378,7 @@
      (when (and sync-enabled org-id)
        [:<>
         ;; Audit summary notification - show if there are audit issues
-        [audit-summary-notification {:tr tr :lipas-id lipas-id}]
+        [audit-summary-notification {:tr tr :org-id org-id :lipas-id lipas-id}]
 
         ;; Warn when PTV has unpublished edits that would block sync.
         (when service-channel-modified?
@@ -437,6 +437,13 @@
           :on-change set-selected-tab
           :enabled-languages (set org-languages)}]
 
+        ;; Per-type-group authoring guidance (DVV). Shown in the user's UI
+        ;; language, not `selected-tab` — these are instructions to the
+        ;; author, who reads them in their own language while writing the
+        ;; text for whichever language tab is open.
+        [ptv-components/site-writing-guidance
+         {:tr tr :type-code type-code :field :summary}]
+
         ;; Summary
         (let [v (or (get-in edit-data [:ptv :summary selected-tab])
                     (get-in sports-site [:ptv :summary selected-tab])
@@ -457,8 +464,12 @@
         ;; Summary audit feedback
         [audit-feedback-component
          {:tr tr
+          :org-id org-id
           :lipas-id lipas-id
           :field-name :summary}]
+
+        [ptv-components/site-writing-guidance
+         {:tr tr :type-code type-code :field :description}]
 
         ;; Description
         (let [v (or (get-in edit-data [:ptv :description selected-tab])
@@ -481,5 +492,6 @@
         ;; Description audit feedback
         [audit-feedback-component
          {:tr tr
+          :org-id org-id
           :lipas-id lipas-id
           :field-name :description}]])]))

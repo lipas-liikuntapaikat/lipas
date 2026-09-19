@@ -16,6 +16,29 @@
         (str/lower-case)
         (str/replace #"(\"|\(|\))" ""))))
 
+;; Values users type into a mandatory free-text field they have nothing to put
+;; in: "-", "--", ".", "-,-". Deliberately conservative — only punctuation and
+;; whitespace, so "x" or "Ei" (which might be real content) are left alone.
+(def ^:private placeholder-text-re
+  #"[\s\-\u2010-\u2015._,;:/\\?!*+#\"'()\[\]<>|~^`&%$@]+")
+
+(defn ->sortable-text
+  "Sort key for a user-entered free-text field: the value trimmed, or nil when
+  it carries nothing sortable — blank, or punctuation-only placeholder text.
+
+  Sorting on the raw value puts those rows at the top in ascending order, where
+  they read as a block of empty cells above the real data, while rows that
+  simply have no value at all sort to the bottom. Returning nil here leaves the
+  field out of the indexed document, so both kinds of empty end up in the same
+  place. The stored document is untouched — `-` is a legal address and stays
+  one; this only decides where the row sorts."
+  [s]
+  (when (string? s)
+    (let [t (str/trim s)]
+      (when-not (or (str/blank? t)
+                    (re-matches placeholder-text-re t))
+        t))))
+
 (defn ->slug
   "URL-friendly slug from a title: lowercase, ä/å→a ö→o, whitespace→-,
    other non-alphanumerics dropped. Returns \"\" for blank input."
@@ -223,6 +246,18 @@
 
 (defn reverse-cmp [a b]
   (compare b a))
+
+(defn make-field-sorter
+  "Builds a sort-key fn that orders map entries by the position of their
+  key in `ks`. Intended to be used with `reverse-cmp`:
+
+    (sort-by (make-field-sorter [:a :b]) reverse-cmp {:b 2 :a 1})
+
+  Keys missing from `ks` sort last."
+  [ks]
+  (let [lookup (->> ks (reverse) (map-indexed (fn [idx k] [k idx])) (into {}))]
+    (fn [[k _]]
+      (get lookup k -1))))
 
 (defn str-matches? [s x]
   (-> x str str/lower-case (str/includes? s)))

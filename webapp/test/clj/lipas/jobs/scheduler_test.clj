@@ -98,12 +98,13 @@
         (testing "Scheduler tasks do not enqueue maintenance jobs"
           ;; The old design routed reminder checks and cleanup through the
           ;; queue as job rows; the new design calls them directly. Real
-          ;; work still becomes jobs: the nightly KB sync and the nightly
-          ;; GDPR removal batch each enqueue exactly one (deduplicated)
-          ;; job on their startup tick.
+          ;; work still becomes jobs: the nightly KB sync, the nightly GDPR
+          ;; removal batch and the two postal data refreshes each enqueue
+          ;; exactly one (deduplicated) job on their startup tick.
           (Thread/sleep 500)
           (let [jobs (test-utils/get-all-jobs db)]
-            (is (= {"help-kb-sync" 1 "gdpr-removals" 1}
+            (is (= {"help-kb-sync" 1 "gdpr-removals" 1
+                    "fetch-postal-data" 1 "fetch-paavo-areas" 1}
                    (frequencies (mapv :jobs/type jobs)))
                 "No queue churn from scheduler ticks beyond the nightly real work")))
 

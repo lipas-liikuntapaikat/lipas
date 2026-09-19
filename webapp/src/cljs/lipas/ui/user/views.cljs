@@ -23,6 +23,7 @@
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Typography$default" :as Typography]
             [lipas.roles :as roles]
+            [lipas.ui.components.email-change :as email-change]
             [lipas.ui.components.selects :as selects]
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.org.subs :as org-subs]
@@ -192,7 +193,15 @@
         [:> Card card-props
          [:> CardHeader {:title (tr :user/greeting firstname lastname)}]
          [:> CardContent
-          [user-form tr user]]
+          [user-form tr user]
+          [email-change/email-change-dialog
+           {:tr tr
+            :current-email (:email user)
+            :state (<== [::subs/email-change])
+            :help-text (tr :lipas.user/change-email-help)
+            :on-change #(==> [::events/set-new-email %])
+            :on-submit #(==> [::events/request-email-change %])
+            :on-close #(==> [::events/close-email-change-dialog])}]]
          [:> CardActions
           [:> Button {:href  "/etusivu"
                       :color :secondary}
@@ -200,6 +209,9 @@
           [:> Button {:href  "/passu-hukassa"
                       :color :primary}
            (str "> " (tr :reset-password/change-password))]
+          [:> Button {:color    :primary
+                      :on-click #(==> [::events/open-email-change-dialog])}
+           (str "> " (tr :lipas.user/change-email))]
           (when @(rf/subscribe [::subs/check-privilege nil :users/manage])
             [:> Button {:href  "/admin"
                         :color :primary}

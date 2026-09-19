@@ -1,4 +1,16 @@
 {:headline "Rekisteröidy",
  :link "Rekisteröidy",
+ :email-step-intro
+ "Aloita syöttämällä sähköpostiosoitteesi. Lähetämme siihen linkin, jonka kautta pääset viimeistelemään rekisteröitymisen.",
+ :send-link "Lähetä linkki",
+ :link-sent
+ "Linkki on lähetetty osoitteeseen {1}. Avaa linkki viimeistelläksesi rekisteröitymisen. Linkki on voimassa 24 tuntia. Jos viestiä ei kuulu muutamassa minuutissa, tarkista roskapostikansio ja sähköpostiosoitteen oikeinkirjoitus.",
+ :send-again "Syötä sähköpostiosoite uudelleen",
+ :complete-headline "Viimeistele rekisteröityminen",
+ :complete-intro
+ "Sähköpostiosoitteesi on vahvistettu. Täytä vielä alla olevat tiedot.",
+ :link-invalid "Rekisteröitymislinkki on vanhentunut tai virheellinen.",
+ :request-new-link "Pyydä uusi linkki",
+ :go-to-login "Kirjaudu sisään",
  :thank-you-for-registering
- "Kiitos rekisteröitymisestä! Saat  sähköpostiisi viestin kun sinulle on myönnetty käyttöoikeudet."}
+ "Kiitos rekisteröitymisestä! Tunnuksesi on luotu ja voit nyt kirjautua sisään. Saat sähköpostiisi viestin, kun sinulle on myönnetty käyttöoikeudet."}

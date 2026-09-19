@@ -6,6 +6,7 @@
   return normally (job completed) or throw (job retried / dead-lettered
   by the worker)."
   (:require
+    [lipas.backend.address.core :as address]
     [lipas.backend.analysis.diversity :as diversity]
     [lipas.backend.config :as config]
     [lipas.backend.core :as core]
@@ -73,7 +74,7 @@
         (-> current
             (assoc-in [:location :geometries] fcoll)
             (->> (core/upsert-sports-site!* db user))
-            (as-> $ (core/index! search $ :sync (core/org-names db))))
+            (as-> $ (core/index! search $ :sync (core/index-context db))))
         (log/info "Elevation enrichment completed for lipas-id" lipas-id))
 
       (do
@@ -89,6 +90,14 @@
 
     ;; Default email handling
     (email/send! emailer payload)))
+
+(defmethod handle-job "fetch-paavo-areas"
+  [{:keys [db]} _job]
+  (address/refresh-paavo-areas! db))
+
+(defmethod handle-job "fetch-postal-data"
+  [{:keys [db]} _job]
+  (address/refresh-postal-data! db))
 
 (defmethod handle-job "gdpr-removals"
   [{:keys [db]} {:keys [payload]}]

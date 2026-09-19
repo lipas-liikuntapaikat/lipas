@@ -429,16 +429,15 @@
 
 (rf/reg-sub ::sports-sites
   (fn [[_ org-id]]
-    [(rf/subscribe [::ptv])
+    [(rf/subscribe [::sites-with-audit org-id])
      (rf/subscribe [::services-by-id org-id])
      (rf/subscribe [::service-channels-by-id org-id])
      (rf/subscribe [::default-settings org-id])
      (rf/subscribe [:lipas.ui.sports-sites.subs/all-types])
      (rf/subscribe [::selected-org])])
-  (fn [[ptv services service-channels org-defaults types selected-org] [_ org-id]]
-    (let [lipas-id->site (get-in ptv [:org org-id :data :sports-sites])
-          org-langs (get-in selected-org [:ptv-data :supported-languages] ptv-data/fallback-languages)]
-      (->> (vals lipas-id->site)
+  (fn [[sites services service-channels org-defaults types selected-org] [_ org-id]]
+    (let [org-langs (get-in selected-org [:ptv-data :supported-languages] ptv-data/fallback-languages)]
+      (->> sites
            (map (fn [site]
                   (ptv-data/sports-site->ptv-input {:org-id org-id
                                                     :types types
@@ -622,6 +621,33 @@
               sub-cats))))
 
 ;; PTV Audit subscriptions
+
+;; Site audits are cached apart from the sites, at
+;; [:ptv :org <ptv-org-id> :data :site-audits] keyed by lipas-id (from
+;; /actions/fetch-ptv-site-audits), the same way :service-audits is kept
+;; apart from :services. Only the derived ::sites-with-audit view carries
+;; an audit inside a site map, so no cache write of a site's :ptv can drop
+;; one. (Audit drafts live apart too, under [:ptv :audit :site-draft].)
+
+(rf/reg-sub ::site-audits
+  ;; lipas-id -> current audit
+  (fn [db [_ org-id]]
+    (get-in db [:ptv :org org-id :data :site-audits])))
+
+(rf/reg-sub ::sites-with-audit
+  ;; The org's cached sites joined with their stored audit as [:ptv :audit],
+  ;; the shape the cljc audit fns read (site-audit-fields,
+  ;; determine-audit-status, sports-site->ptv-input).
+  (fn [[_ org-id]]
+    [(rf/subscribe [::ptv])
+     (rf/subscribe [::site-audits org-id])])
+  (fn [[ptv audits] [_ org-id]]
+    (map (fn [[lipas-id site]]
+           (if-let [audit (get audits lipas-id)]
+             (assoc-in site [:ptv :audit] audit)
+             site))
+         (get-in ptv [:org org-id :data :sports-sites]))))
+
 (rf/reg-sub ::audit
   :<- [::ptv]
   (fn [ptv _]
@@ -659,7 +685,7 @@
 (defn- site-audit-persisted
   [db lipas-id]
   (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
-    (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit])))
+    (get-in db [:ptv :org org-id :data :site-audits lipas-id])))
 
 (defn- site-audit-edited
   [db lipas-id]
@@ -685,19 +711,16 @@
   ;; the alert renders resolved instead of staying red (tester finding #4).
   ;; The comparison must use the :ptv-persisted snapshot, not the cached
   ;; :ptv the text fields mutate on every keystroke — otherwise a single
-  ;; keypress flips the alert to "fixed" before anything is saved. Falls
-  ;; back to the sports-site document when the PTV org cache isn't loaded
-  ;; (site page outside the PTV dialog).
-  (fn [db [_ lipas-id field]]
-    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])
-          cached-site (get-in db [:ptv :org org-id :data :sports-sites lipas-id])
-          site-ptv (or (:ptv cached-site)
-                       (let [latest (get-in db [:sports-sites lipas-id :latest])]
-                         (get-in db [:sports-sites lipas-id :history latest :ptv])))
-          field-audit (get-in site-ptv [:audit field])
+  ;; keypress flips the alert to "fixed" before anything is saved. Both
+  ;; live in the PTV org cache of `org-id` (the wizard's selected org, or
+  ;; ::resolved-org-id on the site page, which loads that cache too); the
+  ;; sports-site document itself never carries an audit.
+  (fn [db [_ org-id lipas-id field]]
+    (let [cached-site (get-in db [:ptv :org org-id :data :sports-sites lipas-id])
+          field-audit (get-in db [:ptv :org org-id :data :site-audits lipas-id field])
           content (if-let [persisted (:ptv-persisted cached-site)]
                     (get persisted field)
-                    (get site-ptv field))]
+                    (get-in cached-site [:ptv field]))]
       (when field-audit
         (assoc field-audit
                :state (ptv-data/audit-field-state field-audit content))))))
@@ -791,7 +814,8 @@
 ;; Whose-move audit workflow (see lipas.data.ptv/audit-bucket):
 ;; an item is in the audit sample when it has an audit record; within the
 ;; sample it sits in exactly one bucket: :waiting-audit (auditor's move),
-;; :waiting-fixes (municipality's move) or :done (all approved, unchanged).
+;; :waiting-fixes (municipality's move) or :done (all approved or fixed —
+;; later edits are flagged but never reopen an audit).
 
 (defn- site-has-audit-content? [site]
   (and (some-> site :ptv :summary :fi count (> 5))
@@ -820,11 +844,12 @@
                (-> site :ptv :last-sync)))))
 
 (rf/reg-sub ::auditable-sites
-  (fn [[_ _org-id _bucket]]
-    [(rf/subscribe [::ptv])
+  (fn [[_ org-id _bucket]]
+    [(rf/subscribe [::sites-with-audit org-id])
+     (rf/subscribe [::service-channels-by-id org-id])
      (rf/subscribe [::audit-sort])])
-  (fn [[ptv sort-key] [_ org-id bucket]]
-    (->> (vals (get-in ptv [:org org-id :data :sports-sites] {}))
+  (fn [[sites service-channels sort-key] [_ _ bucket]]
+    (->> sites
          (filter (fn [site]
                    (let [b (ptv-data/audit-bucket
                              (get-in site [:ptv :audit])
@@ -836,19 +861,17 @@
                        (or (= :waiting-audit b)
                            (and (nil? b) (site-has-audit-content? site)))
                        (= bucket b)))))
-         (map (partial attach-site-content-modified
-                       (get-in ptv [:org org-id :data :service-channels] {})))
+         (map (partial attach-site-content-modified (or service-channels {})))
          (sort-audit-items sort-key
                            {:name-fn :name
                             :audit-ts-fn #(get-in % [:ptv :audit :timestamp])}))))
 
 (rf/reg-sub ::audit-sample-sites
   ;; every site in the audit sample, regardless of bucket
-  (fn [[_ _org-id]]
-    [(rf/subscribe [::ptv])])
-  (fn [[ptv] [_ org-id]]
-    (->> (vals (get-in ptv [:org org-id :data :sports-sites] {}))
-         (filter #(some? (get-in % [:ptv :audit :timestamp]))))))
+  (fn [[_ org-id]]
+    (rf/subscribe [::sites-with-audit org-id]))
+  (fn [sites _]
+    (filter #(some? (get-in % [:ptv :audit :timestamp])) sites)))
 
 (rf/reg-sub ::sending-notification?
   :<- [::audit]
@@ -905,16 +928,17 @@
 
 ;; PTV Service audit subs
 
-(rf/reg-sub ::service-docs
+(rf/reg-sub ::service-audits
+  ;; (str service-id) -> current audit, from /actions/fetch-ptv-service-audits
   (fn [db [_ org-id]]
-    (get-in db [:ptv :org org-id :data :service-docs])))
+    (get-in db [:ptv :org org-id :data :service-audits])))
 
 ;; Persisted vs. edited, exactly as on the site side above.
 
 (defn- service-audit-persisted
   [db service-id]
   (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
-    (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit])))
+    (get-in db [:ptv :org org-id :data :service-audits (str service-id)])))
 
 (defn- service-audit-edited
   [db service-id]
@@ -939,7 +963,7 @@
   ;; it has at hand (see audit-feedback-alert call sites).
   (fn [db [_ service-id field]]
     (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
-      (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit field]))))
+      (get-in db [:ptv :org org-id :data :service-audits (str service-id) field]))))
 
 (rf/reg-sub ::service-audit-data-valid?
   (fn [[_ service-id]]
@@ -967,13 +991,12 @@
   ;; LIPAS-managed/adopted services joined with their stored audit
   (fn [[_ org-id]]
     [(rf/subscribe [::services org-id])
-     (rf/subscribe [::service-docs org-id])])
-  (fn [[services docs] _]
+     (rf/subscribe [::service-audits org-id])])
+  (fn [[services audits] _]
     (->> services
          (filter #(some-> % :source-id (str/starts-with? "lipas-")))
          (map (fn [svc]
-                (assoc svc :audit
-                       (get-in docs [(str (:service-id svc)) :document :audit])))))))
+                (assoc svc :audit (get audits (str (:service-id svc)))))))))
 
 (defn- service-has-audit-content? [svc]
   (and (some-> svc :summary :fi count (> 5))

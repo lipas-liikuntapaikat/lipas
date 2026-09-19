@@ -151,6 +151,66 @@
 
 ;;; account-name resolution (shared by org history + site edit history) ;;;
 
+(defn mask-email
+  "Partially redact an email for viewers who may learn THAT someone has access
+  without learning WHO: `matti.meikalainen@example.fi` becomes
+  `m...............n@example.fi`.
+
+  First and last character of the local part survive so a colleague who already
+  knows the address can still recognise it; the domain is kept whole because it
+  identifies the organisation, not the individual. Local parts of 1-2 characters
+  carry no recognisable middle, so they are masked entirely. Anything without a
+  domain part is masked whole rather than passed through — this function must
+  never return an unredacted identifier for input it does not understand."
+  [email]
+  (when-let [s (some-> email str str/trim not-empty)]
+    (let [[local domain] (str/split s #"@" 2)
+          dots           #(apply str (repeat % \.))]
+      (if (str/blank? domain)
+        (dots (count s))
+        (str (if (<= (count local) 2)
+               (dots (count local))
+               (str (first local) (dots (- (count local) 2)) (last local)))
+             "@" domain)))))
+
+(defn apply-pii-tier
+  "Render one account's person identifier at the viewer's `tier`:
+  `:full` → the email, `:masked` → `mask-email` of it, anything else → nil.
+  Callers MUST drop the surrounding entry when this returns nil rather than
+  falling back to another field — `:username` is an email for ~25% of accounts,
+  so it is not a safe stand-in for a redacted address."
+  [tier email]
+  (case tier
+    :full   email
+    :masked (mask-email email)
+    nil))
+
+(defn co-member-ids
+  "Account ids (as strings) that share one of `org-ids` with `user-id`.
+
+  These are the people whose addresses the user ALREADY sees unmasked in that
+  org's Jäsenet tab (`get-org-users` is gated at `org-member-or-admin?` and
+  returns full `:email`), so masking them elsewhere protects nothing while
+  making the same person look different in two tabs.
+
+  `org-ids` MUST be scoped to the resource being viewed — for a site, its owner
+  org plus any grantees. An earlier version collected members of every org the
+  viewer belonged to, which meant sharing some entirely unrelated org with
+  someone unmasked them on a site neither org had anything to do with. The
+  Jäsenet argument technically still held, but the result was baffling in the
+  UI. Empty `org-ids` ⇒ nobody. One query, the same reverse jsonb-containment
+  `user-orgs` uses."
+  [db user-id org-ids]
+  (let [wanted (set (map str org-ids))]
+    (if-let [uid (and (seq wanted) (utils/->uuid-safe user-id))]
+      (->> (user-orgs db uid)
+           (filter (fn [o] (contains? wanted (str (:id o)))))
+           (mapcat :members)
+           (keep :user-id)
+           (map str)
+           set)
+      #{})))
+
 (defn resolve-account-names
   "Batch-resolve account ids → display label in one query. Returns a map keyed
   by string id (nil when `ids` is empty); ids absent from `account` are simply
@@ -559,6 +619,29 @@
   Called at token-creation time (login / refresh) to enrich the user's roles."
   [db user-id]
   (derive-org-roles user-id (user-orgs db user-id)))
+
+(defn enrich-org-roles
+  "Project the user's org-derived roles and merge them into the user's roles.
+  Both existing and derived roles are conformed to the same (keyword/set) shape
+  and deduped, so a legacy account org role and its derived twin collapse.
+  Derived roles live only in the resulting token — never persisted.
+
+  Lives here rather than in `lipas.backend.auth` because `auth` requires
+  `core`, so `core` (which mints impersonation tokens) could never call it
+  there. `auth/enrich-org-roles` delegates to this.
+
+  EVERY path that mints a session token must run this. Org membership confers
+  no stored role — skip it and the session silently loses :org/member and
+  :org/manage, which reads as \"this user is in no organization\" rather than as
+  an error."
+  [db user]
+  (update-in user [:permissions :roles]
+             (fn [roles]
+               (->> (derive-user-org-roles db (:id user))
+                    (concat roles)
+                    roles/conform-roles
+                    distinct
+                    vec))))
 
 (comment
   (all-orgs (:lipas/db integrant.repl.state/system))

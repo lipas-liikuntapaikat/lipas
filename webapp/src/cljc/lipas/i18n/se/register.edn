@@ -1,4 +1,16 @@
 {:headline "Registrera",
  :link "Registrera här",
+ :email-step-intro
+ "Börja med att ange din e-postadress. Vi skickar en länk till den, via vilken du kan slutföra registreringen.",
+ :send-link "Skicka länk",
+ :link-sent
+ "Länken har skickats till {1}. Öppna länken för att slutföra registreringen. Länken är giltig i 24 timmar. Om meddelandet inte kommer inom några minuter, kontrollera skräppostmappen och att e-postadressen är rätt stavad.",
+ :send-again "Ange e-postadressen på nytt",
+ :complete-headline "Slutför registreringen",
+ :complete-intro
+ "Din e-postadress har verifierats. Fyll ännu i uppgifterna nedan.",
+ :link-invalid "Registreringslänken har gått ut eller är ogiltig.",
+ :request-new-link "Begär en ny länk",
+ :go-to-login "Logga in",
  :thank-you-for-registering
- "Tack för registrering! Du vill få e-posten snart."}
+ "Tack för din registrering! Ditt konto har skapats och du kan nu logga in. Du får ett e-postmeddelande när du har beviljats behörigheter."}

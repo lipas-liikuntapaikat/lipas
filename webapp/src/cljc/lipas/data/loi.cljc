@@ -1,5 +1,6 @@
 (ns lipas.data.loi
-  (:require [lipas.data.status :as status]))
+  (:require [lipas.data.activities :as activities]
+            [lipas.data.status :as status]))
 
 (def statuses status/statuses)
 
@@ -104,6 +105,36 @@
                    :se "Tillgänglighet"
                    :en "Accessibility"}}}})
 
+(def arrival-props
+  {:arrival
+   {:schema localized-string-schema
+    :field
+    {:type        "textarea"
+     :description {:fi "Eri kulkumuodoilla kohteeseen pääsyyn liittyvää tietoa. Esim. pysäköintialueet ja joukkoliikenneyhteydet."
+                   :se "Information om olika transportsätt att ta sig till destinationen. T.ex. parkeringsplatser och kollektivtrafikförbindelser."
+                   :en "Information about how to get to the destination with different means of transport, e.g. parking areas and public transport."}
+     :label       {:fi "Saapuminen"
+                   :se "Ankomst"
+                   :en "Arrival to destination"}}}})
+
+;; Reused verbatim from activities so the two stay identical: same structured
+;; table + dialog (organization, role, email, web address, phone number) and the
+;; same contact roles.
+(def contact-props
+  {:contacts (:contacts activities/common-props)})
+
+(def additional-info-props
+  {:additional-info-link
+   {:schema localized-string-schema
+    :field
+    {:type        "text-field"
+     :description {:fi "Linkki kohteen omille verkkosivuille tai laajempaan kohde-esittelyyn. Syötä vain yksi verkko-osoite."
+                   :se "Länk till platsens egen webbplats eller till en mer omfattande presentation av platsen. Ange endast en webbadress."
+                   :en "Link to the website of the place or to a more extensive presentation of it. Enter only one web address."}
+     :label       {:fi "Lisätietoa verkossa"
+                   :se "Mer information på webben"
+                   :en "More information online"}}}})
+
 (def fire-props
   {:use-structure-during-fire-warning
    {:schema [:boolean]
@@ -188,6 +219,16 @@
       :props (merge
                common-props
                accessibility-props)}
+
+     :nature-centre
+     {:label {:fi "Luontokeskus" :se "Naturcentrum" :en "Nature centre"}
+      :value "nature-centre"
+      :props (merge
+               common-props
+               arrival-props
+               accessibility-props
+               contact-props
+               additional-info-props)}
 
      :parking-spot
      {:label {:fi "Pysäköintipaikka" :se "Parkeringsplats" :en "Parking spot"}
