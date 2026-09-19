@@ -3,33 +3,24 @@
    ptv_site_audit / ptv_service_audit tables. Audits are information about
    a site or service, not part of its document — and not part of the
    search index either: they are stored apart, served by audit-only
-   endpoints (site-audits / service-audits) that the frontend merges into
-   its site and service caches, and stripped from whatever clients send
-   back. This namespace is a leaf (db accessors + lipas.data.ptv only) so
-   both lipas.backend.core (the generic site save) and
-   lipas.backend.ptv.core (the PTV endpoints) can call it."
-  (:require [clojure.string :as str]
-            [lipas.backend.db.ptv-service :as ptv-service-db]
+   endpoints (site-audits / service-audits) that the frontend caches
+   apart from its sites and services, and stripped from whatever clients
+   send back. This namespace is a leaf (db accessors + lipas.data.ptv
+   only) so both lipas.backend.core (the generic site save) and
+   lipas.backend.ptv.core (the PTV endpoints) can call it; anything that
+   needs the PTV API happens in ptv.core before calling in here."
+  (:require [lipas.backend.db.ptv-service :as ptv-service-db]
             [lipas.backend.db.ptv-service-audit :as ptv-service-audit-db]
             [lipas.backend.db.ptv-site-audit :as ptv-site-audit-db]
-            [lipas.backend.ptv.integration :as ptv]
-            [lipas.data.ptv :as ptv-data]
+            [lipas.backend.db.sports-site :as sports-site-db]
             [lipas.utils :as utils]))
 
 ;;; Sites ;;;
 
-(defn strip-site-audit
-  "Site without a [:ptv :audit] key. Clients round-trip the site documents
-   the PTV views serve (audit included) and pre-move revisions still carry
-   one in the database; neither may land in a revision."
-  [site]
-  (cond-> site
-    (get-in site [:ptv :audit]) (update :ptv dissoc :audit)))
-
 (defn site-audits
   "Current audits of the given sites, [{:lipas-id n :audit map} ...] —
    sites without one are absent. What /actions/fetch-ptv-site-audits
-   serves; the frontend merges it into its site cache as [:ptv :audit]."
+   serves."
   [db lipas-ids]
   (->> (ptv-site-audit-db/get-current-by-lipas-ids db lipas-ids)
        (mapv (fn [[lipas-id audit]] {:lipas-id lipas-id :audit audit}))))
@@ -43,7 +34,7 @@
   (let [audit-by-lipas-id (ptv-site-audit-db/get-current-by-lipas-ids db (map :lipas-id sites))]
     (mapv (fn [site]
             (let [audit (get audit-by-lipas-id (:lipas-id site))]
-              (cond-> (strip-site-audit site)
+              (cond-> (sports-site-db/strip-audit site)
                 audit (assoc-in [:ptv :audit] audit))))
           sites)))
 
@@ -67,68 +58,46 @@
 
 ;;; Services ;;;
 
-(defn- resolve-service-revision!
-  "The lineage's current ptv_service revision for the service, by PTV
-   service id then by source-id. When the service has never been
-   persisted, takes an initial content revision from live PTV so the
-   lineage — and the audit's revision reference — exist. Only
-   sourceId-bearing (LIPAS-managed or adopted) services form auditable
-   lineages; nil otherwise."
-  [db ptv {:keys [org-id ptv-org-id user-id now service-id source-id]}]
-  (or (ptv-service-db/get-current-by-service-id db org-id service-id)
-      (when source-id
-        (ptv-service-db/get-current db org-id source-id))
-      (when ptv-org-id
-        (let [svc (ptv/get-service ptv ptv-org-id (str service-id))]
-          (when-not (str/blank? (:sourceId svc))
-            (let [doc (ptv-data/->service-document ptv-org-id svc)]
-              (ptv-service-db/insert-service-rev!
-                db
-                {:org-id org-id
-                 :source-id (:source-id doc)
-                 :service-id service-id
-                 :status "active"
-                 :author-id user-id
-                 :event-date now
-                 :document doc})))))))
-
 (defn save-service-audit!
   "Appends the auditor's verdicts on a PTV Service of `org` (a LIPAS org
-   map) to ptv_service_audit, anchored to the lineage's current
-   ptv_service revision, and returns the stored audit map — or nil when
-   the service can't be resolved (see resolve-service-revision!)."
-  [db ptv user org {:keys [service-id source-id audit]}]
+   map) to ptv_service_audit, anchored to `current`, the lineage's current
+   ptv_service revision (see lipas.backend.ptv.core/save-ptv-service-audit
+   for how it is resolved), and returns the stored audit map."
+  [db user org current {:keys [service-id audit]}]
   (let [now (utils/timestamp)
         user-id (or (:id user) (get-in user [:login :user :id]))
-        current (resolve-service-revision! db ptv {:org-id (:id org)
-                                                   :ptv-org-id (-> org :ptv-data :org-id)
-                                                   :user-id user-id
-                                                   :now now
-                                                   :service-id service-id
-                                                   :source-id source-id})]
-    (when current
-      (let [audit* (assoc audit :timestamp now :auditor-id (str user-id))]
-        (ptv-service-audit-db/insert-audit!
-          db
-          {:org-id (:id org)
-           :source-id (:source-id current)
-           :service-id (or (:service-id current) service-id)
-           :service-revision-id (:id current)
-           :auditor-id user-id
-           :event-date now
-           :document audit*})
-        audit*))))
+        audit* (assoc audit :timestamp now :auditor-id (str user-id))]
+    (ptv-service-audit-db/insert-audit!
+      db
+      {:org-id (:id org)
+       :source-id (:source-id current)
+       :service-id (or (:service-id current) service-id)
+       :service-revision-id (:id current)
+       :auditor-id user-id
+       :event-date now
+       :document audit*})
+    audit*))
 
 (defn service-audits
   "Current audits of the org's audited services,
    [{:service-id \"<uuid>\" :source-id s :audit map} ...]. What
-   /actions/fetch-ptv-service-audits serves; the frontend merges it into
-   the live PTV service list by service id."
+   /actions/fetch-ptv-service-audits serves; the frontend joins it with
+   the live PTV service list by service id. An audit row that predates
+   its lineage's PTV UUID takes the id from the lineage's current
+   revision; a lineage without one anywhere is not served, as nothing
+   could be joined to it."
   [db org-id]
-  (->> (ptv-service-audit-db/get-current-by-org db org-id)
-       (mapv (fn [row] {:service-id (str (:service-id row))
-                        :source-id (:source-id row)
-                        :audit (:document row)}))))
+  (let [service-id-by-source-id (into {}
+                                      (map (juxt :source-id :service-id))
+                                      (ptv-service-db/get-current-by-org db org-id))]
+    (->> (ptv-service-audit-db/get-current-by-org db org-id)
+         (keep (fn [{:keys [service-id source-id document]}]
+                 (when-let [service-id (or service-id
+                                           (get service-id-by-source-id source-id))]
+                   {:service-id (str service-id)
+                    :source-id source-id
+                    :audit document})))
+         vec)))
 
 (defn current-service-audits
   "service-id (string) -> current audit map for the org's audited

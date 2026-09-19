@@ -972,6 +972,8 @@
       ;; Document extracted from the live PTV entity
       (is (= {:fi "Kuntosalit"} (get-in current [:document :name])))
       (is (= {:fi "Tiivistelmä"} (get-in current [:document :summary])))
+      ;; ...written by the same path as every other revision
+      (is (some? (get-in current [:document :last-sync])))
       ;; ...and the audit anchored to that initial revision
       (is (= "changes-requested" (get-in stored [:document :summary :status])))
       (is (= (:id current) (:service-revision-id stored))))))
@@ -1125,6 +1127,31 @@
           body (tu/safe-parse-json resp)]
       (is (= 200 (:status resp)))
       (is (= [{:service-id svc-id :source-id source-id :audit audit}] body))))
+
+  (testing "An audit row without a service id is served under the lineage's current one"
+    (let [org (seed-service-org!)
+          auditor (tu/gen-ptv-auditor :db-component (test-db))
+          token (jwt/create-token auditor)
+          svc-id (str (java.util.UUID/randomUUID))
+          source-id (str "lipas-" svc-ptv-org-id "-1300")
+          rev (seed-service-rev! org {:source-id source-id :service-id svc-id})
+          audit {:timestamp "2026-07-01T00:00:00.000Z" :auditor-id (str (:id auditor))
+                 :summary {:status "approved" :feedback "" :audited-content {:fi "Tiivistelmä"}}}
+          _ (ptv-service-audit-db/insert-audit! (test-db)
+                                                {:org-id (:id org)
+                                                 :source-id source-id
+                                                 :service-id nil ; audited before the PTV UUID was recorded
+                                                 :service-revision-id (:id rev)
+                                                 :auditor-id (:id auditor)
+                                                 :event-date (:timestamp audit)
+                                                 :document audit})
+          resp (test-app (-> (mock/request :post "/api/actions/fetch-ptv-service-audits")
+                             (mock/content-type "application/json")
+                             (mock/body (tu/->json {:org-id (str (:id org))}))
+                             (tu/token-header token)))]
+      (is (= 200 (:status resp)))
+      (is (= [{:service-id svc-id :source-id source-id :audit audit}]
+             (tu/safe-parse-json resp)))))
 
   (testing "Regular users get 403"
     (let [org (seed-service-org!)

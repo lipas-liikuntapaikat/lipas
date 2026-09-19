@@ -830,13 +830,29 @@
   (send-audit-notification!* db emailer org-id :sites
                              (site-audit-notification-data db search org-id)))
 
+(defn- resolve-service-revision!
+  "The lineage's current ptv_service revision for the service, by PTV
+   service id then by source-id. When the service has never been
+   persisted, takes an initial content revision from live PTV so the
+   lineage — and the audit's revision reference — exist. Only
+   sourceId-bearing (LIPAS-managed or adopted) services form auditable
+   lineages; nil otherwise."
+  [db ptv user org {:keys [service-id source-id]}]
+  (or (ptv-service-db/get-current-by-service-id db (:id org) service-id)
+      (when source-id
+        (ptv-service-db/get-current db (:id org) source-id))
+      (when-let [ptv-org-id (-> org :ptv-data :org-id)]
+        (persist-ptv-service-revision!
+          db user ptv-org-id (ptv/get-service ptv ptv-org-id (str service-id))))))
+
 (defn save-ptv-service-audit
   "Saves auditor feedback for a PTV Service of the LIPAS org `org-id` (see
    lipas.backend.ptv.audit/save-service-audit!). Returns the stored audit
    map, or nil when the org or the service can't be resolved."
   [db ptv user {:keys [org-id] :as m}]
   (when-let [org (backend-org/get-org db org-id)]
-    (audit/save-service-audit! db ptv user org m)))
+    (when-let [current (resolve-service-revision! db ptv user org m)]
+      (audit/save-service-audit! db user org current m))))
 
 (defn get-ptv-service-audits
   "Current katselmointi of the org's services (see

@@ -114,13 +114,20 @@
       (if content_event_date
         (do
           (log/info "lipas-id" lipas_id "revision" (str id) ":" (str event_date) "->" (str content_event_date))
+          ;; jsonb_set is strict: a NULL value would null the whole document.
+          ;; Fall back to formatting the column when the earlier revision's
+          ;; document has no event-date string of its own.
           (jdbc/execute-one!
             db
             ["UPDATE sports_site
               SET event_date = ?,
-                  document = jsonb_set(document, '{event-date}', to_jsonb(?::text))
+                  document = jsonb_set(
+                    document, '{event-date}',
+                    to_jsonb(COALESCE(?::text,
+                                      to_char(?::timestamptz AT TIME ZONE 'UTC',
+                                              'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"'))))
               WHERE id = ?"
-             content_event_date content_event_date_str id]))
+             content_event_date content_event_date_str content_event_date id]))
         (log/warn "lipas-id" lipas_id "revision" (str id)
                   "has no earlier content revision; event_date left as is")))
     (log/info "Migration complete: ptv-site-audit-move")

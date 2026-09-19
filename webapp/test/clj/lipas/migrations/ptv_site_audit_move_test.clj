@@ -74,8 +74,17 @@
 
 (deftest ptv-site-audit-move-test
   (let [user (tu/gen-admin-user :db-component (test-db))
-        lipas-id 9990101]
+        lipas-id 9990101
+        ;; the same, but the content revision's document (a pre-marshall
+        ;; import) has no event-date string to copy into the audit-only ones
+        no-doc-date-id 9990103
+        t0-from-column "2026-05-14T15:34:16.385Z"]
     (seed-site! user lipas-id)
+    (seed-site! user no-doc-date-id)
+    (jdbc/execute-one! (test-db)
+                       ["UPDATE sports_site SET document = document - 'event-date'
+                         WHERE lipas_id = ? AND document->>'event-date' = ?"
+                        no-doc-date-id t0])
     ;; a site whose revision carries an audit but whose event-date is a
     ;; content edit (audit carried over by a sync) is not audit-only
     (core/upsert-sports-site!* (test-db) user
@@ -100,9 +109,9 @@
 
     (testing "dry run lists what will happen"
       (let [{:keys [audits repairs]} (sut/compute-plan (test-db))]
-        (is (= #{[lipas-id t1] [lipas-id t2] [9990102 t1]}
+        (is (= #{[lipas-id t1] [lipas-id t2] [9990102 t1] [no-doc-date-id t1] [no-doc-date-id t2]}
                (set (map (juxt :lipas_id #(str (.toInstant ^java.sql.Timestamp (:event_date %)))) audits))))
-        (is (= [[lipas-id t1 t0] [lipas-id t2 t0]]
+        (is (= [[lipas-id t1 t0] [lipas-id t2 t0] [no-doc-date-id t1 nil] [no-doc-date-id t2 nil]]
                (mapv (juxt :lipas_id
                            #(str (.toInstant ^java.sql.Timestamp (:event_date %)))
                            :content_event_date_str)
@@ -128,7 +137,11 @@
         (is (= t0 (:doc_event_date row)))
         (is (= t0 (str (.toInstant ^java.sql.Timestamp (:event_date row)))))
         ;; the audit revision itself is still the current one (view tie-break on created_at)
-        (is (:has_audit row))))
+        (is (:has_audit row)))
+      (let [row (current-row no-doc-date-id)]
+        (is (= t0-from-column (:doc_event_date row))
+            "no string to copy: the document gets the column's value formatted")
+        (is (= t0 (str (.toInstant ^java.sql.Timestamp (:event_date row)))))))
 
     (testing "the synced site's revision is left alone"
       (is (= t2 (:doc_event_date (current-row 9990102)))))

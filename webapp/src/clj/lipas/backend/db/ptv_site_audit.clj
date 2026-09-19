@@ -45,18 +45,6 @@
                                    :where [:in :lipas_id (vec lipas-ids)]})
                      query-opts))))
 
-(defn get-all-current
-  "Map of lipas-id -> latest audit map for every audited site (one small
-   query; audited sites are a sample, hundreds at most). Resolved once per
-   index batch, see lipas.backend.ptv.audit/current-site-audits."
-  [db]
-  (into {}
-        (map (juxt :lipas-id :document))
-        (sql/query db
-                   (hsql/format {:select [:lipas_id :document]
-                                 :from [:ptv_site_audit_current]})
-                   query-opts)))
-
 (defn get-current
   "Latest audit map of the site, or nil."
   [db lipas-id]

@@ -13,13 +13,13 @@
             [lipas.backend.api.v1.sports-place :as legacy-sports-place]
             [lipas.backend.api.v1.transform :as legacy-transform]
             [lipas.backend.db.db :as db]
+            [lipas.backend.db.sports-site :as sports-site-db]
             [lipas.backend.email :as email]
             [lipas.backend.geom-utils :refer [feature-coll->geom-coll]]
             [lipas.backend.gis :as gis]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.newsletter :as newsletter]
             [lipas.backend.org :as org]
-            [lipas.backend.ptv.audit :as ptv-audit]
             [lipas.backend.search :as search]
             [lipas.backend.token-revocation :as revocation]
             [lipas.data-model-export :as data-model-export]
@@ -653,7 +653,7 @@
                        sports-site)
          ;; The PTV audit is not part of the document (see
          ;; lipas.backend.ptv.audit): drop whatever the client sent back.
-         sports-site (ptv-audit/strip-site-audit sports-site)]
+         sports-site (sports-site-db/strip-audit sports-site)]
      ;; 1. Content-edit permission. For an existing site the privilege must hold
      ;;    for BOTH the stored revision (a scoped editor can't touch sites
      ;;    outside their scope, and org-owned-site editors keep edit rights via
@@ -996,7 +996,7 @@
                       :activities activity-keys}]
      (-> sports-site
          (assoc :search-meta search-meta)
-         ptv-audit/strip-site-audit))))
+         sports-site-db/strip-audit))))
 
 #_(defn enrich-ice-stadium [{:keys [envelope building] :as ice-stadium}]
     (let [smaterial (-> envelope :base-floor-structure)
