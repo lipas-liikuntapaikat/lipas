@@ -169,20 +169,23 @@ the site's `:event-date` although nothing changed — which the PTV views
 read as "out of sync" for every audited site.
 
 Audits are a separate entity all the way to the frontend: the backend
-serves them from audit-only endpoints and the frontend merges them into
-the caches its audit readers already use, so the site and service
-listings, the whose-move buckets, the audit form and the site page's PTV
-tab keep reading `[:ptv :audit]` / a per-service audit as before.
+serves them from audit-only endpoints and the frontend caches them apart
+from the sites and services, joining them in derived subscriptions. The
+site and service listings, the whose-move buckets, the audit form and the
+site page's PTV tab keep reading `[:ptv :audit]` / a per-service audit as
+before, but only off those derived views — no cache write of a site's
+`:ptv` (sync, archive, candidates reload) can drop an audit.
 
 | | Sites | Services |
 |---|---|---|
 | content | `get-ptv-integration-candidates` (ES, no audit) | `fetch-ptv-services` (live PTV) |
 | audits | `fetch-ptv-site-audits` `{:lipas-ids [...]}` → `[{:lipas-id :audit}]` | `fetch-ptv-service-audits` `{:org-id}` → `[{:service-id :source-id :audit}]` |
-| FE merge | `::fetch-ptv-site-audits` (dispatched after the candidates load) writes each audit into the cached site as `[:ptv :audit]` | `[:ptv :org <id> :data :service-audits]` keyed by `(str service-id)`, joined by `::services-with-audit` |
+| FE cache | `[:ptv :org <id> :data :site-audits]` keyed by lipas-id (`::fetch-ptv-site-audits`, dispatched after the candidates load), joined by `::sites-with-audit` | `[:ptv :org <id> :data :service-audits]` keyed by `(str service-id)`, joined by `::services-with-audit` |
 
-A sync/archive response replaces a cached site's `:ptv` but keeps the
-audit already in the cache (`-replace-ptv-keep-audit`). The notification
-data is the one backend reader of the merged view
+Both fetches merge into the cache by newer `:timestamp` (audits are
+append-only), so a response that was requested before a save and lands
+after it cannot overwrite what the save stored. The notification data is
+the one backend reader of the merged view
 (`lipas.backend.ptv.audit/with-site-audits`). The write side strips: the
 `ptv_service` accessors and `db/unmarshall` hide the in-document audits
 of pre-move revisions, `core/enrich` drops any legacy copy before

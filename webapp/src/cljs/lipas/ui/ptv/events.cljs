@@ -289,20 +289,39 @@
                                  persisted (select-keys (:ptv new-site)
                                                         ptv-data/site-audited-field-keys)]
                              (assoc m lipas-id
-                                    (cond-> (assoc new-site :ptv-persisted persisted)
-                                      (:ptv existing) (update :ptv #(merge (:ptv existing) %))))))
+                                    (-> new-site
+                                        (assoc :ptv-persisted persisted)
+                                        (cond-> (:ptv existing) (update :ptv #(merge (:ptv existing) %)))
+                                        ;; a search index not yet reindexed after the
+                                        ;; audit move still serves the legacy in-document
+                                        ;; copy; the cache never holds one (see below)
+                                        (update :ptv dissoc :audit)))))
                          {}
                          new-sites)]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :candidates] false)
                (assoc-in [:ptv :org ptv-org-id :data :sports-sites] merged-sites))
-       ;; audits are a separate entity in the backend; merge them in
+       ;; audits are stored and served apart from the sites
        :fx [[:dispatch [::fetch-ptv-site-audits ptv-org-id (vec (keys merged-sites))]]]})))
 
 ;; Site audits live in ptv_site_audit and are served apart from the sites
-;; (/actions/fetch-ptv-site-audits). They are merged into the cached sites
-;; as [:ptv :audit], the shape every audit reader (listings, whose-move
-;; buckets, the audit form, the site page's PTV tab) uses.
+;; (/actions/fetch-ptv-site-audits). They are cached apart too, at
+;; [:ptv :org <ptv-org-id> :data :site-audits] keyed by lipas-id, and the
+;; subs join them into the sites (see ::sites-with-audit in the subs ns).
+;; Service audits are kept the same way under :service-audits, keyed by
+;; (str service-id) like the :services cache.
+
+(defn- -merge-audits
+  "`cached` audits with `fetched` ones merged in. Audits are append-only,
+   so the newer :timestamp always wins: a response requested before a save
+   and arriving after it can't overwrite what the save stored, and a fetch
+   covering a subset of items can't drop the rest."
+  [cached fetched]
+  (merge-with (fn [old new]
+                (if (pos? (compare (:timestamp new) (:timestamp old))) new old))
+              cached
+              fetched))
+
 (rf/reg-event-fx ::fetch-ptv-site-audits
   (fn [{:keys [db]} [_ ptv-org-id lipas-ids]]
     (when (seq lipas-ids)
@@ -319,16 +338,8 @@
 
 (rf/reg-event-db ::fetch-ptv-site-audits-success
   (fn [db [_ ptv-org-id resp]]
-    (let [audit-by-lipas-id (into {} (map (juxt :lipas-id :audit)) resp)]
-      (update-in db [:ptv :org ptv-org-id :data :sports-sites]
-                 (fn [sites]
-                   (reduce-kv (fn [m lipas-id site]
-                                (assoc m lipas-id
-                                       (if-let [audit (get audit-by-lipas-id lipas-id)]
-                                         (assoc-in site [:ptv :audit] audit)
-                                         (update site :ptv dissoc :audit))))
-                              {}
-                              sites))))))
+    (update-in db [:ptv :org ptv-org-id :data :site-audits]
+               -merge-audits (into {} (map (juxt :lipas-id :audit)) resp))))
 
 (rf/reg-event-fx ::fetch-ptv-site-audits-failure
   (fn [{:keys [db]} [_ resp]]
@@ -1346,14 +1357,6 @@
 
 ;;; Create service locations in PTV ;;;
 
-(defn- -replace-ptv-keep-audit
-  "The server's :ptv meta for a site, with the audit the cache already
-   holds kept: audits are fetched apart from the sites (see
-   ::fetch-ptv-site-audits) and a sync/archive response doesn't carry one."
-  [cached-ptv server-ptv]
-  (cond-> server-ptv
-    (:audit cached-ptv) (assoc :audit (:audit cached-ptv))))
-
 (defn service-location-payload
   "Build the exact request body posted to /actions/save-ptv-service-location
   for `lipas-id`. Shared by the sync event and the client-side schema
@@ -1414,7 +1417,7 @@
                  (update-in [:ptv :org org-id :data :service-channels] dissoc old-channel-id))
                               ;; Update the lipas TS also, it will be the same TS as PTV last-sync now
                (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :event-date] (:last-sync ptv))
-               (update-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] -replace-ptv-keep-audit ptv)
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv)
                               ;; The sync persisted the draft — refresh the snapshot audit
                               ;; whose-move states are derived from, so the audit status
                               ;; (row bucket, feedback alert) moves only now, not on keystrokes.
@@ -1471,7 +1474,7 @@
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :service-locations] false)
                (update-in [:ptv :syncing :service-location] dissoc lipas-id)
-               (update-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] -replace-ptv-keep-audit ptv))
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification
                         {:message (tr :ptv.actions/archived-in-ptv) :success? true}]]]})))
 
@@ -1740,7 +1743,7 @@
 (defn- -site-persisted-audit
   [db lipas-id]
   (get-in db [:ptv :org (-get-ptv-org-id db)
-              :data :sports-sites lipas-id :ptv :audit]))
+              :data :site-audits lipas-id]))
 
 (defn- -service-persisted-audit
   [db service-id]
@@ -1808,7 +1811,7 @@
           org-id (-get-ptv-org-id db)]
       {:db (-> db
                (assoc-in [:ptv :audit :saving?] false)
-               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit] resp)
+               (assoc-in [:ptv :org org-id :data :site-audits lipas-id] resp)
                (update-in [:ptv :audit :site-draft] dissoc lipas-id)
                ;; new audit activity re-arms the notification button
                (assoc-in [:ptv :audit :notification-sent?] false))
@@ -1895,8 +1898,8 @@
 
 (rf/reg-event-db ::fetch-ptv-service-audits-success
   (fn [db [_ ptv-org-id resp]]
-    (assoc-in db [:ptv :org ptv-org-id :data :service-audits]
-              (into {} (map (juxt :service-id :audit)) resp))))
+    (update-in db [:ptv :org ptv-org-id :data :service-audits]
+               -merge-audits (into {} (map (juxt :service-id :audit)) resp))))
 
 (rf/reg-event-fx ::fetch-ptv-service-audits-failure
   (fn [{:keys [db]} [_ resp]]

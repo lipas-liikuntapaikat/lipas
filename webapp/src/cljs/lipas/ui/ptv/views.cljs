@@ -124,7 +124,8 @@
    Renders resolved (info) once the municipality has fixed the text."
   [{:keys [lipas-id field-name]}]
   (let [tr (<== [:lipas.ui.subs/translator])
-        field-audit (<== [::subs/site-audit-field-display lipas-id field-name])]
+        org-id (<== [::subs/selected-ptv-org-id])
+        field-audit (<== [::subs/site-audit-field-display org-id lipas-id field-name])]
     [ptv-components/audit-feedback-alert
      {:tr tr
       :field-audit field-audit}]))
