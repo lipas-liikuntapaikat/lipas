@@ -22,10 +22,11 @@ The PTV Audit feature allows authorized users to review and provide feedback on 
 ### Auditing Process
 
 1. **Select Tab** (see "Whose-move workflow" below for the exact rules):
-   - **Odottavat**: the auditor's queue — content-ready but unaudited,
-     partially audited, or approved content edited afterwards
+   - **Odottavat**: the auditor's queue — content-ready but unaudited, or
+     partially audited
    - **Katselmoidut**: waiting for the municipality's fixes
-   - **Valmiit**: approved, or fixed in response to a changes request
+   - **Valmiit**: approved, or fixed in response to a changes request;
+     items edited after the audit stay here, flagged "Muuttunut"
 
 2. **Select Site**: Click on a site from the list to view its details
 
@@ -131,12 +132,74 @@ Backend Validation (audit-data schema)
     ↓
 Add :timestamp and :auditor-id
     ↓
-Save to Database (ptv-audit schema)
+Append to ptv_site_audit (ptv-audit schema) — the site document and the index are untouched
     ↓
 Return to Frontend
     ↓
 Frontend State (ptv-audit schema with metadata)
 ```
+
+### Storage
+
+Audits live in their own append-only tables, apart from the content they
+judge — the same shape on both sides:
+
+| | Sites | Services |
+|---|---|---|
+| table / view | `ptv_site_audit` / `ptv_site_audit_current` | `ptv_service_audit` / `ptv_service_audit_current` |
+| accessors | `lipas.backend.db.ptv-site-audit` | `lipas.backend.db.ptv-service-audit` |
+| lineage | `lipas_id` | `(org_id, source_id)` (+ `service_id`), like `ptv_service` |
+| revision the verdicts were given on | `site_revision_id` → `sports_site.id` | `service_revision_id` → `ptv_service.id` |
+| migrations | `20260918100000` DDL, `20260918100100` move | `20260918100200` DDL, `20260918100300` move |
+
+The business logic over both tables lives in `lipas.backend.ptv.audit`
+(a leaf namespace: db accessors + `lipas.data.ptv`), which
+`lipas.backend.ptv.core` calls for the reads and the saves;
+`lipas.backend.core` only strips the audit from what it saves and indexes
+and knows nothing about the tables.
+
+`document` is the audit map. The revision reference is provenance only: the
+whose-move states compare the audited Finnish text, not revisions, so
+unrelated edits (address, phone) don't count as changes. A service audit on
+a never-persisted service first takes an initial `ptv_service` revision
+from live PTV so the lineage (and the reference) exist. They are **not** part of the sports
+site document: an audit is information *about* the site, and storing it in
+the document used to append a `sports_site` revision per audit save, moving
+the site's `:event-date` although nothing changed — which the PTV views
+read as "out of sync" for every audited site.
+
+Audits are a separate entity all the way to the frontend: the backend
+serves them from audit-only endpoints and the frontend caches them apart
+from the sites and services, joining them in derived subscriptions. The
+site and service listings, the whose-move buckets, the audit form and the
+site page's PTV tab keep reading `[:ptv :audit]` / a per-service audit as
+before, but only off those derived views — no cache write of a site's
+`:ptv` (sync, archive, candidates reload) can drop an audit.
+
+| | Sites | Services |
+|---|---|---|
+| content | `get-ptv-integration-candidates` (ES, no audit) | `fetch-ptv-services` (live PTV) |
+| audits | `fetch-ptv-site-audits` `{:lipas-ids [...]}` → `[{:lipas-id :audit}]` | `fetch-ptv-service-audits` `{:org-id}` → `[{:service-id :source-id :audit}]` |
+| FE cache | `[:ptv :org <id> :data :site-audits]` keyed by lipas-id (`::fetch-ptv-site-audits`, dispatched after the candidates load), joined by `::sites-with-audit` | `[:ptv :org <id> :data :service-audits]` keyed by `(str service-id)`, joined by `::services-with-audit` |
+
+Both fetches merge into the cache by newer `:timestamp` (audits are
+append-only), so a response that was requested before a save and lands
+after it cannot overwrite what the save stored. The notification data is
+the one backend reader of the merged view
+(`lipas.backend.ptv.audit/with-site-audits`). The write side strips: the
+`ptv_service` accessors and `db/unmarshall` hide the in-document audits
+of pre-move revisions, `core/enrich` drops any legacy copy before
+indexing, `core/upsert-sports-site!` drops `[:ptv :audit]` from any
+submitted body (clients round-trip cached sites, and nobody can hand
+themselves an approval), and `save-ptv-audit` / `save-ptv-service-audit`
+are the only writers — neither appends a content revision or touches the
+index.
+
+The code migrations (`lipas.migrations.ptv-site-audit-move` /
+`ptv-service-audit-move`, both with `compute-plan` for a dry run) copied
+the existing audits over. The site one also re-dated the audit-only site
+revisions back to their content revision's date — the pre-move audits in
+prod had turned every audited site's PTV chip orange.
 
 ### State Structure
 
@@ -422,11 +485,10 @@ The `save-ptv-audit` function:
      ...)
    ```
 
-2. **Saves to Database**: Updates the sports site document with audit information
+2. **Appends to ptv_site_audit**: the site document, its `:event-date`
+   and the search index are untouched (see "Storage")
 
-3. **Reindexes Search**: Ensures audit data is searchable (async)
-
-4. **Returns Full Audit**: Returns audit data with timestamp and auditor-id
+3. **Returns Full Audit**: Returns audit data with timestamp and auditor-id
 
 ## Internationalization
 
@@ -658,8 +720,9 @@ Test the Malli schemas:
 
 In addition to service locations (sports sites), auditors can audit **PTV
 Services** — the per-(org × sub-category) entities the locations attach to.
-Services have no sports-site document to hang an audit on, so Service audits
-are persisted in the dedicated append-only **`ptv_service`** table.
+LIPAS keeps a shadow of each managed Service's content in the append-only
+**`ptv_service`** table, and the Service audits in **`ptv_service_audit`**
+(see "Storage" above).
 
 ### Scope
 
@@ -677,10 +740,15 @@ first, which assigns the adopted source-id.
   lineage regardless of status.
 - The `document` holds only the LIPAS-managed subset of the Service (name,
   summary, description, user-instruction, languages, publishing-status —
-  extracted by `lipas.data.ptv/->service-document`) plus `:audit` in the exact
-  same shape as the site-level `ptv-audit` schema, and `:last-sync`.
+  extracted by `lipas.data.ptv/->service-document`) and `:last-sync`.
+- Table `ptv_service_audit` (migration `20260918100200`): the audits, same
+  lineage, `service_revision_id` pointing at the `ptv_service` revision the
+  verdicts were given on, `document` in the exact same shape as the
+  site-level `ptv-audit` schema.
 - Accessors: `lipas.backend.db.ptv-service` (insert-service-rev!, get-current,
-  get-current-by-org, get-current-by-service-id, get-history).
+  get-current-by-org, get-current-by-service-id, get-history) and
+  `lipas.backend.db.ptv-service-audit` (insert-audit!, get-current,
+  get-current-by-org, get-history).
 - Request schemas: `lipas.schema.ptv` (reuses `audit-data` from
   `lipas.schema.sports-sites.ptv` — do not duplicate audit schemas).
 
@@ -688,20 +756,19 @@ first, which assigns the adopted source-id.
 
 1. **Shadow revisions on every Service write.** `upsert-ptv-service!` persists
    a revision from the PTV response after every successful create/update/adopt
-   (`persist-ptv-service-revision!`). The previous revision's `:audit` is
-   carried forward so audits survive content syncs. Persistence failures are
-   logged, never raised — the PTV write already succeeded and the next upsert
-   self-heals.
+   (`persist-ptv-service-revision!`). Persistence failures are logged, never
+   raised — the PTV write already succeeded and the next upsert self-heals.
 2. **Audit save.** `POST /actions/save-ptv-service-audit` (privilege
-   `:ptv/audit`) loads the current revision (by service-id, then source-id);
-   when none exists it lazily creates the initial document from a live PTV
-   fetch. The backend stamps `:timestamp` and `:auditor-id` and appends a new
-   revision with the auditor as `author_id`. Concurrent audits are safe:
-   append-only inserts, last-write-wins in the current view, full history
-   retained.
+   `:ptv/audit`) resolves the current `ptv_service` revision (by service-id,
+   then source-id); when none exists it first creates the initial revision
+   from a live PTV fetch. The backend stamps `:timestamp` and `:auditor-id`
+   and appends a `ptv_service_audit` row referencing that revision — no
+   content revision is written. Concurrent audits are safe: append-only
+   inserts, last-write-wins in the current view, full history retained.
 3. **Read.** `POST /actions/fetch-ptv-service-audits` (gated like other PTV
-   fetches: `:ptv/audit` globally or `:ptv/manage` per city) returns the org's
-   current revisions for the frontend to join with the live PTV service list.
+   fetches: `:ptv/audit` globally or `:ptv/manage` per city) returns the
+   org's current service audits (`[{:service-id :source-id :audit}]`) for
+   the frontend to merge into the live PTV service list.
 4. **Notification.** `POST /actions/send-service-audit-notification` emails the
    org's PTV managers with service-audit counts (template
    `ptv_service_audit_complete_fi`).
@@ -715,40 +782,50 @@ DVV's process vocabulary (Odottavat / Katselmoidut / Valmiit):
 
 | Tab | Bucket | Rule | Whose move |
 |---|---|---|---|
-| Odottavat | `:waiting-audit` | content-ready but unaudited, partially audited, or *approved* content edited afterwards (`:stale`) | auditor |
+| Odottavat | `:waiting-audit` | content-ready but unaudited, or partially audited | auditor |
 | Katselmoidut | `:waiting-fixes` | changes requested, content unchanged | municipality |
-| Valmiit | `:done` | every required field approved, or *fixed* after a changes request | nobody (DVV reviews fixes here) |
+| Valmiit | `:done` | every required field approved or *fixed* after a changes request — including items edited after the audit (`:stale`) | nobody |
 
-The key rule comes from DVV's audit process: a content edit made **in
-response to a changes request** is the municipality completing its move —
-the item goes to *Valmiit*, where DVV sees the original text, the feedback
-and a word diff of the change. An edit to **approved** content instead
-invalidates the approval (`:stale`) and returns the item to the auditor's
-queue.
+The key rules come from DVV's audit process (confirmed with DVV in
+September 2026): DVV audits an item **once, as a whole**. A content edit
+made **in response to a changes request** is the municipality completing
+its move — the item goes to *Valmiit* and the fix is accepted as such,
+without a re-review. An edit to **approved** content does not reopen the
+audit either: the item stays in *Valmiit*, flagged "Muuttunut" with a word
+diff and the content's modification date, and DVV re-audits it only when
+they explicitly decide to ("Auditoi uudelleen").
+
+Only the **Finnish** text is audited, so a verdict is compared on the `:fi`
+entry alone (whitespace-normalized): editing a translation, or a language
+version missing after a PTV-side archive/restore, changes no verdict.
 
 Mechanics (all derived, nothing stored beyond the audit map):
 
 - **Scope is implicit**: the first saved verdict pulls an item into the
   sample. "Odottavat" shows every content-ready item, with in-flight items
-  (partially audited or stale) sorted first so re-audits don't drown among
-  untouched items. (The API also accepts an empty audit —
+  (partially audited) sorted first so they don't drown among untouched
+  items. (The API also accepts an empty audit —
   timestamp/auditor-id only — as an explicit scope marker, but the UI
   doesn't use it; the save button requires at least one field verdict.)
-- **Saves are never no-ops**: every save appends a revision (sports_site /
-  ptv_service) and re-anchors the verdict snapshots to the current text,
-  so the save button additionally requires actual input since the last
-  save (dirty tracking in `[:ptv :audit :site-dirty/:service-dirty]`).
-  The one exception: an item with a *stale* verdict can be saved without
-  touching the form — that save is the re-approval that re-anchors the
-  snapshot to the edited content.
+- **Saves are never no-ops**: every save appends an audit row and anchors
+  the verdicts given in it to the current text
+  (`lipas.data.ptv/anchor-audit-snapshots`), so the save button
+  additionally requires actual input since the last save (a draft exists
+  in `[:ptv :audit :site-draft/:service-draft]`). The one exception: an
+  item with a *stale* verdict can be saved without touching the form —
+  that save is the re-approval that re-anchors the snapshot to the edited
+  content. A *fixed* field the auditor did not touch keeps its old
+  snapshot, so saving another field of the item cannot turn the fix back
+  into an open change request.
 - **Per-revision verdicts**: each field verdict carries an
   `:audited-content` snapshot of the localized text it was given on
   (`audit-field` schema). `lipas.data.ptv/audit-field-state` compares the
-  snapshot against current content: an edit after *approved* → `:stale`
-  ("Muuttunut auditoinnin jälkeen" chip, back to Odottavat); an edit after
-  *changes-requested* → `:fixed` ("Korjattu auditoinnin jälkeen" chip, to
-  Valmiit). Both render a word diff of the change in the audit form.
-  Verdicts saved before snapshots existed are grandfathered as unchanged.
+  snapshot's Finnish text against the current one: an edit after
+  *approved* → `:stale` ("Muuttunut auditoinnin jälkeen" chip, stays in
+  Valmiit); an edit after *changes-requested* → `:fixed` ("Korjattu
+  auditoinnin jälkeen" chip, to Valmiit). Both render a word diff of the
+  change in the audit form. Verdicts saved before snapshots existed are
+  grandfathered as unchanged.
 - **Bucket rollup**: `lipas.data.ptv/audit-bucket` over
   `site-audit-fields`/`service-audit-fields` (Toimintaohje is required only
   when the service has one).
@@ -758,24 +835,32 @@ Mechanics (all derived, nothing stored beyond the audit map):
   read-only gate only engages when there is no unsaved input (dirty flag):
   the bucket is derived from the live draft, so completing the last
   verdict would otherwise hide the save button before the audit is saved.
-- **Audit survives municipality writes**: `:ptv :audit` on sites is
-  server-owned — both the sync path (`upsert-ptv-service-location!*`) and
-  the meta path (`save-ptv-integration-definitions`) carry it over from
-  the existing record instead of rebuilding `:ptv` without it. (For
-  Services, `persist-ptv-service-revision!` has always carried `:audit`
-  forward.)
-- **Notification stats** tally only verdict-complete items (bucket
-  `:waiting-fixes` or `:done`) — an item back in the auditor's queue does
-  not count as audited. Sending opens a confirmation dialog that shows the
-  recipients (the org's PTV managers, from
-  `/actions/get-ptv-audit-notification-recipients`) and a summary of the
-  email contents before anything is sent. New audit activity re-arms the
-  send button.
+- **Audits are not in the site document** (see "Storage" above): only
+  `save-ptv-audit` writes `ptv_site_audit`, and the generic site save drops
+  any `[:ptv :audit]` a client sends back, so municipality writes can
+  neither wipe nor forge verdicts. Service audits live in
+  `ptv_service_audit` the same way, so content syncs
+  (`persist-ptv-service-revision!`) have nothing to carry forward.
+- **Municipality-facing status** (`lipas.data.ptv/audit-display-status`,
+  the Katselmointi column of the sites table and the services list) is
+  derived from the field states, not from DVV's buckets: an open change
+  request on any field shows the warning symbol (even if another field was
+  edited meanwhile); otherwise a fully audited item shows the approved
+  symbol (approved, edited since, or fixed alike — plus a comment marker
+  when the auditor left a remark); an unfinished audit shows nothing.
+- **Notification contents** (`lipas.data.ptv/audit-notification-summary`,
+  shared by the email builder and the send button): the action list is
+  every fully audited item with an open change request on some field, and
+  the approved count is the items approved without change requests. Fixed
+  items and unfinished audits appear in neither. Sending opens a
+  confirmation dialog that shows the recipients (the org's PTV managers)
+  and the derived contents before anything is sent. New audit activity
+  re-arms the send button.
 
 The municipality-facing feedback alerts (site PTV tab, wizard texts editor
 and the PALVELUT tab) follow the same field states: a red
 "vaatii muutoksia" alert turns into a resolved info-alert once the fix is
-saved/synced, and approved-but-edited content shows a warning.
+saved/synced; an approval's remark stays a green alert after edits.
 
 ### UI
 

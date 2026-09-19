@@ -763,17 +763,26 @@
 ;; record exists (scoping = saving an empty audit, which only stamps
 ;; :timestamp/:auditor-id). Verdicts are per field and per revision: each
 ;; verdict carries an :audited-content snapshot. What a later content edit
-;; means depends on the verdict (DVV's process): a fix in response to a
-;; changes request completes the municipality's move (:fixed -> Valmiit,
-;; where DVV reviews the change), while editing approved content invalidates
-;; the approval (:stale -> back to the auditor's queue).
+;; means depends on the verdict (DVV's process, confirmed 2026-09): a fix
+;; in response to a changes request completes the municipality's move
+;; (:fixed -> Valmiit, accepted as such without a re-review), and editing
+;; approved content does not reopen anything either (:stale stays in
+;; Valmiit, flagged "Muuttunut" with a diff) — DVV has reviewed the item as a
+;; whole once, and re-auditing it is their explicit decision.
+;;
+;; DVV audits the Finnish text only, so a verdict covers — and is compared
+;; on — the :fi entry alone. The snapshot still stores every language, but
+;; editing a translation (or a language version missing on the PTV side)
+;; neither invalidates an approval nor counts as a fix.
 
-(defn- blank-normalized-localized
-  "Localized map with blank/nil entries removed, for content comparison."
+(declare normalize-ws)
+
+(defn- audited-text
+  "The part of a localized content map a verdict covers: the Finnish
+   text, whitespace-normalized for comparison (PTV collapses whitespace
+   on save; see normalize-ws). nil when blank."
   [localized]
-  (into {}
-        (remove (fn [[_ v]] (str/blank? v)))
-        localized))
+  (normalize-ws (:fi localized)))
 
 (defn audit-field-state
   "State of one audited field in the whose-move audit workflow.
@@ -781,19 +790,21 @@
    :pending           — no verdict yet
    :fixed             — changes were requested and the content has been
                         edited since: the municipality has responded, so
-                        the field counts as done (DVV reviews the change
-                        on the Valmiit tab)
-   :stale             — approved but content changed since: the approval
-                        no longer covers the current text, back to the
-                        auditor's queue (verdicts without an
-                        :audited-content snapshot are grandfathered as
-                        unchanged)
+                        the field counts as done (per DVV's process a fix
+                        is accepted as such, without a re-review)
+   :stale             — approved but content changed since: still
+                        counts as approved (DVV audited the item once),
+                        the auditor sees the change flagged and may
+                        re-audit (verdicts without an :audited-content
+                        snapshot are grandfathered as unchanged)
    :approved          — approved and unchanged
-   :changes-requested — changes requested and unchanged"
+   :changes-requested — changes requested and unchanged
+
+   Only the Finnish text is compared (see audited-text)."
   [{:keys [status audited-content] :as _field-audit} current-content]
   (let [changed? (and audited-content
-                      (not= (blank-normalized-localized audited-content)
-                            (blank-normalized-localized current-content)))]
+                      (not= (audited-text audited-content)
+                            (audited-text current-content)))]
     (cond
       (nil? status) :pending
       (and changed? (= "approved" status)) :stale
@@ -828,12 +839,12 @@
 (defn service-audit-fields
   "Auditable-fields spec for a PTV Service (UI-shaped map with localized
    :summary/:description/:user-instruction). Toimintaohje is required only
-   when the service has one in some language."
+   when the service has one in Finnish, the audited language."
   [service]
   [{:field :summary :content (:summary service) :required? true}
    {:field :description :content (:description service) :required? true}
    {:field :user-instruction :content (:user-instruction service)
-    :required? (boolean (seq (blank-normalized-localized (:user-instruction service))))}])
+    :required? (some? (audited-text (:user-instruction service)))}])
 
 (defn audit-field-states
   "Map of field -> audit-field-state over the required fields."
@@ -844,53 +855,80 @@
                      [field (audit-field-state (get audit field) content)])))
         fields))
 
+(defn anchor-audit-snapshots
+  "Audit `draft` ready to be saved: every verdict the auditor gives in
+   this save is anchored to the content it was given on by stamping
+   `contents` ({field localized-content}, as currently shown) into
+   :audited-content. `persisted` is the audit as last saved.
+
+   A field whose verdict the auditor did not touch keeps its old snapshot
+   when that verdict is a change request the municipality has already
+   answered (:fixed). Re-anchoring it would turn the fix back into an
+   open change request just because another field of the item was saved.
+   An untouched :stale approval is re-anchored on purpose — re-auditing
+   an item and saving it is how an auditor re-confirms it for the edited
+   text."
+  [draft persisted contents]
+  (reduce-kv
+    (fn [m field content]
+      (let [verdict #(select-keys (get % field) [:status :feedback])
+            untouched-fix? (and (= (verdict m) (verdict persisted))
+                                (= :fixed (audit-field-state (get persisted field) content)))]
+        (cond-> m
+          (and (get-in m [field :status]) (not untouched-fix?))
+          (assoc-in [field :audited-content] content))))
+    draft
+    contents))
+
 (defn audit-bucket
   "Whose-move bucket for an item in the audit sample, or nil when the item
    is not in the sample (no audit record). `fields` as per
    site-audit-fields / service-audit-fields. The buckets map to the DVV
    process tabs: Odottavat / Katselmoidut / Valmiit.
 
-   :waiting-audit — auditor's move: unaudited fields, or approved content
-                    edited afterwards (:stale)
+   :waiting-audit — auditor's move: some field has no verdict yet
    :waiting-fixes — municipality's move: changes requested, content unchanged
-   :done          — every required field approved, or fixed in response to
-                    a changes request (DVV reviews fixes from this bucket)"
+   :done          — every required field approved or fixed; edits made
+                    after an approval (:stale) keep the item here, flagged,
+                    until DVV explicitly re-audits it"
   [audit fields]
   (when (:timestamp audit)
     (let [states (vals (audit-field-states audit fields))]
       (cond
-        (some #{:pending :stale} states) :waiting-audit
+        (some #{:pending} states) :waiting-audit
         (some #{:changes-requested} states) :waiting-fixes
         :else :done))))
 
 (defn audit-notification-summary
   "Contents of the katselmointi notification sent to the municipality's
    PTV managers, derived from the current audit sample (so already-fixed
-   items drop out by themselves): :action-items — items in the
-   :waiting-fixes bucket (municipality's move), each entry's :ref merged
-   with :fields naming the fields with open change requests — and
-   :approved-count, the number of fully-approved items. Items mid-audit
-   (:waiting-audit) and fixes awaiting re-review (:fixed) count in
-   neither: they need no municipality action and aren't approved yet.
+   items drop out by themselves): :action-items — fully audited items
+   with an open change request on some field (whichever DVV tab they sit
+   on: an approved field edited meanwhile must not hide the request),
+   each entry's :ref merged with :fields naming those fields — and
+   :approved-count, the number of items approved without change requests
+   (edited since or not). Items whose audit is unfinished (some field
+   without a verdict) count in neither, and nor do fixed items.
    Entries: {:ref map, :audit map, :fields as per site-audit-fields /
    service-audit-fields}. Used by both the backend email builder and the
    audit view's send-notification button, so the numbers always agree."
   [entries]
   (reduce
     (fn [acc {:keys [ref audit fields]}]
-      (let [states (audit-field-states audit fields)
-            bucket (audit-bucket audit fields)]
+      (let [states (when (:timestamp audit)
+                     (audit-field-states audit fields))
+            unfinished? (some #{:pending} (vals states))
+            open-requests (->> (when-not unfinished? states)
+                               (keep (fn [[field state]]
+                                       (when (= :changes-requested state)
+                                         field)))
+                               vec)]
         (cond
-          (= :waiting-fixes bucket)
-          (update acc :action-items conj
-                  (assoc ref :fields (->> states
-                                          (keep (fn [[field state]]
-                                                  (when (= :changes-requested state)
-                                                    field)))
-                                          vec)))
+          (seq open-requests)
+          (update acc :action-items conj (assoc ref :fields open-requests))
 
-          (and (= :done bucket)
-               (every? #(= :approved %) (vals states)))
+          (and (seq states)
+               (every? #{:approved :stale} (vals states)))
           (update acc :approved-count inc)
 
           :else acc)))
@@ -898,34 +936,46 @@
     entries))
 
 (defn approved-with-feedback?
-  "True when every required field is approved as it stands (nothing fixed
-   and awaiting re-review) and the auditor still left a comment on at least
-   one of them. The listings give this its own symbol: the text passed, but
+  "True when every required field was approved (nothing fixed after a
+   change request) and the auditor still left a comment on at least one
+   of them. The listings give this its own symbol: the text passed, but
    there is a remark worth reading."
   [audit fields]
   (let [states (audit-field-states audit fields)]
     (and (seq states)
-         (every? #(= :approved %) (vals states))
+         (every? #{:approved :stale} (vals states))
          (boolean (some #(not (str/blank? (get-in audit [% :feedback])))
                         (keys states))))))
 
-(defn determine-audit-status
-  "Audit indicator for a sports site row in the manager-facing listing.
-   Derived from the whose-move field states so a municipality's fix clears
-   the changes-requested flag. Returns :approved (done),
-   :approved-with-feedback (done, auditor left a comment),
-   :changes-requested (waiting for fixes), :partial (audit in progress) or
-   :none."
-  [site]
-  (let [audit (get-in site [:ptv :audit])
-        fields (site-audit-fields site)]
-    (case (audit-bucket audit fields)
-      :done (if (approved-with-feedback? audit fields)
+(defn audit-display-status
+  "Audit indicator for the municipality-facing listings. Unlike
+   audit-bucket (whose move is it, DVV's tabs) this answers \"which
+   verdict holds for the text as it stands now\":
+
+   :changes-requested      — some field has an open change request, even
+                             if an approved field was edited meanwhile
+   :approved               — every required field is approved (edited
+                             since or not) or fixed in response to a
+                             change request: DVV accepts both as such
+   :approved-with-feedback — approved, and the auditor left a comment
+   :none                   — not in the audit sample, or audit unfinished
+                             (some field without a verdict: DVV's work
+                             in progress)"
+  [audit fields]
+  (let [states (when (:timestamp audit)
+                 (vals (audit-field-states audit fields)))]
+    (cond
+      (empty? states) :none
+      (some #{:pending} states) :none
+      (some #{:changes-requested} states) :changes-requested
+      :else (if (approved-with-feedback? audit fields)
               :approved-with-feedback
-              :approved)
-      :waiting-fixes :changes-requested
-      :waiting-audit :partial
-      :none)))
+              :approved))))
+
+(defn determine-audit-status
+  "audit-display-status of a sports site row in the manager-facing listing."
+  [site]
+  (audit-display-status (get-in site [:ptv :audit]) (site-audit-fields site)))
 
 (defn ptv-descriptions->texts
   "Extract :summary, :description, :user-instruction maps from PTV descriptions array.

@@ -1585,7 +1585,7 @@
                        (assoc :event-date (utils/timestamp) :status "active"
                               :lipas-id 9992073
                               :owner-org-id (str (:id org1))))
-          enriched (core/enrich site (core/org-names (test-db)))]
+          enriched (core/enrich site (core/index-context (test-db)))]
       (is (= (:name org1) (get-in enriched [:search-meta :owner-org-name]))
           "Owner org name resolved into search-meta
            (old enrich produced no :owner-org-name — fails on old)")

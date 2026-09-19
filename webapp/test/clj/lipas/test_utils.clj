@@ -642,7 +642,9 @@
    "sports_site"
    "subsidy"
    "loi"
-   "ptv_service"])
+   "ptv_service"
+   "ptv_site_audit"
+   "ptv_service_audit"])
 
 ;; For all other tests except the legacy WFS compatibility layer
 ;; Enhanced database utilities that accept db parameter

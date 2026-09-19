@@ -71,12 +71,12 @@
    (let [type-code (first types)
          ;; resolved once per type batch; denormalizes the owner org's name
          ;; into :search-meta (F15)
-         org-names (when type-code (core/org-names db))]
+         index-ctx (when type-code (core/index-context db))]
      (log/info "Starting to re-index type" type-code)
      (if type-code
        (->> type-code
             (core/get-sports-sites-by-type-code db)
-            (map #(core/enrich % org-names))
+            (map #(core/enrich % index-ctx))
             (search/->bulk idx-name :lipas-id)
             (search/bulk-index! client)
             (wait-one)

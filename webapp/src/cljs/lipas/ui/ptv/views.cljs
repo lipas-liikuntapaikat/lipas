@@ -1,7 +1,6 @@
 (ns lipas.ui.ptv.views
   (:require ["@mui/icons-material/CheckCircle$default" :as CheckCircleIcon]
             ["@mui/icons-material/Close$default" :as CloseIcon]
-            ["@mui/icons-material/HourglassTop$default" :as PartialIcon]
             ["@mui/icons-material/Message$default" :as MessageIcon]
             ["@mui/icons-material/Sync$default" :as Sync]
             ["@mui/icons-material/SyncDisabled$default" :as SyncDisabled]
@@ -125,7 +124,8 @@
    Renders resolved (info) once the municipality has fixed the text."
   [{:keys [lipas-id field-name]}]
   (let [tr (<== [:lipas.ui.subs/translator])
-        field-audit (<== [::subs/site-audit-field-display lipas-id field-name])]
+        org-id (<== [::subs/selected-ptv-org-id])
+        field-audit (<== [::subs/site-audit-field-display org-id lipas-id field-name])]
     [ptv-components/audit-feedback-alert
      {:tr tr
       :field-audit field-audit}]))
@@ -690,9 +690,6 @@
                                                    (:approved :approved-with-feedback)
                                                    (str (tr :ptv.audit.status/approved) " " (or last-audit ""))
 
-                                                   :partial
-                                                   (str (tr :ptv.audit/partially-audited) " " (or last-audit ""))
-
                                                    :none
                                                    (tr :ptv.audit/not-audited))]
 
@@ -706,10 +703,7 @@
                                        [:> WarningIcon {:sx #js{:color "warning.main" :fontSize "large" :width "32px" :height "32px"}}]
 
                                        (:approved :approved-with-feedback)
-                                       [:> CheckCircleIcon {:sx #js{:color "success.main" :fontSize "large" :width "32px" :height "32px"}}]
-
-                                       :partial
-                                       [:> PartialIcon {:sx #js{:color "info.main" :fontSize "large" :width "32px" :height "32px"}}])]
+                                       [:> CheckCircleIcon {:sx #js{:color "success.main" :fontSize "large" :width "32px" :height "32px"}}])]
                                     (when (= audit-status :approved-with-feedback)
                                       [audit-comment-marker {:tr tr
                                                              :audit audit-data
@@ -769,8 +763,7 @@
                     (sort-by (fn [site]
                                (let [audit-priority (case (:audit-status site)
                                                       :changes-requested 1 ; Most critical
-                                                      :partial 2 ; Needs completion
-                                                      :none 3 ; Not audited
+                                                      :none 3 ; No verdict on the current text
                                                       :approved 4 ; All good
                                                       :approved-with-feedback 4 ; All good, with a remark
                                                       5)] ; Default/unknown
@@ -2012,26 +2005,23 @@
           ;; in the listing without opening the service (tester finding #3)
           service-audit (<== [::subs/service-audit-data (:service-id service)])
           audit-fields (ptv-data/service-audit-fields ptv-texts)
-          audit-bucket (ptv-data/audit-bucket service-audit audit-fields)
-          audit-icon (case audit-bucket
-                       :waiting-fixes
+          audit-status (ptv-data/audit-display-status service-audit audit-fields)
+          audit-icon (case audit-status
+                       :changes-requested
                        [:> Tooltip {:title (tr :ptv.audit.status/changes-requested)}
                         [:> WarningIcon {:sx #js {:color "warning.main"}}]]
 
-                       :done
+                       (:approved :approved-with-feedback)
                        [:> Stack {:direction "row" :spacing 0.5 :alignItems "center"}
                         [:> Tooltip {:title (tr :ptv.audit.status/approved)}
                          [:> CheckCircleIcon {:sx #js {:color "success.main"}}]]
-                        (when (ptv-data/approved-with-feedback? service-audit audit-fields)
+                        (when (= :approved-with-feedback audit-status)
                           [audit-comment-marker {:tr tr
                                                  :audit service-audit
                                                  :fields [:summary :description :user-instruction]
                                                  :size "16px"}])]
 
-                       :waiting-audit
-                       [:> Tooltip {:title (tr :ptv.audit/audit-in-progress)}
-                        [:> PartialIcon {:sx #js {:color "info.main"}}]]
-
+                       ;; :none — no verdict covers the current text
                        nil)
           sync-chip (when lipas-managed?
                       (cond

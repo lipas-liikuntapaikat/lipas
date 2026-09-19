@@ -2,7 +2,8 @@
   "Schemas for PTV Service persistence (ptv_service table) and Service audits.
    Audit field schemas are shared with sports-site audits and live in
    lipas.schema.sports-sites.ptv."
-  (:require [lipas.schema.sports-sites.ptv :as ss-ptv]
+  (:require [lipas.schema.sports-sites :as sports-sites-schema]
+            [lipas.schema.sports-sites.ptv :as ss-ptv]
             [malli.core :as m]))
 
 (def save-service-audit-body
@@ -23,6 +24,14 @@
     [:map
      {:closed true}
      [:org-id :uuid]]))
+
+(def fetch-site-audits-body
+  "Request body for /actions/fetch-ptv-site-audits: the sites (as loaded
+   by get-ptv-integration-candidates) whose current audits to return."
+  (m/schema
+    [:map
+     {:closed true}
+     [:lipas-ids [:vector {:max 5000} #'sports-sites-schema/lipas-id]]]))
 
 (def service-document
   "Persisted ptv_service document. Deliberately open — the document evolves
