@@ -59,14 +59,22 @@
                            (case status
                              "changes-requested" ["error" (tr :ptv.audit/auditor-feedback-changes-requested)]
                              "approved" ["success" (tr :ptv.audit/auditor-feedback-approved)]
-                             ["warning" (tr :ptv.audit/auditor-feedback)]))]
-    (when (and feedback (not (str/blank? feedback)))
+                             ["warning" (tr :ptv.audit/auditor-feedback)]))
+        has-feedback? (not (str/blank? feedback))
+        ;; An open change request is shown even without feedback text
+        ;; (audits saved before feedback became mandatory) — the
+        ;; municipality must still learn the field was rejected. A silent
+        ;; approval needs no alert.
+        changes-requested? (= "error" severity)]
+    (when (or has-feedback? changes-requested?)
       [:> Alert
        {:severity severity
         :variant "outlined"
         :sx #js {:mt 1 :mb 1}}
        [:> AlertTitle title]
-       feedback])))
+       (if has-feedback?
+         feedback
+         (tr :ptv.audit/changes-requested-no-feedback))])))
 
 (defn ptv-link-field
   "Shows PTV items as links with an edit button to switch to selector mode.

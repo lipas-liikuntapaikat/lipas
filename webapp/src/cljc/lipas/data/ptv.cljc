@@ -784,6 +784,15 @@
   [localized]
   (normalize-ws (:fi localized)))
 
+(defn audit-feedback-missing?
+  "True for a change request without any feedback text. A change request
+   is a request to the municipality, so it must say what to change; an
+   approval needs no words. Enforced on save (schema audit-data) and
+   flagged in the audit form."
+  [{:keys [status feedback]}]
+  (and (= "changes-requested" status)
+       (str/blank? feedback)))
+
 (defn audit-field-state
   "State of one audited field in the whose-move audit workflow.
 

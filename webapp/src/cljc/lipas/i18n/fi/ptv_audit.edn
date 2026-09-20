@@ -30,6 +30,8 @@
  :auditor-feedback "Katselmoijan palaute",
  :auditor-feedback-changes-requested "Katselmoijan palaute - vaatii muutoksia",
  :auditor-feedback-approved "Katselmoijan palaute - hyväksytty",
+ :changes-requested-no-feedback "Katselmoija pyysi muutoksia, mutta ei jättänyt tarkempaa palautetta.",
+ :feedback-required "Kirjoita palaute: kerro, mitä tekstissä pitää muuttaa.",
  :sites-section "Liikuntapaikat",
  :services-section "Palvelut",
  :services-to-audit "Katselmoitavat palvelut",

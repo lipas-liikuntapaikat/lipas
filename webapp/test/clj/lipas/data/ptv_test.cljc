@@ -1,6 +1,8 @@
 (ns lipas.data.ptv-test
   (:require [clojure.test :refer [deftest is testing]]
-            [lipas.data.ptv :as sut]))
+            [lipas.data.ptv :as sut]
+            [lipas.schema.sports-sites.ptv :as ptv-schema]
+            [malli.core :as m]))
 
 (deftest parse-phone-number
   (is (= {:prefix "+358"
@@ -1108,3 +1110,24 @@
       (let [site' (assoc site :ptv-persisted {:description {:fi "d"}})]
         (is (nil? (get-in (sut/with-persisted-audit-content site')
                           [:ptv :summary])))))))
+
+(deftest audit-feedback-missing-test
+  (testing "a change request without feedback text is missing feedback"
+    (is (sut/audit-feedback-missing? {:status "changes-requested" :feedback ""}))
+    (is (sut/audit-feedback-missing? {:status "changes-requested" :feedback "   "}))
+    (is (sut/audit-feedback-missing? {:status "changes-requested"})))
+  (testing "feedback is optional for approvals and satisfied by any text"
+    (is (not (sut/audit-feedback-missing? {:status "approved" :feedback ""})))
+    (is (not (sut/audit-feedback-missing? {:status "changes-requested" :feedback "Tarkenna."})))))
+
+(deftest audit-data-schema-requires-feedback-for-change-requests-test
+  (is (m/validate ptv-schema/audit-data
+                  {:summary {:status "approved" :feedback ""}
+                   :description {:status "changes-requested" :feedback "Liian pitkä."}}))
+  (is (not (m/validate ptv-schema/audit-data
+                       {:description {:status "changes-requested" :feedback ""}}))
+      "the submission schema rejects a wordless change request")
+  (is (m/validate ptv-schema/ptv-audit
+                  {:timestamp "2026-07-13T15:33:52.689078Z" :auditor-id "x"
+                   :description {:status "changes-requested" :feedback ""}})
+      "the stored-audit schema still accepts legacy wordless change requests"))

@@ -31,10 +31,9 @@
   (let [summary-audit @(rf/subscribe [::subs/site-audit-field-display org-id lipas-id :summary])
         desc-audit @(rf/subscribe [::subs/site-audit-field-display org-id lipas-id :description])
 
-        has-issues? (fn [{:keys [feedback state]}]
-                      (and feedback
-                           (not (str/blank? feedback))
-                           (= :changes-requested state)))
+        ;; an open change request counts even without feedback text
+        has-issues? (fn [{:keys [state]}]
+                      (= :changes-requested state))
         has-summary-issues? (has-issues? summary-audit)
         has-desc-issues? (has-issues? desc-audit)]
 

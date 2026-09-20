@@ -30,6 +30,8 @@
  :auditor-feedback "Granskarens respons",
  :auditor-feedback-changes-requested "Granskarens respons – kräver ändringar",
  :auditor-feedback-approved "Granskarens respons – godkänd",
+ :changes-requested-no-feedback "Granskaren begärde ändringar men lämnade ingen närmare respons.",
+ :feedback-required "Skriv respons: ange vad som ska ändras i texten.",
  :sites-section "Idrottsanläggningar",
  :services-section "Tjänster",
  :services-to-audit "Tjänster att granska",
