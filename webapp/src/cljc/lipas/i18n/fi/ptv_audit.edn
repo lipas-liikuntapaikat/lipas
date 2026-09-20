@@ -30,6 +30,8 @@
  :auditor-feedback "Katselmoijan palaute",
  :auditor-feedback-changes-requested "Katselmoijan palaute - vaatii muutoksia",
  :auditor-feedback-approved "Katselmoijan palaute - hyväksytty",
+ :changes-requested-no-feedback "Katselmoija pyysi muutoksia, mutta ei jättänyt tarkempaa palautetta.",
+ :feedback-required "Kirjoita palaute: kerro, mitä tekstissä pitää muuttaa.",
  :sites-section "Liikuntapaikat",
  :services-section "Palvelut",
  :services-to-audit "Katselmoitavat palvelut",
@@ -45,8 +47,6 @@
  :changed-since-audit "Muuttunut katselmoinnin jälkeen",
  :fixed-after-audit "Korjattu katselmoinnin jälkeen",
  :auditor-feedback-fixed "Katselmoijan palaute - korjattu",
- :auditor-feedback-stale "Katselmoijan palaute - sisältö muuttunut katselmoinnin jälkeen",
- :audit-in-progress "Katselmointi kesken",
  :reaudit "Katselmoi uudelleen",
  :done-item-info "Kohde on katselmoitu valmiiksi. Voit tarvittaessa katselmoida sen uudelleen.",
  :notification-dialog-title "Lähetä ilmoitus katselmoinnista",
@@ -62,5 +62,4 @@
  :sort-alphabetically "Aakkosjärjestys",
  :sort-by-modified "Viimeksi muokatut ensin",
  :service-location-preview "PTV-palvelupaikan esikatselu",
- :partially-audited "Osittain katselmoitu",
  :not-audited "Ei katselmoitu"}

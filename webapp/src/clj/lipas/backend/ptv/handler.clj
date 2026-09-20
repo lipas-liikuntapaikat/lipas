@@ -218,6 +218,15 @@
         {:status 200
          :body (ptv-core/get-ptv-integration-candidates search (-> req :parameters :body))})}}]
 
+   ["/actions/fetch-ptv-site-audits"
+    {:post
+     {:require-privilege ptv-feature-read-access?
+      :parameters {:body #'lipas-ptv-schema/fetch-site-audits-body}
+      :handler
+      (fn [req]
+        {:status 200
+         :body (ptv-core/get-ptv-site-audits db (-> req :parameters :body :lipas-ids))})}}]
+
    ["/actions/generate-ptv-descriptions"
     {:post
      {:require-privilege [{:city-code ::roles/any} :ptv/manage]
@@ -543,7 +552,7 @@
       :handler
       (fn [req]
         (let [body (-> req :parameters :body)]
-          (if-let [result (ptv-core/save-ptv-audit db search (:identity req) body)]
+          (if-let [result (ptv-core/save-ptv-audit db (:identity req) body)]
             {:status 200 :body result}
             {:status 404 :body {:error "Sports site not found"}})))}}]
 
@@ -583,7 +592,7 @@
       :handler
       (fn [req]
         {:status 200
-         :body (ptv-core/get-ptv-service-docs db (-> req :parameters :body :org-id))})}}]
+         :body (ptv-core/get-ptv-service-audits db (-> req :parameters :body :org-id))})}}]
 
    ["/actions/save-ptv-service-audit"
     {:post

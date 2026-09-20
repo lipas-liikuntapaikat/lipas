@@ -21,11 +21,23 @@
      utils/->snake-case-keywords
      (assoc :document (dissoc sports-site :acting-org-id)))))
 
-(defn unmarshall [{:keys [document author_id status acting_org_id] :as doc}]
+(defn strip-audit
+  "Site document without a [:ptv :audit] key. Site audits live in
+   ptv_site_audit (migration 20260918100100, see lipas.backend.ptv.audit):
+   revisions written before that still carry one, and clients round-trip
+   the audit the PTV views join in. Neither may be read as, or written
+   into, a revision."
+  [document]
+  (cond-> document
+    (get-in document [:ptv :audit]) (update :ptv dissoc :audit)))
+
+(defn unmarshall [{:keys [id document author_id status acting_org_id] :as doc}]
   (when doc
-    (with-meta document {:author-id     author_id
-                         :doc-status    status
-                         :acting-org-id acting_org_id})))
+    (with-meta (strip-audit document)
+      {:id            id ; the revision's row id
+       :author-id     author_id
+       :doc-status    status
+       :acting-org-id acting_org_id})))
 
 (defn unmarshall-history-row
   "Like `unmarshall`, but also keeps the revision's own row id and
@@ -33,9 +45,10 @@
    (non-deduplicated) event log."
   [{:keys [id created_at document author_id status] :as doc}]
   (when doc
-    (with-meta document {:id id
-                         :created-at created_at
-                         :author-id author_id
-                         :doc-status status})))
+    (with-meta (strip-audit document)
+      {:id id
+       :created-at created_at
+       :author-id author_id
+       :doc-status status})))
 
 (hugsql/def-db-fns "sql/sports_site.sql")

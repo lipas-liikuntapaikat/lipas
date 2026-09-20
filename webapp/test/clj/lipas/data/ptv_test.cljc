@@ -1,6 +1,8 @@
 (ns lipas.data.ptv-test
   (:require [clojure.test :refer [deftest is testing]]
-            [lipas.data.ptv :as sut]))
+            [lipas.data.ptv :as sut]
+            [lipas.schema.sports-sites.ptv :as ptv-schema]
+            [malli.core :as m]))
 
 (deftest parse-phone-number
   (is (= {:prefix "+358"
@@ -789,31 +791,49 @@
                                              :audited-content {:fi "x"}}
                                             {:fi "x"}))))
 
-  (testing "approved content changed since verdict -> :stale (back to auditor)"
+  (testing "approved content changed since verdict -> :stale (flagged, still approved)"
     (is (= :stale (sut/audit-field-state {:status "approved"
                                           :feedback ""
                                           :audited-content {:fi "x"}}
-                                         {:fi "y"})))
-    (is (= :stale (sut/audit-field-state {:status "approved"
-                                          :feedback ""
-                                          :audited-content {:fi "x"}}
-                                         {:fi "x" :se "ny svensk text"}))))
+                                         {:fi "y"}))))
 
   (testing "changes-requested content changed since verdict -> :fixed (municipality responded)"
     (is (= :fixed (sut/audit-field-state {:status "changes-requested"
                                           :feedback "fix"
                                           :audited-content {:fi "x"}}
-                                         {:fi "y"})))
-    (is (= :fixed (sut/audit-field-state {:status "changes-requested"
-                                          :feedback "fix"
-                                          :audited-content {:fi "x"}}
-                                         {:fi "x" :se "ny svensk text"}))))
+                                         {:fi "y"}))))
 
-  (testing "blank/nil localized entries do not count as change"
+  (testing "only the Finnish text is audited: other languages never change a verdict"
     (is (= :approved (sut/audit-field-state {:status "approved"
                                              :feedback ""
-                                             :audited-content {:fi "x" :se ""}}
-                                            {:fi "x" :se nil})))))
+                                             :audited-content {:fi "x" :se "gammal"}}
+                                            {:fi "x" :se "ny svensk text"})))
+    ;; e.g. a language version not re-published after a PTV archive restore
+    (is (= :approved (sut/audit-field-state {:status "approved"
+                                             :feedback ""
+                                             :audited-content {:fi "x" :se "text" :en "text"}}
+                                            {:fi "x"})))
+    ;; an edited translation is not a fix of the Finnish text
+    (is (= :changes-requested (sut/audit-field-state {:status "changes-requested"
+                                                      :feedback "fix"
+                                                      :audited-content {:fi "x" :en "old"}}
+                                                     {:fi "x" :en "new"}))))
+
+  (testing "whitespace-only differences do not count as change"
+    (is (= :approved (sut/audit-field-state {:status "approved"
+                                             :feedback ""
+                                             :audited-content {:fi "x  y\r\nz"}}
+                                            {:fi " x y\nz "})))
+    (is (= :changes-requested (sut/audit-field-state {:status "changes-requested"
+                                                      :feedback "fix"
+                                                      :audited-content {:fi "x"}}
+                                                     {:fi "x "}))))
+
+  (testing "paragraph structure is content"
+    (is (= :stale (sut/audit-field-state {:status "approved"
+                                          :feedback ""
+                                          :audited-content {:fi "x y"}}
+                                         {:fi "x\ny"})))))
 
 (deftest audit-bucket-test
   (let [fields (fn [svc] (sut/service-audit-fields svc))
@@ -850,14 +870,14 @@
                                       :user-instruction (approved (:user-instruction svc))}
                                      (fields svc)))))
 
-    (testing "approved but content edited afterwards -> back to waiting-audit"
-      (is (= :waiting-audit (sut/audit-bucket {:timestamp "t" :auditor-id "a"
-                                               :summary (approved {:fi "vanha tiivistelmä"})
-                                               :description (approved (:description svc))
-                                               :user-instruction (approved (:user-instruction svc))}
-                                              (fields svc)))))
+    (testing "approved but content edited afterwards -> stays done (DVV audited it once)"
+      (is (= :done (sut/audit-bucket {:timestamp "t" :auditor-id "a"
+                                      :summary (approved {:fi "vanha tiivistelmä"})
+                                      :description (approved (:description svc))
+                                      :user-instruction (approved (:user-instruction svc))}
+                                     (fields svc)))))
 
-    (testing "changes requested, then content fixed -> done (DVV reviews the fix there)"
+    (testing "changes requested, then content fixed -> done (accepted without re-review)"
       (is (= :done (sut/audit-bucket {:timestamp "t" :auditor-id "a"
                                       :summary (changes {:fi "vanha tiivistelmä"})
                                       :description (approved (:description svc))
@@ -871,15 +891,22 @@
                                                :user-instruction (approved (:user-instruction svc))}
                                               (fields svc)))))
 
-    (testing "fix on one field never masks an edited approval on another"
-      (is (= :waiting-audit (sut/audit-bucket {:timestamp "t" :auditor-id "a"
-                                               :summary (changes {:fi "vanha tiivistelmä"})
-                                               :description (approved {:fi "vanha kuvaus"})
-                                               :user-instruction (approved (:user-instruction svc))}
-                                              (fields svc)))))
+    (testing "fix on one field and an edited approval on another -> done as well"
+      (is (= :done (sut/audit-bucket {:timestamp "t" :auditor-id "a"
+                                      :summary (changes {:fi "vanha tiivistelmä"})
+                                      :description (approved {:fi "vanha kuvaus"})
+                                      :user-instruction (approved (:user-instruction svc))}
+                                     (fields svc)))))
 
     (testing "toimintaohje not required when the service has none"
       (let [svc' (dissoc svc :user-instruction)]
+        (is (= :done (sut/audit-bucket {:timestamp "t" :auditor-id "a"
+                                        :summary (approved (:summary svc'))
+                                        :description (approved (:description svc'))}
+                                       (fields svc'))))))
+
+    (testing "toimintaohje without a Finnish text is not auditable, so not required"
+      (let [svc' (assoc svc :user-instruction {:se "instruktion" :fi " "})]
         (is (= :done (sut/audit-bucket {:timestamp "t" :auditor-id "a"
                                         :summary (approved (:summary svc'))
                                         :description (approved (:description svc'))}
@@ -891,9 +918,12 @@
                                         :summary (approved {:fi "s"})
                                         :description (approved {:fi "d"})}
                                        (sut/site-audit-fields site))))
+        (is (= :done (sut/audit-bucket {:timestamp "t" :auditor-id "a"
+                                        :summary (approved {:fi "muokattu"})
+                                        :description (approved {:fi "d"})}
+                                       (sut/site-audit-fields site))))
         (is (= :waiting-audit (sut/audit-bucket {:timestamp "t" :auditor-id "a"
-                                                 :summary (approved {:fi "muokattu"})
-                                                 :description (approved {:fi "d"})}
+                                                 :summary (approved {:fi "s"})}
                                                 (sut/site-audit-fields site))))))))
 
 (deftest determine-audit-status-test
@@ -904,16 +934,37 @@
         changes (fn [content] {:status "changes-requested" :feedback "fix" :audited-content content})]
     (testing "no audit -> :none"
       (is (= :none (sut/determine-audit-status (site nil)))))
-    (testing "partially audited -> :partial"
-      (is (= :partial (sut/determine-audit-status
-                        (site {:timestamp "t" :auditor-id "a"
-                               :summary (approved {:fi "s"})})))))
+    (testing "unfinished audit -> :none (nothing the municipality can act on)"
+      (is (= :none (sut/determine-audit-status
+                     (site {:timestamp "t" :auditor-id "a"}))))
+      (is (= :none (sut/determine-audit-status
+                     (site {:timestamp "t" :auditor-id "a"
+                            :summary (approved {:fi "s"})})))))
+    (testing "approved, then edited -> still :approved (DVV audited the item once)"
+      (is (= :approved (sut/determine-audit-status
+                         (site {:timestamp "t" :auditor-id "a"
+                                :summary (approved {:fi "vanha"})
+                                :description (approved {:fi "d"})})))))
+    (testing "an approved field edited meanwhile does not hide an open change request"
+      (is (= :changes-requested (sut/determine-audit-status
+                                  (site {:timestamp "t" :auditor-id "a"
+                                         :summary (approved {:fi "vanha"})
+                                         :description (changes {:fi "d"})})))))
+    (testing "a change request in an unfinished audit is not shown yet"
+      (is (= :none (sut/determine-audit-status
+                     (site {:timestamp "t" :auditor-id "a"
+                            :description (changes {:fi "d"})})))))
+    (testing "fix on one field, approved field edited meanwhile -> :approved"
+      (is (= :approved (sut/determine-audit-status
+                         (site {:timestamp "t" :auditor-id "a"
+                                :summary (approved {:fi "vanha"})
+                                :description (changes {:fi "vanha"})})))))
     (testing "changes requested and unchanged -> :changes-requested"
       (is (= :changes-requested (sut/determine-audit-status
                                   (site {:timestamp "t" :auditor-id "a"
                                          :summary (changes {:fi "s"})
                                          :description (approved {:fi "d"})})))))
-    (testing "requested changes fixed -> :approved (municipality's move done)"
+    (testing "requested changes fixed -> :approved (DVV accepts fixes as such)"
       (is (= :approved (sut/determine-audit-status
                          (site {:timestamp "t" :auditor-id "a"
                                 :summary (changes {:fi "vanha"})
@@ -928,12 +979,94 @@
              (sut/determine-audit-status
                (site {:timestamp "t" :auditor-id "a"
                       :summary (assoc (approved {:fi "s"}) :feedback "hyvä, mutta")
+                      :description (approved {:fi "d"})}))))
+      ;; the remark stays readable after an edit, too
+      (is (= :approved-with-feedback
+             (sut/determine-audit-status
+               (site {:timestamp "t" :auditor-id "a"
+                      :summary (assoc (approved {:fi "vanha"}) :feedback "hyvä, mutta")
                       :description (approved {:fi "d"})})))))
-    (testing "a comment on a fix awaiting re-review is not an approval remark"
+    (testing "the comment of a fixed change request is not an approval remark"
       (is (= :approved (sut/determine-audit-status
                          (site {:timestamp "t" :auditor-id "a"
                                 :summary (changes {:fi "vanha"})
                                 :description (approved {:fi "d"})})))))))
+
+(deftest audit-notification-summary-test
+  (let [fields (sut/site-audit-fields {:ptv {:summary {:fi "s"} :description {:fi "d"}}})
+        approved (fn [content] {:status "approved" :feedback "" :audited-content content})
+        changes (fn [content] {:status "changes-requested" :feedback "fix" :audited-content content})
+        entry (fn [id audit] {:ref {:id id} :audit audit :fields fields})
+        audit (fn [summary description]
+                (cond-> {:timestamp "t" :auditor-id "a"}
+                  summary (assoc :summary summary)
+                  description (assoc :description description)))]
+    (is (= {:action-items [{:id :open :fields [:description]}
+                           {:id :open+stale :fields [:description]}
+                           {:id :both-open :fields [:summary :description]}]
+            :approved-count 2}
+           (sut/audit-notification-summary
+             [(entry :approved (audit (approved {:fi "s"}) (approved {:fi "d"})))
+              (entry :open (audit (approved {:fi "s"}) (changes {:fi "d"})))
+              ;; an approved field edited meanwhile must not hide the request
+              (entry :open+stale (audit (approved {:fi "vanha"}) (changes {:fi "d"})))
+              (entry :both-open (audit (changes {:fi "s"}) (changes {:fi "d"})))
+              ;; approved without change requests, edited since: still approved
+              (entry :stale (audit (approved {:fi "vanha"}) (approved {:fi "d"})))
+              ;; neither actionable nor approved:
+              (entry :fixed (audit (approved {:fi "s"}) (changes {:fi "vanha"})))
+              (entry :unfinished (audit (approved {:fi "s"}) nil))
+              (entry :unfinished-with-request (audit (changes {:fi "s"}) nil))
+              (entry :not-sampled nil)
+              ;; verdicts without the record's :timestamp are not a sample entry
+              (entry :no-timestamp {:description (changes {:fi "d"})})])))))
+
+(deftest anchor-audit-snapshots-test
+  (let [approved (fn [content] {:status "approved" :feedback "" :audited-content content})
+        changes (fn [content] {:status "changes-requested" :feedback "fix" :audited-content content})
+        contents {:summary {:fi "s2"} :description {:fi "d2"}}]
+
+    (testing "first verdicts are anchored to the shown content; fields without a verdict are not"
+      (is (= {:summary {:status "approved" :feedback "" :audited-content {:fi "s2"}}
+              :description {:feedback "kesken"}}
+             (sut/anchor-audit-snapshots {:summary {:status "approved" :feedback ""}
+                                          :description {:feedback "kesken"}}
+                                         nil
+                                         contents))))
+
+    (testing "an untouched fix keeps its snapshot when another field is saved"
+      (let [persisted {:timestamp "t" :auditor-id "a"
+                       :summary (approved {:fi "s"})      ; :stale, s -> s2
+                       :description (changes {:fi "d"})}  ; :fixed, d -> d2
+            saved (sut/anchor-audit-snapshots persisted persisted contents)
+            fields [{:field :summary :content (:summary contents) :required? true}
+                    {:field :description :content (:description contents) :required? true}]]
+        (is (= {:fi "d"} (get-in saved [:description :audited-content])))
+        ;; the untouched stale approval is re-confirmed by the save
+        (is (= {:summary :approved :description :fixed}
+               (sut/audit-field-states saved fields)))))
+
+    (testing "touching the fixed field's verdict re-anchors it"
+      (let [persisted {:summary (approved {:fi "s2"})
+                       :description (changes {:fi "d"})}]
+        ;; auditor accepts the fix explicitly
+        (is (= {:fi "d2"}
+               (get-in (sut/anchor-audit-snapshots
+                         (assoc-in persisted [:description :status] "approved")
+                         persisted contents)
+                       [:description :audited-content])))
+        ;; auditor rejects the fix by rewording the request
+        (is (= {:fi "d2"}
+               (get-in (sut/anchor-audit-snapshots
+                         (assoc-in persisted [:description :feedback] "ei vieläkään")
+                         persisted contents)
+                       [:description :audited-content])))))
+
+    (testing "an unanswered change request is simply re-anchored (content unchanged)"
+      (let [persisted {:description (changes {:fi "d2"})}]
+        (is (= persisted
+               (sut/anchor-audit-snapshots persisted persisted
+                                           {:description {:fi "d2"}})))))))
 
 (deftest with-persisted-audit-content-test
   (let [changes (fn [content] {:status "changes-requested" :feedback "fix" :audited-content content})
@@ -977,3 +1110,24 @@
       (let [site' (assoc site :ptv-persisted {:description {:fi "d"}})]
         (is (nil? (get-in (sut/with-persisted-audit-content site')
                           [:ptv :summary])))))))
+
+(deftest audit-feedback-missing-test
+  (testing "a change request without feedback text is missing feedback"
+    (is (sut/audit-feedback-missing? {:status "changes-requested" :feedback ""}))
+    (is (sut/audit-feedback-missing? {:status "changes-requested" :feedback "   "}))
+    (is (sut/audit-feedback-missing? {:status "changes-requested"})))
+  (testing "feedback is optional for approvals and satisfied by any text"
+    (is (not (sut/audit-feedback-missing? {:status "approved" :feedback ""})))
+    (is (not (sut/audit-feedback-missing? {:status "changes-requested" :feedback "Tarkenna."})))))
+
+(deftest audit-data-schema-requires-feedback-for-change-requests-test
+  (is (m/validate ptv-schema/audit-data
+                  {:summary {:status "approved" :feedback ""}
+                   :description {:status "changes-requested" :feedback "Liian pitkä."}}))
+  (is (not (m/validate ptv-schema/audit-data
+                       {:description {:status "changes-requested" :feedback ""}}))
+      "the submission schema rejects a wordless change request")
+  (is (m/validate ptv-schema/ptv-audit
+                  {:timestamp "2026-07-13T15:33:52.689078Z" :auditor-id "x"
+                   :description {:status "changes-requested" :feedback ""}})
+      "the stored-audit schema still accepts legacy wordless change requests"))

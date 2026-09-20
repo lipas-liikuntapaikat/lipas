@@ -3,6 +3,8 @@
             [clojure.test :refer [deftest is testing use-fixtures] :as t]
             [lipas.backend.core :as core]
             [lipas.backend.db.ptv-service :as ptv-service-db]
+            [lipas.backend.db.ptv-service-audit :as ptv-service-audit-db]
+            [lipas.backend.db.ptv-site-audit :as ptv-site-audit-db]
             [lipas.backend.email :as email]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.org :as backend-org]
@@ -35,9 +37,9 @@
 ;;; Audit notification ;;;
 ;;
 ;; The katselmointi notification's contents are derived server-side from
-;; the current audit sample: items in the :waiting-fixes bucket become the
-;; email's action list, fully-approved items only a count. Items mid-audit
-;; or already fixed (awaiting DVV re-review) appear in neither.
+;; the current audit sample: items with an open change request become the
+;; email's action list, approved items only a count. Items mid-audit or
+;; fixed appear in neither.
 
 (defn- seed-ptv-site!
   "Seeds + indexes an active city-91 site with PTV texts (:fi \"Tiivistelmä\"
@@ -58,11 +60,15 @@
                                       :features [{:type "Feature"
                                                   :geometry {:type "Point"
                                                              :coordinates [24.9384 60.1695]}}]}}
-              :ptv (cond-> {:org-id "test-ptv-org"
-                            :summary {:fi "Tiivistelmä"}
-                            :description {:fi "Kuvaus"}}
-                     audit (assoc :audit audit))}]
+              :ptv {:org-id "test-ptv-org"
+                    :summary {:fi "Tiivistelmä"}
+                    :description {:fi "Kuvaus"}}}]
     (core/upsert-sports-site!* (test-db) user site)
+    ;; audits live in ptv_site_audit; the candidates read joins them in
+    (when audit
+      (ptv-site-audit-db/insert-audit! (test-db) {:lipas-id lipas-id
+                                                  :event-date (:timestamp audit)
+                                                  :document audit}))
     (core/index! (test-search) site true)
     site))
 
@@ -112,13 +118,23 @@
                     (dissoc (site-audit "changes-requested" "Tiivistelmä")
                             :description))
     (seed-ptv-site! auditor 9990005 "Auditoimaton halli" nil)
+    ;; open change request on :summary while the approved :description was
+    ;; edited meanwhile (stale): sits on DVV's Odottavat tab, but the
+    ;; request is still the municipality's to act on
+    (seed-ptv-site! auditor 9990006 "Muokattu halli"
+                    (assoc-in (site-audit "changes-requested" "Tiivistelmä")
+                              [:description :audited-content :fi] "Vanha kuvaus"))
 
-    (t/testing "Payload: only the waiting-fixes site is actionable, only the approved one counts as passed"
-      (is (= {:action-items [{:lipas-id 9990001
-                              :name "Korjattava halli"
-                              :fields [:summary]}]
+    (t/testing "Payload: only sites with an open change request are actionable, only the approved one counts as passed"
+      (is (= {:action-items #{{:lipas-id 9990001
+                               :name "Korjattava halli"
+                               :fields [:summary]}
+                              {:lipas-id 9990006
+                               :name "Muokattu halli"
+                               :fields [:summary]}}
               :approved-count 1}
-             (ptv-core/site-audit-notification-data (test-db) (test-search) org-id))))
+             (-> (ptv-core/site-audit-notification-data (test-db) (test-search) org-id)
+                 (update :action-items set)))))
 
     (t/testing "Email leads with the action list and names no already-fixed items"
       (let [emailer (tu/create-test-emailer)
@@ -130,6 +146,7 @@
         (is (= (:email ptv-manager) (:to msg)))
         (is (str/includes? (:subject msg) "korjauspyyntöjä"))
         (is (str/includes? (:plain msg) "Korjattava halli — Tiivistelmä"))
+        (is (str/includes? (:plain msg) "Muokattu halli — Tiivistelmä"))
         (is (str/includes? (:plain msg) "Lisäksi 1 kohdetta on katselmoitu ilman muutospyyntöjä."))
         (is (not (str/includes? (:plain msg) "Korjattu halli")))
         (is (not (str/includes? (:plain msg) "Kesken halli")))))
@@ -141,8 +158,9 @@
             body (<-json (:body resp))]
         (is (= 200 (:status resp)))
         (is (= [(:email ptv-manager)] (:recipients body)))
-        (is (= [{:lipas-id 9990001 :name "Korjattava halli" :fields ["summary"]}]
-               (:action-items body)))
+        (is (= #{{:lipas-id 9990001 :name "Korjattava halli" :fields ["summary"]}
+                 {:lipas-id 9990006 :name "Muokattu halli" :fields ["summary"]}}
+               (set (:action-items body))))
         (is (= 1 (:approved-count body)))))
 
     (t/testing "Send endpoint takes only the org — contents are derived server-side"
@@ -193,17 +211,24 @@
                   :serviceDescriptions [{:type "Summary" :language "fi" :value "Tiivistelmä"}
                                         {:type "Description" :language "fi" :value "Kuvaus"}]})
         seed-audit! (fn [svc-id audit]
-                      (ptv-service-db/insert-service-rev!
-                        (test-db)
-                        {:org-id (:id org)
-                         :source-id (str "lipas-" svc-id)
-                         :service-id svc-id
-                         :status "active"
-                         :author-id (:id author)
-                         :event-date (utils/timestamp)
-                         :document {:source-id (str "lipas-" svc-id)
-                                    :service-id (str svc-id)
-                                    :audit audit}}))]
+                      (let [rev (ptv-service-db/insert-service-rev!
+                                  (test-db)
+                                  {:org-id (:id org)
+                                   :source-id (str "lipas-" svc-id)
+                                   :service-id svc-id
+                                   :status "active"
+                                   :author-id (:id author)
+                                   :event-date (utils/timestamp)
+                                   :document {:source-id (str "lipas-" svc-id)
+                                              :service-id (str svc-id)}})]
+                        (ptv-service-audit-db/insert-audit!
+                          (test-db)
+                          {:org-id (:id org)
+                           :source-id (str "lipas-" svc-id)
+                           :service-id svc-id
+                           :service-revision-id (:id rev)
+                           :event-date (:timestamp audit)
+                           :document audit})))]
     (seed-audit! fixes-id (site-audit "changes-requested" "Tiivistelmä"))
     (seed-audit! ok-id (site-audit "approved" "Tiivistelmä"))
     (seed-audit! fixed-id (site-audit "changes-requested" "Vanha tiivistelmä"))
@@ -531,12 +556,11 @@
           :languages ["fi"] :summary {:fi "summary"} :description {:fi "description"}}
          extra))
 
-(deftest upsert-ptv-service-location-preserves-audit-test
-  ;; :audit is server-owned and deliberately not in persisted-ptv-keys — a
-  ;; sync (e.g. the municipality fixing a changes-requested text) must not
-  ;; wipe the auditor's verdicts. Regression: tester observed an audited
-  ;; site returning to "unaudited" after a fix + sync, because the rebuilt
-  ;; :ptv meta dropped :audit.
+(deftest upsert-ptv-service-location-drops-legacy-audit-test
+  ;; Audits live in ptv_site_audit since migration 20260918100100. A site
+  ;; document still carrying a pre-move [:ptv :audit] must not have it
+  ;; rebuilt into the synced :ptv meta (it would then be indexed as the
+  ;; audit and shadow the real one).
   (let [audit {:timestamp "2026-07-01T00:00:00.000Z"
                :auditor-id "auditor-1"
                :summary {:status "changes-requested"
@@ -549,7 +573,6 @@
                                       :features [{:type "Feature"
                                                   :geometry {:type "Point" :coordinates [25.0 65.0]}}]}}
               :search-meta {:location {:wgs84-point [25.0 65.0]}}
-              ;; The DB copy of the site carries the audit...
               :ptv (sent-ptv {:audit audit})}
         published-resp {:id "chan-1" :sourceId "src-1" :publishingStatus "Published"
                         :services [] :serviceChannelNames [] :serviceChannelDescriptions []}]
@@ -562,10 +585,8 @@
             (ptv-core/upsert-ptv-service-location!*
               {} {:org-id "org-x"
                   :site site
-                  ;; ...while the client's sync payload does not.
                   :ptv (dissoc (:ptv site) :audit)})]
-        (is (= audit (:audit new-ptv-data))
-            "Auditor's verdicts survive the sync")))))
+        (is (nil? (:audit new-ptv-data)))))))
 
 (deftest to-archive?-decision-test
   (let [sent (fn [status & [ptv-extra]]

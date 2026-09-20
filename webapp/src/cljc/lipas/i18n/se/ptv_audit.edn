@@ -30,6 +30,8 @@
  :auditor-feedback "Granskarens respons",
  :auditor-feedback-changes-requested "Granskarens respons – kräver ändringar",
  :auditor-feedback-approved "Granskarens respons – godkänd",
+ :changes-requested-no-feedback "Granskaren begärde ändringar men lämnade ingen närmare respons.",
+ :feedback-required "Skriv respons: ange vad som ska ändras i texten.",
  :sites-section "Idrottsanläggningar",
  :services-section "Tjänster",
  :services-to-audit "Tjänster att granska",
@@ -45,8 +47,6 @@
  :changed-since-audit "Ändrad efter granskningen",
  :fixed-after-audit "Åtgärdad efter granskningen",
  :auditor-feedback-fixed "Granskarens respons – åtgärdad",
- :auditor-feedback-stale "Granskarens respons – innehållet har ändrats efter granskningen",
- :audit-in-progress "Granskning pågår",
  :reaudit "Granska igen",
  :done-item-info "Objektet är färdiggranskat. Vid behov kan du granska det på nytt.",
  :notification-dialog-title "Skicka meddelande om granskningen",
@@ -62,5 +62,4 @@
  :sort-alphabetically "Alfabetisk",
  :sort-by-modified "Senast ändrade först",
  :service-location-preview "Förhandsgranskning av serviceställe",
- :partially-audited "Delvis granskad",
  :not-audited "Inte granskad"}

@@ -30,6 +30,8 @@
  :auditor-feedback "Auditor feedback",
  :auditor-feedback-changes-requested "Auditor feedback — changes requested",
  :auditor-feedback-approved "Auditor feedback — approved",
+ :changes-requested-no-feedback "The auditor requested changes but left no further feedback.",
+ :feedback-required "Write feedback: say what needs to change in the text.",
  :sites-section "Sports facilities",
  :services-section "Services",
  :services-to-audit "Services to audit",
@@ -45,8 +47,6 @@
  :changed-since-audit "Changed since audit",
  :fixed-after-audit "Fixed after audit",
  :auditor-feedback-fixed "Auditor feedback — fixed",
- :auditor-feedback-stale "Auditor feedback — content changed since audit",
- :audit-in-progress "Audit in progress",
  :reaudit "Re-audit",
  :done-item-info "This item has been audited. You can re-audit it if needed.",
  :notification-dialog-title "Send audit notification",
@@ -62,5 +62,4 @@
  :sort-alphabetically "Alphabetical",
  :sort-by-modified "Last modified first",
  :service-location-preview "Service location preview",
- :partially-audited "Partially audited",
  :not-audited "Not audited"}
