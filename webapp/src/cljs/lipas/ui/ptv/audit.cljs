@@ -136,18 +136,24 @@
    ;; Feedback field
    (let [feedback-length (count (or feedback ""))
          max-length 1000
-         is-over-limit (> feedback-length max-length)]
+         is-over-limit (> feedback-length max-length)
+         ;; a change request must say what to change — the save button
+         ;; stays disabled until it does (schema audit-data)
+         feedback-required? (ptv-data/audit-feedback-missing? {:status status :feedback feedback})]
      [:> TextField
       {:fullWidth true
        :multiline true
        :InputProps #js{:inputComponent tf/patched-textarea}
        :inputProps #js{:maxLength max-length}
        :rows 3
+       :required (= status "changes-requested")
        :label (tr :ptv.audit/feedback)
        :placeholder (tr :ptv.audit/feedback-placeholder)
        :value (or feedback "")
-       :error is-over-limit
-       :helperText (str feedback-length "/" max-length " "
+       :error (or is-over-limit feedback-required?)
+       :helperText (str (when feedback-required?
+                          (str (tr :ptv.audit/feedback-required) " "))
+                        feedback-length "/" max-length " "
                         (tr :ptv.audit/characters))
        :onChange (fn [e]
                    (on-feedback-change (.. e -target -value)))}])])

@@ -343,6 +343,23 @@
 
       (is (= 400 (:status resp))))))
 
+(deftest save-ptv-audit-changes-requested-needs-feedback-test
+  (let [admin-user (tu/gen-admin-user :db-component (test-db))
+        ptv-auditor (tu/gen-ptv-auditor :db-component (test-db))
+        site (create-test-site-with-ptv admin-user)
+        lipas-id (:lipas-id site)
+        token (jwt/create-token ptv-auditor)
+        post (fn [audit]
+               (test-app (-> (mock/request :post "/api/actions/save-ptv-audit")
+                             (mock/content-type "application/json")
+                             (mock/body (tu/->json {:lipas-id lipas-id :audit audit}))
+                             (tu/token-header token))))]
+    (testing "A change request without feedback text is rejected"
+      (is (= 400 (:status (post {:description {:status "changes-requested" :feedback ""}})))))
+    (testing "An approval needs no feedback; a change request with text is fine"
+      (is (= 200 (:status (post {:summary {:status "approved" :feedback ""}
+                                 :description {:status "changes-requested" :feedback "Tarkenna."}})))))))
+
 (deftest save-ptv-audit-no-auth-token-test
   (testing "Requires authentication token"
     (let [admin-user (tu/gen-admin-user :db-component (test-db))

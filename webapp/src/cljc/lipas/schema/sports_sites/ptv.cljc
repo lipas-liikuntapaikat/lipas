@@ -46,14 +46,25 @@
      [:description {:optional true} audit-field]
      [:user-instruction {:optional true} audit-field]]))
 
+(def audit-field-submission
+  "audit-field as the auditor submits it: a change request must carry
+   feedback text (see lipas.data.ptv/audit-feedback-missing?). Stored
+   audits (ptv-audit) are not held to this — rows saved before the rule
+   may lack it."
+  (m/schema
+    [:and
+     audit-field
+     [:fn {:error/message "a change request needs feedback text"}
+      (complement ptv-data/audit-feedback-missing?)]]))
+
 (def audit-data
   "Schema for audit data sent from frontend (before backend adds timestamp/auditor-id)."
   (m/schema
     [:map
      {:closed true}
-     [:summary {:optional true} audit-field]
-     [:description {:optional true} audit-field]
-     [:user-instruction {:optional true} audit-field]]))
+     [:summary {:optional true} audit-field-submission]
+     [:description {:optional true} audit-field-submission]
+     [:user-instruction {:optional true} audit-field-submission]]))
 
 (def ptv-meta
   "Schema for PTV metadata associated with sports sites."

@@ -30,6 +30,8 @@
  :auditor-feedback "Auditor feedback",
  :auditor-feedback-changes-requested "Auditor feedback — changes requested",
  :auditor-feedback-approved "Auditor feedback — approved",
+ :changes-requested-no-feedback "The auditor requested changes but left no further feedback.",
+ :feedback-required "Write feedback: say what needs to change in the text.",
  :sites-section "Sports facilities",
  :services-section "Services",
  :services-to-audit "Services to audit",
