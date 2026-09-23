@@ -643,6 +643,10 @@
    "subsidy"
    "loi"
    "ptv_service"
+   "postal_code"
+   "postal_street_segment"
+   "paavo_area"
+   "postal_data_source"
    "ptv_site_audit"
    "ptv_service_audit"])
 

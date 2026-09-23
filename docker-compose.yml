@@ -147,6 +147,10 @@ services:
       MAILCHIMP_NEWSLETTER_INTEREST_ID:
       MAILCHIMP_API_URL:
       MAILCHIMP_API_KEY:
+      # Digitransit's Pelias geocoder, used by GET /actions/reverse-geocode.
+      # The proxy services get this too (for the frontend's address search);
+      # the backend needs its own copy for the server-side reverse lookup.
+      DIGITRANSIT_SUBSCRIPTION_KEY:
       MML_COVERAGE_URL:
       MML_API_KEY:
       UTP_CMS_API_URL:

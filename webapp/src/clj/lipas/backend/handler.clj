@@ -1,6 +1,8 @@
 (ns lipas.backend.handler
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
+            [lipas.backend.address.core :as address]
+            [lipas.backend.address.pelias :as pelias]
             [lipas.backend.analysis.heatmap :as heatmap]
             [lipas.backend.api.v1.routes :as v1]
             [lipas.backend.api.v2 :as v2]
@@ -62,6 +64,11 @@
 (def exception-handlers
   {:username-conflict (exception-handler 409 :username-conflict)
    :email-conflict (exception-handler 409 :email-conflict)
+   ;; Registration link expired, tampered with, or not a registration token.
+   :invalid-registration-token (exception-handler 400 :invalid-registration-token)
+   ;; Email-change link expired, tampered with, already used or superseded.
+   :invalid-email-change-token (exception-handler 400 :invalid-email-change-token)
+   :same-email (exception-handler 400 :same-email)
    :no-permission (exception-handler 403 :no-permission)
    :impersonation-not-allowed (exception-handler 403 :impersonation-not-allowed)
    :user-not-found (exception-handler 404 :user-not-found)
@@ -149,6 +156,24 @@
                                {:org-id #{(str (-> req :parameters :body :org-id))}}
                                :org/member))))
 
+(defn- site-org-member-or-admin?
+  "Boolean privilege fn for POST /actions/get-site-editors: LIPAS admin, or
+  `:org/member` on an org tied to the site named in the body — its owner org or
+  one it has granted edit to.
+
+  That set is exactly `search-meta.editor-org-ids`, which is what the Kohteet
+  tab queries to build its list, so every row a member can see there can also
+  open its drawer, and nothing else can. Before this the route was
+  `:require-privilege nil`: ANY authenticated user could ask who edits ANY
+  lipas-id."
+  [db req]
+  (let [user (:identity req)]
+    (or (roles/check-role user :admin)
+        (let [site    (core/get-sports-site db (-> req :parameters :body :lipas-id))
+              org-ids (:org-id (roles/site-roles-context site))]
+          (boolean (and (seq org-ids)
+                        (roles/check-privilege user {:org-id org-ids} :org/member)))))))
+
 (defn- utp-image-upload-access?
   "Boolean privilege fn for POST /actions/upload-utp-image.
 
@@ -172,8 +197,21 @@
     (or (roles/check-privilege user ctx :activity/edit)
         (roles/check-privilege user ctx :loi/create-edit))))
 
+(defn- pelias-reverse-fn
+  "`(fn [lat lon] -> [<pelias address properties> ...])` for the `:pelias` app
+  config.
+
+  A `:reverse-fn` in that config wins over the real HTTP call. That is the
+  seam tests use: `GET /actions/reverse-geocode` is the only route with an
+  outbound third-party dependency, and injecting the fn keeps the test's
+  Pelias half a plain function while everything else — routing, coercion,
+  the database lookups — stays real."
+  [pelias]
+  (or (:reverse-fn pelias)
+      (partial pelias/nearest-addresses pelias)))
+
 (defn create-app
-  [{:keys [db emailer search mailchimp ptv] :as ctx}]
+  [{:keys [db emailer search mailchimp ptv pelias] :as ctx}]
   (ring/ring-handler
     (ring/router
 
@@ -463,15 +501,21 @@
         ["/actions/get-org-history"
          {:post
           {:no-doc true
-         ;; History/audit is admin-only (lipas-admin or org-admin), not members.
-         ;; Author identity (email) only for :users/manage; org admins get a
-         ;; coarse role label instead (same GDPR rule as site edit history).
+         ;; History/audit is admin-only (lipas-admin or org-admin), not members —
+         ;; so every caller who gets this far is already at the `:full` tier of
+         ;; the PM PII rule (2026-09-07: "org admin and LIPAS admin see the full
+         ;; emails"). Hence `true` unconditionally.
+         ;;
+         ;; NOTE this REPLACES the earlier F38 behaviour, where org admins saw a
+         ;; coarse :author-role and only :users/manage saw :author-name. That was
+         ;; the conservative placeholder taken "pending data-protection guidance"
+         ;; (docs/organizations.md); this is that guidance. Reverting is a
+         ;; one-word change back to the check-privilege call.
            :require-privilege [org-scope-from-body :org/manage]
            :parameters {:body [:map [:org-id org-schema/org-id]]}
            :handler (fn [req]
                       {:status 200
-                       :body (org/get-history db (-> req :parameters :body :org-id)
-                                              (roles/check-privilege (:identity req) {} :users/manage))})}}]
+                       :body (org/get-history db (-> req :parameters :body :org-id) true)})}}]
 
       ;; --- Bulk contact update candidates (org-only). Read-only candidate
       ;; listing is member-visible (same gate as /actions/get-org-sites) so the
@@ -498,21 +542,27 @@
                       {:status 200
                        :body (org-takeover/preview db (-> req :parameters :body :org-id))})}}]
 
-      ;; --- "Who can edit site Z" (Q2) — transparency, any authenticated user ---
+      ;; --- "Who can edit site Z" (Q2) — scoped to the site's own orgs: LIPAS
+      ;; admins, plus members of the org that owns the site or has been granted
+      ;; edit on it. Person entries within that are still rendered at the
+      ;; caller's core/site-pii-tier (full email for admins, masked for plain
+      ;; members). ---
         ["/actions/get-site-editors"
          {:post
           {:no-doc true
-           :require-privilege nil
-           :middleware [mw/token-auth mw/auth]
+           :require-privilege (fn [req] (site-org-member-or-admin? db req))
            :parameters {:body [:map [:lipas-id #'sports-site-schema/lipas-id]]}
            :handler (fn [req]
                       {:status 200
-                       :body (core/site-editors db (-> req :parameters :body :lipas-id))})}}]
+                       :body (core/site-editors db
+                                                (-> req :parameters :body :lipas-id)
+                                                (:identity req))})}}]
 
       ;; --- Site edit history — any authenticated user, surfaced in the org
-      ;; Kohteet drawer for the members maintaining the data. The author is a
-      ;; person identifier (email) ONLY for :users/manage holders; everyone
-      ;; else gets timestamp + a coarse role label (GDPR, F38). ---
+      ;; Kohteet drawer for the members maintaining the data. Same three tiers
+      ;; as get-site-editors: full author email for LIPAS/org admins, masked for
+      ;; org members and the site's own editors, and timestamp + a coarse role
+      ;; label for anyone else (GDPR, F38). ---
         ["/actions/get-site-edit-history"
          {:post
           {:no-doc true
@@ -523,7 +573,7 @@
                       {:status 200
                        :body (core/site-edit-history
                                db (-> req :parameters :body :lipas-id)
-                               {:emails? (roles/check-privilege (:identity req) {} :users/manage)})})}}]
+                               (:identity req))})}}]
 
       ;; --- Commands --------------------------------------------------------
 
@@ -879,6 +929,23 @@
            (fn [{:keys [body-params]}]
              (core/search search (search-guard/check-query! body-params)))}}]
 
+        ;; Click the map -> nearest address, postal code, postitoimipaikka.
+        ;; Public and unauthenticated like /actions/search below it: the answer
+        ;; is open data (Posti, Tilastokeskus, Digitransit) about a point the
+        ;; caller already knows, and the map it serves is public too. The
+        ;; coordinate bounds in the query schema are what keeps an open
+        ;; endpoint from being a free proxy to Digitransit for the rest of the
+        ;; world.
+        ["/actions/reverse-geocode"
+         {:get
+          {:no-doc false
+           :parameters {:query handler-schema/reverse-geocode-query-params}
+           :responses {200 {:body handler-schema/reverse-geocode-response}}
+           :handler
+           (fn [{{{:keys [lat lon]} :query} :parameters}]
+             {:status 200
+              :body (address/reverse-geocode db (pelias-reverse-fn pelias) lat lon)})}}]
+
         ["/actions/find-fields"
          {:post
           {:no-doc false
@@ -889,21 +956,105 @@
              {:status 200
               :body (core/search-fields search body-params)})}}]
 
+        ["/actions/request-registration"
+         {:post
+          {:no-doc true
+           ;; Self-registration step 1: mails a registration link (or an
+           ;; "account exists" note) to the address. Unauthenticated mail to an
+           ;; address of the caller's choosing, so it gets the register budget.
+           ;; `:register-url` is host-whitelisted like every other emailed-link
+           ;; sink: the link carries the email-verification token.
+           :rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 5}
+           :parameters {:body [:map {:closed true}
+                               [:email users-schema/email-schema]
+                               [:register-url handler-schema/magic-link-login-url]
+                               [:lang {:optional true} users-schema/registration-lang]]}
+           :handler
+           (fn [req]
+             (core/request-registration! db emailer (-> req :parameters :body))
+             {:status 200
+              :body {:status "OK"}})}}]
+
         ["/actions/register"
          {:post
           {:no-doc true
-           ;; Creates an account and mails lipasinfo. Registering is a
-           ;; once-ever act per person, so this can be tighter than the
-           ;; password-reset budget.
+           ;; Self-registration step 2: creates the account and mails lipasinfo.
+           ;; Gated by the email-verification token from step 1; the email is
+           ;; read from the token, and only the coerced `:parameters` are used —
+           ;; never the raw body — so nothing the client adds (permissions,
+           ;; status, verification fields) reaches the account row.
            :rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 5}
+           :parameters {:body users-schema/registration-payload-schema}
            :handler
            (fn [req]
-             (let [user (-> req
-                            :body-params
-                            (dissoc :permissions))
-                   _ (core/register! db emailer user)]
-               {:status 201
-                :body {:status "OK"}}))}}]
+             (core/register! db emailer (-> req :parameters :body))
+             {:status 201
+              :body {:status "OK"}})}}]
+
+        ["/actions/request-email-change"
+         {:post
+          {:no-doc true
+           ;; Self-service email change, step 1. Any logged-in user: the
+           ;; always-true privilege makes privilege-middleware authenticate,
+           ;; which also runs it before the per-user rate limit (that needs
+           ;; :identity). Mails a confirmation link to the new address; nothing
+           ;; changes until it is opened (core/request-email-change!).
+           :require-privilege (fn [_req] true)
+           :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 5}
+           :parameters {:body [:map {:closed true}
+                               [:new-email users-schema/email-schema]
+                               [:confirm-url handler-schema/magic-link-login-url]
+                               [:lang {:optional true} users-schema/registration-lang]]}
+           :handler
+           (fn [{:keys [identity parameters]}]
+             (let [{:keys [new-email confirm-url lang]} (:body parameters)
+                   user (core/get-user! db (str (:id identity)))]
+               (core/request-email-change! db emailer {:user        user
+                                                       :new-email   new-email
+                                                       :confirm-url confirm-url
+                                                       :lang        lang
+                                                       :actor       (or (:impersonator identity) user)
+                                                       :admin?      false}))
+             {:status 200 :body {:status "OK"}})}}]
+
+        ["/actions/request-email-change-for-user"
+         {:post
+          {:no-doc true
+           ;; Admin-initiated email change. Same confirmation as self-service:
+           ;; the new address must open the link, so a typo can't hand an
+           ;; account to a stranger.
+           :require-privilege :users/manage
+           :parameters {:body [:map {:closed true}
+                               [:id :string]
+                               [:new-email users-schema/email-schema]
+                               [:confirm-url handler-schema/magic-link-login-url]
+                               [:lang {:optional true} users-schema/registration-lang]]}
+           :handler
+           (fn [{:keys [identity parameters]}]
+             (let [{:keys [id new-email confirm-url lang]} (:body parameters)]
+               (core/request-email-change! db emailer {:user        (core/get-user! db id)
+                                                       :new-email   new-email
+                                                       :confirm-url confirm-url
+                                                       :lang        lang
+                                                       :actor       identity
+                                                       :admin?      true}))
+             {:status 200 :body {:status "OK"}})}}]
+
+        ["/actions/confirm-email-change"
+         {:post
+          {:no-doc true
+           ;; Email change, step 2, from the link in the new inbox.
+           ;; Unauthenticated on purpose: the email-change token is the
+           ;; credential, and the link is typically opened in a mail client's
+           ;; browser, not the logged-in one. It mails the old address, hence
+           ;; the budget.
+           :rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 10}
+           :parameters {:body [:map {:closed true}
+                               [:token [:string {:min 1 :max 4096}]]]}
+           :handler
+           (fn [{:keys [parameters]}]
+             (core/confirm-email-change! db emailer (-> parameters :body :token))
+             {:status 200 :body {:status "OK"}})}}]
 
         ["/actions/login"
          {:post
@@ -937,6 +1088,12 @@
                        ;; the short expiry across refreshes so they can't be
                        ;; laundered into regular sessions.
                        impersonator (:impersonator identity)]
+                   ;; This is where an emailed magic link lands, so for an
+                   ;; unverified invite account it is the first proof of the
+                   ;; inbox. Never for an impersonation session — that's the
+                   ;; admin, not the owner.
+                   (when-not impersonator
+                     (core/mark-email-verified-by-login! db stored))
                    {:status 200
                     :body (merge (dissoc user :password)
                                  {:token (if impersonator
@@ -1087,7 +1244,11 @@
              (let [user (-> req :parameters :body :user)
                    variant (-> req :parameters :body :variant keyword)
                    user (or (core/get-user db (:email user))
-                            (do (core/add-user! db user)
+                            ;; No password from the client: an account made
+                            ;; here must only be reachable through the emailed
+                            ;; link, which is what lets its first login count as
+                            ;; email verification (core/mark-email-verified-by-login!).
+                            (do (core/add-user! db (dissoc user :password))
                                 (core/get-user db (:email user))))
                    url (-> req :parameters :body :login-url)
                    params {:user user :variant variant :login-url url}
@@ -1345,8 +1506,10 @@
            :parameters
            {:body feedback-schema/feedback-payload}
            :handler
-           (fn [{:keys [body-params]}]
-             (core/send-feedback! emailer body-params)
+           ;; The coerced body, not the raw one: only the schema's keys may
+           ;; reach the ops inbox.
+           (fn [{:keys [parameters]}]
+             (core/send-feedback! emailer (:body parameters))
              {:status 200
               :body {:status "OK"}})}}]
 
