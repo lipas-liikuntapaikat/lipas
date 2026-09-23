@@ -35,6 +35,7 @@
  :filter-all "Alla"
  :filter-sync-enabled "Synkronisering på"
  :filter-sync-disabled "Synkronisering av"
+ :filter-no-longer-matches "Matchar inte längre filtret"
  :filter-not-synced "Inte synkroniserad"
  :filter-out-of-date "Ändrad"
  :filter-ok "Uppdaterad"
