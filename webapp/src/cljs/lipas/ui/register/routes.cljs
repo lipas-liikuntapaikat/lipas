@@ -8,6 +8,11 @@
     :tr-key :register/headline
     :view   views/main
     :controllers
-    [{:stop
+    [{:start
+      ;; Opened from the emailed link: ?token=<email-verification token>
+      (fn [& _params]
+        (==> [:lipas.ui.register.events/init-registration
+              (utils/parse-token (-> js/window .-location .-href))]))
+      :stop
       (fn [& _params]
         (==> [:lipas.ui.register.events/reset-form]))}]}])
