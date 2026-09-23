@@ -37,6 +37,7 @@
  :filter-all "Kaikki"
  :filter-sync-enabled "Integraatio päällä"
  :filter-sync-disabled "Integraatio pois"
+ :filter-no-longer-matches "Ei enää vastaa suodatinta"
  :filter-not-synced "Ei vielä viety"
  :filter-out-of-date "Muuttunut"
  :filter-ok "Ajan tasalla"

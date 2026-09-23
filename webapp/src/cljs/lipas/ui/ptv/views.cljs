@@ -615,6 +615,15 @@
                 :missing-descriptions (not valid)
                 true)))))
 
+(defn- shown-sites
+  "The sites the table lists: those matching the filter, plus any row the
+   user has open. Every edit writes straight into the cached site the
+   statuses are derived from, so without the pin an open row would vanish
+   mid-edit (or right after its sync) the moment it stops matching.
+   Keeps the order of `sites`."
+  [sites matching-ids open-ids]
+  (filter #(or (matching-ids (:lipas-id %)) (open-ids (:lipas-id %))) sites))
+
 (defn- audit-feedback-text
   "The auditor's comments on an item, one \"Tiivistelmä: …\" line per field
    that has one."
@@ -653,6 +662,14 @@
           org-id (<== [::subs/selected-ptv-org-id])
           sites (<== [::subs/sports-sites org-id])
           filtered-sites (filter-sites sites @search-text @status-filter)
+          open-ids (into #{} (keep (fn [[id open?]] (when open? id))) @expanded-rows)
+          matching-ids (into #{} (map :lipas-id) filtered-sites)
+          shown (shown-sites sites matching-ids open-ids)
+          ;; A filter change starts a new lookup: rows open from the previous
+          ;; one stay open only if they match the new filter too.
+          refilter! (fn [search status]
+                      (let [ids (into #{} (map :lipas-id) (filter-sites sites search status))]
+                        (swap! expanded-rows #(into {} (filter (comp ids key)) %))))
           double-linked-ids (<== [::subs/double-linked-lipas-ids org-id])
 
           ;; Audit status component
@@ -722,13 +739,15 @@
          :expanded? @filter-expanded?
          :on-toggle-expanded #(swap! filter-expanded? not)
          :search-text @search-text
-         :on-search-change #(reset! search-text %)
+         :on-search-change #(do (refilter! % @status-filter)
+                                (reset! search-text %))
          :status-filter @status-filter
-         :on-status-change #(reset! status-filter %)
+         :on-status-change #(do (refilter! @search-text %)
+                                (reset! status-filter %))
          :total-count (count sites)
          :filtered-count (count filtered-sites)}]
 
-       (when (seq filtered-sites)
+       (when (seq shown)
          [:> TableContainer {:component Paper}
           [:> Table
 
@@ -754,7 +773,7 @@
                                                       :approved-with-feedback 4 ; All good, with a remark
                                                       5)] ; Default/unknown
                                  [audit-priority (:type site)]))
-                             filtered-sites)]
+                             shown)]
 
                 [:<> {:key lipas-id}
 
@@ -831,7 +850,12 @@
                     (when (contains? double-linked-ids (:lipas-id site))
                       [:> Tooltip {:title (tr :ptv.double-link/warning-title)}
                        [:> WarningIcon {:color "warning" :sx #js {:fontSize "1rem"}}]])
-                    [:span (:name site)]]]
+                    [:span (:name site)]
+                    ;; Kept on screen only because the row is open (see shown-sites)
+                    (when-not (matching-ids lipas-id)
+                      [:> Chip {:label (tr :ptv/filter-no-longer-matches)
+                                :size "small"
+                                :variant "outlined"}])]]
 
                 ;; Type
                   [:> TableCell
