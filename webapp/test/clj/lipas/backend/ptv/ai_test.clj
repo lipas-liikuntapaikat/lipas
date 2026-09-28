@@ -188,3 +188,44 @@
           expected #{:name :comment :status :reservations-link :lipas-id
                      :location :search-meta :properties}]
       (is (= expected (set (keys doc)))))))
+
+;;; enforce-summary-limit ;;;
+
+(def ^:private long-fi (apply str (repeat 158 "a")))
+(def ^:private long-se (apply str (repeat 170 "b")))
+
+(deftest enforce-summary-limit-test
+  (testing "results within the limit make no follow-up call"
+    (with-redefs [ai/shorten-summaries (fn [_] (throw (ex-info "must not be called" {})))]
+      (is (= [{:summary {:fi "lyhyt"}}]
+             (ai/enforce-summary-limit [{:summary {:fi "lyhyt"}}])))))
+
+  (testing "over-long summaries are shortened in one call; others untouched"
+    (let [calls (atom [])]
+      (with-redefs [ai/shorten-summaries (fn [items]
+                                           (swap! calls conj items)
+                                           {"0/fi" "lyhennetty" "1/se" "förkortad"})]
+        (is (= [{:summary {:fi "lyhennetty" :en "ok"}}
+                {:summary {:se "förkortad"}}
+                {:summary {:fi "ok"}}]
+               (ai/enforce-summary-limit [{:summary {:fi long-fi :en "ok"}}
+                                          {:summary {:se long-se}}
+                                          {:summary {:fi "ok"}}])))
+        (is (= 1 (count @calls)))
+        (is (= #{"0/fi" "1/se"} (set (map :key (first @calls))))))))
+
+  (testing "skip-langs are never sent or changed"
+    (with-redefs [ai/shorten-summaries (fn [items]
+                                         (is (= ["0/se"] (map :key items)))
+                                         {"0/se" "förkortad"})]
+      (is (= [{:summary {:fi long-fi :se "förkortad"}}]
+             (ai/enforce-summary-limit [{:summary {:fi long-fi :se long-se}}]
+                                       :skip-langs #{:fi})))))
+
+  (testing "a rewrite that isn't shorter, or a failed call, keeps the original"
+    (with-redefs [ai/shorten-summaries (fn [_] {"0/fi" (str long-fi "zz")})]
+      (is (= [{:summary {:fi long-fi}}]
+             (ai/enforce-summary-limit [{:summary {:fi long-fi}}]))))
+    (with-redefs [ai/shorten-summaries (fn [_] (throw (ex-info "LLM down" {})))]
+      (is (= [{:summary {:fi long-fi}}]
+             (ai/enforce-summary-limit [{:summary {:fi long-fi}}]))))))

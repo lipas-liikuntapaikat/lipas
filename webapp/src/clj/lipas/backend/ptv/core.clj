@@ -43,6 +43,14 @@
   [db lipas-ids]
   (audit/site-audits db lipas-ids))
 
+(defn- enforce-summary-limit
+  "Single-result variant of `ai/enforce-summary-limit`. Non-map content
+   (an unparseable model response) passes through untouched."
+  [result & opts]
+  (if (map? result)
+    (first (apply ai/enforce-summary-limit [result] opts))
+    result))
+
 (defn generate-ptv-descriptions
   [{:keys [client indices] :as _search}
    lipas-id & [{:keys [reference]}]]
@@ -52,7 +60,8 @@
                 :_source)]
     (-> (ai/generate-ptv-descriptions doc {:reference reference})
         :message
-        :content)))
+        :content
+        enforce-summary-limit)))
 
 (defn generate-ptv-descriptions-batch
   "Generate PTV descriptions for multiple same-type sports sites in one Gemini call.
@@ -70,23 +79,28 @@
                       (-> (search/fetch-document client idx lipas-id)
                           :body
                           :_source))
-                    lipas-ids)]
-    (-> (ai/generate-ptv-descriptions-batch docs {:reference reference})
-        :message
-        :content)))
+                    lipas-ids)
+        content (-> (ai/generate-ptv-descriptions-batch docs {:reference reference})
+                    :message
+                    :content)]
+    (cond-> content
+      (and (map? content) (seq (:sites content)))
+      (update :sites ai/enforce-summary-limit))))
 
 (defn generate-ptv-descriptions-from-data
   [doc & [{:keys [reference]}]]
   (let [doc (core/enrich doc)]
     (-> (ai/generate-ptv-descriptions doc {:reference reference})
         :message
-        :content)))
+        :content
+        enforce-summary-limit)))
 
 (defn translate-to-other-langs
   [doc]
   (-> (ai/translate-to-other-langs doc)
       :message
       :content
+      (enforce-summary-limit :skip-langs #{(keyword (:from doc))})
       ;; Ensure the original from texts are kept as-is
       (assoc-in [:summary (keyword (:from doc))] (:summary doc))
       (assoc-in [:description (keyword (:from doc))] (:description doc))))
@@ -137,7 +151,8 @@
                                                   :lighting? true})))]
     (-> (ai/generate-ptv-service-descriptions doc {:sub-category-id sub-category-id})
         :message
-        :content)))
+        :content
+        enforce-summary-limit)))
 
 (defn- localized-list?
   "Localized lists are `[{:value <str> :language <str> ...} ...]`. Used by
@@ -694,11 +709,16 @@
         ;; keys from the existing record — there's no PTV response here to
         ;; re-derive them, and a blanket (assoc :ptv ptv) would wipe them and
         ;; break the reversible-archive bookkeeping (is-sent-to-ptv?).
+        ;; :last-sync is server-owned too (when LIPAS last pushed to PTV):
+        ;; never taken from the client, and dropping it made a site that IS in
+        ;; PTV read as never exported (sync-status :not-synced).
         (let [old-ptv (:ptv existing)
               new-ptv (-> (select-keys ptv persisted-ptv-keys)
                           (assoc :source-id          (:source-id old-ptv)
                                  :publishing-status  (:publishing-status old-ptv)
-                                 :previous-type-code (:previous-type-code old-ptv)))
+                                 :previous-type-code (:previous-type-code old-ptv))
+                          (dissoc :last-sync)
+                          (cond-> (:last-sync old-ptv) (assoc :last-sync (:last-sync old-ptv))))
               site (assoc existing
                           :event-date (utils/timestamp)
                           :ptv new-ptv)]

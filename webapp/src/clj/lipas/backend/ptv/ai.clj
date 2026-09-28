@@ -5,9 +5,11 @@
   (:require [cheshire.core :as json]
             [clojure.string :as str]
             [lipas.backend.llm :as llm]
+            [lipas.data.ptv :as ptv-data]
             [lipas.data.ptv-service-guidance :as service-guidance]
             [malli.json-schema :as json-schema]
-            [malli.util :as mu]))
+            [malli.util :as mu]
+            [taoensso.timbre :as log]))
 
 (def ptv-system-instruction-v2
   "You are an assistant who helps users produce content for the Service Information Repository (Palvelutietovaranto). You will be asked questions and should primarily use source material and secondarily your own knowledge to provide answers. Follow these style guidelines in your responses:
@@ -697,3 +699,107 @@ Source data:
     (gemini-complete llm/gemini-config
                      ptv-system-instruction-v5
                      prompt)))
+
+;;; ——— Summary length enforcement ——————————————————————————————————————
+;;
+;; PTV rejects summaries over `ptv-data/max-summary-length` (150) chars.
+;; Structured output can't carry a maxLength, so the limit lives only in
+;; the prompts and the model regularly overshoots it (Uusikaupunki:
+;; 158- and ~230-char summaries that then bounced off the backend
+;; schema). Every generator's result goes through `enforce-summary-limit`:
+;; one follow-up call rewrites all over-long summaries at once. Anything
+;; still too long afterwards is returned as-is — the UI flags it and
+;; blocks the export until a human shortens it.
+
+(def ^:private shorten-target-length
+  "Asked-for length, with headroom below the hard limit: the model's own
+   character counting is approximate."
+  (- ptv-data/max-summary-length 15))
+
+(def shorten-summaries-response-schema
+  [:map
+   {:closed true}
+   [:summaries
+    [:vector
+     [:map
+      {:closed true}
+      [:key :string]
+      [:summary :string]]]]])
+
+(def ^:private ShortenSummariesGeminiResponse
+  (json-schema/transform (mu/open-schema shorten-summaries-response-schema)))
+
+(def ^:private shorten-summaries-openai-format
+  {:type "json_schema"
+   :json_schema {:name   "ShortenSummaries"
+                 :strict true
+                 :schema (json-schema/transform shorten-summaries-response-schema)}})
+
+(def shorten-summaries-prompt
+  "Each summary below is too long for the Service Information Repository (Palvelutietovaranto), which has a hard limit of %d characters.
+
+Rewrite each summary to AT MOST %d characters:
+- Keep the SAME language as the original.
+- Keep it a complete sentence (not a list).
+- Keep the most essential facts; drop secondary details. Do not add anything new.
+- Return every item with its key unchanged.
+
+Items:
+%s")
+
+(defn shorten-summaries
+  "Asks the model to shorten `items` ({:key str :summary str}). Returns
+   {key shortened-summary}."
+  [items]
+  (let [config (assoc llm/gemini-config
+                      :response-schema ShortenSummariesGeminiResponse
+                      :fallback-message-format shorten-summaries-openai-format)]
+    (->> (gemini-complete config
+                          ptv-system-instruction-v5
+                          (format shorten-summaries-prompt
+                                  ptv-data/max-summary-length
+                                  shorten-target-length
+                                  (json/encode items)))
+         :message
+         :content
+         :summaries
+         (into {} (map (juxt :key :summary))))))
+
+(defn- over-limit? [s]
+  (and (string? s) (> (count s) ptv-data/max-summary-length)))
+
+(defn enforce-summary-limit
+  "Shortens any over-long summary in `results` (a seq of maps carrying
+   :summary {lang text}) with one follow-up model call, and returns
+   `results` as a vector. A rewrite is only taken if it is shorter than
+   the original; summaries still over the limit are left for the UI to
+   flag. Languages in `skip-langs` (user-authored source text, e.g. the
+   from-language of a translation) are never touched. A failing follow-up
+   call is logged and the originals are returned."
+  [results & {:keys [skip-langs]}]
+  (let [results (vec results)
+        items (for [[i result] (map-indexed vector results)
+                    [lang summary] (:summary result)
+                    :when (and (over-limit? summary)
+                               (not (contains? skip-langs lang)))]
+                {:key (str i "/" (name lang)) :i i :lang lang :summary summary})]
+    (if (empty? items)
+      results
+      (let [shortened (try
+                        (shorten-summaries (map #(select-keys % [:key :summary]) items))
+                        (catch Exception e
+                          (log/warnf e "Shortening %d over-long PTV summaries failed" (count items))
+                          {}))
+            results' (reduce (fn [rs {:keys [key i lang summary]}]
+                               (let [s (get shortened key)]
+                                 (if (and (string? s)
+                                          (not (str/blank? s))
+                                          (< (count s) (count summary)))
+                                   (assoc-in rs [i :summary lang] s)
+                                   rs)))
+                             results
+                             items)]
+        (log/infof "Shortened over-long PTV summaries: %d over the limit, %d still over after rewrite"
+                   (count items)
+                   (count (for [r results' [_ s] (:summary r) :when (over-limit? s)] s)))
+        results'))))

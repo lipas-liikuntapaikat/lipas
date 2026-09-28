@@ -4,7 +4,10 @@
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
             [lipas.roles :as roles]
+            [lipas.schema.sports-sites.ptv :as ptv-schema]
             [lipas.ui.utils :as utils]
+            [malli.core :as m]
+            [malli.transform :as mt]
             [re-frame.core :as rf]))
 
 (defn ptv-error-payload
@@ -274,6 +277,14 @@
                 :on-success [::fetch-integration-candidates-success ptv-org-id]
                 :on-failure [::fetch-integration-candidates-failure]}]]}))))
 
+(defn- persisted-sync?
+  "Snapshot of whether the SAVED site has PTV sync on. Kept next to the live
+  :ptv draft (whose :sync-enabled flips on every toggle) so ::persist-ptv-meta
+  can tell whether turning sync off changes anything on the backend. Only the
+  load and the save/sync/archive responses may set it."
+  [ptv]
+  (boolean (:sync-enabled ptv)))
+
 (rf/reg-event-fx ::fetch-integration-candidates-success
   (fn [{:keys [db]} [_ ptv-org-id resp]]
     (let [new-sites (utils/index-by :lipas-id resp)
@@ -290,7 +301,8 @@
                                                         ptv-data/site-audited-field-keys)]
                              (assoc m lipas-id
                                     (-> new-site
-                                        (assoc :ptv-persisted persisted)
+                                        (assoc :ptv-persisted persisted
+                                               :ptv-persisted-sync? (persisted-sync? (:ptv new-site)))
                                         (cond-> (:ptv existing) (update :ptv #(merge (:ptv existing) %)))
                                         ;; a search index not yet reindexed after the
                                         ;; audit move still serves the legacy in-document
@@ -524,10 +536,17 @@
   ;; save-ptv-meta without syncing to PTV. Reads the (already-updated) app-db
   ;; site, so dispatch any flag change before this. save-ptv-meta keys off the
   ;; top-level :lipas-id and reads the remaining meta from the flattened map.
+  ;;
+  ;; Only called to persist sync OFF, so it's skipped when the saved site
+  ;; doesn't have sync on — no :ptv saved at all, or saved with sync already
+  ;; off. Off is the default; saving it would change nothing (and a site that
+  ;; never had PTV data would send an entry without :org-id or texts, which
+  ;; the backend rightly rejects).
   (fn [{:keys [db]} [_ lipas-id]]
     (let [org-id (-get-ptv-org-id db)
           site (get-in db [:ptv :org org-id :data :sports-sites lipas-id])]
-      {:fx [[:dispatch [::save-ptv-meta [(assoc (:ptv site) :lipas-id lipas-id)]]]]})))
+      (when (:ptv-persisted-sync? site)
+        {:fx [[:dispatch [::save-ptv-meta [(assoc (:ptv site) :lipas-id lipas-id)]]]]}))))
 
 (rf/reg-event-fx ::toggle-sync-enabled
   ;; Turning sync OFF on a site that is currently published in PTV prompts the
@@ -1418,6 +1437,8 @@
                               ;; Update the lipas TS also, it will be the same TS as PTV last-sync now
                (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :event-date] (:last-sync ptv))
                (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv)
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv-persisted-sync?]
+                         (persisted-sync? ptv))
                               ;; The sync persisted the draft — refresh the snapshot audit
                               ;; whose-move states are derived from, so the audit status
                               ;; (row bucket, feedback alert) moves only now, not on keystrokes.
@@ -1474,7 +1495,9 @@
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :service-locations] false)
                (update-in [:ptv :syncing :service-location] dissoc lipas-id)
-               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv))
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv)
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv-persisted-sync?]
+                         (persisted-sync? ptv)))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification
                         {:message (tr :ptv.actions/archived-in-ptv) :success? true}]]]})))
 
@@ -1497,6 +1520,24 @@
                           on-single-success
                           on-single-failure]])]})))
 
+(defn ptv-meta-entry
+  "The /actions/save-ptv-meta entry for `site`: the same editable keys the
+  sync path persists (shared source of truth); the backend preserves the
+  server-owned lifecycle keys (:source-id, :publishing-status,
+  :previous-type-code) itself. `utils/clean` drops empty collections, so the
+  required id vectors are defaulted back — without them an unlinked site's
+  entry is invalid."
+  [site]
+  (merge {:service-ids [] :service-channel-ids []}
+         (utils/clean (select-keys site ptv-data/persisted-ptv-keys))))
+
+(def ^:private valid-ptv-meta?
+  "Would `entry` pass the backend's ptv-meta validation? Extra keys are
+  stripped first, as the backend does."
+  (let [decode (m/decoder ptv-schema/ptv-meta (mt/strip-extra-keys-transformer))
+        valid? (m/validator ptv-schema/ptv-meta)]
+    (comp valid? decode)))
+
 (rf/reg-event-fx ::create-all-ptv-service-locations
   (fn [{:keys [db]} [_ sports-sites]]
     (let [org-id (-get-ptv-org-id db)
@@ -1507,7 +1548,11 @@
                                                   :to-save))
                                               sports-sites)
 
-          ids (map :lipas-id to-sync)]
+          ids (map :lipas-id to-sync)
+          ;; Only sites with something persistable: an untouched site (no
+          ;; texts yet) or one with over-long texts would fail the backend's
+          ;; ptv-meta validation and take the whole meta save down with it.
+          to-save (filter (comp valid-ptv-meta? ptv-meta-entry) to-save)]
 
       #_(println "To sync: " (count to-sync))
       #_(println "to save: " (count to-save))
@@ -1532,30 +1577,38 @@
     ;; This event is used to save :ptv data for sites which have :sync-enabled false
     (when (seq sports-sites)
       (let [token (-> db :user :login :token)
-            ;; Same editable keys the sync path persists (shared source of
-            ;; truth). The backend preserves server-owned lifecycle keys
-            ;; (:source-id, :publishing-status, :previous-type-code) itself.
-            ks ptv-data/persisted-ptv-keys]
+            params (reduce (fn [m site]
+                             (assoc m (:lipas-id site) (ptv-meta-entry site)))
+                           {}
+                           sports-sites)]
         {:db (assoc-in db [:ptv :save-in-progress] true)
          :fx [[:http-xhrio
                {:method :post
                 :headers {:Authorization (str "Token " token)}
                 :uri (str (:backend-url db) "/actions/save-ptv-meta")
-                :params (reduce (fn [m site]
-                                  (assoc m (:lipas-id site) (utils/clean (select-keys site ks))))
-                                {}
-                                sports-sites)
+                :params params
                 :format (ajax/transit-request-format)
                 :response-format (ajax/transit-response-format)
-                :on-success [::save-ptv-meta-success]
+                :on-success [::save-ptv-meta-success params]
                 :on-failure [::save-ptv-meta-failure]}]]}))))
 
 (rf/reg-event-fx ::save-ptv-meta-success
-  (fn [{:keys [db]} _]
+  (fn [{:keys [db]} [_ saved _resp]]
     (let [tr (:translator db)
+          org-id (-get-ptv-org-id db)
           notification {:message (tr :notifications/save-success)
                         :success? true}]
-      {:db (-> db (assoc-in [:ptv :save-in-progress] false))
+      {:db (-> db
+               (assoc-in [:ptv :save-in-progress] false)
+               (update-in [:ptv :org org-id :data :sports-sites]
+                          (fn [sites]
+                            (reduce-kv (fn [sites lipas-id ptv-meta]
+                                         (cond-> sites
+                                           (contains? sites lipas-id)
+                                           (assoc-in [lipas-id :ptv-persisted-sync?]
+                                                     (persisted-sync? ptv-meta))))
+                                       sites
+                                       saved))))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
 (rf/reg-event-fx ::save-ptv-meta-failure

@@ -476,3 +476,72 @@
                                        {lipas-id (meta-for own-ptv-org-id)
                                         (inc lipas-id) (meta-for foreign-ptv-org-id)}
                                        token))))))))))
+
+(deftest save-ptv-meta-invalid-entry-is-a-400-not-a-403-test
+  (testing "an invalid entry is rejected by validation, not silently dropped"
+    ;; Regression (Uusikaupunki): body coercion used to strip invalid
+    ;; :map-of entries, so a batch of only invalid entries arrived as {} and
+    ;; the gate answered 403 "no :org-id" — for a caller who DID have access.
+    (let [own-ptv-org-id (str (random-uuid))
+          _own (seed-org! own-ptv-org-id [own-city])
+          admin (tu/gen-admin-user :db-component (test-db))
+          site (seed-site! admin)
+          caller (tu/gen-user {:db? true
+                               :db-component (test-db)
+                               :admin? false
+                               :permissions {:roles [{:role "ptv-manager"
+                                                      :city-code [own-city]}
+                                                     {:role "city-manager"
+                                                      :city-code [own-city]}]}})
+          token (jwt/create-token caller)
+          lipas-id (:lipas-id site)
+          too-long (apply str (repeat 158 "x"))]
+      (with-ptv-stub
+        (fn []
+          (doseq [[label entry] [["over-long summary"
+                                  (assoc (meta-for own-ptv-org-id) :summary {:fi too-long})]
+                                 ["missing summary"
+                                  (dissoc (meta-for own-ptv-org-id) :summary)]]]
+            (testing label
+              (let [resp (post* "/api/actions/save-ptv-meta" {lipas-id entry} token)
+                    body (tu/safe-parse-json resp)]
+                (is (= 400 (:status resp)))
+                (is (= "invalid-ptv-meta" (:type body)))
+                (is (contains? (:errors body) (keyword (str lipas-id)))
+                    "the offending lipas-id is named in the errors")))))))))
+
+(deftest save-ptv-meta-ptv-manager-happy-path-test
+  (testing "a municipality ptv-manager saves a wizard-style sync-off entry"
+    ;; The Uusikaupunki flow end to end: a non-admin (admins skip the gate)
+    ;; saves meta for a site they're not exporting. The entry carries the
+    ;; extra keys the UI really sends (:last-sync, :descriptions-integration),
+    ;; which ptv-meta doesn't know and must be stripped, not rejected.
+    (let [own-ptv-org-id (str (random-uuid))
+          _own (seed-org! own-ptv-org-id [own-city])
+          admin (tu/gen-admin-user :db-component (test-db))
+          site (seed-site! admin)
+          caller (tu/gen-user {:db? true
+                               :db-component (test-db)
+                               :admin? false
+                               :permissions {:roles [{:role "ptv-manager"
+                                                      :city-code [own-city]}
+                                                     {:role "city-manager"
+                                                      :city-code [own-city]}]}})
+          token (jwt/create-token caller)
+          lipas-id (:lipas-id site)
+          entry (assoc (meta-for own-ptv-org-id)
+                       :sync-enabled false
+                       :summary {:fi "Uusi tiivistelmä"}
+                       :description {:fi "Uusi kuvaus"}
+                       :last-sync "2026-01-02T00:00:00.000Z"
+                       :descriptions-integration "lipas-managed-ptv-fields")]
+      (with-ptv-stub
+        (fn []
+          (let [resp (post* "/api/actions/save-ptv-meta" {lipas-id entry} token)
+                after (:ptv (core/get-sports-site (test-db) lipas-id))]
+            (is (= 200 (:status resp)))
+            (is (false? (:sync-enabled after)))
+            (is (= {:fi "Uusi tiivistelmä"} (:summary after)))
+            (is (= {:fi "Uusi kuvaus"} (:description after)))
+            (is (= own-ptv-org-id (:org-id after)))
+            (is (empty? @ptv-calls) "a meta save never calls the PTV API")))))))

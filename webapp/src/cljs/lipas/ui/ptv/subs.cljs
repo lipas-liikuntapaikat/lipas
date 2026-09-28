@@ -322,22 +322,39 @@
                                        (utils/timestamp)
                                        site))))
 
+(def ^:private explain-service-location
+  (m/explainer ptv-schema/create-ptv-service-location))
+
+(defn- service-location-schema-errors
+  "Localized error-message keys for the would-be /save-ptv-service-location
+  payload of `lipas-id`, validated against the same malli schema the backend
+  coerces against. Returns a distinct vector of localization keys (from the
+  schema's :error/message props) — empty when the payload is valid. Only
+  keyword messages are surfaced; structural errors (missing required keys)
+  are left to the business-level sync hints."
+  [db lipas-id]
+  (->> (some-> (explain-service-location (events/service-location-payload db lipas-id))
+               :errors)
+       (map me/error-message)
+       (filter keyword?)
+       distinct
+       vec))
+
 (rf/reg-sub ::service-location-schema-errors
-  ;; Localized error-message keys for the would-be /save-ptv-service-location
-  ;; payload of `lipas-id`, validated against the same malli schema the backend
-  ;; coerces against. Returns a distinct vector of localization keys (from the
-  ;; schema's :error/message props) — empty when the payload is valid. Only
-  ;; keyword messages are surfaced; structural errors (missing required keys)
-  ;; are left to the business-level sync hints. Used to disable the sync button
-  ;; and explain why in its tooltip.
+  ;; Used to disable the sync button and explain why in its tooltip.
   (fn [db [_ lipas-id]]
-    (let [payload (events/service-location-payload db lipas-id)]
-      (->> (some-> (m/explain ptv-schema/create-ptv-service-location payload)
-                   :errors)
-           (map me/error-message)
-           (filter keyword?)
-           distinct
-           vec))))
+    (service-location-schema-errors db lipas-id)))
+
+(rf/reg-sub ::service-location-schema-errors-by-id
+  ;; {lipas-id -> error keys} for every site of the selected org that has
+  ;; schema errors. The wizard validates its whole batch with this so an
+  ;; over-length text blocks the export instead of bouncing as a 400.
+  (fn [db [_ org-id]]
+    (into {}
+          (keep (fn [lipas-id]
+                  (when-let [errs (not-empty (service-location-schema-errors db lipas-id))]
+                    [lipas-id errs])))
+          (keys (get-in db [:ptv :org org-id :data :sports-sites])))))
 
 (rf/reg-sub ::service-candidate-descriptions
   :<- [::ptv]
@@ -450,15 +467,25 @@
 
 (rf/reg-sub ::sports-sites-wizard
   ;; Sports sites filtered by the wizard step 1 sub-category selection.
+  ;; :valid also requires the would-be payload to pass the backend schema
+  ;; (e.g. summary length); the offending error keys ride along in
+  ;; :schema-errors.
   (fn [[_ org-id]]
     [(rf/subscribe [::sports-sites org-id])
-     (rf/subscribe [::candidates-search])])
-  (fn [[sites candidates-search] _]
-    (let [sub-cats (:sub-cats candidates-search)]
-      (if (seq sub-cats)
-        (let [sub-cats-set (set sub-cats)]
-          (filter (fn [site] (contains? sub-cats-set (:sub-category-id site))) sites))
-        sites))))
+     (rf/subscribe [::candidates-search])
+     (rf/subscribe [::service-location-schema-errors-by-id org-id])])
+  (fn [[sites candidates-search schema-errors] _]
+    (let [sub-cats (:sub-cats candidates-search)
+          sites (if (seq sub-cats)
+                  (let [sub-cats-set (set sub-cats)]
+                    (filter (fn [site] (contains? sub-cats-set (:sub-category-id site))) sites))
+                  sites)]
+      (map (fn [{:keys [lipas-id] :as site}]
+             (let [errs (get schema-errors lipas-id [])]
+               (-> site
+                   (assoc :schema-errors errs)
+                   (update :valid #(and % (empty? errs))))))
+           sites))))
 
 (rf/reg-sub ::sports-sites-count
   (fn [[_ org-id]]
