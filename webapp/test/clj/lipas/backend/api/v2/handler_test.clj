@@ -8,7 +8,9 @@
   (:require
     [clojure.set :as set]
     [clojure.test :refer [deftest is testing use-fixtures]]
+    [lipas.backend.api.v2 :as v2]
     [lipas.backend.core :as core]
+    [lipas.backend.search :as search]
     [lipas.test-utils :as test-utils]
     [ring.mock.request :as mock]))
 
@@ -427,6 +429,161 @@
     (let [resp ((test-app) (mock/request :get "/v2/sports-sites?page-size=101"))]
       (is (= 400 (:status resp))))))
 
+;;; Tests for deep pagination (index.max_result_window) ;;;
+
+;; Elasticsearch rejects `from + size > index.max_result_window`, which used to
+;; reach the client as a bare 500: /v2/sports-sites?page-size=100&page=601 (the
+;; first page over the 60000 window) while page 600 answered 200. That rejection
+;; depends only on `from + size`, never on how many documents the index holds,
+;; so the real boundary is reachable in a test with a handful of documents — no
+;; window rebinding and no 60000-document seed needed.
+
+(deftest sports-sites-query-window-test
+  (testing "->sports-sites-query"
+
+    (testing "pages inside the window fetch normally"
+      (let [q (v2/->sports-sites-query {:page 600 :page-size 100})]
+        (is (= 59900 (:from q)))
+        (is (= 100 (:size q)))))
+
+    (testing "the page at the exact window boundary still fetches"
+      (let [window (:sports-site search/max-result-window)
+            q (v2/->sports-sites-query {:page (/ window 100) :page-size 100})]
+        (is (= (- window 100) (:from q)))
+        (is (= 100 (:size q)))
+        (is (= window (+ (:from q) (:size q))))))
+
+    (testing "the first page past the window becomes a count-only query"
+      (let [q (v2/->sports-sites-query {:page 601 :page-size 100})]
+        (is (= 0 (:from q)))
+        (is (= 0 (:size q)))
+        (is (= (:sports-site search/max-result-window) (:track_total_hits q))
+            "totals must still be tracked so total-items stays correct")))
+
+    (testing "an absurd page becomes a count-only query"
+      (let [q (v2/->sports-sites-query {:page 100000 :page-size 100})]
+        (is (= 0 (:from q)))
+        (is (= 0 (:size q)))))
+
+    (testing "filters survive into the count-only query"
+      (let [q (v2/->sports-sites-query {:page 100000 :page-size 100 :type-codes [1120]})]
+        (is (= 0 (:size q)))
+        (is (= [{:terms {:type.type-code [1120]}}]
+               (-> q :query :bool :filter)))))))
+
+(deftest lois-query-window-test
+  (testing "->lois-query uses the lois index window, not the sports-sites one"
+    (let [window (:lois search/max-result-window)]
+      (is (= 50000 window))
+
+      (testing "the page at the exact boundary still fetches"
+        (let [q (v2/->lois-query {:page (/ window 100) :page-size 100})]
+          (is (= (- window 100) (:from q)))
+          (is (= 100 (:size q)))))
+
+      (testing "the first page past the window becomes a count-only query"
+        (let [q (v2/->lois-query {:page (inc (/ window 100)) :page-size 100})]
+          (is (= 0 (:from q)))
+          (is (= 0 (:size q)))
+          (is (= window (:track_total_hits q)))))
+
+      (testing "filters survive into the count-only query"
+        (let [q (v2/->lois-query {:page 100000 :page-size 100 :types ["fishing-spot"]})]
+          (is (= 0 (:size q)))
+          (is (= [{:terms {:loi-type.keyword ["fishing-spot"]}}]
+                 (-> q :query :bool :must))))))))
+
+(deftest list-sports-sites-beyond-window-test
+  (testing "GET /v2/sports-sites past index.max_result_window"
+    (doseq [i (range 1 16)]
+      (create-sports-site! (test-utils/make-point-site (+ 70000 i)
+                                                       :name (str "Window Site " i)
+                                                       :type-code (if (odd? i) 1120 1310))))
+
+    (testing "a page well inside the window returns items"
+      (let [resp ((test-app) (mock/request :get "/v2/sports-sites?page-size=5&page=3"))
+            body (parse-json-body resp)]
+        (is (= 200 (:status resp)))
+        (is (= 5 (count (:items body))))
+        (is (= 15 (-> body :pagination :total-items)))))
+
+    (testing "the page at the exact window boundary returns 200"
+      ;; from 59900 + size 100 = 60000 = the window: the deepest page ES
+      ;; accepts, and it does get sent to ES.
+      (let [resp ((test-app) (mock/request :get "/v2/sports-sites?page-size=100&page=600"))
+            body (parse-json-body resp)]
+        (is (= 200 (:status resp)))
+        (is (empty? (:items body)))
+        (is (= 15 (-> body :pagination :total-items)))))
+
+    (testing "the first page past the window returns 200 with empty items"
+      ;; The regression. from 60000 + size 100 > the window, so ES rejects the
+      ;; query outright — independently of how many documents the index holds,
+      ;; which is why 15 of them are enough to reproduce the production 500.
+      (let [resp ((test-app) (mock/request :get "/v2/sports-sites?page-size=100&page=601"))
+            body (parse-json-body resp)]
+        (is (= 200 (:status resp)))
+        (is (empty? (:items body)))
+        (is (= {:current-page 601
+                :page-size 100
+                :total-items 15
+                :total-pages 1}
+               (:pagination body)))))
+
+    (testing "an absurd page returns 200 with empty items"
+      (let [resp ((test-app) (mock/request :get "/v2/sports-sites?page-size=100&page=100000"))
+            body (parse-json-body resp)]
+        (is (= 200 (:status resp)))
+        (is (empty? (:items body)))
+        (is (= 100000 (-> body :pagination :current-page)))
+        (is (= 15 (-> body :pagination :total-items)))))
+
+    (testing "an out-of-range page with a filter reports the filtered total"
+      (let [resp ((test-app) (mock/request :get "/v2/sports-sites?page-size=100&page=601&type-codes=1310"))
+            body (parse-json-body resp)]
+        (is (= 200 (:status resp)))
+        (is (empty? (:items body)))
+        (is (= 7 (-> body :pagination :total-items))
+            "7 of the 15 sites have type-code 1310, not all 15")))))
+
+(deftest list-lois-beyond-window-test
+  (testing "GET /v2/lois past index.max_result_window"
+    (doseq [_ (range 12)]
+      (create-loi! (test-utils/gen-loi!)))
+
+    (testing "a page inside the window returns items"
+      (let [resp ((test-app) (mock/request :get "/v2/lois?page-size=5&page=2"))
+            body (parse-json-body resp)]
+        (is (= 200 (:status resp)))
+        (is (= 5 (count (:items body))))
+        (is (= 12 (-> body :pagination :total-items)))))
+
+    (testing "the page at the exact window boundary returns 200"
+      ;; The lois index has its own, smaller window: from 49900 + size 100.
+      (let [resp ((test-app) (mock/request :get "/v2/lois?page-size=100&page=500"))
+            body (parse-json-body resp)]
+        (is (= 200 (:status resp)))
+        (is (empty? (:items body)))
+        (is (= 12 (-> body :pagination :total-items)))))
+
+    (testing "the first page past the window returns 200 with empty items"
+      (let [resp ((test-app) (mock/request :get "/v2/lois?page-size=100&page=501"))
+            body (parse-json-body resp)]
+        (is (= 200 (:status resp)))
+        (is (empty? (:items body)))
+        (is (= {:current-page 501
+                :page-size 100
+                :total-items 12
+                :total-pages 1}
+               (:pagination body)))))
+
+    (testing "an absurd page returns 200 with empty items"
+      (let [resp ((test-app) (mock/request :get "/v2/lois?page-size=100&page=100000"))
+            body (parse-json-body resp)]
+        (is (= 200 (:status resp)))
+        (is (empty? (:items body)))
+        (is (= 12 (-> body :pagination :total-items)))))))
+
 ;;; Health check ;;;
 
 (deftest health-check-test
@@ -455,4 +612,8 @@
   (clojure.test/run-test-var #'get-single-loi-test)
   (clojure.test/run-test-var #'pagination-structure-test)
   (clojure.test/run-test-var #'invalid-parameters-test)
+  (clojure.test/run-test-var #'sports-sites-query-window-test)
+  (clojure.test/run-test-var #'lois-query-window-test)
+  (clojure.test/run-test-var #'list-sports-sites-beyond-window-test)
+  (clojure.test/run-test-var #'list-lois-beyond-window-test)
   (clojure.test/run-test-var #'health-check-test))

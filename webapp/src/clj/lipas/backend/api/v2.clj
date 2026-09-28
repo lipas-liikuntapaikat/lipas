@@ -1,6 +1,7 @@
 (ns lipas.backend.api.v2
   (:require [clojure.string :as str]
             [lipas.backend.core :as core]
+            [lipas.backend.search :as search]
             [lipas.schema.common :as common-schema]
             [lipas.schema.lois :as lois-schema]
             [lipas.schema.sports-sites :as sports-sites-schema]
@@ -74,37 +75,57 @@
    :total-items total-items
    :total-pages (-> total-items (/ page-size) Math/ceil int)})
 
+(defn ->paging
+  "`:from` and `:size` for `page`, or a count-only `{:from 0 :size 0}` when the
+  requested page reaches past `window`, the index's `max_result_window`.
+
+  Elasticsearch rejects `from + size > window` outright, which used to reach
+  the client as a bare 500 (sports-sites page 601 at page-size 100 is the first
+  page over the 60000 window). Pages past the end of the result set already
+  answer 200 with an empty `items`, so the window boundary is made to behave
+  the same way rather than introduce a second kind of answer in the middle of a
+  paging run. The filters and `track_total_hits` stay on the query, so ES still
+  counts what the filters match — only the fetching is dropped — and the
+  handler is left with no hits plus a correct `total-items`."
+  [page page-size window]
+  (let [from (* (dec page) page-size)]
+    (if (> (+ from page-size) window)
+      {:from 0 :size 0}
+      {:from from :size page-size})))
+
 (defn ->sports-sites-query
   [{:keys [page page-size statuses type-codes city-codes admins owners activities]
     :or {page 1
          page-size 10}}]
-  {:from (* (dec page) page-size)
-   :size page-size
-   :track_total_hits 60000
-   :_source {:includes sports-site-keys}
-   :query {:bool
-           {:filter (cond-> []
-                      statuses (conj {:terms {:status statuses}})
-                      type-codes (conj {:terms {:type.type-code type-codes}})
-                      city-codes (conj {:terms {:location.city.city-code city-codes}})
-                      admins (conj {:terms {:admin admins}})
-                      owners (conj {:terms {:owner owners}})
-                      ;; NEW: Use search-meta.activities keyword array for filtering
-                      ;; instead of existence checks on individual activity fields
-                      (seq activities) (conj {:terms {:search-meta.activities activities}}))}}})
+  (let [window (:sports-site search/max-result-window)]
+    (merge
+      (->paging page page-size window)
+      {:track_total_hits window
+       :_source {:includes sports-site-keys}
+       :query {:bool
+               {:filter (cond-> []
+                          statuses (conj {:terms {:status statuses}})
+                          type-codes (conj {:terms {:type.type-code type-codes}})
+                          city-codes (conj {:terms {:location.city.city-code city-codes}})
+                          admins (conj {:terms {:admin admins}})
+                          owners (conj {:terms {:owner owners}})
+                          ;; NEW: Use search-meta.activities keyword array for filtering
+                          ;; instead of existence checks on individual activity fields
+                          (seq activities) (conj {:terms {:search-meta.activities activities}}))}}})))
 
 (defn ->lois-query
   [{:keys [page page-size statuses types categories]
     :or {page 1
          page-size 10}}]
-  {:from (* (dec page) page-size)
-   :size page-size
-   :track_total_hits 50000
-   :query {:bool
-           {:must (cond-> []
-                    statuses (conj {:terms {:status.keyword statuses}})
-                    types (conj {:terms {:loi-type.keyword types}})
-                    categories (conj {:terms {:loi-category.keyword categories}}))}}})
+  (let [window (:lois search/max-result-window)]
+    (merge
+      (->paging page page-size window)
+      {:track_total_hits window
+       :query {:bool
+               {:must (cond-> []
+                        statuses (conj {:terms {:status.keyword statuses}})
+                        types (conj {:terms {:loi-type.keyword types}})
+                        categories (conj {:terms {:loi-category.keyword categories}}))}}})))
 
 (defn routes [{:keys [search] :as _ctx}]
   (let [ui-handler (swagger-ui/create-swagger-ui-handler

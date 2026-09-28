@@ -10,6 +10,16 @@
 
 (def legacy-date-format "yyyy-MM-dd HH:mm:ss.SSS")
 
+(def max-result-window
+  "`index.max_result_window` per index: the largest `from + size` Elasticsearch
+  accepts for a plain (non-`search_after`) search. Anything above it is
+  rejected with an error, so paging callers — `lipas.backend.api.v2` — have to
+  check the requested page against this rather than let ES turn a deep page
+  into a 500. Kept here next to the index settings that apply it, because the
+  two must never drift apart."
+  {:sports-site 60000
+   :lois 50000})
+
 (defn create-cli
   [{:keys [hosts user password]}]
   (es/client {:hosts       hosts
@@ -264,7 +274,7 @@
                               disabled-fields)]
 
     {:settings
-     {:max_result_window 60000
+     {:max_result_window (:sports-site max-result-window)
       :index {:mapping   {:total_fields {:limit total-fields-limit}}
               :analysis  folding-analysis}}
      :mappings
@@ -347,7 +357,7 @@
    :kb            kb-mapping
    :assistant     assistant-logs-mapping
    :lois          {:settings
-                   {:max_result_window 50000
+                   {:max_result_window (:lois max-result-window)
                     :index {:analysis folding-analysis}}
                    :mappings
                    {:date_detection false
