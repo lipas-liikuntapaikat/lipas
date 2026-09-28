@@ -4,7 +4,10 @@
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
             [lipas.roles :as roles]
+            [lipas.schema.sports-sites.ptv :as ptv-schema]
             [lipas.ui.utils :as utils]
+            [malli.core :as m]
+            [malli.transform :as mt]
             [re-frame.core :as rf]))
 
 (defn ptv-error-payload
@@ -1497,6 +1500,24 @@
                           on-single-success
                           on-single-failure]])]})))
 
+(defn ptv-meta-entry
+  "The /actions/save-ptv-meta entry for `site`: the same editable keys the
+  sync path persists (shared source of truth); the backend preserves the
+  server-owned lifecycle keys (:source-id, :publishing-status,
+  :previous-type-code) itself. `utils/clean` drops empty collections, so the
+  required id vectors are defaulted back — without them an unlinked site's
+  entry is invalid."
+  [site]
+  (merge {:service-ids [] :service-channel-ids []}
+         (utils/clean (select-keys site ptv-data/persisted-ptv-keys))))
+
+(def ^:private valid-ptv-meta?
+  "Would `entry` pass the backend's ptv-meta validation? Extra keys are
+  stripped first, as the backend does."
+  (let [decode (m/decoder ptv-schema/ptv-meta (mt/strip-extra-keys-transformer))
+        valid? (m/validator ptv-schema/ptv-meta)]
+    (comp valid? decode)))
+
 (rf/reg-event-fx ::create-all-ptv-service-locations
   (fn [{:keys [db]} [_ sports-sites]]
     (let [org-id (-get-ptv-org-id db)
@@ -1507,7 +1528,11 @@
                                                   :to-save))
                                               sports-sites)
 
-          ids (map :lipas-id to-sync)]
+          ids (map :lipas-id to-sync)
+          ;; Only sites with something persistable: an untouched site (no
+          ;; texts yet) or one with over-long texts would fail the backend's
+          ;; ptv-meta validation and take the whole meta save down with it.
+          to-save (filter (comp valid-ptv-meta? ptv-meta-entry) to-save)]
 
       #_(println "To sync: " (count to-sync))
       #_(println "to save: " (count to-save))
@@ -1531,18 +1556,14 @@
   (fn [{:keys [db]} [_ sports-sites]]
     ;; This event is used to save :ptv data for sites which have :sync-enabled false
     (when (seq sports-sites)
-      (let [token (-> db :user :login :token)
-            ;; Same editable keys the sync path persists (shared source of
-            ;; truth). The backend preserves server-owned lifecycle keys
-            ;; (:source-id, :publishing-status, :previous-type-code) itself.
-            ks ptv-data/persisted-ptv-keys]
+      (let [token (-> db :user :login :token)]
         {:db (assoc-in db [:ptv :save-in-progress] true)
          :fx [[:http-xhrio
                {:method :post
                 :headers {:Authorization (str "Token " token)}
                 :uri (str (:backend-url db) "/actions/save-ptv-meta")
                 :params (reduce (fn [m site]
-                                  (assoc m (:lipas-id site) (utils/clean (select-keys site ks))))
+                                  (assoc m (:lipas-id site) (ptv-meta-entry site)))
                                 {}
                                 sports-sites)
                 :format (ajax/transit-request-format)

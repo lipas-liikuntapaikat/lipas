@@ -9,6 +9,9 @@
             [lipas.schema.ptv :as lipas-ptv-schema]
             [lipas.schema.sports-sites :as sports-sites-schema]
             [lipas.schema.sports-sites.ptv :as ptv-schema]
+            [malli.core :as m]
+            [malli.error :as me]
+            [malli.transform :as mt]
             [taoensso.timbre :as log]))
 
 ;; Schemas moved to lipas.schema.sports-sites.ptv
@@ -181,6 +184,14 @@
                         (deny user (str "org-id " (pr-str org-id)
                                         " does not resolve to a LIPAS org (save-ptv-meta)"))))
                     org-ids))))))
+
+(def ^:private decode-ptv-meta
+  "Strips keys ptv-meta doesn't know (e.g. :last-sync), as route coercion
+   would."
+  (m/decoder ptv-schema/ptv-meta (mt/strip-extra-keys-transformer)))
+
+(def ^:private explain-ptv-meta
+  (m/explainer ptv-schema/ptv-meta))
 
 (defn ptv-feature-read-access?
   "Gate for `/actions/get-ptv-integration-candidates`.
@@ -529,12 +540,32 @@
    ["/actions/save-ptv-meta"
     {:post
      {:require-privilege (ptv-meta-write-access? db)
-      :parameters {:body [:map-of :int #'ptv-schema/ptv-meta]}
+      ;; Values are validated against ptv-meta in the handler, NOT here:
+      ;; malli's strip-extra-keys decoder silently DROPS invalid :map-of
+      ;; entries, so [:map-of :int ptv-meta] turned an invalid entry into a
+      ;; no-op (and an all-invalid batch into {}, which the gate then
+      ;; refused as a 403 "no :org-id"). The open, key-less map strips
+      ;; nothing and drops nothing, so the gate sees every :org-id and an
+      ;; entry without one reaches the validation below (nothing is
+      ;; written until every entry has passed it).
+      :parameters {:body [:map-of :int [:map {:closed false}]]}
       :handler
       (fn [req]
         (try
-          {:status 200
-           :body (ptv-core/save-ptv-integration-definitions db search (:identity req) (-> req :parameters :body))}
+          (let [body (update-vals (-> req :parameters :body) decode-ptv-meta)
+                invalid (into {}
+                              (keep (fn [[lipas-id ptv-meta]]
+                                      (when-let [e (explain-ptv-meta ptv-meta)]
+                                        [lipas-id (me/humanize e)])))
+                              body)]
+            (if (seq invalid)
+              (do
+                (log/infof "save-ptv-meta rejected, invalid entries: %s" (pr-str invalid))
+                {:status 400
+                 :body {:type "invalid-ptv-meta"
+                        :errors invalid}})
+              {:status 200
+               :body (ptv-core/save-ptv-integration-definitions db search (:identity req) body)}))
           (catch clojure.lang.ExceptionInfo e
             (if (= :double-link (:type (ex-data e)))
               (do

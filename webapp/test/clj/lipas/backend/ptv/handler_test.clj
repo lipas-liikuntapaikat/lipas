@@ -783,6 +783,30 @@
       (is (= rink-channel (:service-channel-id body)))
       (is (contains? (set (map :lipas-id (:other-sites body))) rink-b)))))
 
+(deftest save-ptv-meta-rejects-invalid-batch-atomically-test
+  (testing "One invalid entry rejects the whole batch with 400 and writes nothing"
+    (let [admin (tu/gen-admin-user :db-component (test-db))
+          token (jwt/create-token admin)
+          {:keys [pool rink-a]} (seed-double-link-scenario! admin)
+          ptv-before (:ptv (core/get-sports-site (test-db) pool))
+          valid {:org-id ptv-org-id
+                 :sync-enabled false
+                 :service-ids []
+                 :service-channel-ids []
+                 :summary {:fi "Uusi tiivistelmä"}
+                 :description {:fi "Uusi kuvaus"}}
+          resp (test-app (-> (mock/request :post "/api/actions/save-ptv-meta")
+                             (mock/content-type "application/json")
+                             (mock/body (tu/->json {pool valid
+                                                    rink-a (assoc valid :summary {:fi (apply str (repeat 158 "x"))})}))
+                             (tu/token-header token)))
+          body (tu/safe-parse-json resp)]
+      (is (= 400 (:status resp)))
+      (is (= "invalid-ptv-meta" (:type body)))
+      (is (= #{(keyword (str rink-a))} (set (keys (:errors body)))))
+      (is (= ptv-before (:ptv (core/get-sports-site (test-db) pool)))
+          "the valid entry of a rejected batch is not written either"))))
+
 (deftest save-ptv-meta-allows-own-channel-test
   (testing "Re-saving meta for the site that already owns the channel is allowed (self excluded)"
     (let [admin (tu/gen-admin-user :db-component (test-db))

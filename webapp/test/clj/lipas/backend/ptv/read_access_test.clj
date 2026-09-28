@@ -476,3 +476,36 @@
                                        {lipas-id (meta-for own-ptv-org-id)
                                         (inc lipas-id) (meta-for foreign-ptv-org-id)}
                                        token))))))))))
+
+(deftest save-ptv-meta-invalid-entry-is-a-400-not-a-403-test
+  (testing "an invalid entry is rejected by validation, not silently dropped"
+    ;; Regression (Uusikaupunki): body coercion used to strip invalid
+    ;; :map-of entries, so a batch of only invalid entries arrived as {} and
+    ;; the gate answered 403 "no :org-id" — for a caller who DID have access.
+    (let [own-ptv-org-id (str (random-uuid))
+          _own (seed-org! own-ptv-org-id [own-city])
+          admin (tu/gen-admin-user :db-component (test-db))
+          site (seed-site! admin)
+          caller (tu/gen-user {:db? true
+                               :db-component (test-db)
+                               :admin? false
+                               :permissions {:roles [{:role "ptv-manager"
+                                                      :city-code [own-city]}
+                                                     {:role "city-manager"
+                                                      :city-code [own-city]}]}})
+          token (jwt/create-token caller)
+          lipas-id (:lipas-id site)
+          too-long (apply str (repeat 158 "x"))]
+      (with-ptv-stub
+        (fn []
+          (doseq [[label entry] [["over-long summary"
+                                  (assoc (meta-for own-ptv-org-id) :summary {:fi too-long})]
+                                 ["missing summary"
+                                  (dissoc (meta-for own-ptv-org-id) :summary)]]]
+            (testing label
+              (let [resp (post* "/api/actions/save-ptv-meta" {lipas-id entry} token)
+                    body (tu/safe-parse-json resp)]
+                (is (= 400 (:status resp)))
+                (is (= "invalid-ptv-meta" (:type body)))
+                (is (contains? (:errors body) (keyword (str lipas-id)))
+                    "the offending lipas-id is named in the errors")))))))))
