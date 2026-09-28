@@ -62,4 +62,10 @@ webapp/.eca/
 **/.claude/settings.local.json
 **/.claude/*.bak
 .git-rewrite/
-data/
+data/# ...but `data/` above is unanchored, so it also swallows the Clojure
+# `lipas.data.*` source and test directories. Their files are tracked only
+# because they were force-added; a new one would be silently dropped by
+# `git add .`. Re-include them explicitly.
+!webapp/src/cljc/lipas/data/
+!webapp/src/clj/lipas/integration/yti/data/
+!webapp/test/clj/lipas/data/
