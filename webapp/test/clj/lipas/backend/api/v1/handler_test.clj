@@ -10,8 +10,12 @@
     [clojure.set :as set]
     [clojure.string :as str]
     [clojure.test :refer [deftest is testing use-fixtures]]
+    [lipas.backend.api.v1.search :as v1-search]
     [lipas.backend.core :as core]
+    [lipas.backend.search :as search]
+    [lipas.schema.sports-sites.types :as types-schema]
     [lipas.test-utils :as test-utils]
+    [malli.core :as m]
     [ring.mock.request :as mock]))
 
 ;;; Test system setup ;;;
@@ -557,6 +561,50 @@
           (is (= 200 (:status resp)))
           (is (= 1120 (:typeCode body))))))))
 
+(deftest sports-place-type-detail-legacy-codes-test
+  (testing "GET /v1/sports-place-types/:code serves every code the listing advertises"
+    ;; The detail route declared the active-only type-code enum while its
+    ;; handler serves `types/all`, so eight deprecated codes — all of them
+    ;; listed by /v1/sports-place-types, all of them still carried by real
+    ;; sites — answered 400 instead of the type they describe.
+    (let [deprecated-codes #{205 102 104 108 1620 4310 4520 4530}
+          listed (->> ((test-app) (mock/request :get "/v1/sports-place-types"))
+                      parse-json-body
+                      (map :typeCode)
+                      set)]
+
+      (testing "the listing advertises the deprecated codes"
+        (is (set/subset? deprecated-codes listed)))
+
+      (testing "every listed code passes the detail route's path coercion"
+        ;; The drift guard: whatever the listing grows to, the detail route's
+        ;; schema has to accept all of it.
+        (is (= #{} (into #{} (remove #(m/validate types-schema/type-code-with-legacy %)) listed))))
+
+      (testing "each deprecated code answers 200"
+        (doseq [type-code deprecated-codes]
+          (let [resp ((test-app) (mock/request :get (str "/v1/sports-place-types/" type-code)))]
+            (is (= 200 (:status resp)) (str "type-code " type-code)))))
+
+      (testing "a deprecated code answers with the same body shape as an active one"
+        (doseq [type-code [205 1120]]
+          (let [resp ((test-app) (mock/request :get (str "/v1/sports-place-types/" type-code)))
+                body (parse-json-body resp)]
+            (is (= 200 (:status resp)) (str "type-code " type-code))
+            (is (= type-code (:typeCode body)))
+            (is (string? (:name body)))
+            (is (string? (:description body)))
+            (is (#{"Point" "LineString" "Polygon"} (:geometryType body)))
+            (is (integer? (:subCategory body)))
+            (is (map? (:properties body))))))
+
+      (testing "and the list route accepts a deprecated code as a typeCodes filter"
+        ;; Same mismatch, other end of the API: sites created under these codes
+        ;; are still indexed and still listed, so filtering by one must not 400.
+        (let [resp ((test-app) (mock/request :get "/v1/sports-places?typeCodes=205"))]
+          (is (= 200 (:status resp)))
+          (is (= [] (parse-json-body resp))))))))
+
 ;;; Tests for different geometry types ;;;
 
 (deftest geometry-types-test
@@ -741,6 +789,143 @@
         (is (= 404 (:status resp))
             "HEAD on missing item should return 404")))))
 
+;;; Tests for deep pagination (index.max_result_window) ;;;
+
+;; The legacy index sat at Elasticsearch's default 10000 result window while
+;; holding 49k sports places, so /v1/sports-places?pageSize=100&page=101
+;; answered 500 and roughly 39000 sites were unreachable through the list
+;; route. The window is now 60000 (lipas.backend.search/max-result-window) and
+;; a page past it answers the way a page past the end of the result set has
+;; always answered: 200 with an empty array.
+;;
+;; ES rejects `from + size > window` before it looks at any data, so the real
+;; production boundary is reachable here with a handful of seeded documents and
+;; without rebinding the window.
+
+(deftest paging-window-test
+  (let [window (:legacy-sports-site search/max-result-window)]
+
+    (testing "the legacy index shares the sports-site window"
+      (is (= 60000 window))
+      (is (= (:sports-site search/max-result-window) window)))
+
+    (testing "->paging"
+
+      (testing "fetches normally well inside the window"
+        (is (= {:from 900 :size 100} (v1-search/->paging 100 9))))
+
+      (testing "still fetches at the exact window boundary"
+        (let [offset (dec (/ window 100))
+              paging (v1-search/->paging 100 offset)]
+          (is (= {:from (- window 100) :size 100} paging))
+          (is (= window (+ (:from paging) (:size paging))))))
+
+      (testing "becomes a count-only query one page past the boundary"
+        (is (= {:from 0 :size 0} (v1-search/->paging 100 (/ window 100)))))
+
+      (testing "becomes a count-only query for an absurd page"
+        (is (= {:from 0 :size 0} (v1-search/->paging 100 99999))))
+
+      (testing "the boundary moves with page size"
+        ;; 60000 is not divisible by 7, so the deepest page ends short of it.
+        (is (= {:from 59990 :size 7} (v1-search/->paging 7 8570)))
+        (is (= {:from 0 :size 0} (v1-search/->paging 7 8571)))))
+
+    (testing "deepest-page is the deepest page ->paging still fetches"
+      (doseq [page-size [1 7 10 100]]
+        (let [deepest (v1-search/deepest-page page-size)]
+          (is (pos? (:size (v1-search/->paging page-size (dec deepest))))
+              "the deepest page must still carry a real size")
+          (is (= {:from 0 :size 0} (v1-search/->paging page-size deepest))
+              "one page deeper must be count-only"))))
+
+    (testing "more? never reports an out-of-window page as partial"
+      ;; A 206 there would keep a client that pages until the 206s stop going
+      ;; forever, so this holds even when the index has more hits than the
+      ;; window can reach.
+      (let [huge {:hits {:total {:value 70000} :hits []}}]
+        (is (false? (v1-search/more? huge 100 (/ window 100))))
+        (is (false? (v1-search/more? huge 100 99999))))
+
+      (testing "while an in-window page is still partial when hits remain"
+        (let [results {:hits {:total {:value 500}
+                              :hits (repeat 100 {:_source {}})}}]
+          (is (true? (v1-search/more? results 100 0)))
+          (is (false? (v1-search/more? results 100 4))))))))
+
+(deftest list-sports-places-beyond-window-test
+  (testing "GET /v1/sports-places past index.max_result_window"
+    (doseq [i (range 1 16)]
+      (create-sports-site! (test-utils/make-point-site (+ 71000 i)
+                                                       :name (str "Window Site " i)
+                                                       :type-code (if (odd? i) 1120 1310))))
+
+    (testing "a page inside the window returns items"
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places?pageSize=5&page=2"))
+            body (parse-json-body resp)]
+        (is (= 206 (:status resp)))
+        (is (= 5 (count body)))
+        (is (= "15" (get-in resp [:headers "X-total-count"])))))
+
+    (testing "the page at the exact window boundary returns 200"
+      ;; from 59900 + size 100 = 60000 = the window: the deepest page ES
+      ;; accepts, and it really is sent to ES — at the old 10000 default this
+      ;; request is what answered 500.
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places?pageSize=100&page=600"))]
+        (is (= 200 (:status resp)))
+        (is (= [] (parse-json-body resp)))))
+
+    (testing "the first page past the window returns 200 with an empty array"
+      ;; The regression. from 60000 + size 100 > the window, so ES rejects the
+      ;; search outright — independently of how many documents the index holds,
+      ;; which is why 15 of them reproduce the production 500.
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places?pageSize=100&page=601"))]
+        (is (= 200 (:status resp)))
+        (is (not= 206 (:status resp))
+            "206 would make a client paging until the 206s stop loop forever")
+        (is (= [] (parse-json-body resp)))))
+
+    (testing "an absurd page returns 200 with an empty array"
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places?pageSize=100&page=100000"))]
+        (is (= 200 (:status resp)))
+        (is (= [] (parse-json-body resp)))))
+
+    (testing "an out-of-window page answers exactly like a page past the end"
+      (let [past-end ((test-app) (mock/request :get "/v1/sports-places?pageSize=100&page=50"))
+            past-window ((test-app) (mock/request :get "/v1/sports-places?pageSize=100&page=601"))]
+        (is (= (:status past-end) (:status past-window)))
+        (is (= (parse-json-body past-end) (parse-json-body past-window)))
+        (is (= (get-in past-end [:headers "Link"])
+               (get-in past-window [:headers "Link"]))
+            "neither carries pagination headers")))
+
+    (testing "an out-of-window page with a filter returns 200 with an empty array"
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places?pageSize=100&page=601&typeCodes=1310"))]
+        (is (= 200 (:status resp)))
+        (is (= [] (parse-json-body resp)))))
+
+    (testing "the count-only query still counts what the filter matches"
+      ;; The 200 response carries no headers (that is what past-the-end does),
+      ;; so the filtered total is asserted where it lives: on the ES response
+      ;; the count-only query produces.
+      (let [client (:client (test-search))
+            idx-name (get-in (test-search) [:indices :legacy-sports-site :search])
+            data (:body (v1-search/fetch-sports-places
+                          client idx-name {:limit 100 :offset 600 :type-codes [1310]}))]
+        (is (empty? (-> data :hits :hits)))
+        (is (= 7 (-> data :hits :total :value))
+            "7 of the 15 sites have type-code 1310, not all 15")))
+
+    (testing "rel=\"last\" points at a page that answers"
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places?pageSize=1&page=1"))
+            links (parse-link-header (get-in resp [:headers "Link"]))
+            last-url (get links "last")
+            last-resp ((test-app) (mock/request :get (str/replace last-url #"/\?" "?")))]
+        (is (= 206 (:status resp)))
+        (is (= 15 (extract-page-param last-url)))
+        (is (= 200 (:status last-resp)))
+        (is (= 1 (count (parse-json-body last-resp))))))))
+
 (comment
   (clojure.test/run-tests 'lipas.backend.api.v1.handler-test)
 
@@ -752,4 +937,7 @@
   (clojure.test/run-test-var #'sports-place-type-detail-test)
   (clojure.test/run-test-var #'geometry-types-test)
   (clojure.test/run-test-var #'list-sports-places-search-string-relevance-test)
-  (clojure.test/run-test-var #'head-method-support-test))
+  (clojure.test/run-test-var #'head-method-support-test)
+  (clojure.test/run-test-var #'paging-window-test)
+  (clojure.test/run-test-var #'list-sports-places-beyond-window-test)
+  (clojure.test/run-test-var #'sports-place-type-detail-legacy-codes-test))

@@ -1,5 +1,6 @@
 (ns lipas.backend.api.v1.search
   (:require [clojure.string :as str]
+            [lipas.backend.search :as search]
             [qbits.spandex :as es]
             [qbits.spandex.utils :as es-utils]
             [taoensso.timbre :as log]))
@@ -156,6 +157,38 @@
     query
     {:match_all {}}))
 
+(defn beyond-window?
+  "True when the requested page reaches past the legacy index's
+  `max_result_window`, i.e. `from + size` exceeds it.
+
+  `offset` is the 0-indexed page number the route derives from `page`, so
+  `from` is `offset * limit`. Elasticsearch rejects such a search before it
+  looks at any data, which used to reach the client as a bare 500."
+  [limit offset]
+  (> (* (inc offset) limit)
+     (:legacy-sports-site search/max-result-window)))
+
+(defn deepest-page
+  "The deepest 1-indexed page `page-size` can still reach inside the legacy
+  index's `max_result_window`. Used to keep the `rel=\"last\"` link pointing
+  at a page that actually answers."
+  [page-size]
+  (quot (:legacy-sports-site search/max-result-window) page-size))
+
+(defn ->paging
+  "`:from` and `:size` for the requested page, or a count-only
+  `{:from 0 :size 0}` once the page reaches past the index's result window.
+
+  Pages past the end of the result set already answer 200 with an empty array,
+  so out-of-window pages are made to behave the same rather than introduce a
+  second kind of answer in the middle of a paging run. The query keeps its
+  filters and `track_total_hits`, so `X-total-count` still reflects what the
+  filters match — only the fetching is dropped."
+  [limit offset]
+  (if (beyond-window? limit offset)
+    {:from 0 :size 0}
+    {:from (* offset limit) :size limit}))
+
 (defn fetch-sports-places
   [client index-name params]
   (try
@@ -170,10 +203,9 @@
           sort-config (when-not has-search?
                         [{:sportsPlaceId {:order "asc"
                                           :unmapped_type "long"}}])
-          body (cond-> {:query query
-                        :track_total_hits true
-                        :size (:limit params)
-                        :from (* (:offset params) (:limit params))}
+          body (cond-> (merge {:query query
+                               :track_total_hits true}
+                              (->paging (:limit params) (:offset params)))
                  sort-config (assoc :sort sort-config))
           response (es/request client {:method :get
                                        :url (es-utils/url [index-name :_search])
@@ -208,8 +240,14 @@
 
 (defn more?
   "Returns true if result set was limited considering
-  page-size and requested page, otherwise false."
+  page-size and requested page, otherwise false.
+
+  An out-of-window page is never partial: nothing beyond it is reachable
+  through this route, so it has to answer 200 like the pages past the end of
+  the result set do. Answering 206 there would keep a client that pages until
+  the 206s stop going forever."
   [results page-size page]
   (let [total (-> results :hits :total :value)
         n (count (-> results :hits :hits))]
-    (< (+ (* page page-size) n) total)))
+    (and (not (beyond-window? page-size page))
+         (< (+ (* page page-size) n) total))))

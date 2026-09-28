@@ -3,6 +3,7 @@
             [lipas.backend.api.v1.core :as v1-core]
             [lipas.backend.api.v1.handlers :as v1-handlers]
             [lipas.backend.api.v1.http :as v1-http]
+            [lipas.backend.api.v1.search :as v1-search]
             [lipas.schema.api.v1 :as v1-schema]
             [lipas.schema.sports-sites.types :as types-schema]
             [reitit.coercion.malli :as malli]
@@ -196,7 +197,8 @@ Access to the hierarchical type classification system used for categorizing spor
                                            (remove (fn [[_ v]] (or (nil? v) (and (coll? v) (empty? v)))))
                                            (into {}))
                          ;; Pass page number (1-indexed), not offset (0-indexed)
-                          links (v1-http/create-page-links path link-params (or page 1) (:limit params) total)]
+                          links (v1-http/create-page-links path link-params (or page 1) (:limit params) total
+                                                           (v1-search/deepest-page (:limit params)))]
                       (v1-http/linked-partial-content results links))
                     {:status 200
                      :body results}))))]
@@ -249,7 +251,11 @@ Access to the hierarchical type classification system used for categorizing spor
      ["/sports-place-types/:type-code"
       {:swagger {:id ::legacy}
        :parameters {:query [:map [:lang {:optional true} #'v1-schema/lang]]
-                    :path [:map [:type-code #'types-schema/active-type-code]]}
+                    ;; Every code in `types/all`, not just the active ones: the
+                    ;; listing endpoint advertises the legacy codes too (real
+                    ;; sites still carry them), so the detail route has to
+                    ;; serve what the listing promises.
+                    :path [:map [:type-code #'types-schema/type-code-with-legacy]]}
        :get
        {:tags ["sport-place-types"]
         :handler

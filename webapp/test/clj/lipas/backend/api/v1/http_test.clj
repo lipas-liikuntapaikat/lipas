@@ -63,6 +63,28 @@
         (is (= 1 (http/last-page 5 10)))
         (is (re-find #"page=1" (:last links)))))))
 
+;;; Tests for the result-window cap on rel="last" ;;;
+
+(deftest last-page-window-cap-test
+  (testing "last-page caps at the deepest page the index can actually serve"
+    ;; rel="last" is only worth emitting if the page it names answers. Once a
+    ;; collection outgrows the index result window, ceil(total / page-size)
+    ;; names a page Elasticsearch refuses, so the caller passes the deepest
+    ;; page (lipas.backend.api.v1.search/deepest-page) as the cap.
+    (is (= 600 (http/last-page 70000 100 600)))
+    (is (= 493 (http/last-page 49254 100 600))
+        "an in-window last page is left alone")
+    (is (= (http/last-page 49254 100) (http/last-page 49254 100 600))
+        "the capped and uncapped arities agree below the cap"))
+
+  (testing "create-page-links applies the cap"
+    (let [links (http/create-page-links "/v1/sports-places" {:pageSize 100} 1 100 70000 600)]
+      (is (re-find #"page=600" (:last links))))
+
+    (testing "and is uncapped without one"
+      (let [links (http/create-page-links "/v1/sports-places" {:pageSize 100} 1 100 70000)]
+        (is (re-find #"page=700" (:last links)))))))
+
 ;;; Tests for extract-base-path ;;;
 
 (deftest extract-base-path-test

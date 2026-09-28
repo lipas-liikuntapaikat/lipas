@@ -13,11 +13,16 @@
 (def max-result-window
   "`index.max_result_window` per index: the largest `from + size` Elasticsearch
   accepts for a plain (non-`search_after`) search. Anything above it is
-  rejected with an error, so paging callers — `lipas.backend.api.v2` — have to
-  check the requested page against this rather than let ES turn a deep page
-  into a 500. Kept here next to the index settings that apply it, because the
-  two must never drift apart."
+  rejected with an error, so paging callers — `lipas.backend.api.v2` and
+  `lipas.backend.api.v1.search` — have to check the requested page against this
+  rather than let ES turn a deep page into a 500. Kept here next to the index
+  settings that apply it, because the two must never drift apart.
+
+  The legacy index holds the same sports sites as `:sports-site` (49k and
+  growing), so it gets the same window: at ES's 10000 default most of the
+  corpus was simply unreachable through the V1 list route."
   {:sports-site 60000
+   :legacy-sports-site 60000
    :lois 50000})
 
 (defn create-cli
@@ -368,7 +373,9 @@
                      :search-meta.location.geometries
                      {:type "geo_shape"}}}}
    :legacy-sports-site
-   {:mappings
+   {:settings
+    {:max_result_window (:legacy-sports-site max-result-window)}
+    :mappings
     {:date_detection false
      :properties
      {;; Raw GeoJSON kept in _source for API responses only. Must not be

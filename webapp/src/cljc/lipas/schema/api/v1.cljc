@@ -276,9 +276,12 @@
                             [:vector (into [:enum] legacy-fields)]
                             (into [:enum] legacy-fields)
                             [:string {:min 1}]]]
+                  ;; Legacy codes included on purpose: sites created under
+                  ;; them are still in the index and still listed by V1, so
+                  ;; filtering by one must not be a 400.
                   [:typeCodes [:or
-                               #'types-schema/active-type-code
-                               #'types-schema/active-type-codes]]
+                               #'types-schema/type-code-with-legacy
+                               #'types-schema/type-codes-with-legacy]]
                   [:closeToLon [:float {:min -180 :max 180}]]
                   [:closeToLat [:float {:min -90 :max 90}]]
                   [:lang #'lang]

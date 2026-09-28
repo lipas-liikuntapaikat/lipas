@@ -13,18 +13,25 @@
    :body body})
 
 (defn last-page
-  [total page-size]
-  (int (Math/ceil (/ total page-size))))
+  "The last page for `total` items at `page-size`, capped at `max-page` when
+  one is given — the deepest page the backing index can actually serve, so
+  `rel=\"last\"` never advertises a page the search engine would refuse."
+  ([total page-size]
+   (int (Math/ceil (/ total page-size))))
+  ([total page-size max-page]
+   (min (last-page total page-size) max-page)))
 
 (defn create-page-links
-  [path query-params page page-size total]
-  {:first (str path "/?" (form-encode (assoc query-params "page" 1)))
-   :next (str path "/?" (form-encode (assoc query-params "page" (inc page))))
-   :prev (str path "/?" (form-encode (assoc query-params "page"
-                                            (max (dec page) 1))))
-   :last (str path "/?" (form-encode (assoc query-params "page"
-                                            (last-page total page-size))))
-   :total total})
+  ([path query-params page page-size total]
+   (create-page-links path query-params page page-size total Long/MAX_VALUE))
+  ([path query-params page page-size total max-page]
+   {:first (str path "/?" (form-encode (assoc query-params "page" 1)))
+    :next (str path "/?" (form-encode (assoc query-params "page" (inc page))))
+    :prev (str path "/?" (form-encode (assoc query-params "page"
+                                             (max (dec page) 1))))
+    :last (str path "/?" (form-encode (assoc query-params "page"
+                                             (last-page total page-size max-page))))
+    :total total}))
 
 (defn- get-header
   "Get a header value case-insensitively from Ring request headers."
