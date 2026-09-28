@@ -509,3 +509,39 @@
                 (is (= "invalid-ptv-meta" (:type body)))
                 (is (contains? (:errors body) (keyword (str lipas-id)))
                     "the offending lipas-id is named in the errors")))))))))
+
+(deftest save-ptv-meta-ptv-manager-happy-path-test
+  (testing "a municipality ptv-manager saves a wizard-style sync-off entry"
+    ;; The Uusikaupunki flow end to end: a non-admin (admins skip the gate)
+    ;; saves meta for a site they're not exporting. The entry carries the
+    ;; extra keys the UI really sends (:last-sync, :descriptions-integration),
+    ;; which ptv-meta doesn't know and must be stripped, not rejected.
+    (let [own-ptv-org-id (str (random-uuid))
+          _own (seed-org! own-ptv-org-id [own-city])
+          admin (tu/gen-admin-user :db-component (test-db))
+          site (seed-site! admin)
+          caller (tu/gen-user {:db? true
+                               :db-component (test-db)
+                               :admin? false
+                               :permissions {:roles [{:role "ptv-manager"
+                                                      :city-code [own-city]}
+                                                     {:role "city-manager"
+                                                      :city-code [own-city]}]}})
+          token (jwt/create-token caller)
+          lipas-id (:lipas-id site)
+          entry (assoc (meta-for own-ptv-org-id)
+                       :sync-enabled false
+                       :summary {:fi "Uusi tiivistelmä"}
+                       :description {:fi "Uusi kuvaus"}
+                       :last-sync "2026-01-02T00:00:00.000Z"
+                       :descriptions-integration "lipas-managed-ptv-fields")]
+      (with-ptv-stub
+        (fn []
+          (let [resp (post* "/api/actions/save-ptv-meta" {lipas-id entry} token)
+                after (:ptv (core/get-sports-site (test-db) lipas-id))]
+            (is (= 200 (:status resp)))
+            (is (false? (:sync-enabled after)))
+            (is (= {:fi "Uusi tiivistelmä"} (:summary after)))
+            (is (= {:fi "Uusi kuvaus"} (:description after)))
+            (is (= own-ptv-org-id (:org-id after)))
+            (is (empty? @ptv-calls) "a meta save never calls the PTV API")))))))

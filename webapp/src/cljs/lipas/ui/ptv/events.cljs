@@ -277,6 +277,14 @@
                 :on-success [::fetch-integration-candidates-success ptv-org-id]
                 :on-failure [::fetch-integration-candidates-failure]}]]}))))
 
+(defn- persisted-sync?
+  "Snapshot of whether the SAVED site has PTV sync on. Kept next to the live
+  :ptv draft (whose :sync-enabled flips on every toggle) so ::persist-ptv-meta
+  can tell whether turning sync off changes anything on the backend. Only the
+  load and the save/sync/archive responses may set it."
+  [ptv]
+  (boolean (:sync-enabled ptv)))
+
 (rf/reg-event-fx ::fetch-integration-candidates-success
   (fn [{:keys [db]} [_ ptv-org-id resp]]
     (let [new-sites (utils/index-by :lipas-id resp)
@@ -293,7 +301,8 @@
                                                         ptv-data/site-audited-field-keys)]
                              (assoc m lipas-id
                                     (-> new-site
-                                        (assoc :ptv-persisted persisted)
+                                        (assoc :ptv-persisted persisted
+                                               :ptv-persisted-sync? (persisted-sync? (:ptv new-site)))
                                         (cond-> (:ptv existing) (update :ptv #(merge (:ptv existing) %)))
                                         ;; a search index not yet reindexed after the
                                         ;; audit move still serves the legacy in-document
@@ -527,10 +536,17 @@
   ;; save-ptv-meta without syncing to PTV. Reads the (already-updated) app-db
   ;; site, so dispatch any flag change before this. save-ptv-meta keys off the
   ;; top-level :lipas-id and reads the remaining meta from the flattened map.
+  ;;
+  ;; Only called to persist sync OFF, so it's skipped when the saved site
+  ;; doesn't have sync on — no :ptv saved at all, or saved with sync already
+  ;; off. Off is the default; saving it would change nothing (and a site that
+  ;; never had PTV data would send an entry without :org-id or texts, which
+  ;; the backend rightly rejects).
   (fn [{:keys [db]} [_ lipas-id]]
     (let [org-id (-get-ptv-org-id db)
           site (get-in db [:ptv :org org-id :data :sports-sites lipas-id])]
-      {:fx [[:dispatch [::save-ptv-meta [(assoc (:ptv site) :lipas-id lipas-id)]]]]})))
+      (when (:ptv-persisted-sync? site)
+        {:fx [[:dispatch [::save-ptv-meta [(assoc (:ptv site) :lipas-id lipas-id)]]]]}))))
 
 (rf/reg-event-fx ::toggle-sync-enabled
   ;; Turning sync OFF on a site that is currently published in PTV prompts the
@@ -1421,6 +1437,8 @@
                               ;; Update the lipas TS also, it will be the same TS as PTV last-sync now
                (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :event-date] (:last-sync ptv))
                (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv)
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv-persisted-sync?]
+                         (persisted-sync? ptv))
                               ;; The sync persisted the draft — refresh the snapshot audit
                               ;; whose-move states are derived from, so the audit status
                               ;; (row bucket, feedback alert) moves only now, not on keystrokes.
@@ -1477,7 +1495,9 @@
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :service-locations] false)
                (update-in [:ptv :syncing :service-location] dissoc lipas-id)
-               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv))
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv)
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv-persisted-sync?]
+                         (persisted-sync? ptv)))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification
                         {:message (tr :ptv.actions/archived-in-ptv) :success? true}]]]})))
 
@@ -1556,27 +1576,39 @@
   (fn [{:keys [db]} [_ sports-sites]]
     ;; This event is used to save :ptv data for sites which have :sync-enabled false
     (when (seq sports-sites)
-      (let [token (-> db :user :login :token)]
+      (let [token (-> db :user :login :token)
+            params (reduce (fn [m site]
+                             (assoc m (:lipas-id site) (ptv-meta-entry site)))
+                           {}
+                           sports-sites)]
         {:db (assoc-in db [:ptv :save-in-progress] true)
          :fx [[:http-xhrio
                {:method :post
                 :headers {:Authorization (str "Token " token)}
                 :uri (str (:backend-url db) "/actions/save-ptv-meta")
-                :params (reduce (fn [m site]
-                                  (assoc m (:lipas-id site) (ptv-meta-entry site)))
-                                {}
-                                sports-sites)
+                :params params
                 :format (ajax/transit-request-format)
                 :response-format (ajax/transit-response-format)
-                :on-success [::save-ptv-meta-success]
+                :on-success [::save-ptv-meta-success params]
                 :on-failure [::save-ptv-meta-failure]}]]}))))
 
 (rf/reg-event-fx ::save-ptv-meta-success
-  (fn [{:keys [db]} _]
+  (fn [{:keys [db]} [_ saved _resp]]
     (let [tr (:translator db)
+          org-id (-get-ptv-org-id db)
           notification {:message (tr :notifications/save-success)
                         :success? true}]
-      {:db (-> db (assoc-in [:ptv :save-in-progress] false))
+      {:db (-> db
+               (assoc-in [:ptv :save-in-progress] false)
+               (update-in [:ptv :org org-id :data :sports-sites]
+                          (fn [sites]
+                            (reduce-kv (fn [sites lipas-id ptv-meta]
+                                         (cond-> sites
+                                           (contains? sites lipas-id)
+                                           (assoc-in [lipas-id :ptv-persisted-sync?]
+                                                     (persisted-sync? ptv-meta))))
+                                       sites
+                                       saved))))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
 (rf/reg-event-fx ::save-ptv-meta-failure
