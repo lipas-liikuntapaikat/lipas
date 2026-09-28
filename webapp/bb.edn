@@ -379,6 +379,9 @@
          i18n-unused {:doc "Find unused translation keys. --lang fi|se|en picks the reference dictionary (default fi). Use --remove to delete them, --dry-run to preview."
                       :task (apply shell "bb" "scripts/unused_translations.bb" *command-line-args*)}
 
+         api-scroll-check {:doc "Walk every page of the public V1+V2 APIs and fail on any bad response. --base-url picks the target (default prod), --pages bounds it, --help lists the rest."
+                           :task (apply shell "bb" "scripts/api_scroll_check.bb" *command-line-args*)}
+
          test-watch {:doc "Run tests in watch mode (re-runs on file changes)"
                      :task (shell "clojure" "-M:dev:test" "--watch")}
 

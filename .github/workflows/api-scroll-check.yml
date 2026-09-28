@@ -1,0 +1,115 @@
+name: Public API scroll check
+
+# Walk every page of the public V1 and V2 APIs and fail on any response that is
+# not a success.
+#
+# The gap this closes: in December 2025 a short-lived schema change made an
+# `:admin`/`:owner` value legal on the way in. Eleven sports sites kept it, and
+# response coercion rejected them on the way out — `/v2/sports-sites?page=275`
+# and `/v2/sports-sites/618830` both answered 500. It took nine months to
+# notice, because nothing walked the whole API. Coverage is the point: no
+# amount of unit testing finds a record that only production holds.
+#
+# Runs on a GitHub-hosted runner, not the self-hosted ones, on purpose: this
+# should exercise the same public path an integrator uses — DNS, TLS, nginx,
+# the backend — from outside the host. It is read-only GETs throughout.
+#
+# Load: roughly 2700 requests over 5-10 minutes, six in flight, which is about
+# nine requests a second — ordinary API traffic, and less than one full
+# reindex. Nothing here writes.
+#
+# A failure files (or updates) a single `api-health` issue rather than one per
+# night; a clean complete scroll closes it again. See
+# webapp/scripts/api_scroll_check.bb for the deduplication and closing rules.
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 02:00 UTC nightly, after the overnight jobs settle
+  workflow_dispatch:
+    inputs:
+      base-url:
+        description: 'API root to check'
+        required: false
+        default: 'https://api.lipas.fi'
+      only:
+        description: 'Restrict to one API (v1 or v2); blank checks both'
+        required: false
+        default: ''
+      pages:
+        description: 'Bounded page spec for a quick run, e.g. 1-3,326'
+        required: false
+        default: ''
+      manage-issue:
+        description: 'File/update/close the api-health issue'
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: api-scroll-check
+  cancel-in-progress: false
+
+jobs:
+  scroll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      # The scroll itself needs nothing; issues:write is for the api-health
+      # issue the checker files, comments on and closes.
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # Same pinned babashka as the lint job in ci.yaml. The checker is a bb
+      # script so it can be run locally against prod or dev without a JVM,
+      # stays subject to `bb fmt`/`bb lint`, and needs no dependencies beyond
+      # what the bb image ships.
+      - name: Install clojure tools
+        uses: DeLaGuardo/setup-clojure@13.6.1
+        with:
+          bb: 1.12.217
+
+      - name: Scroll the public API
+        working-directory: webapp
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BASE_URL: ${{ inputs.base-url || 'https://api.lipas.fi' }}
+          ONLY: ${{ inputs.only }}
+          PAGES: ${{ inputs.pages }}
+          # Scheduled runs always manage the issue. A manual dispatch does so
+          # only when asked, so a hand-run against another environment cannot
+          # close a production report.
+          MANAGE_ISSUE: ${{ github.event_name == 'schedule' || inputs.manage-issue }}
+        run: |
+          set -uo pipefail
+          ARGS=(--base-url "$BASE_URL" --report-md "$RUNNER_TEMP/api-scroll.md"
+                --report-json "$RUNNER_TEMP/api-scroll.json")
+          [ -n "$ONLY" ] && ARGS+=(--only "$ONLY")
+          [ -n "$PAGES" ] && ARGS+=(--pages "$PAGES")
+          [ "$MANAGE_ISSUE" = "true" ] && ARGS+=(--github-issue)
+          bb scripts/api_scroll_check.bb "${ARGS[@]}"
+          STATUS=$?
+          if [ "$STATUS" -ne 0 ]; then
+            echo "::error::Public API scroll check failed — see the summary below"
+          fi
+          {
+            echo "## Public API scroll check"
+            echo
+            cat "$RUNNER_TEMP/api-scroll.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$STATUS"
+
+      - name: Upload the full report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: api-scroll-report
+          path: |
+            ${{ runner.temp }}/api-scroll.md
+            ${{ runner.temp }}/api-scroll.json
+          if-no-files-found: ignore
+          retention-days: 30
