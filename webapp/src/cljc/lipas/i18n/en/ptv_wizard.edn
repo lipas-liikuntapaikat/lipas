@@ -16,6 +16,8 @@
  :service-channel-name-conflict
  "A service location with the name {1} already exists in PTV.",
  :services-to-add "Services to create",
+ :export-blocked-invalid
+ "Export is blocked. Fix or deselect the following sports sites:",
  :export-error-try-again
  "Export failed. Try again or contact support if the problem persists.",
  :no-sports-sites-for-types

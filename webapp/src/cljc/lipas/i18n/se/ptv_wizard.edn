@@ -17,6 +17,8 @@
  :service-channel-name-conflict
  "Det finns redan en servicepunkt med namnet {1} i PTV.",
  :services-to-add "Service att upprätta",
+ :export-blocked-invalid
+ "Exporten är blockerad. Korrigera eller avmarkera följande idrottsanläggningar:",
  :export-error-try-again
  "Exporten misslyckades. Försök igen eller kontakta supporten om problemet kvarstår.",
  :no-sports-sites-for-types

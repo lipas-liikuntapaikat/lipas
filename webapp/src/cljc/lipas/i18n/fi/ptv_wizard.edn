@@ -16,6 +16,8 @@
  :service-channel-name-conflict
  "PTV:ssä on jo olemassa palvelupaikka nimellä {1}.",
  :services-to-add "Perustettavat palvelut",
+ :export-blocked-invalid
+ "Vienti on estetty. Korjaa tai poista valinta seuraavilta liikuntapaikoilta:",
  :export-error-try-again
  "Vienti epäonnistui. Yritä uudelleen tai ota yhteyttä ylläpitoon, jos ongelma toistuu.",
  :no-sports-sites-for-types

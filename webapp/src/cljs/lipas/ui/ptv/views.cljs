@@ -1365,7 +1365,7 @@
                      :sub-category-id sub-category-id}])]]))]]]]])))
 
 (r/defc service-location-details
-  [{:keys [org-id tr site lipas-id sync-enabled name-conflict service-ids selected-tab set-selected-tab service-channel-ids]}]
+  [{:keys [org-id tr site lipas-id sync-enabled name-conflict service-ids selected-tab set-selected-tab service-channel-ids valid]}]
   (let [services @(rf/subscribe [::subs/services org-id])
         org-languages (<== [::subs/org-languages org-id])
         [selected-tab2 set-selected-tab2] (hooks/use-state "descriptions")
@@ -1521,35 +1521,45 @@
                 (tr :ptv.actions/load-texts-from-ptv)]])]
 
           ;; Summary
-           [text-fields/text-field
-            {:multiline true
-             :variant "outlined"
-             :on-change #(==> [::events/set-summary site selected-tab %])
-             :label (tr :ptv/summary)
-             :value (get-in site [:summary selected-tab])}]
+           (let [summary-val (or (get-in site [:summary selected-tab]) "")
+                 summary-len (count summary-val)]
+             [text-fields/text-field
+              {:multiline true
+               :variant "outlined"
+               :on-change #(==> [::events/set-summary site selected-tab %])
+               :label (tr :ptv/summary)
+               :value summary-val
+               :inputProps #js {:maxLength ptv-data/max-summary-length}
+               :helperText (str summary-len "/" ptv-data/max-summary-length)
+               :error (> summary-len ptv-data/max-summary-length)}])
 
           ;; Description
-           [text-fields/text-field
-            {:variant "outlined"
-             :rows 7
-             :multiline true
-             :on-change #(==> [::events/set-description site selected-tab %])
-             :label (tr :ptv/description)
-             :value (get-in site [:description selected-tab])}]
+           (let [desc-val (or (get-in site [:description selected-tab]) "")
+                 desc-len (count desc-val)]
+             [text-fields/text-field
+              {:variant "outlined"
+               :rows 7
+               :multiline true
+               :on-change #(==> [::events/set-description site selected-tab %])
+               :label (tr :ptv/description)
+               :value desc-val
+               :inputProps #js {:maxLength ptv-data/max-description-length}
+               :helperText (str desc-len "/" ptv-data/max-description-length)
+               :error (> desc-len ptv-data/max-description-length)}])
 
-          ;; Disclaimer and enable switch
-           (let [has-descriptions? (and (some-> site :summary :fi count (> 5))
-                                        (some-> site :description :fi count (> 5)))]
-             [checkboxes/switch
-              {:label (if (:last-sync site)
-                        (tr :ptv.actions/update-disclaimer)
-                        (tr :ptv.actions/export-disclaimer))
-               :value sync-enabled
-               :disabled (not has-descriptions?)
-               :on-change #(==> [::events/toggle-sync-enabled site %])}])])])]))
+          ;; Disclaimer and enable switch. Sync can't be switched on for an
+          ;; invalid site, but can always be switched off (e.g. to drop a site
+          ;; that blocks the batch export).
+           [checkboxes/switch
+            {:label (if (:last-sync site)
+                      (tr :ptv.actions/update-disclaimer)
+                      (tr :ptv.actions/export-disclaimer))
+             :value sync-enabled
+             :disabled (and (not sync-enabled) (not valid))
+             :on-change #(==> [::events/toggle-sync-enabled site %])}]])])]))
 
 (r/defc service-location
-  [{:keys [site sync-enabled name-conflict valid just-synced?]
+  [{:keys [site sync-enabled name-conflict valid schema-errors just-synced?]
     :as props}]
   (let [tr (<== [:lipas.ui.subs/translator])
         sync-status (:sync-status site)
@@ -1576,6 +1586,8 @@
        [:> Typography
         {:sx #js {:mr 0.5}}
         (cond
+          (seq schema-errors) [:> Tooltip {:title (str/join " " (map tr schema-errors))}
+                               [:> Icon {:color "error"} "error"]]
           name-conflict [:> Icon {:color "warning"} "warning"]
           valid [:> Icon {:color "success"} "done"]
           :else [:> Icon {:color "disabled"} "done"])]
@@ -1625,6 +1637,9 @@
         sports-sites (<== [::subs/sports-sites-wizard org-id])
         sports-sites-count (count sports-sites)
         sports-sites-count-sync (count (filter :sync-enabled sports-sites))
+        ;; Every site selected for export must pass validation, otherwise the
+        ;; export is blocked and the offending sites are listed.
+        invalid-to-export (filter #(and (:sync-enabled %) (not (:valid %))) sports-sites)
 
         [selected-tab set-selected-tab] (hooks/use-state :fi)
 
@@ -1696,11 +1711,25 @@
            ;; Export to PTV button
            [:> Button
             {:variant "outlined"
-             :disabled (or in-progress? (not (some #(and (:sync-enabled %) (:valid %)) sports-sites)))
+             :disabled (or in-progress?
+                           (zero? sports-sites-count-sync)
+                           (seq invalid-to-export))
              :color "primary"
              :startIcon (r/as-element [:> Icon "ios_share"])
              :on-click #(==> [::events/create-all-ptv-service-locations sports-sites])}
             (tr :ptv.wizard/export-service-locations-to-ptv)]
+
+           (when (seq invalid-to-export)
+             [:> Alert {:severity "warning" :sx #js{:mt 2}}
+              [:> AlertTitle (tr :ptv.wizard/export-blocked-invalid)]
+              [:ul {:style {:margin 0 :padding-left "1.2em"}}
+               (for [{:keys [lipas-id name schema-errors summary description]} invalid-to-export]
+                 (let [reasons (cond-> []
+                                 (not (some-> summary :fi count (> 5))) (conj (tr :ptv/hint-add-summary))
+                                 (not (some-> description :fi count (> 5))) (conj (tr :ptv/hint-add-description))
+                                 :always (into (map tr schema-errors)))]
+                   ^{:key lipas-id}
+                   [:li (str name ": " (str/join "; " reasons))]))]])
 
            (when in-progress?
              [:> Stack {:direction "row" :spacing 2 :align-items "center"}
@@ -1768,7 +1797,7 @@
                 (tr :ptv.wizard/go-to-services-tab)]]])
 
            [:> Stack
-            (for [{:keys [lipas-id valid name-conflict sync-enabled service-ids service-channel-ids] :as site} sports-sites]
+            (for [{:keys [lipas-id valid schema-errors name-conflict sync-enabled service-ids service-channel-ids] :as site} sports-sites]
               ^{:key lipas-id}
               [service-location
                {:tr tr
@@ -1778,6 +1807,7 @@
                 :name-conflict name-conflict
                 :sync-enabled sync-enabled
                 :valid valid
+                :schema-errors schema-errors
                 :service-ids service-ids
                 :selected-tab selected-tab
                 :set-selected-tab set-selected-tab
