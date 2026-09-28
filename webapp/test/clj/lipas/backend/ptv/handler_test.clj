@@ -871,6 +871,9 @@
                              (mock/body (tu/->json {lipas-id (merge texts
                                                                     {:org-id ptv-org-id
                                                                      :sync-enabled false
+                                                                     ;; the UI sends its cached copy;
+                                                                     ;; it must not overwrite the stored one
+                                                                     :last-sync "2099-01-01T00:00:00.000Z"
                                                                      :service-ids []
                                                                      :service-channel-ids [channel]})}))
                              (tu/token-header token)))
@@ -882,6 +885,8 @@
       (is (= source-id (:source-id after)))
       (is (= "Published" (:publishing-status after)))
       (is (= 1210 (:previous-type-code after)))
+      (is (= "2026-01-02T00:00:00.000Z" (:last-sync after))
+          "last-sync is server-owned: a meta save keeps it")
       ;; channel link preserved (frozen in PTV, not unlinked)
       (is (= [channel] (:service-channel-ids after)))
       ;; audits live in ptv_site_audit now; a legacy in-document copy is not rebuilt

@@ -709,11 +709,16 @@
         ;; keys from the existing record — there's no PTV response here to
         ;; re-derive them, and a blanket (assoc :ptv ptv) would wipe them and
         ;; break the reversible-archive bookkeeping (is-sent-to-ptv?).
+        ;; :last-sync is server-owned too (when LIPAS last pushed to PTV):
+        ;; never taken from the client, and dropping it made a site that IS in
+        ;; PTV read as never exported (sync-status :not-synced).
         (let [old-ptv (:ptv existing)
               new-ptv (-> (select-keys ptv persisted-ptv-keys)
                           (assoc :source-id          (:source-id old-ptv)
                                  :publishing-status  (:publishing-status old-ptv)
-                                 :previous-type-code (:previous-type-code old-ptv)))
+                                 :previous-type-code (:previous-type-code old-ptv))
+                          (dissoc :last-sync)
+                          (cond-> (:last-sync old-ptv) (assoc :last-sync (:last-sync old-ptv))))
               site (assoc existing
                           :event-date (utils/timestamp)
                           :ptv new-ptv)]
