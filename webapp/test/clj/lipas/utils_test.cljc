@@ -14,6 +14,28 @@
   (testing "handles normal strings without special characters"
     (is (= (utils/->sortable-name "Normal String") "normal string"))))
 
+(deftest sortable-text-test
+  (testing "keeps real content, trimmed"
+    (is (= "Keskuskatu 1" (utils/->sortable-text "Keskuskatu 1")))
+    (is (= "Moksunsalontie" (utils/->sortable-text "  Moksunsalontie ")))
+    (is (= "Suokatu 42 (hallinto)" (utils/->sortable-text " Suokatu 42 (hallinto)"))))
+  (testing "nil for values with nothing sortable in them"
+    (is (nil? (utils/->sortable-text nil)))
+    (is (nil? (utils/->sortable-text "")))
+    (is (nil? (utils/->sortable-text "   ")))
+    ;; what users type into a mandatory field they have nothing to put in
+    (is (nil? (utils/->sortable-text "-")))
+    (is (nil? (utils/->sortable-text "--")))
+    (is (nil? (utils/->sortable-text " - ")))
+    (is (nil? (utils/->sortable-text ".")))
+    (is (nil? (utils/->sortable-text "-,-")))
+    (is (nil? (utils/->sortable-text "?"))))
+  (testing "leaves ambiguous single tokens alone - they might be real content"
+    (is (= "x" (utils/->sortable-text "x")))
+    (is (= "Ei" (utils/->sortable-text "Ei"))))
+  (testing "a value that merely starts with punctuation is content"
+    (is (= "-tie 5" (utils/->sortable-text "-tie 5")))))
+
 (deftest index-by-test
   (testing "index-by with single argument (idx-fn)"
     (let [data [{:id 1 :name "John"} {:id 2 :name "Jane"}]
