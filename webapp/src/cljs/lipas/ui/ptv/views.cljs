@@ -253,6 +253,33 @@
            :value-fn :service-id
            :label (tr :ptv/services)}]}]
 
+       ;; Name conflict warning. PTV enforces unique service-location names
+       ;; per org, so syncing this site (which on next sync creates/updates a
+       ;; channel named after the site) would collide with an existing,
+       ;; differently-linked channel of the same name. Surface it here with
+       ;; the same guidance the wizard uses; otherwise the conflict only
+       ;; manifests as a PTV 400 at sync time. Rendered above the channel
+       ;; selector (as in the wizard) since the guidance points "below".
+       (when name-conflict
+         [:> Alert {:severity "warning" :variant "outlined"}
+          [:> AlertTitle
+           (tr :ptv.wizard/service-channel-name-conflict (:name site))]
+          [:> Typography {:variant "body2"}
+           (tr :ptv.name-conflict/do-one-of-these)]
+          [:ul {:style {:margin 0}}
+           [:li (tr :ptv.name-conflict/opt1)]
+           [:li (tr :ptv.name-conflict/opt2)]
+           [:li (tr :ptv.name-conflict/opt3)]]
+          [:> Button
+           {:size "small"
+            :variant "outlined"
+            :color "warning"
+            :sx #js {:textTransform "none"}
+            :on-click #(==> [::events/select-service-channels
+                             {:lipas-id (:lipas-id site)}
+                             [(:service-channel-id name-conflict)]])}
+           (tr :ptv.wizard/attach-to-conflicting-service-channel)]])
+
        ;; Service channel
        (if channel-id
          ;; Already linked - show link with edit option
@@ -282,7 +309,9 @@
            (tr :ptv/service-channel)]
           [:> Typography {:variant "body2" :color "text.secondary" :sx #js {:fontStyle "italic"}}
            (tr :ptv.actions/new-service-channel-will-be-created)]
-          (if @editing-channel?
+          ;; During a name-conflict the selector stays open: the conflict
+          ;; guidance directs the user to it.
+          (if (or @editing-channel? name-conflict)
             [:> Stack {:spacing 0.5}
              [service-channel-selector
               {:org-id org-id
@@ -292,40 +321,15 @@
                             (==> [::events/select-service-channels site v])
                             (reset! editing-channel? false))
                :label (tr :ptv/service-channel)}]
-             [:> Button {:size "small" :variant "text"
-                         :sx #js {:textTransform "none" :alignSelf "flex-start" :p 0}
-                         :on-click #(reset! editing-channel? false)}
-              (tr :actions/cancel)]]
+             (when-not name-conflict
+               [:> Button {:size "small" :variant "text"
+                           :sx #js {:textTransform "none" :alignSelf "flex-start" :p 0}
+                           :on-click #(reset! editing-channel? false)}
+                (tr :actions/cancel)])]
             [:> Button {:size "small" :variant "text"
                         :sx #js {:textTransform "none" :alignSelf "flex-start" :p 0}
                         :on-click #(reset! editing-channel? true)}
              (tr :ptv.actions/attach-existing-service-channel)])])
-
-       ;; Name conflict warning. PTV enforces unique service-location names
-       ;; per org, so syncing this site (which on next sync creates/updates a
-       ;; channel named after the site) would collide with an existing,
-       ;; differently-linked channel of the same name. Surface it here with
-       ;; the same guidance the wizard uses; otherwise the conflict only
-       ;; manifests as a PTV 400 at sync time.
-       (when name-conflict
-         [:> Alert {:severity "warning" :variant "outlined"}
-          [:> AlertTitle
-           (tr :ptv.wizard/service-channel-name-conflict (:name site))]
-          [:> Typography {:variant "body2"}
-           (tr :ptv.name-conflict/do-one-of-these)]
-          [:ul {:style {:margin 0}}
-           [:li (tr :ptv.name-conflict/opt1)]
-           [:li (tr :ptv.name-conflict/opt2)]
-           [:li (tr :ptv.name-conflict/opt3)]]
-          [:> Button
-           {:size "small"
-            :variant "outlined"
-            :color "warning"
-            :sx #js {:textTransform "none"}
-            :on-click #(==> [::events/select-service-channels
-                             {:lipas-id (:lipas-id site)}
-                             [(:service-channel-id name-conflict)]])}
-           (tr :ptv.wizard/attach-to-conflicting-service-channel)]])
 
        ;; Double-link block: the user tried to attach a service-location that
        ;; another site already owns. The link was refused (not set); explain why.
