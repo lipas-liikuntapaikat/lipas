@@ -1,8 +1,9 @@
 (ns lipas.migrations.roles
-  (:require [clojure.string :as str]
+  (:require [clojure.java.jdbc :as jdbc]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
-            [lipas.backend.db.db :refer [get-users]]
             [lipas.backend.db.user :as user]
+            [lipas.backend.db.utils] ; jsonb <-> Clojure protocol extensions
             [lipas.schema.users :as users-schema]
             [malli.core :as m]
             [taoensso.timbre :as log]))
@@ -128,6 +129,16 @@
            (permissions->roles {:activities ["outdoor-recreation-facilities"
                                              "fishing"]}
                                nil)))))
+
+(defn- get-users
+  "The accounts this migration reads, with the column list pinned to the 2024
+  schema it runs against. Deliberately NOT lipas.backend.db.db/get-users: that
+  selects the account columns of TODAY's schema, and on an empty database (CI,
+  fresh installs) this migration runs long before the later migrations that
+  add them — e.g. email_verified_at (20260911120000) broke CI exactly so."
+  [db]
+  (->> (jdbc/query db ["SELECT id, email, permissions FROM account"])
+       (map user/unmarshall)))
 
 (defn migrate-up [{:keys [db] :as _config}]
   (let [users (get-users db)]
