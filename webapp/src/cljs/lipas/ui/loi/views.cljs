@@ -21,6 +21,7 @@
             [lipas.ui.loi.subs :as subs]
             [lipas.ui.map.events :as map-events]
             [lipas.ui.map.import :as import]
+            [lipas.ui.sports-sites.activities.views :as activities-views]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
 
@@ -232,6 +233,7 @@
         loi-cat      (:loi-category edit-data)
         loi-type     (:loi-type edit-data)
         loi-props    (<== [::subs/props loi-cat loi-type])
+        field-sorter (<== [::subs/field-sorter])
         form-data    (if read-only? display-data edit-data)]
 
     [:> Grid {:container true :spacing 2 :style {:padding "1em"}}
@@ -336,7 +338,7 @@
      ;; Props
      (when loi-type
        (into [:<>]
-             (for [[k {:keys [field] :as v}] loi-props]
+             (for [[k {:keys [field] :as v}] (sort-by field-sorter utils/reverse-cmp loi-props)]
                (let [field-type (-> v :field :type)]
                  [:> Grid {:item true :xs 12}
                   (condp = field-type
@@ -377,6 +379,17 @@
                                :value-fn    first
                                :on-change   #(==> [::events/edit-loi-field k %])
                                :value       (get-in form-data [k])}]
+
+                    ;; Same structured table + dialog the activities form uses.
+                    ;; Its set-field is called with the whole updated vector.
+                    "contacts" [activities-views/contacts
+                                {:read-only?    read-only?
+                                 :locale        locale
+                                 :label         (get-in field [:label locale])
+                                 :description   (get-in field [:description locale])
+                                 :contact-props (:props field)
+                                 :set-field     #(==> [::events/edit-loi-field k %])
+                                 :value         (get form-data k)}]
 
                     ;; Fallback
                     [text-fields/text-field

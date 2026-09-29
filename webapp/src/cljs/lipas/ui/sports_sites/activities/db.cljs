@@ -1,5 +1,6 @@
 (ns lipas.ui.sports-sites.activities.db
-  (:require [lipas.data.activities :as data]))
+  (:require [lipas.data.activities :as data]
+            [lipas.utils :as utils]))
 
 (def default-sort-order
   [:route-name
@@ -54,13 +55,7 @@
    :www
    :phone-number])
 
-(defn make-field-sorter
-  [ks]
-  (let [lookup (->> ks (reverse) (map-indexed (fn [idx k] [k idx])) (into {}))]
-    (fn [[k _]]
-      (get lookup k -1))))
-
-(def default-field-sorter (make-field-sorter default-sort-order))
+(def default-field-sorter (utils/make-field-sorter default-sort-order))
 
 (def default-db
   {:mode          :default
@@ -70,4 +65,4 @@
                     {:default default-field-sorter}
                     (for [{:keys [sort-order value]} (vals data/activities)
                           :when                      sort-order]
-                      [(keyword value) (make-field-sorter sort-order)]))})
+                      [(keyword value) (utils/make-field-sorter sort-order)]))})

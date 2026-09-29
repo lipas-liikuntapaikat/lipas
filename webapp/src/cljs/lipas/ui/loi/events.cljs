@@ -34,7 +34,13 @@
   (fn [db [_ & args]]
     (let [path (into [:loi :editing] (butlast args))
           v    (last args)]
-      (assoc-in db path v))))
+      ;; set-field, not assoc-in: text fields emit nil when cleared (see
+      ;; components.text-fields/coerce), and the schemas mark localized strings
+      ;; {:optional true} [:string] — optional permits the key to be ABSENT, but
+      ;; a present nil fails validation and leaves the form permanently invalid.
+      ;; set-field dissocs on nil while still assoc'ing false, which the
+      ;; :accessible? checkbox needs.
+      (utils/set-field db path v))))
 
 (rf/reg-event-fx ::discard-edits
   (fn [{:keys [db]} _]
