@@ -760,9 +760,10 @@
 (defn invite-org-member!
   "Org-admin invite (separate from the lipas-admin user-management plane). The
   assignment is hard-validated against the org's catalog BEFORE any side effect.
-  If the email has no account, one is created (active, random password) and the
-  invitee is emailed a magic login link. The member is added to the org document
-  with the (catalog-bounded) assignment. Never touches account.permissions.roles.
+  If the email has no account, one is created (active, random password, name
+  guessed from a firstname.lastname@ address) and the invitee is emailed a
+  magic login link. The member is added to the org document with the
+  (catalog-bounded) assignment. Never touches account.permissions.roles.
   Returns {:user-id .. :new-account? bool}."
   [db emailer org-id {:keys [email] :as assignment} author-id login-url]
   (let [org (org/get-org db org-id)]
@@ -780,7 +781,11 @@
                          :email  email
                          :org-id (str org-id)})))
       (let [new?     (nil? existing)
-            _        (when new? (add-user! db {:email email :username email}))
+            ;; Guess a name so the new account isn't nameless ("??" avatar);
+            ;; nil for addresses that aren't firstname.lastname@.
+            _        (when new? (add-user! db {:email     email
+                                               :username  email
+                                               :user-data (or (utils/guess-names-from-email email) {})}))
             user     (or existing (db/get-user-by-email db {:email email}))
             org-name (:name org)]
         (org/add-member! db org-id (:id user) assignment author-id)
