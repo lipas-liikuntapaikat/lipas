@@ -49,6 +49,19 @@
    {:interval-seconds 86400
     :task-fn (fn [db] (jobs/enqueue-job! db "gdpr-removals" {}))}
 
+   :daily-fetch-postal-data
+   ;; Posti publishes PCF daily except Sundays and BAF weekly. The handler
+   ;; compares the published run dates against what is loaded and no-ops
+   ;; when nothing is newer, so a daily tick costs one HTTP GET most days.
+   {:interval-seconds 86400
+    :task-fn (fn [db] (jobs/enqueue-job! db "fetch-postal-data" {}))}
+
+   :weekly-fetch-paavo-areas
+   ;; Paavo publishes once a year; weekly is only about noticing it soon
+   ;; enough. Also self-seeds an empty paavo_area table after a deploy.
+   {:interval-seconds 604800
+    :task-fn (fn [db] (jobs/enqueue-job! db "fetch-paavo-areas" {}))}
+
    :recover-stuck-jobs
    {:interval-seconds 600
     :task-fn (fn [db] (jobs/recover-stuck-jobs! db jobs/stuck-job-timeout-minutes))}

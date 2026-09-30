@@ -100,7 +100,7 @@
  :select-templates "Valitse roolit"
  :member-col "Jäsen"
  :no-members "Ei jäseniä"
- :remove-member-confirm "Poista jäsen organisaatiosta?"
+ :remove-member-confirm "Poistetaanko jäsen {1} organisaatiosta?"
  :members-plane-note
  "Nämä roolit ovat voimassa vain tässä organisaatiossa ja perustuvat jäsenyyteen (organisaation kautta saadut oikeudet)."
  :permissions-refresh-note

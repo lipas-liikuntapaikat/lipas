@@ -100,7 +100,7 @@
  :select-templates "Select roles"
  :member-col "Member"
  :no-members "No members"
- :remove-member-confirm "Remove member from the organization?"
+ :remove-member-confirm "Remove {1} from the organization?"
  :members-plane-note
  "These roles apply only within this organization and are based on membership (permissions via the organization)."
  :permissions-refresh-note

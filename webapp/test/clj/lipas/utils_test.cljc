@@ -1,5 +1,9 @@
 (ns lipas.utils-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
+            [clojure.test.check.clojure-test :refer [defspec]]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as prop]
             [lipas.utils :as utils]))
 
 (deftest sortable-name-test
@@ -13,6 +17,28 @@
     (is (= (utils/->sortable-name "") "")))
   (testing "handles normal strings without special characters"
     (is (= (utils/->sortable-name "Normal String") "normal string"))))
+
+(deftest sortable-text-test
+  (testing "keeps real content, trimmed"
+    (is (= "Keskuskatu 1" (utils/->sortable-text "Keskuskatu 1")))
+    (is (= "Moksunsalontie" (utils/->sortable-text "  Moksunsalontie ")))
+    (is (= "Suokatu 42 (hallinto)" (utils/->sortable-text " Suokatu 42 (hallinto)"))))
+  (testing "nil for values with nothing sortable in them"
+    (is (nil? (utils/->sortable-text nil)))
+    (is (nil? (utils/->sortable-text "")))
+    (is (nil? (utils/->sortable-text "   ")))
+    ;; what users type into a mandatory field they have nothing to put in
+    (is (nil? (utils/->sortable-text "-")))
+    (is (nil? (utils/->sortable-text "--")))
+    (is (nil? (utils/->sortable-text " - ")))
+    (is (nil? (utils/->sortable-text ".")))
+    (is (nil? (utils/->sortable-text "-,-")))
+    (is (nil? (utils/->sortable-text "?"))))
+  (testing "leaves ambiguous single tokens alone - they might be real content"
+    (is (= "x" (utils/->sortable-text "x")))
+    (is (= "Ei" (utils/->sortable-text "Ei"))))
+  (testing "a value that merely starts with punctuation is content"
+    (is (= "-tie 5" (utils/->sortable-text "-tie 5")))))
 
 (deftest index-by-test
   (testing "index-by with single argument (idx-fn)"
@@ -321,6 +347,49 @@
           ids (map :id (get-in result [:outdoor-recreation-routes :routes]))]
       ;; All IDs should be different from each other
       (is (= 3 (count (set ids)))))))
+
+;; Fictional addresses only — never real ones (GDPR).
+(deftest guess-names-from-email-test
+  (testing "firstname.lastname@ is guessed and capitalized"
+    (is (= {:firstname "Matti" :lastname "Meikalainen"}
+           (utils/guess-names-from-email "matti.meikalainen@kunta.example")))
+    (is (= {:firstname "Maija" :lastname "Meikäläinen"}
+           (utils/guess-names-from-email "Maija.MEIKÄLÄINEN@kunta.example"))))
+  (testing "hyphenated parts capitalize each piece"
+    (is (= {:firstname "Anna-Liisa" :lastname "Esimerkki-Testi"}
+           (utils/guess-names-from-email "anna-liisa.esimerkki-testi@kunta.example"))))
+  (testing "trailing digits are dropped, middle parts ignored"
+    (is (= {:firstname "Matti" :lastname "Esimerkki"}
+           (utils/guess-names-from-email "matti.esimerkki2@kunta.example")))
+    (is (= {:firstname "Matti" :lastname "Esimerkki"}
+           (utils/guess-names-from-email "matti.j.esimerkki@kunta.example"))))
+  (testing "anything else is not guessed (both or neither)"
+    (doseq [email ["pekka@kunta.example"            ; one-word local part
+                   "kirjaamo@kunta.example"
+                   "mesimerkki@kunta.example"
+                   "m.esimerkki@kunta.example"      ; initial-only first name
+                   "matti.e@kunta.example"          ; initial-only last name
+                   "m.e@kunta.example"
+                   "matti_esimerkki@kunta.example"  ; other separators
+                   "matti+tag.esimerkki@kunta.example"
+                   "matti..esimerkki@kunta.example" ; empty parts
+                   ".esimerkki@kunta.example"
+                   "matti.esimerkki.@kunta.example"
+                   "matti-.esimerkki@kunta.example"
+                   "matti.2esimerkki@kunta.example" ; digits inside
+                   "@kunta.example"
+                   ""
+                   nil]]
+      (is (nil? (utils/guess-names-from-email email)) (pr-str email)))))
+
+(def ^:private gen-name
+  (gen/fmap str/join (gen/vector (gen/elements (seq "abcdefghijklmnopqrstuvwxyzåäö")) 2 12)))
+
+(defspec guess-names-from-email-roundtrip 100
+  (prop/for-all [first-name gen-name
+                 last-name  gen-name]
+                (= {:firstname (str/capitalize first-name) :lastname (str/capitalize last-name)}
+                   (utils/guess-names-from-email (str first-name "." last-name "@kunta.example")))))
 
 (comment
   (clojure.test/run-tests *ns*))

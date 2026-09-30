@@ -22,22 +22,77 @@
 (defn set-field [& args]
   (==> [::events/set-registration-form-field (butlast args) (last args)]))
 
-(r/defc registration-form [{:keys [tr]}]
+(defn- notice [text]
+  [:> Paper {:style {:background-color mui/gray3 :padding "1em"}}
+   [:> Typography {:variant "body2"} text]])
+
+(defn- privacy-policy-link [tr]
+  [:> Link
+   {:style {:margin-top "0.5em"}
+    :href "https://lipas.fi/pdf/tietosuojailmoitus_lipas.pdf"
+    :target "_blank"}
+   (tr :help/privacy-policy)])
+
+;;; Step 1: ask for a link ;;;
+
+(r/defc request-link-form [{:keys [tr]}]
+  (let [{:keys [email in-progress?]} @(rf/subscribe [::subs/registration-request])
+        error @(rf/subscribe [::subs/registration-error])
+        valid? (m/validate users/email-schema (or email ""))]
+    [:> FormGroup {}
+     [:> Typography {:variant "body1" :sx {:mb 1}}
+      (tr :register/email-step-intro)]
+
+     [text-fields/text-field
+      {:required true
+       :label (tr :lipas.user/email)
+       :type "email"
+       :spec users/email-schema
+       :value email
+       :on-change #(==> [::events/set-request-email %])
+       :placeholder (tr :lipas.user/email-example)}]
+
+     [:> Button
+      {:style {:margin-top "1em"}
+       :color "secondary"
+       :variant "contained"
+       :disabled (or (not valid?) in-progress?)
+       :size "large"
+       :on-click #(==> [::events/submit-registration-request email])}
+      (tr :register/send-link)]
+
+     [:> Stack {:spacing 1}
+      [privacy-policy-link tr]]
+
+     (when error
+       [:> Typography {:color "error"} (tr :error/unknown)])]))
+
+(r/defc link-sent-box [{:keys [tr email]}]
+  [:> Stack {:spacing 2}
+   [notice (tr :register/link-sent email)]
+   [:> Button {:variant "text"
+               :sx {:align-self "flex-start"}
+               :on-click #(==> [::events/edit-request-email])}
+    (tr :register/send-again)]])
+
+;;; Step 2: complete the registration ;;;
+
+(r/defc registration-form [{:keys [tr email]}]
   (let [form-data @(rf/subscribe [::subs/registration-form])
         error @(rf/subscribe [::subs/registration-error])]
 
     [:> FormGroup
      {}
 
-     ;; Email
+     [:> Typography {:variant "body1" :sx {:mb 1}}
+      (tr :register/complete-intro)]
+
+     ;; Email — from the verified link, not editable
      [text-fields/text-field
-      {:required true
-       :label (tr :lipas.user/email)
+      {:label (tr :lipas.user/email)
        :type "email"
-       :spec users/email-schema
-       :value (:email form-data)
-       :on-change #(==> [::events/set-registration-form-email %])
-       :placeholder (tr :lipas.user/email-example)}]
+       :value email
+       :disabled true}]
 
      ;; Username
      [text-fields/text-field
@@ -46,7 +101,7 @@
                             {:shrink true})
        :label (tr :lipas.user/username)
        :type "text"
-       :spec users/username-schema
+       :spec users/registration-username-schema
        :value (:username form-data)
        :on-change #(set-field :username %)
        :placeholder (tr :lipas.user/username-example)}]
@@ -92,19 +147,14 @@
       {:style {:margin-top "1em"}
        :color "secondary"
        :variant "contained"
-       :disabled (not (m/validate users/new-user-schema form-data))
+       :disabled (not (m/validate users/registration-form-schema form-data))
        :size "large"
        :on-click #(==> [::events/submit-registration-form form-data])}
       (tr :register/headline)]
 
      [:> Stack {:spacing 1}
 
-      ;; Privacy policy
-      [:> Link
-       {:style {:margin-top "0.5em"}
-        :href "https://lipas.fi/pdf/tietosuojailmoitus_lipas.pdf"
-        :target "_blank"}
-       (tr :help/privacy-policy)]
+      [privacy-policy-link tr]
 
       ;; Terms
       [:> Typography {:variant "body1" :sx {:mt 1 :mb 1}}
@@ -121,24 +171,51 @@
           "username-conflict" (tr :error/username-conflict)
           (tr :error/unknown))])]))
 
+(r/defc link-invalid-box [{:keys [tr]}]
+  [:> Stack {:spacing 2}
+   [notice (tr :register/link-invalid)]
+   [:> Button {:variant "contained"
+               :color "secondary"
+               :sx {:align-self "flex-start"}
+               :on-click #(==> [::events/start-over])}
+    (tr :register/request-new-link)]])
+
 (r/defc thank-you-for-registering-box [{:keys [tr]}]
-  [:> Grid
-   {:item true :xs 12 :style {:padding-top "1em" :padding-bottom "1em"}}
-   [:> Paper {:style {:background-color mui/gray3 :padding "1em"}}
-    [:> Typography {:variant "body2"}
-     (tr :register/thank-you-for-registering)]]])
+  [:> Stack {:spacing 2}
+   [notice (tr :register/thank-you-for-registering)]
+   [:> Button {:variant "contained"
+               :color "secondary"
+               :sx {:align-self "flex-start"}
+               :on-click #(navigate! "/kirjaudu")}
+    (tr :register/go-to-login)]])
 
 (r/defc create-panel [{:keys [tr]}]
-  (let [registered? @(rf/subscribe [::subs/registration-success?])]
+  (let [registered? @(rf/subscribe [::subs/registration-success?])
+        token @(rf/subscribe [::subs/registration-token])
+        request @(rf/subscribe [::subs/registration-request])]
     [:> Grid {:container true :justify-content "center" :style {:padding "1em"}}
      [:> Grid {:item true :xs 12 :md 8 :lg 6}
       [:> Card {:square true :style {:height "100%"}}
-       [:> CardHeader {:title (tr :register/headline)}]
+       [:> CardHeader {:title (if token
+                                (tr :register/complete-headline)
+                                (tr :register/headline))}]
        [:> CardContent
         {}
-        (if registered?
+        (cond
+          registered?
           [thank-you-for-registering-box {:tr tr}]
-          [registration-form {:tr tr}])]]]]))
+
+          (or (:invalid? token) (:expired? token))
+          [link-invalid-box {:tr tr}]
+
+          token
+          [registration-form {:tr tr :email (:email token)}]
+
+          (:sent-to request)
+          [link-sent-box {:tr tr :email (:sent-to request)}]
+
+          :else
+          [request-link-form {:tr tr}])]]]]))
 
 (r/defc main []
   (let [tr @(rf/subscribe [:lipas.ui.subs/translator])

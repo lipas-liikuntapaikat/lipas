@@ -16,6 +16,29 @@
         (str/lower-case)
         (str/replace #"(\"|\(|\))" ""))))
 
+;; Values users type into a mandatory free-text field they have nothing to put
+;; in: "-", "--", ".", "-,-". Deliberately conservative — only punctuation and
+;; whitespace, so "x" or "Ei" (which might be real content) are left alone.
+(def ^:private placeholder-text-re
+  #"[\s\-\u2010-\u2015._,;:/\\?!*+#\"'()\[\]<>|~^`&%$@]+")
+
+(defn ->sortable-text
+  "Sort key for a user-entered free-text field: the value trimmed, or nil when
+  it carries nothing sortable — blank, or punctuation-only placeholder text.
+
+  Sorting on the raw value puts those rows at the top in ascending order, where
+  they read as a block of empty cells above the real data, while rows that
+  simply have no value at all sort to the bottom. Returning nil here leaves the
+  field out of the indexed document, so both kinds of empty end up in the same
+  place. The stored document is untouched — `-` is a legal address and stays
+  one; this only decides where the row sorts."
+  [s]
+  (when (string? s)
+    (let [t (str/trim s)]
+      (when-not (or (str/blank? t)
+                    (re-matches placeholder-text-re t))
+        t))))
+
 (defn ->slug
   "URL-friendly slug from a title: lowercase, ä/å→a ö→o, whitespace→-,
    other non-alphanumerics dropped. Returns \"\" for blank input."
@@ -277,3 +300,39 @@
   [site locale]
   (or (not-empty (get-in site [:name-localized locale]))
       (:name site)))
+
+(defn- letter? [c]
+  (let [s (str c)]
+    (not= (str/upper-case s) (str/lower-case s))))
+
+(defn- name-part?
+  "Letters, optionally joined by single hyphens (`anna-liisa`)."
+  [s]
+  (every? #(and (seq %) (every? letter? %)) (str/split s #"-" -1)))
+
+(defn- capitalize-name [s]
+  (->> (str/split s #"-")
+       (map str/capitalize)
+       (str/join "-")))
+
+(defn guess-names-from-email
+  "Guess `{:firstname .. :lastname ..}` from a `firstname.lastname@domain`
+  address, or nil when the local part doesn't have that shape. Both or
+  neither: a one-word local part (`pekka@`, `kirjaamo@`, `mvirtanen@`) is
+  more often a shared mailbox or a mangled name than a first name, so it's
+  not guessed. Trailing digits are dropped (`matti.virtanen2`) and middle
+  parts ignored (`matti.j.virtanen`); the first and last parts must each be
+  at least two letters."
+  [email]
+  (when (string? email)
+    (let [local (-> email (str/split #"@") first str/lower-case
+                    (str/replace #"\d+$" ""))
+          parts (str/split local #"\." -1)]
+      (when (and (<= 2 (count parts))
+                 (every? name-part? parts))
+        (let [first-name (first parts)
+              last-name  (last parts)]
+          (when (and (<= 2 (count first-name))
+                     (<= 2 (count last-name)))
+            {:firstname (capitalize-name first-name)
+             :lastname  (capitalize-name last-name)}))))))

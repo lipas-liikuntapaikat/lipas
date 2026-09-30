@@ -11,7 +11,9 @@ SELECT
   password,
   user_data,
   history,
-  permissions
+  permissions,
+  email_verified_at,
+  email_verified_via
 FROM
   account;
 
@@ -28,7 +30,9 @@ SELECT
   password,
   user_data,
   history,
-  permissions
+  permissions,
+  email_verified_at,
+  email_verified_via
 FROM
   account
 WHERE
@@ -47,7 +51,9 @@ SELECT
   password,
   user_data,
   history,
-  permissions
+  permissions,
+  email_verified_at,
+  email_verified_via
 FROM
   account
 WHERE
@@ -66,7 +72,9 @@ SELECT
   password,
   user_data,
   history,
-  permissions
+  permissions,
+  email_verified_at,
+  email_verified_via
 FROM
   account
 WHERE
@@ -82,7 +90,9 @@ INSERT INTO account (
   username,
   password,
   user_data,
-  permissions
+  permissions,
+  email_verified_at,
+  email_verified_via
 )
 VALUES (
   :status,
@@ -90,7 +100,9 @@ VALUES (
   :username,
   :password,
   :user_data,
-  :permissions
+  :permissions,
+  :email_verified_at,
+  :email_verified_via
 );
 
 -- :name update-user-permissions!
@@ -170,4 +182,29 @@ WHERE
 --      issued before this instant stops being accepted.
 UPDATE account
 SET    tokens_valid_from = :tokens_valid_from
+WHERE  id = :id ::uuid;
+
+-- :name mark-user-email-verified!
+-- :command :execute
+-- :result :affected
+-- :doc Records how the user's email address was proven. The first proof wins:
+--      a row that already carries a verification is left untouched, so this is
+--      safe to call on every login.
+UPDATE account
+SET    email_verified_at = now(),
+       email_verified_via = :email_verified_via
+WHERE  id = :id ::uuid
+  AND  email_verified_via IS NULL;
+
+-- :name change-user-email!
+-- :command :execute
+-- :result :affected
+-- :doc Moves the account to its newly proven address (email change). The
+--      username is passed explicitly: it moves along only when it equalled the
+--      old address. The confirmation link proved the new address.
+UPDATE account
+SET    email = :email,
+       username = :username,
+       email_verified_at = now(),
+       email_verified_via = 'change'
 WHERE  id = :id ::uuid;
