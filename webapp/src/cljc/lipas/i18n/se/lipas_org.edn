@@ -100,7 +100,7 @@
  :select-templates "Välj roller"
  :member-col "Medlem"
  :no-members "Inga medlemmar"
- :remove-member-confirm "Ta bort medlem från organisationen?"
+ :remove-member-confirm "Ta bort medlemmen {1} från organisationen?"
  :members-plane-note
  "Dessa roller gäller endast i denna organisation och baseras på medlemskap (behörigheter via organisationen)."
  :permissions-refresh-note

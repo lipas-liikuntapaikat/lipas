@@ -672,6 +672,27 @@
       (is (= ["editor"] (->> (backend-org/get-org-users (test-db) org-id)
                              (filter #(= (str (:id account)) (str (:id %)))) first :roles))))))
 
+(deftest org-admin-invite-guesses-name-test
+  ;; Fictional addresses only (GDPR).
+  (let [org-id (catalog-org! editor+ptv-catalog)
+        ts     (System/currentTimeMillis)
+        invite (fn [email]
+                 (core/invite-org-member! (test-db) (test-utils/create-test-emailer) org-id
+                                          {:email email :roles []}
+                                          nil "http://localhost/login")
+                 (:user-data (core/get-user (test-db) email)))]
+    (testing "A new firstname.lastname@ account gets a name guessed from the email"
+      (is (= {:firstname "Maija" :lastname "Esimerkki"}
+             (-> (invite (str "maija.esimerkki" ts "@kunta.example"))
+                 (select-keys [:firstname :lastname])))))
+    (testing "A one-word address gets no name"
+      (is (empty? (select-keys (invite (str "kirjaamo" ts "@kunta.example"))
+                               [:firstname :lastname]))))
+    (testing "An existing account's name is never overwritten"
+      (let [user (test-utils/gen-regular-user :db-component (test-db))]
+        (invite (:email user))
+        (is (= (:user-data user) (:user-data (core/get-user (test-db) (:email user)))))))))
+
 (deftest org-admin-invite-existing-account-magic-link-test
   (testing "Inviting an EXISTING account sends a one-click magic login link (token in URL)"
     (let [org-id  (catalog-org! editor+ptv-catalog)
