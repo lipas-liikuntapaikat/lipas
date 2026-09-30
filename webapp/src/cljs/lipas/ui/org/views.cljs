@@ -564,7 +564,12 @@
               [:> TableCell {:align "right"}
                [:> IconButton
                 {:size "small" :color "error"
-                 :on-click (fn [] (rf/dispatch [::events/remove-member org-id (:id member)]))}
+                 :on-click (fn []
+                             (rf/dispatch
+                               [:lipas.ui.events/confirm
+                                (tr :lipas.org/remove-member-confirm
+                                    (or (:email member) (:username member)))
+                                #(rf/dispatch [::events/remove-member org-id (:id member)])]))}
                 [:> DeleteIcon]]])])]]
        [:> Typography {:color "text.secondary"} (tr :lipas.org/no-members)])]))
 
