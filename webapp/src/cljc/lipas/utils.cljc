@@ -277,3 +277,39 @@
   [site locale]
   (or (not-empty (get-in site [:name-localized locale]))
       (:name site)))
+
+(defn- letter? [c]
+  (let [s (str c)]
+    (not= (str/upper-case s) (str/lower-case s))))
+
+(defn- name-part?
+  "Letters, optionally joined by single hyphens (`anna-liisa`)."
+  [s]
+  (every? #(and (seq %) (every? letter? %)) (str/split s #"-" -1)))
+
+(defn- capitalize-name [s]
+  (->> (str/split s #"-")
+       (map str/capitalize)
+       (str/join "-")))
+
+(defn guess-names-from-email
+  "Guess `{:firstname .. :lastname ..}` from a `firstname.lastname@domain`
+  address, or nil when the local part doesn't have that shape. Both or
+  neither: a one-word local part (`pekka@`, `kirjaamo@`, `mvirtanen@`) is
+  more often a shared mailbox or a mangled name than a first name, so it's
+  not guessed. Trailing digits are dropped (`matti.virtanen2`) and middle
+  parts ignored (`matti.j.virtanen`); the first and last parts must each be
+  at least two letters."
+  [email]
+  (when (string? email)
+    (let [local (-> email (str/split #"@") first str/lower-case
+                    (str/replace #"\d+$" ""))
+          parts (str/split local #"\." -1)]
+      (when (and (<= 2 (count parts))
+                 (every? name-part? parts))
+        (let [first-name (first parts)
+              last-name  (last parts)]
+          (when (and (<= 2 (count first-name))
+                     (<= 2 (count last-name)))
+            {:firstname (capitalize-name first-name)
+             :lastname  (capitalize-name last-name)}))))))
