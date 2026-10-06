@@ -214,6 +214,21 @@
        (map (fn [{:keys [lipas_id name]}]
               {:lipas-id lipas_id :name name}))))
 
+(defn get-ptv-adoption
+  "One row per site that has ever had a :ptv subtree: `:first-month`
+  (\"YYYY-MM\", Helsinki time) of its first :ptv revision and the current
+  revision's PTV state."
+  [db-spec]
+  (->> (sports-site/get-ptv-adoption db-spec)
+       (map (fn [{:keys [lipas_id first_month city_code ptv_org_id
+                         sync_enabled publishing_status]}]
+              {:lipas-id lipas_id
+               :first-month first_month
+               :city-code (some-> city_code parse-long)
+               :ptv-org-id ptv_org_id
+               :sync-enabled? (boolean sync_enabled)
+               :publishing-status publishing_status}))))
+
 (defn get-users-drafts [db user]
   (let [params {:author-id (:id user) :status "draft"}]
     (->> params

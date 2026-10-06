@@ -49,3 +49,33 @@
      [:publishing-status {:optional true} [:maybe :string]]
      [:sub-category-id {:optional true} [:maybe :int]]
      [:audit {:optional true} #'ss-ptv/ptv-audit]]))
+
+(def adoption-status-counts
+  [[:sites :int]
+   [:integrated :int]
+   [:sync-enabled :int]
+   [:published :int]
+   [:deleted :int]])
+
+(def adoption-stats
+  "Response of /actions/get-ptv-adoption-stats (admin PTV adoption view).
+   Months are \"YYYY-MM\" in Helsinki time."
+  (m/schema
+    [:map
+     [:generated-at :string]
+     [:totals (into [:map [:municipalities :int]] adoption-status-counts)]
+     [:monthly
+      [:vector
+       [:map
+        [:month :string]
+        [:new :int]
+        [:total :int]
+        [:by-municipality [:vector [:map [:municipality :string] [:new :int]]]]]]]
+     [:municipalities
+      [:vector
+       (into [:map
+              [:city-code [:maybe :int]]
+              [:municipality :string]
+              [:first-month :string]
+              [:latest-month :string]]
+             adoption-status-counts)]]]))

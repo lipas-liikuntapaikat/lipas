@@ -139,6 +139,28 @@ SELECT lipas_id, document ->> 'name' AS name
 FROM sports_site_current
 WHERE document #> '{ptv,service-channel-ids}' @> to_jsonb(:service_channel_id ::text)
 
+-- :name get-ptv-adoption
+-- :command :query
+-- :result :many
+-- :doc One row per site that has ever had a :ptv subtree: the Helsinki-local
+-- :doc month of its first :ptv revision plus the current revision's PTV state.
+-- :doc Feeds the admin PTV adoption view.
+WITH first_ptv AS (
+  SELECT lipas_id,
+         to_char(min(event_date) AT TIME ZONE 'Europe/Helsinki', 'YYYY-MM') AS first_month
+  FROM sports_site
+  WHERE jsonb_typeof(document -> 'ptv') = 'object'
+  GROUP BY lipas_id
+)
+SELECT f.lipas_id,
+       f.first_month,
+       c.city_code,
+       c.document #>> '{ptv,org-id}' AS ptv_org_id,
+       (c.document #>> '{ptv,sync-enabled}')::boolean AS sync_enabled,
+       c.document #>> '{ptv,publishing-status}' AS publishing_status
+FROM first_ptv f
+JOIN sports_site_current c USING (lipas_id)
+
 -- :name invalidate-since!
 -- :command :execute
 -- :result :affected

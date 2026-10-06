@@ -298,6 +298,20 @@
                  {:id         {:type "keyword"}
                   :doc-status {:type "keyword"}
                   :created-at {:type "date"}
+                  ;; PTV adoption dashboards aggregate over the revision history
+                  ;; (e.g. first :ptv revision per site). Unindexed, every such
+                  ;; query needs a _source runtime script over all revisions (~30s
+                  ;; on prod), so index the scalar integration fields. dynamic false
+                  ;; keeps the localized texts and audit in _source only.
+                  :ptv        {:dynamic false
+                               :properties
+                               {:org-id              {:type "keyword"}
+                                :sync-enabled        {:type "boolean"}
+                                :publishing-status   {:type "keyword"}
+                                :last-sync           {:type "date" :ignore_malformed true}
+                                :service-ids         {:type "keyword"}
+                                :service-channel-ids {:type "keyword"}
+                                :languages           {:type "keyword"}}}
                   :author     {:dynamic false
                                :properties
                                {:id          {:type "keyword"}
