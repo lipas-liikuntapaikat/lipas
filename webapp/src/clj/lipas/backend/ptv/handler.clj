@@ -2,6 +2,7 @@
   (:require [clojure.string :as str]
             [lipas.backend.db.db :as db]
             [lipas.backend.org :as org]
+            [lipas.backend.ptv.adoption :as adoption]
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.backend.rate-limit :as rate-limit]
             [lipas.data.ptv :as ptv-data]
@@ -216,6 +217,16 @@
    {#_#_:middleware [mw/token-auth mw/auth]
     :tags ["ptv"]
     :no-doc false}
+
+   ["/actions/get-ptv-adoption-stats"
+    {:post
+     {:require-privilege :users/manage
+      :parameters {:body [:map]}
+      :responses {200 {:body #'lipas-ptv-schema/adoption-stats}}
+      :handler
+      (fn [_req]
+        {:status 200
+         :body (adoption/get-adoption-stats db)})}}]
 
    ["/actions/get-ptv-integration-candidates"
     {:post
