@@ -149,6 +149,24 @@
                                {:org-id #{(str (-> req :parameters :body :org-id))}}
                                :org/member))))
 
+(defn- site-org-member-or-admin?
+  "Boolean privilege fn for POST /actions/get-site-editors: LIPAS admin, or
+  `:org/member` on an org tied to the site named in the body — its owner org or
+  one it has granted edit to.
+
+  That set is exactly `search-meta.editor-org-ids`, which is what the Kohteet
+  tab queries to build its list, so every row a member can see there can also
+  open its drawer, and nothing else can. Before this the route was
+  `:require-privilege nil`: ANY authenticated user could ask who edits ANY
+  lipas-id."
+  [db req]
+  (let [user (:identity req)]
+    (or (roles/check-role user :admin)
+        (let [site    (core/get-sports-site db (-> req :parameters :body :lipas-id))
+              org-ids (:org-id (roles/site-roles-context site))]
+          (boolean (and (seq org-ids)
+                        (roles/check-privilege user {:org-id org-ids} :org/member)))))))
+
 (defn- utp-image-upload-access?
   "Boolean privilege fn for POST /actions/upload-utp-image.
 
@@ -463,15 +481,21 @@
         ["/actions/get-org-history"
          {:post
           {:no-doc true
-         ;; History/audit is admin-only (lipas-admin or org-admin), not members.
-         ;; Author identity (email) only for :users/manage; org admins get a
-         ;; coarse role label instead (same GDPR rule as site edit history).
+         ;; History/audit is admin-only (lipas-admin or org-admin), not members —
+         ;; so every caller who gets this far is already at the `:full` tier of
+         ;; the PM PII rule (2026-09-07: "org admin and LIPAS admin see the full
+         ;; emails"). Hence `true` unconditionally.
+         ;;
+         ;; NOTE this REPLACES the earlier F38 behaviour, where org admins saw a
+         ;; coarse :author-role and only :users/manage saw :author-name. That was
+         ;; the conservative placeholder taken "pending data-protection guidance"
+         ;; (docs/organizations.md); this is that guidance. Reverting is a
+         ;; one-word change back to the check-privilege call.
            :require-privilege [org-scope-from-body :org/manage]
            :parameters {:body [:map [:org-id org-schema/org-id]]}
            :handler (fn [req]
                       {:status 200
-                       :body (org/get-history db (-> req :parameters :body :org-id)
-                                              (roles/check-privilege (:identity req) {} :users/manage))})}}]
+                       :body (org/get-history db (-> req :parameters :body :org-id) true)})}}]
 
       ;; --- Bulk contact update candidates (org-only). Read-only candidate
       ;; listing is member-visible (same gate as /actions/get-org-sites) so the
@@ -498,21 +522,27 @@
                       {:status 200
                        :body (org-takeover/preview db (-> req :parameters :body :org-id))})}}]
 
-      ;; --- "Who can edit site Z" (Q2) — transparency, any authenticated user ---
+      ;; --- "Who can edit site Z" (Q2) — scoped to the site's own orgs: LIPAS
+      ;; admins, plus members of the org that owns the site or has been granted
+      ;; edit on it. Person entries within that are still rendered at the
+      ;; caller's core/site-pii-tier (full email for admins, masked for plain
+      ;; members). ---
         ["/actions/get-site-editors"
          {:post
           {:no-doc true
-           :require-privilege nil
-           :middleware [mw/token-auth mw/auth]
+           :require-privilege (fn [req] (site-org-member-or-admin? db req))
            :parameters {:body [:map [:lipas-id #'sports-site-schema/lipas-id]]}
            :handler (fn [req]
                       {:status 200
-                       :body (core/site-editors db (-> req :parameters :body :lipas-id))})}}]
+                       :body (core/site-editors db
+                                                (-> req :parameters :body :lipas-id)
+                                                (:identity req))})}}]
 
       ;; --- Site edit history — any authenticated user, surfaced in the org
-      ;; Kohteet drawer for the members maintaining the data. The author is a
-      ;; person identifier (email) ONLY for :users/manage holders; everyone
-      ;; else gets timestamp + a coarse role label (GDPR, F38). ---
+      ;; Kohteet drawer for the members maintaining the data. Same three tiers
+      ;; as get-site-editors: full author email for LIPAS/org admins, masked for
+      ;; org members and the site's own editors, and timestamp + a coarse role
+      ;; label for anyone else (GDPR, F38). ---
         ["/actions/get-site-edit-history"
          {:post
           {:no-doc true
@@ -523,7 +553,7 @@
                       {:status 200
                        :body (core/site-edit-history
                                db (-> req :parameters :body :lipas-id)
-                               {:emails? (roles/check-privilege (:identity req) {} :users/manage)})})}}]
+                               (:identity req))})}}]
 
       ;; --- Commands --------------------------------------------------------
 
