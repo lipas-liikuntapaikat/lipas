@@ -1,5 +1,6 @@
 (ns lipas.backend.config
-  (:require [environ.core :as e]
+  (:require [clojure.string :as str]
+            [environ.core :as e]
             [integrant.core :as ig]))
 
 (defn env!
@@ -8,6 +9,23 @@
   (if (contains? e/env kw)
     (kw e/env)
     (throw (Exception. (str "Environment variable not set: " kw)))))
+
+(defn secret!
+  "Like `env!`, but a blank value counts as unset too. For signing keys, where
+  an empty value doesn't fail: buddy signs and verifies with a nil or \"\" key
+  without complaint, which turns the key into a publicly known one."
+  [kw]
+  (let [v (env! kw)]
+    (if (str/blank? v)
+      (throw (Exception. (str "Environment variable is blank: " kw)))
+      v)))
+
+(def auth-key
+  "Signs and verifies every JWT: sessions, magic links, and (through keys
+  derived from it, see lipas.backend.jwt) registration and email-change links.
+  Read once at load, so a missing key stops startup instead of letting anyone
+  forge tokens."
+  (secret! :auth-key))
 
 (def default-config
   {:db

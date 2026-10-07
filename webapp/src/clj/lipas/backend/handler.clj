@@ -69,6 +69,9 @@
    ;; Email-change link expired, tampered with, already used or superseded.
    :invalid-email-change-token (exception-handler 400 :invalid-email-change-token)
    :same-email (exception-handler 400 :same-email)
+   ;; Re-authentication failed (current password). 403, not 401: the session
+   ;; itself is fine, and 401 would read as "logged out" to the client.
+   :invalid-password (exception-handler 403 :invalid-password)
    :no-permission (exception-handler 403 :no-permission)
    :impersonation-not-allowed (exception-handler 403 :impersonation-not-allowed)
    :user-not-found (exception-handler 404 :user-not-found)
@@ -999,16 +1002,25 @@
            ;; which also runs it before the per-user rate limit (that needs
            ;; :identity). Mails a confirmation link to the new address; nothing
            ;; changes until it is opened (core/request-email-change!).
+           ;;
+           ;; Requires the current password: a session alone must not be
+           ;; enough to move the account to another inbox, or a stolen 6h
+           ;; token becomes permanent ownership (change → confirm → password
+           ;; reset). This also keeps impersonating admins out — they don't
+           ;; know the password and have the admin endpoint instead. The
+           ;; per-user rate limit bounds guessing.
            :require-privilege (fn [_req] true)
            :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 5}
            :parameters {:body [:map {:closed true}
                                [:new-email users-schema/email-schema]
+                               [:password [:string {:min 1 :max 128}]]
                                [:confirm-url handler-schema/magic-link-login-url]
                                [:lang {:optional true} users-schema/registration-lang]]}
            :handler
            (fn [{:keys [identity parameters]}]
-             (let [{:keys [new-email confirm-url lang]} (:body parameters)
+             (let [{:keys [new-email password confirm-url lang]} (:body parameters)
                    user (core/get-user! db (str (:id identity)))]
+               (core/check-current-password! user password)
                (core/request-email-change! db emailer {:user        user
                                                        :new-email   new-email
                                                        :confirm-url confirm-url

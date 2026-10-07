@@ -64,7 +64,15 @@
   (fn [[path]]
     #_(println "Track!" path)
     (when-not config/debug?
-      (.push (.-_paq js/window) #js ["trackPageView" (str path)]))))
+      ;; Matomo records location.href unless told otherwise, and every emailed
+      ;; link carries a credential in ?token= (magic login, password reset,
+      ;; registration, email change). Tracking the URL without it keeps those
+      ;; out of the analytics database. setCustomUrl sticks, so heartbeats and
+      ;; link clicks that follow use it too.
+      (let [url (js/URL. (.-href js/location))]
+        (.delete (.-searchParams url) "token")
+        (.push (.-_paq js/window) #js ["setCustomUrl" (.toString url)])
+        (.push (.-_paq js/window) #js ["trackPageView" (str path)])))))
 
 (rf/reg-fx :tracker/event!
   (fn [[category action k v]]

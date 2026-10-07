@@ -77,6 +77,12 @@
         (assoc-in [:user :email-change :new-email] v)
         (update-in [:user :email-change] dissoc :error))))
 
+(rf/reg-event-db ::set-email-change-password
+  (fn [db [_ v]]
+    (-> db
+        (assoc-in [:user :email-change :password] v)
+        (update-in [:user :email-change] dissoc :error))))
+
 (rf/reg-event-fx ::request-email-change
   (fn [{:keys [db]} [_ new-email]]
     {:db (assoc-in db [:user :email-change :in-progress?] true)
@@ -85,6 +91,7 @@
       :uri             (str (:backend-url db) "/actions/request-email-change")
       :headers         {:Authorization (str "Token " (-> db :user :login :token))}
       :params          {:new-email   new-email
+                        :password    (-> db :user :email-change :password)
                         :confirm-url (str (utils/base-url) "/vahvista-sahkoposti")
                         :lang        (name ((:translator db)))}
       :format          (ajax/json-request-format)

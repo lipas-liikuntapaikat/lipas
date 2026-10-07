@@ -200,6 +200,7 @@
             :state (<== [::subs/email-change])
             :help-text (tr :lipas.user/change-email-help)
             :on-change #(==> [::events/set-new-email %])
+            :on-password-change #(==> [::events/set-email-change-password %])
             :on-submit #(==> [::events/request-email-change %])
             :on-close #(==> [::events/close-email-change-dialog])}]]
          [:> CardActions

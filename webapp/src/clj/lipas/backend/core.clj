@@ -195,6 +195,19 @@
         [(db/get-user-by-email db {:email email})
          (db/get-user-by-username db {:username email})]))
 
+(defn check-current-password!
+  "Re-authentication before a change that could hand the account to someone
+  else. Throws :invalid-password unless `password` matches `user`'s.
+
+  Accounts created by an org invite or an admin magic link have a random
+  password their owner never saw; they set one via password reset first, which
+  goes through the current inbox and so proves the same thing."
+  [user password]
+  (when-not (and (some? (:password user))
+                 (some? password)
+                 (hashers/check password (:password user)))
+    (throw (ex-info "Wrong password" {:type :invalid-password}))))
+
 (defn request-email-change!
   "Email change, step 1: mail a confirmation link to `new-email`. Nothing
   changes yet; the link carries a signed email-change token (lipas.backend.jwt)
@@ -258,12 +271,17 @@
                      (invalid!))
                    (when (address-taken? tx new-email (:id user))
                      (throw (ex-info "Email is already in use!" {:type :email-conflict})))
-                   (db/change-user-email! tx {:id       (:id user)
-                                              :email    new-email
-                                              :username (if (= (str/lower-case (str (:username user)))
-                                                               (str/lower-case (str old-email)))
-                                                          new-email
-                                                          (:username user))})
+                   ;; The UPDATE re-checks the old address itself, so of two
+                   ;; links confirmed concurrently (both read the old address
+                   ;; above) only one can apply; the other matches no row.
+                   (when-not (= 1 (db/change-user-email! tx {:id        (:id user)
+                                                             :old-email old-email
+                                                             :email     new-email
+                                                             :username  (if (= (str/lower-case (str (:username user)))
+                                                                               (str/lower-case (str old-email)))
+                                                                          new-email
+                                                                          (:username user))}))
+                     (invalid!))
                    (revocation/revoke! tx user)
                    (add-user-event! tx user "email-changed" {:by by})
                    user))]
