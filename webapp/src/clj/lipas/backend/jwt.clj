@@ -1,10 +1,10 @@
 (ns lipas.backend.jwt
   (:require
     [buddy.sign.jwt :as jwt]
-    [environ.core :refer [env]]))
+    [lipas.backend.config :as config]))
 
-(def sign #(jwt/sign % (env :auth-key) {:alg :hs512}))
-(def unsign #(jwt/unsign % (env :auth-key) {:alg :hs512}))
+(def sign #(jwt/sign % config/auth-key {:alg :hs512}))
+(def unsign #(jwt/unsign % config/auth-key {:alg :hs512}))
 
 (defn create-token
   "Creates signed jwt-token with user data as payload.
@@ -45,7 +45,7 @@
 ;; too, so two purposes can never share a key by accident.
 
 (defn- purpose-key [purpose]
-  (str (env :auth-key) "|" purpose))
+  (str config/auth-key "|" purpose))
 
 (defn- create-purpose-token [purpose claims valid-seconds]
   (let [now (java.time.Instant/now)]

@@ -3,7 +3,7 @@
     [buddy.auth.backends :refer [jws]]
     [buddy.auth.backends.httpbasic :refer [http-basic-backend]]
     [buddy.hashers :as hashers]
-    [environ.core :refer [env]]
+    [lipas.backend.config :as config]
     [lipas.backend.core :as core]
     [lipas.backend.jwt :as jwt]
     [lipas.backend.org :as org]
@@ -58,7 +58,7 @@
   (http-basic-backend {:authfn (partial basic-auth db)}))
 
 (def token-backend
-  (jws {:secret (env :auth-key)
+  (jws {:secret config/auth-key
         :authfn (fn [token-data]
                   ;; unmarshall the permissions/roles to use keywords and sets
                   (if (:permissions token-data)
