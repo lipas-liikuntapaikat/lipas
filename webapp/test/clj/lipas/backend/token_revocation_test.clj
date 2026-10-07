@@ -277,8 +277,7 @@
     (is (some? reset-token) "the reset mail must carry a link")
     (is (= 200 (:status (test-app (-> (mock/request :post "/api/actions/reset-password")
                                       (mock/content-type "application/json")
-                                      (mock/body (tu/->json {:password new-password}))
-                                      (tu/token-header reset-token)))))
+                                      (mock/body (tu/->json {:token reset-token :password new-password}))))))
         "the reset must complete with the very token it was started with")
     (is (= 200 (login new-password))
         "the reset must actually have changed the password")
@@ -286,25 +285,22 @@
         "and the old password must be gone")))
 
 (deftest password-reset-link-cannot-be-replayed-test
-  ;; Replay protection is a side effect of reset-password! revoking, and it is
-  ;; NOT unconditional: the revocation point is truncated to whole seconds (see
-  ;; lipas.backend.token-revocation on why — the alternative locks people out of
-  ;; their own reset), so a link minted in the SAME second as the reset survives.
-  ;;
-  ;; That is why this test backdates the link instead of using a freshly minted
-  ;; one. Any real reset link is at least seconds old by the time it is clicked —
-  ;; it travels through email — so backdating is the realistic case, not a
-  ;; contrivance. Asserting it on a same-second token made this flaky (it failed
-  ;; ~4 runs in 5) and, worse, claimed a guarantee the design does not make.
+  ;; The link names the password hash it was issued for (by fingerprint), so the
+  ;; reset itself voids it — deterministically, with none of the same-second
+  ;; allowance that revocation-based replay protection had.
   (let [user (tu/gen-regular-user :db-component (test-db))
-        reset-token (token-issued-secs-ago user 60)
-        new-password "lipas-test-replay-password-3!"]
-    (is (= 200 (:status (test-app (-> (mock/request :post "/api/actions/reset-password")
-                                      (mock/content-type "application/json")
-                                      (mock/body (tu/->json {:password new-password}))
-                                      (tu/token-header reset-token)))))
+        emailer (capturing-emailer)
+        _ (core/send-password-reset-link!
+            (test-db) emailer
+            {:email (:email user)
+             :reset-url "https://liikuntapaikat.lipas.fi/passu-hukassa"})
+        reset-token (first (sent-tokens emailer))
+        reset! #(test-app (-> (mock/request :post "/api/actions/reset-password")
+                              (mock/content-type "application/json")
+                              (mock/body (tu/->json {:token reset-token :password %}))))]
+    (is (= 200 (:status (reset! "lipas-test-replay-password-3!")))
         "control: the link works the first time")
-    (is (= 401 (probe reset-token))
+    (is (= 400 (:status (reset! "lipas-test-replay-password-4!")))
         "the same link must not work again once the reset has been completed")))
 
 ;;; Link lifetimes ;;;
@@ -316,9 +312,9 @@
       (test-db) emailer
       {:email (:email user)
        :reset-url "https://liikuntapaikat.lipas.fi/passu-hukassa"})
-    (is (= (* 24 60 60) (token-ttl-seconds (first (sent-tokens emailer))))
-        (str "a reset link is a full login token sitting in an inbox; 7 days of"
-             " exposure bought nothing"))))
+    (let [{:keys [iat exp]} (jwt/unsign-password-reset-token (first (sent-tokens emailer)))]
+      (is (= (* 24 60 60) (- exp iat))
+          "a reset link sitting in an inbox can take the account over; 7 days of exposure bought nothing"))))
 
 (deftest magic-login-link-is-still-valid-for-7-days-test
   ;; The other three callers of create-magic-link keep the long span

@@ -92,6 +92,8 @@
     [:post "/api/actions/register"]
     ;; Gated by the email-change token in its body.
     [:post "/api/actions/confirm-email-change"]
+    ;; Gated by the password-reset token in its body; a session is refused.
+    [:post "/api/actions/reset-password"]
     [:post "/api/actions/request-password-reset"]
     [:post "/api/actions/order-magic-link"]
     [:post "/api/actions/send-feedback"]

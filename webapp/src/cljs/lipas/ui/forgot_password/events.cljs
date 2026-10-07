@@ -43,9 +43,8 @@
   (fn [{:keys [db]} [_ password token]]
     {:http-xhrio
      {:method          :post
-      :headers         {:Authorization (str "Token " token)}
       :uri             (str (:backend-url db) "/actions/reset-password")
-      :params          {:password password}
+      :params          {:token token :password password}
       :format          (ajax/json-request-format)
       :response-format (ajax/json-response-format {:keywords? true})
       :on-success      [::reset-success]
@@ -55,9 +54,13 @@
 (rf/reg-event-fx ::failure
   (fn [{:keys [db]} [_ resp]]
     (let [tr     (:translator db)
-          error  (or (-> resp :response :type keyword)
-                     (when (= 401 (:status resp)) :reset-token-expired)
-                     :unknown)
+          type   (-> resp :response :type)
+          error  (cond
+                   ;; Expired, already used or superseded: same remedy, a new
+                   ;; link (the view offers one for :reset-token-expired).
+                   (= "invalid-password-reset-token" type) :reset-token-expired
+                   type (keyword type)
+                   :else :unknown)
           fatal? (= error :unknown)]
       {:dispatch       [:lipas.ui.events/set-active-notification
                         {:message  (tr (keyword :error error))

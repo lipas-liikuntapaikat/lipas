@@ -99,3 +99,18 @@
   "The claims of an email-change `token`, or nil (see unsign-purpose-token)."
   [token]
   (unsign-purpose-token "email-change" token))
+
+;; Password reset: proves the requester reads the account's current address.
+
+(defn create-password-reset-token
+  "`claims`: {:account-id :email :password-fingerprint}. The last two are what
+  make a link single-use and short-lived in practice: the reset checks the
+  account still has both (lipas.backend.core/reset-password-with-token!), so a
+  completed reset, a newer one or an email change each void it."
+  [claims valid-seconds]
+  (create-purpose-token "password-reset" claims valid-seconds))
+
+(defn unsign-password-reset-token
+  "The claims of a password-reset `token`, or nil (see unsign-purpose-token)."
+  [token]
+  (unsign-purpose-token "password-reset" token))
