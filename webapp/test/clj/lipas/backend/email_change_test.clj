@@ -109,23 +109,31 @@
   (let [user  (tu/gen-regular-user :db-component (test-db))
         admin (tu/gen-admin-user :db-component (test-db))
         other (tu/gen-regular-user :db-component (test-db))
-        body  {:new-email (unique-email) :confirm-url confirm-url}]
+        body  {:new-email (unique-email) :confirm-url confirm-url}
+        self  (assoc body :password (:password user))]
     (testing "self-service"
-      (is (= 200 (:status (post "/actions/request-email-change" body (jwt/create-token user)))))
-      (is (= 401 (:status (post "/actions/request-email-change" body))))
+      (is (= 200 (:status (post "/actions/request-email-change" self (jwt/create-token user)))))
+      (is (= 401 (:status (post "/actions/request-email-change" self))))
       (testing "same answer for a taken address"
         (is (= 200 (:status (post "/actions/request-email-change"
-                                  (assoc body :new-email (:email other))
+                                  (assoc self :new-email (:email other))
                                   (jwt/create-token user)))))))
+    (testing "the current password is required: a session alone isn't enough"
+      (is (= 400 (:status (post "/actions/request-email-change" body (jwt/create-token user)))))
+      (let [resp (post "/actions/request-email-change"
+                       (assoc self :password "not-the-password")
+                       (jwt/create-token user))]
+        (is (= 403 (:status resp)))
+        (is (= "invalid-password" (-> resp :body :type)))))
     (testing "validation"
       (is (= 400 (:status (post "/actions/request-email-change"
-                                (assoc body :confirm-url "https://evil.example/x")
+                                (assoc self :confirm-url "https://evil.example/x")
                                 (jwt/create-token user)))))
       (is (= 400 (:status (post "/actions/request-email-change"
-                                (assoc body :new-email "not-an-email")
+                                (assoc self :new-email "not-an-email")
                                 (jwt/create-token user)))))
       (is (= "same-email" (-> (post "/actions/request-email-change"
-                                    (assoc body :new-email (:email user))
+                                    (assoc self :new-email (:email user))
                                     (jwt/create-token user))
                               :body :type))))
     (testing "admin endpoint"

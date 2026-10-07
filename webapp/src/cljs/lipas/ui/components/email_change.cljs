@@ -8,6 +8,7 @@
             ["@mui/material/DialogActions$default" :as DialogActions]
             ["@mui/material/DialogContent$default" :as DialogContent]
             ["@mui/material/DialogTitle$default" :as DialogTitle]
+            ["@mui/material/Link$default" :as Link]
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Typography$default" :as Typography]
             [clojure.string :as str]
@@ -17,12 +18,16 @@
             [reagent.core :as r]))
 
 (r/defc email-change-dialog
-  "`state` is {:open? :new-email :in-progress? :sent-to :error}."
-  [{:keys [tr current-email state help-text on-change on-submit on-close]}]
-  (let [{:keys [open? new-email in-progress? sent-to error]} state
+  "`state` is {:open? :new-email :password :in-progress? :sent-to :error}.
+  With `on-password-change` the dialog also asks for the current password
+  (self-service: the backend requires it; admins don't have it)."
+  [{:keys [tr current-email state help-text on-change on-password-change on-submit on-close]}]
+  (let [{:keys [open? new-email password in-progress? sent-to error]} state
         valid? (and (m/validate users-schema/email-schema (or new-email ""))
                     (not= (str/lower-case (or new-email ""))
-                          (str/lower-case (or current-email ""))))]
+                          (str/lower-case (or current-email "")))
+                    (or (nil? on-password-change)
+                        (not (str/blank? password))))]
     [:> Dialog {:open (boolean open?) :on-close on-close :max-width "sm" :full-width true}
      [:> DialogTitle (tr :lipas.user/change-email)]
      [:> DialogContent
@@ -40,10 +45,23 @@
            :spec users-schema/email-schema
            :value new-email
            :on-change on-change}]
+         (when on-password-change
+           [:<>
+            [text-fields/text-field
+             {:label (tr :lipas.user/current-password)
+              :type "password"
+              :auto-complete "current-password"
+              :value password
+              :on-change on-password-change}]
+            ;; Invite and magic-link accounts were never told their password.
+            [:> Typography {:variant "caption"}
+             (tr :lipas.user/email-change-no-password) " "
+             [:> Link {:href "/passu-hukassa"} (tr :reset-password/change-password)]]])
          (when error
            [:> Typography {:color "error" :variant "body2"}
             (case error
               "same-email" (tr :lipas.user/email-change-same)
+              "invalid-password" (tr :lipas.user/email-change-wrong-password)
               "email-conflict" (tr :error/email-conflict)
               (tr :error/unknown))])])]
      [:> DialogActions

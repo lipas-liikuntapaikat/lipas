@@ -194,6 +194,19 @@
         [(db/get-user-by-email db {:email email})
          (db/get-user-by-username db {:username email})]))
 
+(defn check-current-password!
+  "Re-authentication before a change that could hand the account to someone
+  else. Throws :invalid-password unless `password` matches `user`'s.
+
+  Accounts created by an org invite or an admin magic link have a random
+  password their owner never saw; they set one via password reset first, which
+  goes through the current inbox and so proves the same thing."
+  [user password]
+  (when-not (and (some? (:password user))
+                 (some? password)
+                 (hashers/check password (:password user)))
+    (throw (ex-info "Wrong password" {:type :invalid-password}))))
+
 (defn request-email-change!
   "Email change, step 1: mail a confirmation link to `new-email`. Nothing
   changes yet; the link carries a signed email-change token (lipas.backend.jwt)
