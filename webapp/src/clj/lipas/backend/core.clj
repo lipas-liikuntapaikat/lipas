@@ -270,12 +270,17 @@
                      (invalid!))
                    (when (address-taken? tx new-email (:id user))
                      (throw (ex-info "Email is already in use!" {:type :email-conflict})))
-                   (db/change-user-email! tx {:id       (:id user)
-                                              :email    new-email
-                                              :username (if (= (str/lower-case (str (:username user)))
-                                                               (str/lower-case (str old-email)))
-                                                          new-email
-                                                          (:username user))})
+                   ;; The UPDATE re-checks the old address itself, so of two
+                   ;; links confirmed concurrently (both read the old address
+                   ;; above) only one can apply; the other matches no row.
+                   (when-not (= 1 (db/change-user-email! tx {:id        (:id user)
+                                                             :old-email old-email
+                                                             :email     new-email
+                                                             :username  (if (= (str/lower-case (str (:username user)))
+                                                                               (str/lower-case (str old-email)))
+                                                                          new-email
+                                                                          (:username user))}))
+                     (invalid!))
                    (revocation/revoke! tx user)
                    (add-user-event! tx user "email-changed" {:by by})
                    user))]

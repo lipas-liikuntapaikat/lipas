@@ -201,10 +201,13 @@ WHERE  id = :id ::uuid
 -- :result :affected
 -- :doc Moves the account to its newly proven address (email change). The
 --      username is passed explicitly: it moves along only when it equalled the
---      old address. The confirmation link proved the new address.
+--      old address. The confirmation link proved the new address. Applies only
+--      while the account still has :old_email, which makes concurrent
+--      confirmations of superseding links safe: at most one matches.
 UPDATE account
 SET    email = :email,
        username = :username,
        email_verified_at = now(),
        email_verified_via = 'change'
-WHERE  id = :id ::uuid;
+WHERE  id = :id ::uuid
+  AND  lower(email) = lower(:old_email);

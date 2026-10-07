@@ -4,6 +4,7 @@
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [lipas.backend.core :as core]
+            [lipas.backend.db.db :as db]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.rate-limit :as rl]
             [lipas.test-utils :as tu :refer [->json <-json]]
@@ -207,6 +208,21 @@
     (testing "an older link after a newer change"
       (is (= :invalid-email-change-token
              (try (confirm! older) nil (catch clojure.lang.ExceptionInfo e (:type (ex-data e)))))))))
+
+(deftest change-user-email-requires-old-address-test
+  ;; Two links confirmed at the same moment both pass the read in
+  ;; core/confirm-email-change!; the UPDATE's own old-address check is what
+  ;; lets only one of them through.
+  (let [user   (tu/gen-regular-user :db-component (test-db))
+        addr-a (unique-email)
+        addr-b (unique-email)
+        change #(db/change-user-email! (test-db) {:id        (:id user)
+                                                  :old-email (:email user)
+                                                  :email     %
+                                                  :username  (:username user)})]
+    (is (= 1 (change addr-a)))
+    (is (= 0 (change addr-b)))
+    (is (= addr-a (:email (account (:id user)))))))
 
 (deftest confirm-rejects-address-taken-meanwhile-test
   (let [user      (tu/gen-regular-user :db-component (test-db))
