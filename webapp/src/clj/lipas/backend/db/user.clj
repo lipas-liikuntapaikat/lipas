@@ -34,6 +34,8 @@
          update-user-status!
          update-user-username!
          get-user-tokens-valid-from
-         update-user-tokens-valid-from!)
+         update-user-tokens-valid-from!
+         mark-user-email-verified!
+         change-user-email!)
 
 (hugsql/def-db-fns "sql/user.sql")

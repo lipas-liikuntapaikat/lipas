@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is testing use-fixtures] :as t]
             [dk.ative.docjure.spreadsheet :as excel]
             [lipas.backend.core :as core]
+            [lipas.backend.db.db :as db]
             [lipas.backend.jwt :as jwt]
             [lipas.data.status :as status]
             [lipas.schema.common :as common-schema]
@@ -325,21 +326,8 @@
   (t/run-test search-loi-by-status)
   (t/run-test search-lois-by-location))
 
-(deftest register-user-test
-  (let [user (tu/gen-user)
-        resp (test-app (-> (mock/request :post "/api/actions/register")
-                           (mock/content-type "application/json")
-                           (mock/body (->json user))))]
-    (is (= 201 (:status resp)))))
-
-(deftest register-user-conflict-test
-  (let [user (tu/gen-regular-user :db-component (test-db))
-        resp (test-app (-> (mock/request :post "/api/actions/register")
-                           (mock/content-type "application/json")
-                           (mock/body (->json user))))
-        body (<-json (:body resp))]
-    (is (= 409 (:status resp)))
-    (is (= "username-conflict" (:type body)))))
+;; Registration (request-registration + register) is covered in
+;; lipas.backend.registration-test.
 
 (deftest login-failure-test
   (let [resp (test-app (-> (mock/request :post "/api/actions/login")
@@ -474,24 +462,72 @@
     (is (= (<-json (:body known-resp)) (<-json (:body unknown-resp)))
         "...and by response body")))
 
+(defn- reset-password [body & [session-token]]
+  (test-app (cond-> (-> (mock/request :post "/api/actions/reset-password")
+                        (mock/content-type "application/json")
+                        (mock/body (->json body)))
+              session-token (tu/token-header session-token))))
+
+(defn- reset-token [user & {:keys [valid-seconds] :or {valid-seconds 3600}}]
+  (let [emailer (tu/create-test-emailer)]
+    (with-redefs [core/password-reset-valid-seconds valid-seconds]
+      (core/send-password-reset-link! (test-db) emailer
+                                      {:email (:email user)
+                                       :reset-url "https://localhost/passu-hukassa"}))
+    (second (re-find #"\?token=([A-Za-z0-9._-]+)" (:plain (first @(:sent-emails emailer)))))))
+
 (deftest reset-password-test
-  (let [user (tu/gen-regular-user :db-component (test-db))
-        token (jwt/create-token user :terse? true)
-        resp (test-app (-> (mock/request :post "/api/actions/reset-password")
-                           (mock/content-type "application/json")
-                           (mock/body (->json {:password "blablaba"}))
-                           (tu/token-header token)))]
-    (is (= 200 (:status resp)))))
+  (let [user (tu/gen-regular-user :db-component (test-db))]
+    (is (= 200 (:status (reset-password {:token (reset-token user) :password "blablaba"}))))))
 
 (deftest reset-password-expired-token-test
   (let [user (tu/gen-regular-user :db-component (test-db))
-        token (jwt/create-token user :terse? true :valid-seconds 0)
-        _ (Thread/sleep 100) ; make sure token expires
-        resp (test-app (-> (mock/request :post "/api/actions/reset-password")
-                           (mock/content-type "application/json")
-                           (mock/body (->json {:password "blablaba"}))
-                           (tu/token-header token)))]
-    (is (= 401 (:status resp)))))
+        token (reset-token user :valid-seconds 0)
+        _ (Thread/sleep 1100) ; JWT exp is whole seconds
+        resp (reset-password {:token token :password "blablaba"})]
+    (is (= 400 (:status resp)))
+    (is (= "invalid-password-reset-token" (:type (<-json (:body resp)))))))
+
+(deftest reset-password-rejects-sessions-test
+  ;; A session must not be able to set a password: a stolen 6h token would
+  ;; become permanent ownership of the account.
+  (let [user (tu/gen-regular-user :db-component (test-db))
+        session (jwt/create-token user)
+        magic-link (jwt/create-token user :terse? true)]
+    (testing "as the header, without a link token"
+      (is (= 400 (:status (reset-password {:password "blablaba"} session)))))
+    (testing "in place of the link token"
+      (doseq [token [session magic-link]]
+        (is (= 400 (:status (reset-password {:token token :password "blablaba"}))))))
+    (testing "the password is unchanged"
+      (is (= 200 (:status (test-app (-> (mock/request :post "/api/actions/login")
+                                        (tu/auth-header (:username user) (:password user))))))))))
+
+(deftest reset-password-link-lifecycle-test
+  ;; A link names the account's address and password hash at issue time; both
+  ;; must still match when it is used.
+  (let [user (tu/gen-regular-user :db-component (test-db))]
+    (testing "a reset token is not a session"
+      (is (= 401 (:status (test-app (-> (mock/request :get "/api/actions/refresh-login")
+                                        (tu/token-header (reset-token user))))))))
+    (testing "an older link dies when a newer one is used"
+      (let [older (reset-token user)
+            newer (reset-token user)]
+        (is (= 200 (:status (reset-password {:token newer :password "lifecycle-1"}))))
+        (is (= 400 (:status (reset-password {:token older :password "lifecycle-2"}))))))
+    (testing "an email change voids links sent to the old inbox"
+      (let [token     (reset-token user)
+            new-email (str "reset-" (random-uuid) "@example.com")]
+        (is (= 1 (db/change-user-email! (test-db) {:id        (:id user)
+                                                   :old-email (:email user)
+                                                   :email     new-email
+                                                   :username  (:username user)})))
+        (is (= 400 (:status (reset-password {:token token :password "lifecycle-3"}))))))
+    (testing "an archived account can't be reset"
+      (let [other (tu/gen-regular-user :db-component (test-db))
+            token (reset-token other)]
+        (core/update-user-status! (test-db) (assoc other :status "archived"))
+        (is (= 400 (:status (reset-password {:token token :password "lifecycle-4"}))))))))
 
 (deftest send-magic-link-requires-admin-test
   (let [admin (tu/gen-regular-user :db-component (test-db))

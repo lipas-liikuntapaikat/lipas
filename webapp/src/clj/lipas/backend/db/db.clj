@@ -64,8 +64,27 @@
 
 (defn add-user! [db-spec user]
   (->> user
+       ;; Unverified unless the caller says otherwise (hugsql wants every
+       ;; parameter present).
+       (merge {:email-verified-at nil :email-verified-via nil})
        (user/marshall)
        (user/insert-user! db-spec)))
+
+(defn change-user-email!
+  "Moves the account to its newly proven address, provided it still has
+  `old-email`. Returns the number of rows changed (0 or 1); see
+  lipas.backend.core/confirm-email-change!."
+  [db-spec {:keys [id old-email email username]}]
+  (user/change-user-email! db-spec {:id        id
+                                    :old_email old-email
+                                    :email     email
+                                    :username  username}))
+
+(defn mark-user-email-verified!
+  "Records that the user's email was proven `via` (\"registration\"/\"login\").
+  No-op when the account is already verified — the first proof wins."
+  [db-spec {:keys [id]} via]
+  (user/mark-user-email-verified! db-spec {:id id :email_verified_via via}))
 
 (defn update-user-permissions! [db-spec user]
   (->> user
