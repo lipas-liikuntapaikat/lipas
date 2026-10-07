@@ -14,8 +14,8 @@
             [malli.core :as m]
             [reagent.core :as r]))
 
-(defn request-reset-link-form [{:keys [tr]}]
-  (r/with-let [email (r/atom nil)]
+(defn request-reset-link-form [{:keys [tr initial-email]}]
+  (r/with-let [email (r/atom initial-email)]
     [:> FormGroup
 
      ;; Email
@@ -98,9 +98,12 @@
       (tr :actions/submit)]]))
 
 (defn main []
+  ;; Only the emailed link's token can set a password, never the session's
+  ;; (the backend rejects it). A signed-in user changing their password gets
+  ;; the request form, prefilled with their own address.
   (let [tr    (<== [:lipas.ui.subs/translator])
-        token (or (utils/parse-token (-> js/window .-location .-href))
-                  (:token (<== [:lipas.ui.user.subs/user-data])))]
+        token (utils/parse-token (-> js/window .-location .-href))
+        email (:email (<== [:lipas.ui.user.subs/user-data]))]
     (if token
       ;; Reset password
       [panel {:tr          tr
@@ -113,4 +116,4 @@
               :title       (tr :reset-password/headline)
               :helper-text (tr :reset-password/helper-text)
               :form        request-reset-link-form
-              :form-props  {:tr tr :token token}}])))
+              :form-props  {:tr tr :initial-email email}}])))

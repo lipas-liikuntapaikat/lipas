@@ -1,5 +1,7 @@
 (ns lipas.backend.core
-  (:require [buddy.hashers :as hashers]
+  (:require [buddy.core.codecs :as codecs]
+            [buddy.core.hash :as buddy-hash]
+            [buddy.hashers :as hashers]
             [cheshire.core :as json]
             [clojure.core.async :as async]
             [clojure.data.csv :as csv]
@@ -323,8 +325,7 @@
 (def password-reset-valid-seconds
   "Life of a password-reset link: 24h.
 
-  A reset link is a full login token in an email: whoever holds it can take the
-  account over. Unlike a magic login or an invitation it is requested at a known
+  Whoever holds a reset link can take the account over. Unlike a magic login or an invitation it is requested at a known
   moment by someone sitting at the keyboard, so there is no reason for it to
   outlive the day, and 7 days of exposure in a mailbox bought nothing.
 
@@ -336,9 +337,9 @@
   "Builds a `url?token=<terse login token>` link and the copy figure that goes
   with it.
 
-  `valid-seconds` defaults to `magic-link-valid-seconds` (7 days) so the three
-  callers that want that span are untouched by omission. Password reset passes
-  `password-reset-valid-seconds`."
+  `valid-seconds` defaults to `magic-link-valid-seconds` (7 days). Password
+  reset doesn't use this: its link carries a password-reset token, which can't
+  log anyone in (see `send-password-reset-link!`)."
   [url user & {:keys [valid-seconds]
                :or {valid-seconds magic-link-valid-seconds}}]
   (let [token (jwt/create-token user :terse? true :valid-seconds valid-seconds)]
@@ -385,6 +386,13 @@
                      {:from old-status :to status})
     new-user))
 
+(defn- password-fingerprint
+  "A short digest of the account's password HASH, carried in a reset link so the
+  link dies with the password it was issued for. Not reversible into anything
+  useful: it is 64 bits of a SHA-256 of a bcrypt hash."
+  [user]
+  (-> (str (:password user)) buddy-hash/sha256 codecs/bytes->hex (subs 0 16)))
+
 (defn send-password-reset-link!
   "Mails a password-reset link, if `email` belongs to an account.
 
@@ -397,9 +405,12 @@
   address has an account\" rather than claiming a mail was sent."
   [db emailer {:keys [email reset-url]}]
   (if-let [user (db/get-user-by-email db {:email email})]
-    (let [params (create-magic-link reset-url user
-                                    :valid-seconds password-reset-valid-seconds)]
-      (email/send-reset-password-email! emailer email params)
+    (let [token (jwt/create-password-reset-token
+                  {:account-id           (str (:id user))
+                   :email                (:email user)
+                   :password-fingerprint (password-fingerprint user)}
+                  password-reset-valid-seconds)]
+      (email/send-reset-password-email! emailer email {:link (str reset-url "?token=" token)})
       (add-user-event! db user "password-reset-link-sent"))
     (log/infof "Password reset requested for an address with no account")))
 
@@ -416,22 +427,37 @@
   ;; into — otherwise a stolen token outlives the reset by up to 6h and the reset
   ;; achieves nothing against the case it exists for.
   ;;
-  ;; This cannot bounce the caller mid-flow, in either of the two ways this
-  ;; endpoint is reached:
-  ;;
-  ;; - reset link from email: the request is already past mw/auth, so it
-  ;;   completes; the frontend's very next step is to navigate to the login page
-  ;;   (see lipas.ui.forgot-password.events/reset-success), so the link's token
-  ;;   is never used again. A side benefit: the link becomes single-use.
-  ;; - a signed-in user changing their password from their profile: same page,
-  ;;   same navigate-to-login afterwards. Their session token dies here, which is
-  ;;   the intended behaviour for a password change, and the periodic
-  ;;   refresh-login turns it into a clean logout rather than a stuck UI.
+  ;; The caller holds a password-reset token, not a session, so revoking can't
+  ;; bounce it mid-flow; the frontend navigates to the login page next (see
+  ;; lipas.ui.forgot-password.events/reset-success).
   ;;
   ;; Ordering: after the password write, so a failed write leaves nothing
   ;; revoked, and before the event log, which is not authenticated.
   (revocation/revoke! db user)
   (add-user-event! db user "password-reset"))
+
+(defn reset-password-with-token!
+  "Sets a new password from an emailed reset link. The link's token is the only
+  credential accepted: a session can't change the password, or a stolen 6h token
+  would become permanent ownership of the account (set a password, which also
+  logs the owner out). Signed-in users change their password through the same
+  link, mailed to their own address.
+
+  The token names the account's address and password at issue time; both must
+  still match. So a link is single-use (the reset changes the password), an
+  older link dies when a newer one is used, and an email change voids links
+  sent to the old inbox."
+  [db token password]
+  (let [{:keys [account-id email] fingerprint :password-fingerprint :as claims}
+        (jwt/unsign-password-reset-token token)
+        user (when claims (db/get-user-by-id db {:id account-id}))]
+    (when-not (and user
+                   (= "active" (:status user))
+                   (= (str/lower-case (str (:email user))) (str/lower-case (str email)))
+                   (= (password-fingerprint user) fingerprint))
+      (throw (ex-info "Invalid, expired or already used password reset link"
+                      {:type :invalid-password-reset-token})))
+    (reset-password! db user password)))
 
 (def impersonation-token-valid-seconds 3600)
 
