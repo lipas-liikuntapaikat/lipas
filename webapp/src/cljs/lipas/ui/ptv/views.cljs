@@ -42,6 +42,7 @@
             ["@mui/material/TableContainer$default" :as TableContainer]
             ["@mui/material/TableHead$default" :as TableHead]
             ["@mui/material/TableRow$default" :as TableRow]
+            ["@mui/material/TableSortLabel$default" :as TableSortLabel]
             ["@mui/material/Tabs$default" :as Tabs]
             ["@mui/material/Toolbar$default" :as Toolbar]
             ["@mui/material/Tooltip$default" :as Tooltip]
@@ -49,7 +50,6 @@
             [clojure.string :as str]
             [goog.string.format]
             [lipas.data.ptv :as ptv-data]
-            [lipas.data.ptv-service-guidance :as service-guidance]
             [lipas.data.types :as types]
             [lipas.ui.components.autocompletes :refer [autocomplete2]]
             [lipas.ui.components.checkboxes :as checkboxes]
@@ -142,25 +142,8 @@
       :field-audit field-audit
       :current-content current-content}]))
 
-(defn service-writing-guidance
-  "Collapsed accordion showing the DVV per-sub-category content guidance
-   for a Service field. `field` is :description or :user-instruction.
-   Renders nothing when no guidance exists for the sub-category (e.g.
-   adopted services without a sub-category mapping). Guidance body is
-   Finnish-only by source."
-  [{:keys [tr sub-category-id field]}]
-  (when-let [text (get-in service-guidance/guidance [sub-category-id field])]
-    [:> Accordion {:disableGutters true :elevation 0 :variant "outlined"}
-     [:> AccordionSummary {:expandIcon (r/as-element [:> Icon "expand_more"])}
-      [:> Stack {:direction "row" :spacing 1 :align-items "center"}
-       [:> Icon {:fontSize "small" :color "action"} "help_outline"]
-       [:> Typography {:variant "body2"}
-        (case field
-          :description      (tr :ptv/writing-guidance-description)
-          :user-instruction (tr :ptv/writing-guidance-user-instruction))]]]
-     [:> AccordionDetails
-      [:> Typography {:variant "body2" :sx #js {:whiteSpace "pre-line"}}
-       text]]]))
+(def service-writing-guidance ptv-components/service-writing-guidance)
+(def site-writing-guidance ptv-components/site-writing-guidance)
 
 (def ptv-link-field ptv-components/ptv-link-field)
 
@@ -498,6 +481,8 @@
           (tr :ptv.actions/load-texts-from-ptv)]])]
 
      ;; Summary
+     [site-writing-guidance
+      {:tr tr :type-code (:type-code site) :field :summary}]
      (let [v (or (get-in site [:summary @selected-tab]) "")]
        [text-fields/text-field
         {:disabled loading?
@@ -515,6 +500,8 @@
        :field-name :summary}]
 
      ;; Description
+     [site-writing-guidance
+      {:tr tr :type-code (:type-code site) :field :description}]
      (let [v (or (get-in site [:description @selected-tab]) "")]
        [text-fields/text-field
         {:disabled loading?
@@ -671,8 +658,62 @@
                 (str (tr :ptv.audit/auditor-feedback) "\n" feedback)])}
      [:> MessageIcon {:sx #js {:color "text.secondary" :width size :height size}}]]))
 
+(def ^:private name-collator (js/Intl.Collator. "fi" #js {:sensitivity "base" :numeric true}))
+
+(defn- audit-rank
+  "Most critical first: changes requested, approved with a remark to read,
+   approved, no verdict on the current text."
+  [{:keys [audit-status]}]
+  (case audit-status
+    :changes-requested 1
+    :approved-with-feedback 2
+    :approved 3
+    :none 4
+    5))
+
+(defn- integration-rank
+  "Most critical first: PTV content drifted (red), out of date (orange),
+   in sync, not yet synced, integration off."
+  [{:keys [sync-enabled sync-status]}]
+  (if-not sync-enabled
+    5
+    (case sync-status
+      :content-drift 1
+      :out-of-date 2
+      :ok 3
+      :not-synced 4
+      5)))
+
+(defn- sort-sites
+  "Default order (no column chosen) puts the sites needing attention first:
+   audit priority, then type. A chosen column sorts on it — text columns
+   alphabetically, status columns most critical first — with the name
+   (always A→Z) as tie-breaker."
+  [sites {:keys [col dir]}]
+  (if-not col
+    (sort-by (fn [site]
+               [(case (:audit-status site)
+                  :changes-requested 1 ; Most critical
+                  :none 3 ; No verdict on the current text
+                  (:approved :approved-with-feedback) 4 ; All good
+                  5) ; Default/unknown
+                (:type site)])
+             sites)
+    (let [sign (if (= dir :desc) -1 1)
+          cmp-col (case col
+                    :audit #(compare (audit-rank %1) (audit-rank %2))
+                    :event-data #(compare (integration-rank %1) (integration-rank %2))
+                    #(.compare name-collator (str (col %1)) (str (col %2))))]
+      (sort (fn [a b]
+              (let [c (* sign (cmp-col a b))]
+                (if (zero? c)
+                  (.compare name-collator (str (:name a)) (str (:name b)))
+                  c)))
+            sites))))
+
 (defn table []
   (r/with-let [expanded-rows (r/atom {})
+               sort-state (r/atom {:col nil :dir :asc})
                search-text (r/atom "")
                status-filter (r/atom :all)
                filter-expanded? (r/atom true)]
@@ -739,13 +780,13 @@
                        {:value sync-all-enabled?
                         :on-change #(==> [::events/toggle-sync-all %2])}]}
                    #_{:key :auto-sync :label "Vie automaattisesti"}
-                   {:key :event-data :label (tr :ptv/integration) :sx {:textAlign "center"}}
-                   {:key :audit :label (tr :ptv.audit/tab-label) :sx {:textAlign "center"}}
+                   {:key :event-data :label (tr :ptv/integration) :sx {:textAlign "center"} :sortable? true}
+                   {:key :audit :label (tr :ptv.audit/tab-label) :sx {:textAlign "center"} :sortable? true}
                    #_{:key :last-sync :label "Viety viimeksi"}
-                   {:key :name :label (tr :general/name)}
-                   {:key :type :label (tr :general/type)}
+                   {:key :name :label (tr :general/name) :sortable? true}
+                   {:key :type :label (tr :general/type) :sortable? true}
                    ;;{:key :admin :label (tr :lipas.sports-site/admin)}
-                   {:key :owner :label (tr :lipas.sports-site/owner)}
+                   {:key :owner :label (tr :lipas.sports-site/owner) :sortable? true}
                    #_{:key :service :label "Palvelu"}
                    #_{:key :service-channel :label (tr :ptv/service-channel)}
                    #_{:key :service-channel-summary :label "Tiivistelmä"}
@@ -773,25 +814,27 @@
            [:> TableHead
             [:> TableRow
              (doall
-               (for [{:keys [key label action-component padding sx]} headers]
-                 [:> TableCell {:key (name key) :padding padding :sx (clj->js sx)}
+               (for [{:keys [key label action-component padding sx sortable?]} headers
+                     :let [active? (= key (:col @sort-state))]]
+                 [:> TableCell {:key (name key) :padding padding :sx (clj->js sx)
+                                :sortDirection (if active? (name (:dir @sort-state)) false)}
                   action-component
-                  label]))]]
+                  (if sortable?
+                    [:> TableSortLabel
+                     {:active active?
+                      :direction (if active? (name (:dir @sort-state)) "asc")
+                      :onClick #(swap! sort-state
+                                       (fn [{:keys [col dir]}]
+                                         (if (= col key)
+                                           {:col key :dir (if (= dir :asc) :desc :asc)}
+                                           {:col key :dir :asc})))}
+                     label]
+                    label)]))]]
 
           ;; Body
            [:> TableBody
             (doall
-              (for [{:keys [lipas-id sync-status] :as site}
-                  ;; Sort by audit priority first, then by type
-                    (sort-by (fn [site]
-                               (let [audit-priority (case (:audit-status site)
-                                                      :changes-requested 1 ; Most critical
-                                                      :none 3 ; No verdict on the current text
-                                                      :approved 4 ; All good
-                                                      :approved-with-feedback 4 ; All good, with a remark
-                                                      5)] ; Default/unknown
-                                 [audit-priority (:type site)]))
-                             shown)]
+              (for [{:keys [lipas-id sync-status] :as site} (sort-sites shown @sort-state)]
 
                 [:<> {:key lipas-id}
 
@@ -1525,6 +1568,8 @@
                 (tr :ptv.actions/load-texts-from-ptv)]])]
 
           ;; Summary
+           [site-writing-guidance
+            {:tr tr :type-code (:type-code site) :field :summary}]
            (let [summary-val (or (get-in site [:summary selected-tab]) "")
                  summary-len (count summary-val)]
              [text-fields/text-field
@@ -1538,6 +1583,8 @@
                :error (> summary-len ptv-data/max-summary-length)}])
 
           ;; Description
+           [site-writing-guidance
+            {:tr tr :type-code (:type-code site) :field :description}]
            (let [desc-val (or (get-in site [:description selected-tab]) "")
                  desc-len (count desc-val)]
              [text-fields/text-field
