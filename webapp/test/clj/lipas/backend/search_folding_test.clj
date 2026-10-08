@@ -105,10 +105,9 @@
 (deftest free-text-field-sort-test
   ;; postal-office & co are user-entered free text with wildly mixed case.
   ;; Raw keyword sort is code-point order, which puts every lowercase value
-  ;; after the entire uppercase alphabet (HELSINKI < VANTAA < espoo). The
-  ;; icu_collation_keyword `sort` sub-field orders case-insensitively (case
-  ;; only breaks ties, lowercase first). www/email/phone-number additionally
-  ;; used to be unindexed ({:enabled false}), so sorting them was an ES 400.
+  ;; after the entire uppercase alphabet (HELSINKI < VANTAA < espoo). Sorting
+  ;; runs on search-meta.sort.*, an icu_collation_keyword built from the value,
+  ;; which orders case-insensitively (case only breaks ties, lowercase first).
   (doseq [[i [po www]] (map-indexed vector
                                     [["VANTAA"   "www.d.fi"]
                                      ["espoo"    "WWW.B.FI"]
@@ -125,18 +124,60 @@
 
   (testing "postal-office sorts case-insensitively in Finnish collation order"
     (let [expected ["espoo" "helsinki" "HELSINKI" "VANTAA" "Ähtäri"]]
-      (is (= expected (sorted-values :location.postal-office.sort "asc"
+      (is (= expected (sorted-values :search-meta.sort.postal-office "asc"
                                      [:location :postal-office])))
-      (is (= (reverse expected) (sorted-values :location.postal-office.sort "desc"
+      (is (= (reverse expected) (sorted-values :search-meta.sort.postal-office "desc"
                                                [:location :postal-office])))))
 
   (testing "www sorts case-insensitively"
     (is (= ["www.a.fi" "WWW.B.FI" "www.C.fi" "www.d.fi" "www.e.fi"]
-           (sorted-values :www.sort "asc" [:www]))))
+           (sorted-values :search-meta.sort.www "asc" [:www]))))
 
   (testing "email and phone-number sort without erroring"
-    (is (= 5 (count (sorted-values :email.sort "asc" [:email]))))
-    (is (= 5 (count (sorted-values :phone-number.sort "asc" [:phone-number]))))))
+    (is (= 5 (count (sorted-values :search-meta.sort.email "asc" [:email]))))
+    (is (= 5 (count (sorted-values :search-meta.sort.phone-number "asc" [:phone-number]))))))
+
+(deftest empty-free-text-sorts-last-test
+  ;; A site with no postal-office and one whose postal-office is "-" look the
+  ;; same in the results table. They must sort to the same end of the list, and
+  ;; that end is the bottom in both directions -- otherwise sorting ascending
+  ;; opens on a screenful of apparently blank rows.
+  (doseq [[i po] (map-indexed vector ["Ylitornio" "-" "   " ::none])]
+    (core/index! (test-search)
+                 (cond-> (tu/make-point-site (+ 981000 i) :name (str "Tyhjyys " i))
+                   (not= ::none po) (assoc-in [:location :postal-office] po)
+                   (= ::none po) (update :location dissoc :postal-office))
+                 :sync))
+
+  (let [values-of (fn [order]
+                    (let [body {:size 50
+                                :_source ["location.postal-office"]
+                                :sort [{:search-meta.sort.postal-office {:order order
+                                                                         :missing "_last"}}
+                                       {:lipas-id {:order "asc"}}]
+                                :query {:simple_query_string {:query "Tyhjyys*"
+                                                              :fields ["name"]
+                                                              :analyze_wildcard true}}}
+                          resp (test-app (-> (mock/request :post "/api/actions/search")
+                                             (mock/content-type "application/json")
+                                             (mock/body (->json body))))]
+                      (is (= 200 (:status resp)))
+                      (->> resp :body <-json :hits :hits
+                           (mapv #(get-in (:_source %) [:location :postal-office])))))]
+
+    (testing "blank, placeholder and absent values all sort last, ascending"
+      (let [vs (values-of "asc")]
+        (is (= 4 (count vs)))
+        (is (= "Ylitornio" (first vs)) "the only real value comes first")
+        (is (= #{"-" "   " nil} (set (rest vs))))))
+
+    (testing "...and still last descending, so they never lead the list"
+      (let [vs (values-of "desc")]
+        (is (= "Ylitornio" (first vs)) "empties stay at the bottom in both directions")
+        (is (= #{"-" "   " nil} (set (rest vs))))))
+
+    (testing "the stored value is untouched - '-' is still returned as '-'"
+      (is (contains? (set (values-of "asc")) "-")))))
 
 (deftest locale-correct-name-sort-test
   ;; Finnish collation orders å, ä, ö after z (and å before ä). Raw code-point
