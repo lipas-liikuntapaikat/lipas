@@ -385,6 +385,28 @@
 ;; no-sync meta path persist exactly the same editable keys.
 (def persisted-ptv-keys ptv-data/persisted-ptv-keys)
 
+(defn resolve-service-location-source-id
+  "The sourceId to send when writing the service-location `channel-id`, or
+  nil for `->ptv-service-location` to generate a fresh one.
+
+  A LIPAS sourceId is bound to the PTV channel it was first sent with, and
+  PTV keeps it reserved even after that channel is archived. The stored
+  `:source-id` is therefore stale whenever the site now points at another
+  channel (relinked to a pre-existing one, or unlinked and re-created), and
+  sending it makes PTV fail with an unexplained 500. So follow PTV's own
+  record of the target channel instead:
+
+  - create (no channel-id): always a fresh sourceId
+  - update: the target channel's sourceId, fresh if it has none (a channel
+    created outside LIPAS)
+  - update of a channel that 404s (archived, being re-published): the stored
+    one, which is what the archived channel carries"
+  [channel-id channel stored-ptv]
+  (cond
+    (nil? channel-id) nil
+    (nil? channel) (:source-id stored-ptv)
+    :else (:sourceId channel)))
+
 (defn upsert-ptv-service-location!*
   [ptv-component {:keys [org-id site ptv archive?] :as _m}]
   (let [id (-> ptv :service-channel-ids first)
@@ -395,14 +417,6 @@
         org-langs (or (:supported-languages org-config)
                       ptv-data/fallback-languages)
         ptv (assoc ptv :languages org-langs)
-        ;; merge or just replace?
-        site (update site :ptv merge ptv)
-        ;; Use the same TS for sourceId, ptv last-sync and site event-date
-        now (utils/timestamp)
-        data (ptv-data/->ptv-service-location org-id gis/wgs84->tm35fin-no-wrap now (core/enrich site))
-        data (cond-> data
-               archive? (assoc :publishingStatus "Deleted"))
-        ;; Note: Update request doesn't update Service connections!
 
         ;; Fetch the stored channel for service-connection diffing below.
         ;; Drift detection in `sports-site->ptv-input` uses a separately
@@ -417,6 +431,17 @@
                                    (if (= 404 (-> e ex-data :resp :status))
                                      nil
                                      (throw e)))))
+
+        ;; merge or just replace?
+        site (-> (update site :ptv merge ptv)
+                 (assoc-in [:ptv :source-id]
+                           (resolve-service-location-source-id id old-service-location (:ptv site))))
+        ;; Use the same TS for sourceId, ptv last-sync and site event-date
+        now (utils/timestamp)
+        data (ptv-data/->ptv-service-location org-id gis/wgs84->tm35fin-no-wrap now (core/enrich site))
+        data (cond-> data
+               archive? (assoc :publishingStatus "Deleted"))
+        ;; Note: Update request doesn't update Service connections!
 
         ptv-resp (if id
                    (ptv/update-service-location ptv-component id data)
