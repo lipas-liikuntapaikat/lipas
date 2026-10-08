@@ -6,6 +6,7 @@
     [clojure.java.jdbc :as jdbc]
     [clojure.string :as str]
     [clojure.test :as t]
+    [clojure.walk]
     [cognitect.transit :as transit]
     [integrant.core :as ig]
     [lipas.backend.analysis.diversity :as diversity]
@@ -1263,3 +1264,90 @@
     (when ack-user
       (ack-fn db {:id dlj-id :acknowledged_by ack-user}))
     (get-fn db {:id dlj-id})))
+
+;;; ES field-path checks ;;;
+
+(defn sample-prop-filter
+  "A property filter that restricts something, shaped like the map search UI
+   builds it for a prop of `prop-def`'s data-type
+   (lipas.ui.search.views/add-property-filter)."
+  [prop-def]
+  (case (:data-type prop-def)
+    "numeric" {:type :range :min 1 :max 10}
+    "boolean" {:type :boolean :value true}
+    "string" {:type :string :text "x"}
+    ("enum" "enum-coll") {:type :enum :values [(-> prop-def :opts keys first)]}))
+
+(defn mapped-fields
+  "Set of field paths (strings) an index mapping from
+   `lipas.backend.search/mappings` defines, sub-fields included — e.g.
+   `\"name\"` and `\"name.keyword\"`. Handles both the flat dotted keys of
+   the generated sports-site mapping and nested `:properties` objects."
+  [index-mapping]
+  (letfn [(walk [prefix props]
+            (mapcat (fn [[k v]]
+                      (let [path (str prefix (name k))]
+                        (concat [path]
+                                (map #(str path "." (name %)) (keys (:fields v)))
+                                (when (:properties v)
+                                  (walk (str path ".") (:properties v))))))
+                    props))]
+    (set (walk "" (get-in index-mapping [:mappings :properties])))))
+
+(def ^:private field-keyed-clauses
+  "Query clauses and decay functions whose map keys are the fields queried."
+  #{:term :terms :range :wildcard :prefix :match :match_phrase
+    :geo_bounding_box :geo_shape :geo_distance :exp :gauss :linear})
+
+(defn- sort-fields
+  "Fields of an ES `:sort` value: `{field opts}` entries, or the field keys
+   of a `_geo_distance` sort (the ones holding a point, not an option)."
+  [sort]
+  (for [entry (if (sequential? sort) sort [sort])
+        :when (map? entry)
+        [k v] entry
+        field (if (= :_geo_distance k)
+                (keep (fn [[gk gv]] (when (map? gv) gk)) v)
+                [k])]
+    field))
+
+(defn query-fields
+  "Set of field paths (strings) an ES request body references: field keys
+   of term/terms/range/wildcard/geo/decay clauses, every `:field` value
+   (exists, aggregations), `:sort` fields and the `:fields` of
+   `simple_query_string` with boosts stripped. Those may be `*` patterns;
+   check them with `unmapped-fields`."
+  [body]
+  (let [acc (atom #{})]
+    (clojure.walk/postwalk
+      (fn [x]
+        (when (map? x)
+          (doseq [[k v] x]
+            ;; A `{:terms {:field ...}}` is an aggregation, not a query —
+            ;; its field is picked up by the `:field` branch below.
+            (when (and (field-keyed-clauses k) (map? v) (not (contains? v :field)))
+              (swap! acc into (map name (keys v))))
+            (when (and (= :field k) (or (string? v) (keyword? v)))
+              (swap! acc conj (name v)))
+            (when (= :sort k)
+              (swap! acc into (map name (sort-fields v))))
+            (when (and (= :simple_query_string k) (map? v))
+              (swap! acc into (map #(str/replace (name %) #"\^[\d.]+$" "")
+                                   (:fields v))))))
+        x)
+      body)
+    @acc))
+
+(defn unmapped-fields
+  "Fields `body` references (see `query-fields`) that `mapped` (see
+   `mapped-fields`) doesn't have. A `*` pattern counts as mapped when it
+   matches at least one mapped field. ES matches an unmapped path silently
+   with zero hits, so tests assert this is empty."
+  [mapped body]
+  (set (remove (fn [field]
+                 (if (str/includes? field "*")
+                   (let [re (re-pattern (str/join ".*" (map #(java.util.regex.Pattern/quote %)
+                                                            (str/split field #"\*" -1))))]
+                     (some #(re-matches re %) mapped))
+                   (contains? mapped field)))
+               (query-fields body))))

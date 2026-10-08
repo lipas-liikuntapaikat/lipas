@@ -3,6 +3,7 @@
             [lipas.backend.analysis.heatmap :as heatmap]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
+            [lipas.backend.search :as search]
             [lipas.test-utils :refer [<-transit ->transit] :as tu]
             [malli.core :as m]
             [ring.mock.request :as mock]))
@@ -292,7 +293,7 @@
       (is (coll? (:data body))))))
 
 (deftest create-heatmap-year-round-filter-test
-  (testing "Year-round filter works correctly"
+  (testing "Year-round filter keeps only sites with year-round use"
     (create-test-sports-sites)
     (let [params (valid-heatmap-params {:filters {:year-round-only true}})
 
@@ -305,7 +306,9 @@
           body (<-transit (:body resp))]
 
       (is (= 200 (:status resp)))
-      (is (coll? (:data body))))))
+      ;; Only site 3 has :year-round-use? — the filter used to test the
+      ;; excursion-map flag instead and matched nothing here.
+      (is (= 1 (reduce + (map #(get-in % [:properties :doc_count]) (:data body))))))))
 
 (deftest create-heatmap-dimension-year-round-test
   (testing "Year-round dimension returns facilities with year-round use"
@@ -812,3 +815,30 @@
   (clojure.test/run-test-var #'zoom-precision-mapping-test)
   (clojure.test/run-test-var #'normalize-weights-test)
   (clojure.test/run-test-var #'malli-schema-validation-test))
+
+(deftest es-query-fields-are-mapped-test
+  ;; ES matches a path the mapping lacks with zero hits and no error, which
+  ;; hid three wrong paths here (surface-material/activities `.keyword`,
+  ;; `lighting?` for the misspelled `ligthing?` prop).
+  (let [mapped (tu/mapped-fields (:sports-site search/mappings))
+        filters {:type-codes [1340]
+                 :year-range [2000 2020]
+                 :year-round-only true
+                 :status-codes ["active"]
+                 :city-codes [91]
+                 :admins ["city-sports"]
+                 :owners ["city"]
+                 :surface-materials ["grass"]
+                 :retkikartta? true
+                 :harrastuspassi? true
+                 :school-use? true}]
+    (doseq [dimension [:density :area :type-distribution :year-round :lighting :activities]
+            weight-by [:count :area-m2 :route-length-km]]
+      (let [query (heatmap/build-es-query (assoc (valid-heatmap-params {:dimension dimension
+                                                                        :weight-by weight-by})
+                                                 :filters filters))]
+        (testing (str dimension " " weight-by)
+          (is (= (inc (count filters)) ; + the bbox geo filter
+                 (count (get-in query [:query :bool :filter])))
+              "every filter produced a clause")
+          (is (empty? (tu/unmapped-fields mapped query))))))))

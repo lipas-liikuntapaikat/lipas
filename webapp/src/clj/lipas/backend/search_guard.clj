@@ -26,7 +26,7 @@
   "Cap for the top-level `:size`.
 
   Largest value any real client sends is 5000: the map search sends
-  `{:from 0 :size 5000}` in analysis mode (`lipas.ui.search.events/
+  `{:from 0 :size 5000}` in analysis mode (`lipas.search-query/
   resolve-pagination`) and logged-in users can pick a 5000-row page size
   (`lipas.ui.search.subs/pagination`). The report flow
   (`::create-report-from-current-search`) sends `:size 1000`.

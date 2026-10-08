@@ -155,10 +155,10 @@
                         {:terms {:owner owners}})
 
         materials-filter (when-let [materials (:surface-materials filters)]
-                           {:terms {:properties.surface-material.keyword materials}})
+                           {:terms {:properties.surface-material materials}})
 
         year-round-filter (when (:year-round-only filters)
-                            {:term {:properties.may-be-shown-in-excursion-map-fi? true}})
+                            {:term {:properties.year-round-use? true}})
 
         retkikartta-filter (when (:retkikartta? filters)
                              {:term {:properties.may-be-shown-in-excursion-map-fi? true}})
@@ -193,9 +193,11 @@
 
       :year-round {:year_round_count {:filter {:term {:properties.year-round-use? true}}}}
 
-      :lighting {:lighting_count {:filter {:term {:properties.lighting? true}}}}
+      ;; The prop key is misspelled in lipas.data.prop-types and stored that
+      ;; way in site documents, so the query has to follow it.
+      :lighting {:lighting_count {:filter {:term {:properties.ligthing? true}}}}
 
-      :activities {:activities {:terms {:field "search-meta.activities.keyword" :size 10}}}
+      :activities {:activities {:terms {:field "search-meta.activities" :size 10}}}
 
       ;; Default to count-based aggregation
       base-agg)))
