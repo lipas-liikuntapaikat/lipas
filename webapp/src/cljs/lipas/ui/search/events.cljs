@@ -1,6 +1,7 @@
 (ns lipas.ui.search.events
   (:require [ajax.core :as ajax]
             [clojure.string :as str]
+            [lipas.prop-filters :as prop-filters]
             [lipas.roles :as roles]
             [lipas.ui.search.db :as db]
             [lipas.ui.utils :as utils]
@@ -287,42 +288,9 @@
          (as-> params* params*
            (reduce-kv
              (fn [acc prop-key prop-filter]
-               (let [prop-path (keyword (str "properties." (name prop-key)))]
-                 (case (:type prop-filter)
-                   :range
-                   (cond-> acc
-                     (:min prop-filter) (add-filter {:range {prop-path {:gte (:min prop-filter)}}})
-                     (:max prop-filter) (add-filter {:range {prop-path {:lte (:max prop-filter)}}}))
-
-                   :boolean
-                   (let [value (:value prop-filter)]
-                     (cond
-                      ;; nil = "All" - no filter applied
-                       (nil? value)
-                       acc
-
-                      ;; true = show sites where property IS true
-                       (true? value)
-                       (add-filter acc {:term {prop-path true}})
-
-                      ;; false = show sites where property is NOT true (false OR absent)
-                       (false? value)
-                       (add-filter acc {:bool {:should [{:term {prop-path false}}
-                                                        {:bool {:must_not {:exists {:field (name prop-path)}}}}]}})))
-
-                   :string
-                   (if-let [text (not-empty (:text prop-filter))]
-                     (add-filter acc {:wildcard {(keyword (str (name prop-path) ".keyword"))
-                                                 {:value (str "*" text "*")
-                                                  :case_insensitive true}}})
-                     acc)
-
-                   :enum
-                   (if-let [values (not-empty (:values prop-filter))]
-                     (add-filter acc {:terms {(keyword (str (name prop-path) ".keyword")) values}})
-                     acc)
-
-                   acc)))
+               (if-let [clause (prop-filters/->es-clause prop-key prop-filter)]
+                 (add-filter acc clause)
+                 acc))
              params*
              properties-filters))
 

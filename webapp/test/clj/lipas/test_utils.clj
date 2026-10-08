@@ -6,6 +6,7 @@
     [clojure.java.jdbc :as jdbc]
     [clojure.string :as str]
     [clojure.test :as t]
+    [clojure.walk]
     [cognitect.transit :as transit]
     [integrant.core :as ig]
     [lipas.backend.analysis.diversity :as diversity]
@@ -1267,3 +1268,48 @@
     (when ack-user
       (ack-fn db {:id dlj-id :acknowledged_by ack-user}))
     (get-fn db {:id dlj-id})))
+
+;;; ES field-path checks ;;;
+
+(defn mapped-fields
+  "Set of field paths (strings) an index mapping from
+   `lipas.backend.search/mappings` defines, sub-fields included — e.g.
+   `\"name\"` and `\"name.keyword\"`. Handles both the flat dotted keys of
+   the generated sports-site mapping and nested `:properties` objects."
+  [index-mapping]
+  (letfn [(walk [prefix props]
+            (mapcat (fn [[k v]]
+                      (let [path (str prefix (name k))]
+                        (concat [path]
+                                (map #(str path "." (name %)) (keys (:fields v)))
+                                (when (:properties v)
+                                  (walk (str path ".") (:properties v))))))
+                    props))]
+    (set (walk "" (get-in index-mapping [:mappings :properties])))))
+
+(def ^:private field-keyed-clauses
+  "Query clauses whose (single) map key is the field being queried."
+  #{:term :terms :range :wildcard :prefix :match :match_phrase
+    :geo_bounding_box :geo_shape :geo_distance})
+
+(defn query-fields
+  "Set of field paths (strings) an ES query or aggregation body references:
+   the field keys of term/terms/range/wildcard/... clauses and every
+   `:field` value (exists, aggregations). Lets tests assert that queries
+   only touch fields the mapping actually has — ES matches an unmapped path
+   silently with zero hits."
+  [body]
+  (let [acc (atom #{})]
+    (clojure.walk/postwalk
+      (fn [x]
+        (when (map? x)
+          (doseq [[k v] x]
+            ;; A `{:terms {:field ...}}` is an aggregation, not a query —
+            ;; its field is picked up by the `:field` branch below.
+            (when (and (field-keyed-clauses k) (map? v) (not (contains? v :field)))
+              (swap! acc into (map name (keys v))))
+            (when (and (= :field k) (or (string? v) (keyword? v)))
+              (swap! acc conj (name v)))))
+        x)
+      body)
+    @acc))
