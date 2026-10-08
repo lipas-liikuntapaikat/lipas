@@ -1,6 +1,5 @@
 (ns lipas.backend.analysis.heatmap-test
-  (:require [clojure.set :as set]
-            [clojure.test :refer [deftest is use-fixtures testing]]
+  (:require [clojure.test :refer [deftest is use-fixtures testing]]
             [lipas.backend.analysis.heatmap :as heatmap]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
@@ -842,4 +841,4 @@
           (is (= (inc (count filters)) ; + the bbox geo filter
                  (count (get-in query [:query :bool :filter])))
               "every filter produced a clause")
-          (is (empty? (set/difference (tu/query-fields query) mapped))))))))
+          (is (empty? (tu/unmapped-fields mapped query))))))))
