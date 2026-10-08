@@ -623,16 +623,25 @@
               :search-meta {:location {:wgs84-point [25.0 65.0]}}
               :ptv (sent-ptv {:delete-existing true})}
         deleted-resp {:id channel-id :sourceId "src-1" :publishingStatus "Deleted"
-                      :services [] :serviceChannelNames [] :serviceChannelDescriptions []}]
+                      :services [] :serviceChannelNames [] :serviceChannelDescriptions []}
+        archived (atom [])
+        ;; What PTV answers a full body whose name clashes with another
+        ;; channel in the org (Uusikaupunki 506960, 2026-10-08).
+        name-conflict (ex-info "HTTP Error: 400"
+                               {:resp {:status 400
+                                       :body {:ServiceChannelNames ["Value 'Arkistoitava' of language code 'fi' already exists within organization. The name must be unique."]}}})]
     (with-redefs [core/enrich identity
                   ptv-integ/get-org-ptv-config-with-fallback (fn [_ _] {:supported-languages ["fi"]})
                   ptv-integ/get-org-service-channel (fn [_ _ _] deleted-resp)
-                  ptv-integ/update-service-location (fn [_ _ data] (assoc deleted-resp :publishingStatus (:publishingStatus data)))
+                  ptv-integ/archive-service-location (fn [_ org-id id] (swap! archived conj [org-id id]) deleted-resp)
+                  ptv-integ/update-service-location (fn [_ _ _] (throw name-conflict))
+                  ptv-integ/create-service-location (fn [_ _] (throw (ex-info "create must not be called" {})))
                   ptv-integ/update-service-connections (fn [_ _ _ _] nil)]
       (let [[ptv-resp new-ptv-data]
             (ptv-core/upsert-ptv-service-location!*
               {} {:org-id "org-x" :site site :ptv (:ptv site) :archive? true})]
-        (testing "Archive sends publishingStatus Deleted"
+        (testing "Archive changes only the status, so a name conflict can't block it"
+          (is (= [["org-x" channel-id]] @archived))
           (is (= "Deleted" (:publishingStatus ptv-resp))))
         (testing "LIPAS↔PTV link is preserved (source-id + channel-id kept)"
           (is (= "src-1" (:source-id new-ptv-data)))
@@ -642,6 +651,17 @@
           (is (not (ptv-data/is-sent-to-ptv? {:ptv new-ptv-data}))))
         (testing "One-shot :delete-existing flag is cleared"
           (is (not (contains? new-ptv-data :delete-existing))))))))
+
+(deftest archive-service-location-sends-only-status-test
+  ;; Verified against the PTV test env (2026-10-08): this body archives the
+  ;; channel without validating names and keeps the rest of the channel.
+  (let [sent (atom nil)]
+    (with-redefs [ptv-integ/http (fn [_ org-id req] (reset! sent [org-id req]) {:body {:id "chan-1"}})]
+      (ptv-integ/archive-service-location {:api-url "https://ptv.test/api"} "org-x" "chan-1")
+      (is (= ["org-x" {:url "https://ptv.test/api/v11/ServiceChannel/ServiceLocation/chan-1"
+                       :method :put
+                       :form-params {:publishingStatus "Deleted"}}]
+             @sent)))))
 
 (deftest resurrect-reuses-channel-test
   (let [channel-id "chan-1"

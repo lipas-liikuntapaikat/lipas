@@ -283,6 +283,22 @@
     (-> (http ptv org-id params)
         :body)))
 
+(defn archive-service-location
+  "Archive a service-location by changing only its publishingStatus.
+
+  A full update body would also be validated as a whole, so an unrelated
+  problem in it blocks the archive. In particular, PTV's unique-name check
+  rejects archiving a duplicate whose name clashes with another channel in
+  the org. Everything else on the channel (sourceId, names, descriptions,
+  addresses) is kept, so a later full update can re-publish it."
+  [ptv org-id service-location-id]
+  (let [params {:url (make-url ptv "/v11/ServiceChannel/ServiceLocation/" service-location-id)
+                :method :put
+                :form-params {:publishingStatus "Deleted"}}]
+    (log/infof "Archive PTV service-location %s" service-location-id)
+    (-> (http ptv org-id params)
+        :body)))
+
 (defn get-eligible-sites
   [{:keys [indices client] :as _search}
    {:keys [city-codes type-codes owners] :as _criteria}]

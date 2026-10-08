@@ -438,14 +438,21 @@
                            (resolve-service-location-source-id id old-service-location (:ptv site))))
         ;; Use the same TS for sourceId, ptv last-sync and site event-date
         now (utils/timestamp)
-        data (ptv-data/->ptv-service-location org-id gis/wgs84->tm35fin-no-wrap now (core/enrich site))
-        data (cond-> data
-               archive? (assoc :publishingStatus "Deleted"))
+        ;; Archiving an existing channel changes only its publishingStatus. A
+        ;; full body would be validated as a whole, and e.g. a name clashing
+        ;; with another channel in the org would block the archive.
+        status-only-archive? (and archive? id)
+        data (when-not status-only-archive?
+               (cond-> (ptv-data/->ptv-service-location org-id gis/wgs84->tm35fin-no-wrap now (core/enrich site))
+                 archive? (assoc :publishingStatus "Deleted")))
         ;; Note: Update request doesn't update Service connections!
 
-        ptv-resp (if id
-                   (ptv/update-service-location ptv-component id data)
-                   (ptv/create-service-location ptv-component data))
+        ptv-resp (cond
+                   status-only-archive? (ptv/archive-service-location ptv-component
+                                                                      (or (-> site :ptv :org-id) org-id)
+                                                                      id)
+                   id (ptv/update-service-location ptv-component id data)
+                   :else (ptv/create-service-location ptv-component data))
         _ (when id
             ;; Update service connection changes
             (let [old-services (->> old-service-location
