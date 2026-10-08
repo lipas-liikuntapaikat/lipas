@@ -623,16 +623,25 @@
               :search-meta {:location {:wgs84-point [25.0 65.0]}}
               :ptv (sent-ptv {:delete-existing true})}
         deleted-resp {:id channel-id :sourceId "src-1" :publishingStatus "Deleted"
-                      :services [] :serviceChannelNames [] :serviceChannelDescriptions []}]
+                      :services [] :serviceChannelNames [] :serviceChannelDescriptions []}
+        archived (atom [])
+        ;; What PTV answers a full body whose name clashes with another
+        ;; channel in the org (Uusikaupunki 506960, 2026-10-08).
+        name-conflict (ex-info "HTTP Error: 400"
+                               {:resp {:status 400
+                                       :body {:ServiceChannelNames ["Value 'Arkistoitava' of language code 'fi' already exists within organization. The name must be unique."]}}})]
     (with-redefs [core/enrich identity
                   ptv-integ/get-org-ptv-config-with-fallback (fn [_ _] {:supported-languages ["fi"]})
                   ptv-integ/get-org-service-channel (fn [_ _ _] deleted-resp)
-                  ptv-integ/update-service-location (fn [_ _ data] (assoc deleted-resp :publishingStatus (:publishingStatus data)))
+                  ptv-integ/archive-service-location (fn [_ org-id id] (swap! archived conj [org-id id]) deleted-resp)
+                  ptv-integ/update-service-location (fn [_ _ _] (throw name-conflict))
+                  ptv-integ/create-service-location (fn [_ _] (throw (ex-info "create must not be called" {})))
                   ptv-integ/update-service-connections (fn [_ _ _ _] nil)]
       (let [[ptv-resp new-ptv-data]
             (ptv-core/upsert-ptv-service-location!*
               {} {:org-id "org-x" :site site :ptv (:ptv site) :archive? true})]
-        (testing "Archive sends publishingStatus Deleted"
+        (testing "Archive changes only the status, so a name conflict can't block it"
+          (is (= [["org-x" channel-id]] @archived))
           (is (= "Deleted" (:publishingStatus ptv-resp))))
         (testing "LIPAS↔PTV link is preserved (source-id + channel-id kept)"
           (is (= "src-1" (:source-id new-ptv-data)))
@@ -642,6 +651,17 @@
           (is (not (ptv-data/is-sent-to-ptv? {:ptv new-ptv-data}))))
         (testing "One-shot :delete-existing flag is cleared"
           (is (not (contains? new-ptv-data :delete-existing))))))))
+
+(deftest archive-service-location-sends-only-status-test
+  ;; Verified against the PTV test env (2026-10-08): this body archives the
+  ;; channel without validating names and keeps the rest of the channel.
+  (let [sent (atom nil)]
+    (with-redefs [ptv-integ/http (fn [_ org-id req] (reset! sent [org-id req]) {:body {:id "chan-1"}})]
+      (ptv-integ/archive-service-location {:api-url "https://ptv.test/api"} "org-x" "chan-1")
+      (is (= ["org-x" {:url "https://ptv.test/api/v11/ServiceChannel/ServiceLocation/chan-1"
+                       :method :put
+                       :form-params {:publishingStatus "Deleted"}}]
+             @sent)))))
 
 (deftest resurrect-reuses-channel-test
   (let [channel-id "chan-1"
@@ -676,6 +696,62 @@
         (testing "Channel-id is retained and status flips back to Published"
           (is (= [channel-id] (:service-channel-ids new-ptv-data)))
           (is (= "Published" (:publishing-status new-ptv-data))))))))
+
+(deftest service-location-source-id-follows-target-channel-test
+  ;; Regression: Uusikaupunki 506960 (2026-10-08). The site was relinked from
+  ;; its LIPAS-created duplicate (archived in PTV) to the pre-existing channel,
+  ;; and every PUT carried the duplicate's sourceId → PTV 500.
+  (let [site {:lipas-id 12345 :name "Linkitettävä" :status "active"
+              :type {:type-code 1210}
+              :location {:city {:city-code 425} :address "Katu 1" :postal-code "91900"
+                         :geometries {:type "FeatureCollection"
+                                      :features [{:type "Feature"
+                                                  :geometry {:type "Point" :coordinates [25.0 65.0]}}]}}
+              :search-meta {:location {:wgs84-point [25.0 65.0]}}
+              :ptv (sent-ptv {:source-id "src-old" :service-channel-ids ["chan-old"]})}
+        notfound (ex-info "HTTP Error: 404" {:resp {:status 404}})
+        sync! (fn [channel-ids target-channel]
+                (let [sent (atom nil)
+                      resp (fn [data] {:id (or (first channel-ids) "chan-new")
+                                       :sourceId (:sourceId data)
+                                       :publishingStatus "Published"
+                                       :services [] :serviceChannelNames [] :serviceChannelDescriptions []})]
+                  (with-redefs [core/enrich identity
+                                ptv-integ/get-org-ptv-config-with-fallback (fn [_ _] {:supported-languages ["fi"]})
+                                ;; Pre-PUT read sees the target as it is; the
+                                ;; post-PUT refetch sees what was written.
+                                ptv-integ/get-org-service-channel
+                                (fn [_ _ _]
+                                  (cond
+                                    @sent (resp @sent)
+                                    (= :not-found target-channel) (throw notfound)
+                                    :else target-channel))
+                                ptv-integ/update-service-location (fn [_ _ data] (reset! sent data) (resp data))
+                                ptv-integ/create-service-location (fn [_ data] (reset! sent data) (resp data))
+                                ptv-integ/update-service-connections (fn [_ _ _ _] nil)]
+                    (let [[_ new-ptv-data]
+                          (ptv-core/upsert-ptv-service-location!*
+                            {} {:org-id "org-x"
+                                :site site
+                                :ptv (assoc (:ptv site) :service-channel-ids channel-ids)})]
+                      {:sent (:sourceId @sent)
+                       :stored (:source-id new-ptv-data)}))))
+        fresh? (fn [source-id] (str/starts-with? (str source-id) "lipas-org-x-12345-"))]
+
+    (testing "Relink to a channel created outside LIPAS sends a fresh sourceId"
+      (let [{:keys [sent stored]} (sync! ["chan-target"] {:id "chan-target" :sourceId nil})]
+        (is (fresh? sent))
+        (is (= sent stored) "the new sourceId is what gets persisted")))
+
+    (testing "Relink to a LIPAS-created channel keeps that channel's sourceId"
+      (is (= "src-target"
+             (:sent (sync! ["chan-target"] {:id "chan-target" :sourceId "src-target"})))))
+
+    (testing "Create after unlinking never reuses the stored sourceId"
+      (is (fresh? (:sent (sync! [] nil)))))
+
+    (testing "Re-publishing an archived (404) channel keeps the stored sourceId"
+      (is (= "src-old" (:sent (sync! ["chan-old"] :not-found)))))))
 
 (comment
   (t/run-tests *ns*)
