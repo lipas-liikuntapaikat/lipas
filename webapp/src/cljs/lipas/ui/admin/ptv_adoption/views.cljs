@@ -14,6 +14,7 @@
             ["@mui/material/TableCell$default" :as TableCell]
             ["@mui/material/TableHead$default" :as TableHead]
             ["@mui/material/TableRow$default" :as TableRow]
+            ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
             ["recharts/es6/cartesian/Bar" :refer [Bar]]
             ["recharts/es6/cartesian/CartesianGrid" :refer [CartesianGrid]]
@@ -36,31 +37,50 @@
 (def chart-font
   {:fontFamily "lato" :fontSize 12})
 
-(r/defc stat-tile [{:keys [value label caption]}]
-  [:> Grid {:size {:xs 12 :sm 6 :md 2.4}}
-   [:> Paper {:sx #js{:p 2 :bgcolor "#f5f5f5"}}
-    [:> Typography {:variant "h4"} (str value)]
-    [:> Typography {:color "textSecondary"} label]
-    [:> Typography {:variant "caption" :color "textSecondary"}
-     (or caption " ")]]])
+(r/defc stat-tile [{:keys [value label caption tooltip]}]
+  ;; height 100%: every tile fills its grid row, so a wrapping caption
+  ;; doesn't make one box taller than the rest
+  (let [tile [:> Paper {:sx #js{:p 2 :bgcolor "#f5f5f5" :height "100%" :boxSizing "border-box"}}
+              [:> Typography {:variant "h4"} (str value)]
+              [:> Typography {:color "textSecondary"} label]
+              [:> Typography {:variant "caption" :color "textSecondary"}
+               (or caption " ")]]]
+    [:> Grid {:size {:xs 12 :sm 6 :md 2.4}}
+     (if tooltip
+       [:> Tooltip {:title tooltip} tile]
+       tile)]))
 
 (r/defc summary-tiles [{:keys [totals monthly]}]
   (let [this-month (peek monthly)]
     [:> Grid {:container true :spacing 2 :sx #js{:mb 2}}
      [stat-tile {:value (:sites totals)
                  :label "Liikuntapaikkaa"
-                 :caption "integroitu PTV:hen"}]
+                 :caption "integroitu elinkaarensa aikana"
+                 :tooltip (str "Kaikki liikuntapaikat, joille on joskus tallennettu PTV-tiedot. "
+                               "Sisältää myös paikat, joiden synkronointi on myöhemmin kytketty pois.")}]
      [stat-tile {:value (:municipalities totals)
-                 :label "Kuntaa"}]
+                 :label "Kuntaa"
+                 :tooltip "Kunnat, joissa vähintään yksi liikuntapaikka on integroitu elinkaarensa aikana."}]
      [stat-tile {:value (:sync-enabled totals)
-                 :label "Synkronointi päällä"}]
+                 :label "Synkronointi päällä"
+                 :caption (when (pos? (:sync-pending totals))
+                            (str (:sync-pending totals) " ei vielä PTV:ssä"))
+                 :tooltip (str "Liikuntapaikat, joiden PTV-synkronointi on nyt päällä. "
+                               "\"Ei vielä PTV:ssä\" ovat paikkoja, joille ei ole koskaan luotu palvelupaikkaa PTV:hen, "
+                               "esimerkiksi koska tietoja puuttuu tai vienti epäonnistui.")}]
      [stat-tile {:value (:published totals)
                  :label "Julkaistu PTV:ssä"
                  :caption (when (pos? (:deleted totals))
-                            (str (:deleted totals) " poistettu PTV:stä"))}]
+                            (str (:deleted totals) " poistettu PTV:stä"))
+                 ;; publishing status is what PTV returned at the last sync,
+                 ;; not a live PTV read
+                 :tooltip (str "Liikuntapaikat, joiden palvelupaikka on julkaistu PTV:ssä LIPASin viimeisimmän synkronoinnin mukaan. "
+                               "\"Poistettu PTV:stä\" tarkoittaa, että palvelupaikka on arkistoitu PTV:ssä. "
+                               "Luvut koskevat palvelupaikkoja, eivät PTV-palveluita.")}]
      [stat-tile {:value (or (:new this-month) 0)
                  :label "Uusia tässä kuussa"
-                 :caption (:month this-month)}]]))
+                 :caption (:month this-month)
+                 :tooltip "Liikuntapaikat, joille PTV-tiedot tallennettiin ensimmäisen kerran kuluvana kuukautena."}]]))
 
 (defn- month-tooltip
   "Recharts custom tooltip content: month, the value, and for the monthly
@@ -122,6 +142,54 @@
        [:> TableCell first-month]
        [:> TableCell latest-month]])]])
 
+(r/defc outside-managers-section
+  "PTV managers (direct city-scoped role) who aren't members of the org covering
+  their municipality. They can do PTV work without membership, but membership
+  drives audit emails and the org's member list. Adding is plain membership —
+  roles stay the org-admin's call."
+  []
+  (let [rows @(rf/subscribe [::subs/outside-managers])
+        loading? @(rf/subscribe [::subs/outside-managers-loading?])]
+    (hooks/use-effect
+      (fn []
+        (rf/dispatch [::events/fetch-outside-managers])
+        js/undefined)
+      [])
+    [:<>
+     [:> Typography {:variant "h6" :sx #js{:mt 3}}
+      "PTV-käsittelijät, jotka eivät ole kuntansa organisaation jäseniä"]
+     [:> Typography {:variant "body2" :color "textSecondary" :sx #js{:mb 1}}
+      (str "Käyttäjillä on PTV-oikeudet kuntaan, mutta he eivät ole kunnan organisaation jäseniä. "
+           "Jäseneksi lisääminen ei anna rooleja: organisaation ylläpitäjä päättää ne Jäsenet-välilehdellä. "
+           "Jos kunnalle ei ole PTV-organisaatiota, sen PTV-asetukset puuttuvat.")]
+     (when loading?
+       [:> LinearProgress])
+     (if (and (some? rows) (empty? rows))
+       [:> Typography {:variant "body2"} "Ei puuttuvia jäsenyyksiä."]
+       [:> Table {:size "small"}
+        [:> TableHead
+         [:> TableRow
+          [:> TableCell "Käyttäjä"]
+          [:> TableCell "Sähköposti"]
+          [:> TableCell {:align "right"} "Kuntakoodi"]
+          [:> TableCell "Organisaatio"]
+          [:> TableCell]]]
+        [:> TableBody
+         (for [{:keys [user-id name username email city-code org] :as row} rows]
+           ^{:key (str user-id "-" city-code)}
+           [:> TableRow
+            [:> TableCell (if (seq name) name username)]
+            [:> TableCell email]
+            [:> TableCell {:align "right"} city-code]
+            [:> TableCell (or (:name org) [:em "Ei PTV-organisaatiota"])]
+            [:> TableCell {:align "right"}
+             (when org
+               [:> Button {:size "small"
+                           :variant "outlined"
+                           :disabled @(rf/subscribe [::subs/adding? email])
+                           :on-click #(rf/dispatch [::events/add-to-org row])}
+                "Lisää jäseneksi"])]])]])]))
+
 (r/defc ptv-adoption-tab []
   (let [stats @(rf/subscribe [::subs/stats])
         chart-data @(rf/subscribe [::subs/chart-data])
@@ -157,7 +225,8 @@
            [:> Typography {:variant "h6"} "Uudet liikuntapaikat kuukausittain"]
            [monthly-chart {:data chart-data}]]
           [:> Grid {:size {:xs 12 :lg 6}}
-           [:> Typography {:variant "h6"} "Integroidut liikuntapaikat yhteensä"]
+           [:> Typography {:variant "h6"} "Elinkaarensa aikana integroidut liikuntapaikat"]
            [cumulative-chart {:data chart-data}]]]
          [:> Typography {:variant "h6"} "Kunnittain"]
-         [municipalities-table stats]])]]))
+         [municipalities-table stats]])
+      [outside-managers-section]]]))

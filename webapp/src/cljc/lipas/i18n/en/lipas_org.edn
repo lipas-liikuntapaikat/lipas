@@ -192,4 +192,8 @@
  :pending-approvals "Pending approvals"
 
  ;; site-page editing rights
- :editing-rights "Editing rights"}
+ :editing-rights "Editing rights"
+ ;; PTV member suggestions (members tab)
+ :ptv-suggestions-title "Suggested members"
+ :ptv-suggestions-note "These users have PTV rights for the organisation's municipality but aren't members of the organisation. Adding them makes them members without roles; choose their roles afterwards."
+ :ptv-suggestion-add "Add as member"}

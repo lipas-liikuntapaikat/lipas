@@ -30,3 +30,18 @@
                                         (str municipality " " new))
                                       by-municipality))))
           (:monthly stats))))
+
+(rf/reg-sub ::outside-managers
+  :<- [::state]
+  (fn [state _]
+    (:outside-managers state)))
+
+(rf/reg-sub ::outside-managers-loading?
+  :<- [::state]
+  (fn [state _]
+    (:outside-managers-loading? state)))
+
+(rf/reg-sub ::adding?
+  :<- [::state]
+  (fn [state [_ email]]
+    (boolean (get-in state [:adding email]))))

@@ -82,8 +82,12 @@
                sports-site)
 
         {:keys [sync-enabled delete-existing]} (:ptv site)
+        ;; Everything that keeps this site from syncing (shown while editing;
+        ;; the Save gate only counts it for PTV edits, see map/subs).
+        blockers (ptv-data/sync-blockers site)
 
         orgs @(rf/subscribe [::subs/all-orgs])
+        orgs-loaded? (some? orgs)
         ;; Single source of truth for "which org is this site's PTV integration
         ;; scoped to": persisted value → single org → city-code match → nil.
         org-id @(rf/subscribe [::subs/resolved-org-id lipas-id])
@@ -131,12 +135,22 @@
         service-channel-modified? (= "Modified" (-> site :ptv :service-channel-publishing-status))
         double-link-others @(rf/subscribe [::subs/double-link-others lipas-id])]
 
-    ;; Load user orgs on mount if not already loaded
-    ;; Note: orgs is nil when not loaded, empty vector [] when loaded but user has no orgs
+    ;; Load the PTV orgs the user may act for (by PTV rights, not membership)
+    ;; on mount. nil = not loaded, [] = loaded but none.
     (hooks/use-effect (fn []
                         (when (nil? orgs)
-                          (rf/dispatch [:lipas.ui.org.events/get-user-orgs])))
+                          (rf/dispatch [::events/fetch-ptv-orgs])))
                       [orgs])
+
+    ;; Repair path for sites saved with sync on but no org-id (possible before
+    ;; the save gate): once the org resolves, write it into the edit buffer so
+    ;; the services/texts sections appear and the blockers name what's left.
+    (hooks/use-effect (fn []
+                        (when (and editing? sync-enabled org-id
+                                   (str/blank? (get-in site [:ptv :org-id])))
+                          (rf/dispatch [:lipas.ui.sports-sites.events/edit-field
+                                        lipas-id [:ptv :org-id] org-id])))
+                      [editing? sync-enabled org-id (get-in site [:ptv :org-id])])
 
     ;; Fetch PTV org data, services, and integration candidates when org-id is
     ;; selected. Integration candidates are the org's peer sites — needed so
@@ -222,10 +236,25 @@
                      body
                      ptv-links]))]
        (cond
+         ;; Sync on but unsyncable: say exactly what's missing. Save is
+         ;; blocked meanwhile (map/subs ::ptv-save-blockers).
+         (and editing? (seq blockers))
+         (alert "error"
+                (tr :ptv/sync-blocked-title)
+                [:<>
+                 (for [msg (events/blocker-messages tr blockers)]
+                   ^{:key msg} [:div msg])
+                 [:div {:style {:marginTop "0.5em"}} (tr :ptv/sync-blocked-hint)]])
+
          (:error (:ptv site))
          (alert "error"
                 (tr :ptv/integration-error)
                 (events/ptv-error-body tr (:error (:ptv site))))
+
+         ;; Sync can't be switched on: no PTV org the user may act for
+         ;; covers the site.
+         (and editing? candidate-now? (not sync-enabled) orgs-loaded? (not org-id))
+         (alert "error" (tr :ptv/no-org-for-site))
 
          (and previous-sent? candidate-now? ready?)
          (cond
@@ -239,9 +268,6 @@
          (and candidate-now? ready? sync-enabled)
          (alert "info" (tr :ptv/new-service-location-will-be-created))
 
-         (and candidate-now? (not ready?) sync-enabled)
-         (alert "info" (tr :ptv/data-incomplete))
-
          (and (not candidate-now?) sync-enabled)
          (alert "warning" (tr :ptv/not-suitable-for-export))
 
@@ -254,8 +280,10 @@
        {:label (tr :ptv.actions/integration-enabled)
         :control (r/as-element
                    [:> Switch
-                    {:disabled read-only?
-                     :checked sync-enabled
+                    {:disabled (or read-only?
+                                   ;; can't switch ON without an org
+                                   (and (not sync-enabled) (not org-id)))
+                     :checked (boolean sync-enabled)
                      :on-change (fn [_e v]
                                   (rf/dispatch [::events/toggle-site-sync-enabled lipas-id v]))}])}]
       (when (and (not sync-enabled)

@@ -66,4 +66,12 @@
  :saved-but-sync-failed-body-name-conflict "Namnet '{1}' används redan av ett annat serviceställe i organisationen i PTV. PTV kräver unika namn för serviceställen. Koppla idrottsanläggningen till det befintliga servicestället eller ändra namnet och spara igen.",
  :in-ptv "{1} i PTV",
  :service-name "Tjänstens namn",
- :integration "Integration"}
+ :integration "Integration"
+ ;; Sync gate (lipas.data.ptv/sync-blockers, core/check-ptv-save!)
+ :sync-blocked-title "Kan inte sparas: idrottsanläggningen kan inte exporteras till PTV"
+ :blocker-no-org "PTV-organisation saknas."
+ :blocker-missing-texts "Sammanfattning och beskrivning (på finska) saknas. Skriv dem eller skapa dem med AI nedan."
+ :sync-blocked-hint "Fyll i de uppgifter som saknas eller stäng av PTV-integrationen för att kunna spara."
+ :no-org-for-site "Det finns ingen PTV-organisation för anläggningens kommun som du har PTV-rättigheter till, så integrationen kan inte aktiveras. Kontakta LIPAS-administrationen."
+ :org-mismatch "PTV-organisationen motsvarar inte idrottsanläggningens kommun."
+ :no-ptv-permission "Du har inte PTV-rättigheter till den här anläggningens kommun, så PTV-inställningarna kan inte ändras."}

@@ -243,3 +243,7 @@
 (rf/reg-sub ::releasing?
   (fn [db _]
     (boolean (get-in db [:org :releasing?]))))
+
+(rf/reg-sub ::ptv-member-suggestions
+  (fn [db _]
+    (get-in db [:org :ptv-member-suggestions])))

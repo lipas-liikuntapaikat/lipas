@@ -66,6 +66,21 @@
                       v)))
             body))))
 
+(def blocker->tr-key
+  "lipas.data.ptv/sync-blockers keys -> translation keys."
+  {:ptv/no-org :ptv/blocker-no-org
+   :ptv/missing-texts :ptv/blocker-missing-texts})
+
+(defn blocker-messages
+  "Localized messages for sync blockers. Accepts keywords or the strings they
+  turn into via JSON (\"ptv/no-org\")."
+  [tr blockers]
+  (->> blockers
+       (map keyword)
+       (keep blocker->tr-key)
+       (sort)
+       (mapv tr)))
+
 (def ^:private dialog-body-keys
   {:modified            :ptv/sync-failed-body-ptv-modified
    :invalid-postal-code :ptv/sync-failed-body-invalid-postal-code
@@ -84,6 +99,10 @@
   (let [bad-code (ptv-invalid-postal-code resp)
         dup-name (ptv-duplicate-name resp)]
     (cond
+      ;; A LIPAS-side guard in sync-ptv! (no org / missing texts)
+      (seq (:blockers resp))
+      (str/join " " (blocker-messages tr (:blockers resp)))
+
       (ptv-modified-error? resp)
       (tr (:modified body-keys))
 
@@ -149,6 +168,35 @@
         {:fx [[:dispatch [:lipas.ui.events/set-active-notification
                           (ptv-saved-but-sync-failed-notification tr err)]]]}))))
 
+;; The PTV orgs the user may act for: orgs covering a municipality they hold
+;; :ptv/manage for (direct OR org-catalog role), all for admins/auditors. NOT the
+;; membership-based [:user :orgs] — a city-scoped PTV manager needn't be a
+;; member of the org (see lipas.backend.ptv.handler/ptv-orgs-for-user).
+(rf/reg-event-fx ::fetch-ptv-orgs
+  ;; Optional `{:then [event ...]}` dispatched once the orgs have landed.
+  (fn [{:keys [db]} [_ {:keys [then]}]]
+    (let [token (-> db :user :login :token)]
+      {:http-xhrio
+       {:method :post
+        :uri (str (:backend-url db) "/actions/get-ptv-orgs")
+        :headers {:Authorization (str "Token " token)}
+        :params {}
+        :format (ajax/json-request-format)
+        :response-format (ajax/json-response-format {:keywords? true})
+        :on-success [::fetch-ptv-orgs-success then]
+        :on-failure [::fetch-ptv-orgs-failure then]}})))
+
+(rf/reg-event-fx ::fetch-ptv-orgs-success
+  (fn [{:keys [db]} [_ then resp]]
+    ;; Always non-nil after a fetch, so "loaded?" checks can't refetch-loop.
+    (cond-> {:db (assoc-in db [:ptv :ptv-orgs] (vec resp))}
+      then (assoc :dispatch then))))
+
+(rf/reg-event-fx ::fetch-ptv-orgs-failure
+  (fn [{:keys [db]} [_ then _resp]]
+    (cond-> {:db (assoc-in db [:ptv :ptv-orgs] [])}
+      then (assoc :dispatch then))))
+
 (defn -get-ptv-org-id
   [db]
   (get-in db [:ptv :selected-org :ptv-data :org-id]))
@@ -169,7 +217,7 @@
   accessible org, PTV-configured, and covered by their PTV privileges. nil
   otherwise — admins and auditors are served every org, so they still pick."
   [db]
-  (let [orgs (get-in db [:user :orgs])]
+  (let [orgs (get-in db [:ptv :ptv-orgs])]
     (when (= 1 (count orgs))
       (let [org (first orgs)]
         (when (and (get-in org [:ptv-data :org-id])
@@ -186,13 +234,13 @@
 
 (rf/reg-event-fx ::open-dialog
   (fn [{:keys [db]} [_ _]]
-    (let [orgs-loaded? (seq (get-in db [:user :orgs]))]
+    (let [orgs-loaded? (seq (get-in db [:ptv :ptv-orgs]))]
       {:db (assoc-in db [:ptv :dialog :open?] true)
        :fx (cond-> []
-             ;; Fetch organizations if not already loaded - /current-user-orgs now handles audit users
+             ;; Fetch the PTV orgs the user may act for if not already loaded.
              ;; Auto-select runs as the continuation, once the orgs have landed.
              (not orgs-loaded?)
-             (conj [:dispatch [:lipas.ui.org.events/get-user-orgs
+             (conj [:dispatch [::fetch-ptv-orgs
                                {:then [::maybe-auto-select-org]}]])
 
              ;; Select previously selected org if exists
@@ -580,18 +628,17 @@
 
 (rf/reg-event-fx ::toggle-site-sync-enabled
   ;; Site-tab specific: toggle :ptv :sync-enabled on the site's edit-buffer.
-  ;; If enabling and the site has no persisted org-id, atomically also write
-  ;; the resolved org-id so the "sync-enabled implies org-id" invariant holds.
+  ;; Enabling writes the flag AND the resolved org-id in one edit, or nothing:
+  ;; sync-enabled without an org-id is exactly the state the backend gate
+  ;; (core/check-ptv-save!) rejects, and the one that left sites silently
+  ;; unsynced before it existed.
   (fn [{:keys [db]} [_ lipas-id enabled?]]
     (let [edit-site (get-in db [:sports-sites lipas-id :editing])
           latest-id (get-in db [:sports-sites lipas-id :latest])
           latest-site (get-in db [:sports-sites lipas-id :history latest-id])
-          user-orgs (get-in db [:user :orgs])
           tr (:translator db)
-          persisted-org-id (get-in (or edit-site latest-site) [:ptv :org-id])
-          resolved-org-id (or persisted-org-id
-                              (ptv-data/resolve-org-id (or edit-site latest-site)
-                                                       user-orgs))
+          resolved-org-id (ptv-data/resolve-org-id (or edit-site latest-site)
+                                                   (get-in db [:ptv :ptv-orgs]))
           ;; Published in PTV right now? Archiving only makes sense then.
           published? (ptv-data/is-sent-to-ptv? (or edit-site latest-site))
           set-flag (fn [v] [:dispatch [:lipas.ui.sports-sites.events/edit-field
@@ -599,12 +646,16 @@
           set-archive (fn [v] [:dispatch [:lipas.ui.sports-sites.events/edit-field
                                           lipas-id [:ptv :delete-existing] v]])]
       (cond
-        ;; Enabling: keep existing behaviour (set flag + maybe org-id invariant).
+        (and enabled? resolved-org-id)
+        {:fx [[:dispatch [:lipas.ui.sports-sites.events/edit-fields
+                          lipas-id {[:ptv :sync-enabled] true
+                                    [:ptv :org-id] resolved-org-id}]]]}
+
+        ;; The switch is disabled in this case; this is the defence.
         enabled?
-        {:fx (cond-> [(set-flag true)]
-               (and (not persisted-org-id) resolved-org-id)
-               (conj [:dispatch [:lipas.ui.sports-sites.events/edit-field
-                                 lipas-id [:ptv :org-id] resolved-org-id]]))}
+        {:fx [[:dispatch [:lipas.ui.events/set-active-notification
+                          {:message (tr :ptv/no-org-for-site)
+                           :success? false}]]]}
 
         ;; Disabling a published site: ask whether to archive in PTV. The archive
         ;; itself is deferred to the next sports-site save (via :delete-existing).
@@ -1202,7 +1253,7 @@
           ptv-config (or (get-in db [:ptv :selected-org :ptv-data])
                          (some #(when (= org-id (get-in % [:ptv-data :org-id]))
                                   (:ptv-data %))
-                               (get-in db [:user :orgs])))]
+                               (get-in db [:ptv :ptv-orgs])))]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :services] true)
                (assoc-in [:ptv :syncing :service id] true))

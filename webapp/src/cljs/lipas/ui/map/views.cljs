@@ -1,5 +1,6 @@
 (ns lipas.ui.map.views
   (:require ["@mui/material/Alert$default" :as Alert]
+            ["@mui/material/Badge$default" :as Badge]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Checkbox$default" :as Checkbox]
             ["@mui/material/Drawer$default" :as Drawer]
@@ -967,10 +968,15 @@
 
         ;; Show PTV tab in read-only mode only when sync is enabled.
         ;; In edit mode show only when it's possible to sync.
+        ;; PTV rights for THIS site's municipality — the backend gate
+        ;; (core/check-ptv-save!) rejects PTV edits without them.
         view-ptv? (and (if editing?
                          (ptv-data/ptv-candidate? edit-data)
                          (:sync-enabled (:ptv display-data)))
-                       (<== [:lipas.ui.user.subs/check-privilege {:city-code ::roles/any} :ptv/manage]))
+                       (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :ptv/manage]))
+
+        ;; Same rule as the backend gate; non-empty blocks Save.
+        ptv-save-blockers (<== [::subs/ptv-save-blockers lipas-id])
 
         can-edit-map? can-publish?
 
@@ -1089,7 +1095,10 @@
           [:> Tab
            {:style {:min-width 0}
             :value 6
-            :label "PTV"}])
+            ;; Flag the tab so a blocked Save can be traced from other tabs.
+            :label (if (seq ptv-save-blockers)
+                     (r/as-element [:> Badge {:color "error" :variant "dot"} "PTV"])
+                     "PTV")}])
 
         (when view-images?
           [:> Tab
@@ -1464,7 +1473,7 @@
                   :edit-activities? edit-activities?
                   :edit-floorball? edit-floorball?
                   :save-in-progress? save-in-progress?
-                  :valid? edits-valid?
+                  :valid? (and edits-valid? (empty? ptv-save-blockers))
                   :logged-in? logged-in?
                   :user-can-publish? can-publish?
                   :on-discard #(==> [::events/discard-edits lipas-id])
@@ -1473,7 +1482,9 @@
                   :edit-tooltip (tr :actions/edit)
                   :on-publish #(==> [::events/save-edits lipas-id])
                   :publish-tooltip (tr :actions/save)
-                  :invalid-message (tr :error/invalid-form)
+                  :invalid-message (if (seq ptv-save-blockers)
+                                     (tr :ptv/sync-blocked-title)
+                                     (tr :error/invalid-form))
                   :on-delete #(==> [::events/delete-site])
                   :delete-tooltip (tr :lipas.sports-site/delete-tooltip)}))
 

@@ -80,6 +80,8 @@
                                 user-orgs)))
           fx (cond-> []
                (not is-new?) (conj [:dispatch [::get-org-users org-id]])
+               ;; 403s (→ []) unless the user may manage this org's members
+               (not is-new?) (conj [:dispatch [::fetch-ptv-member-suggestions org-id]])
                is-lipas-admin? (conj [:dispatch [::get-takeover-requests "requested"]])
                               ;; Land on the default "our-sites" tab and load its
                               ;; data via the normal tab path (also fetches the
@@ -778,3 +780,45 @@
           [:dispatch [::get-takeover-requests "requested"]]
           [:dispatch [:lipas.ui.events/set-active-notification
                       {:message "Pyyntö käsitelty" :success? true}]]]}))
+
+;;; PTV member suggestions ;;;
+;; Accounts with PTV rights for the org's municipalities that aren't members
+;; (lipas.backend.ptv.core/ptv-member-suggestions). Names only, no emails.
+
+(rf/reg-event-fx ::fetch-ptv-member-suggestions
+  (fn [{:keys [db]} [_ org-id]]
+    {:http-xhrio
+     {:method :post
+      :uri (str (:backend-url db) "/actions/get-ptv-member-suggestions")
+      :headers (auth-headers db)
+      :params {:org-id org-id}
+      :format (ajax/json-request-format)
+      :response-format (ajax/json-response-format {:keywords? true})
+      :on-success [::fetch-ptv-member-suggestions-success]
+      :on-failure [::fetch-ptv-member-suggestions-success []]}}))
+
+(rf/reg-event-db ::fetch-ptv-member-suggestions-success
+  (fn [db [_ resp]]
+    (assoc-in db [:org :ptv-member-suggestions] (vec resp))))
+
+(rf/reg-event-fx ::add-suggested-ptv-member
+  ;; Plain membership; roles are then chosen in the members table.
+  (fn [{:keys [db]} [_ org-id user-id]]
+    {:http-xhrio
+     {:method :post
+      :uri (str (:backend-url db) "/actions/add-suggested-ptv-member")
+      :headers (auth-headers db)
+      :params {:org-id org-id :user-id user-id}
+      :format (ajax/json-request-format)
+      :response-format (ajax/json-response-format {:keywords? true})
+      :on-success [::add-suggested-ptv-member-done org-id true]
+      :on-failure [::add-suggested-ptv-member-done org-id false]}}))
+
+(rf/reg-event-fx ::add-suggested-ptv-member-done
+  (fn [{:keys [db]} [_ org-id ok? _resp]]
+    (let [tr (:translator db)]
+      {:fx [[:dispatch [::get-org-users org-id]]
+            [:dispatch [::fetch-ptv-member-suggestions org-id]]
+            [:dispatch [:lipas.ui.events/set-active-notification
+                        {:message (tr (if ok? :notifications/save-success :notifications/save-failed))
+                         :success? ok?}]]]})))

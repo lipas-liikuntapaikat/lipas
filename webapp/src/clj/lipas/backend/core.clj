@@ -1640,6 +1640,59 @@
       (log/error e "Failed to enqueue background jobs after save"
                  {:lipas-id (:lipas-id resp)}))))
 
+(defn- ptv-orgs
+  "Every LIPAS org with a PTV config."
+  [db]
+  (filterv #(get-in % [:ptv-data :org-id]) (org/all-orgs db)))
+
+(defn check-ptv-save!
+  "Hard gate for the `:ptv` part of a user-facing site save. Returns the site
+  to persist (org-id filled in when it can be derived) or throws.
+
+  The client's `:ptv` is not trusted:
+  - Changing PTV settings (see `ptv-data/ptv-edited?`) needs :ptv/manage for
+    the site's city. Untouched `:ptv` passes through, so ordinary editors can
+    keep saving integrated sites (which re-syncs them, as before).
+  - The org-id must be the site's persisted one or the org whose PTV config
+    covers the site — never an arbitrary org that LIPAS would then write to
+    with its own PTV credentials.
+  - A PTV edit that leaves sync on must leave the site syncable
+    (`ptv-data/sync-blockers`), otherwise it's rejected. An untouched-but-
+    unsyncable `:ptv` doesn't block unrelated edits; `sync-ptv!` stores a
+    visible error on the site instead."
+  [db user prev sports-site draft?]
+  (if-not (or (:ptv sports-site) (:ptv prev))
+    sports-site
+    (let [edited? (ptv-data/ptv-edited? prev sports-site)
+          city-code (get-in sports-site [:location :city :city-code])
+          orgs (delay (ptv-orgs db))
+          derived-org-id (delay (ptv-data/resolve-org-id
+                                  (update sports-site :ptv dissoc :org-id) @orgs))
+          site (if (and edited?
+                        (get-in sports-site [:ptv :sync-enabled])
+                        (str/blank? (get-in sports-site [:ptv :org-id]))
+                        @derived-org-id)
+                 (assoc-in sports-site [:ptv :org-id] @derived-org-id)
+                 sports-site)
+          org-id (get-in site [:ptv :org-id])]
+      (when (and edited?
+                 (not (roles/check-privilege user {:city-code city-code} :ptv/manage)))
+        (throw (ex-info "Changing PTV settings requires PTV rights for the site's municipality"
+                        {:type :no-permission})))
+      (when (and edited?
+                 (not (str/blank? org-id))
+                 (not= org-id (get-in prev [:ptv :org-id]))
+                 (not= org-id @derived-org-id))
+        (throw (ex-info "PTV org doesn't match the site's municipality"
+                        {:type :ptv-org-mismatch
+                         :org-id org-id})))
+      (when (and edited? (not draft?))
+        (when-let [blockers (not-empty (ptv-data/sync-blockers site))]
+          (throw (ex-info "PTV sync is enabled but the site can't be synced"
+                          {:type :ptv-sync-blocked
+                           :blockers (vec (sort blockers))}))))
+      site)))
+
 ;; TODO refactor upsert-sports-site!, upsert-sports-site!* and
 ;; save-sports-site! to form more sensible API.
 (defn save-sports-site!
@@ -1665,6 +1718,7 @@
                  ;; for diffing which background jobs the edit requires
                  prev (when-let [lipas-id (:lipas-id sports-site)]
                         (get-sports-site tx lipas-id))
+                 sports-site (check-ptv-save! tx user prev sports-site draft?)
                  resp (upsert-sports-site! tx user sports-site draft?)]
 
              ;; Sync the site to PTV if

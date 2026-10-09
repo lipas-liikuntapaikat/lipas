@@ -1,6 +1,7 @@
 (ns lipas.ui.map.subs
   (:require [clojure.string :as str]
             [goog.array :as garray]
+            [lipas.data.ptv :as ptv-data]
             [re-frame.core :as rf]
             [reagent.ratom :as ratom]))
 
@@ -565,3 +566,18 @@
   :<- [::restore-site-backup-dialog]
   (fn [m]
     (:error m)))
+
+(rf/reg-sub ::ptv-save-blockers
+  ;; Lives here, not in lipas.ui.ptv.subs: the site form (:map module) needs it
+  ;; before the lazy :ptv module has loaded.
+  ;; What blocks saving this site's edits because of PTV — same rule as the
+  ;; backend gate (lipas.backend.core/check-ptv-save!): only a PTV edit that
+  ;; leaves sync on can be blocked, so untouched PTV data never blocks
+  ;; unrelated edits. Empty set when nothing blocks (or not editing).
+  (fn [[_ lipas-id]]
+    [(rf/subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])
+     (rf/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])])
+  (fn [[latest edit-data] _]
+    (if (and edit-data (ptv-data/ptv-edited? latest edit-data))
+      (ptv-data/sync-blockers edit-data)
+      #{})))

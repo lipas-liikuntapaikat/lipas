@@ -54,6 +54,7 @@
   [[:sites :int]
    [:integrated :int]
    [:sync-enabled :int]
+   [:sync-pending :int]
    [:published :int]
    [:deleted :int]])
 

@@ -28,6 +28,9 @@
   {:sites (count rows)
    :integrated (count (filter :ptv-org-id rows))
    :sync-enabled (count (filter :sync-enabled? rows))
+   ;; sync on but never reached PTV (no publishing status at all) — a
+   ;; failed or blocked integration someone thinks is live
+   :sync-pending (count (filter #(and (:sync-enabled? %) (nil? (:publishing-status %))) rows))
    :published (count (filter #(= "Published" (:publishing-status %)) rows))
    :deleted (count (filter #(= "Deleted" (:publishing-status %)) rows))})
 
