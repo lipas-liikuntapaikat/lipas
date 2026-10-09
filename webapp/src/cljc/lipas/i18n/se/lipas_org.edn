@@ -192,4 +192,8 @@
  :pending-approvals "Väntande godkännanden"
 
  ;; site-page editing rights
- :editing-rights "Redigeringsrättigheter"}
+ :editing-rights "Redigeringsrättigheter"
+ ;; PTV member suggestions (members tab)
+ :ptv-suggestions-title "Föreslagna medlemmar"
+ :ptv-suggestions-note "De här användarna har PTV-rättigheter till organisationens kommun men är inte medlemmar i organisationen. Att lägga till dem gör dem till medlemmar utan roller – välj roller efteråt."
+ :ptv-suggestion-add "Lägg till som medlem"}

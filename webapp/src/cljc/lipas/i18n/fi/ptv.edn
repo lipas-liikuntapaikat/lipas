@@ -66,4 +66,12 @@
  :saved-but-sync-failed-body-name-conflict "Nimi '{1}' on jo käytössä organisaation toisella palvelupaikalla PTV:ssä. PTV vaatii palvelupaikoille uniikit nimet. Liitä liikuntapaikka olemassa olevaan palvelupaikkaan tai muuta nimeä, ja tallenna uudelleen.",
  :in-ptv "{1} PTV:ssä",
  :service-name "Palvelun nimi",
- :integration "Integraatio"}
+ :integration "Integraatio"
+ ;; Sync gate (lipas.data.ptv/sync-blockers, core/check-ptv-save!)
+ :sync-blocked-title "Tallennus estetty: liikuntapaikkaa ei voi viedä PTV:hen"
+ :blocker-no-org "PTV-organisaatio puuttuu."
+ :blocker-missing-texts "Tiivistelmä ja kuvaus (suomeksi) puuttuvat. Kirjoita ne tai luo ne tekoälyllä alta."
+ :sync-blocked-hint "Täydennä puuttuvat tiedot tai kytke PTV-integraatio pois päältä, niin voit tallentaa."
+ :no-org-for-site "Liikuntapaikan kunnalle ei löydy PTV-organisaatiota, johon sinulla on PTV-oikeudet, joten integraatiota ei voi kytkeä päälle. Ota yhteyttä LIPAS-ylläpitoon."
+ :org-mismatch "PTV-organisaatio ei vastaa liikuntapaikan kuntaa."
+ :no-ptv-permission "Sinulla ei ole PTV-oikeuksia tämän liikuntapaikan kuntaan, joten PTV-asetuksia ei voi muuttaa."}

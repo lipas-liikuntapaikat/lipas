@@ -101,24 +101,38 @@
       {:summary (get-in picked [:summary :fi])
        :description (get-in picked [:description :fi])})))
 
+(defn covering-orgs
+  "The PTV-configured LIPAS orgs whose PTV config covers `site`: the site's
+  city-code is among the org's `:city-codes` and, when the org restricts
+  `:owners`, the site's owner is among them. `ptv-orgs` are LIPAS org maps
+  carrying `:ptv-data`."
+  [site ptv-orgs]
+  (let [city-code (get-in site [:location :city :city-code])
+        owner (:owner site)]
+    (filterv (fn [{:keys [ptv-data]}]
+               (and (:org-id ptv-data)
+                    (contains? (set (:city-codes ptv-data)) city-code)
+                    (or (empty? (:owners ptv-data))
+                        (contains? (set (:owners ptv-data)) owner))))
+             ptv-orgs)))
+
 (defn resolve-org-id
-  "Returns the effective PTV org-id for a site.
-   Resolution order:
-   1. Persisted :ptv :org-id on the site (authoritative once integrated).
-   2. User belongs to exactly one org → that org.
-   3. Exactly one of the user's orgs covers the site's city-code → that org.
-   4. Nil (ambiguous; UI must prompt)."
-  [site user-orgs]
+  "The PTV org-id a site integrates under, or nil when it can't be determined.
+   1. The persisted `[:ptv :org-id]` (authoritative once integrated).
+   2. Otherwise the single org in `ptv-orgs` whose PTV config covers the site
+      (see `covering-orgs`).
+
+   The site decides the org, not the editing user: pass ALL PTV-configured orgs
+   (backend) or the orgs the user may act for (frontend, see `get-ptv-orgs`).
+   Whether the user may act for it is a separate privilege check."
+  [site ptv-orgs]
   (or (get-in site [:ptv :org-id])
-      (when (= 1 (count user-orgs))
-        (get-in (first user-orgs) [:ptv-data :org-id]))
-      (let [city-code (get-in site [:location :city :city-code])
-            matches (filter (fn [org]
-                              (contains? (set (get-in org [:ptv-data :city-codes]))
-                                         city-code))
-                            user-orgs)]
-        (when (= 1 (count matches))
-          (get-in (first matches) [:ptv-data :org-id])))))
+      ;; Distinct PTV org-ids, not LIPAS orgs: two LIPAS orgs may share one PTV
+      ;; org, which is still unambiguous.
+      (let [org-ids (distinct (map #(get-in % [:ptv-data :org-id])
+                                   (covering-orgs site ptv-orgs)))]
+        (when (= 1 (count org-ids))
+          (first org-ids)))))
 
 (def lang->locale
   "PTV language code -> LIPAS locale keyword"
@@ -1329,6 +1343,48 @@
         {:keys [summary description]} ptv]
     (boolean (and (some-> description :fi count (> 5))
                   (some-> summary :fi count (> 5))))))
+
+(defn sync-blockers
+  "What stops `site` from syncing to PTV, as a set of keywords (empty when
+  nothing does). Only meaningful while `[:ptv :sync-enabled]` is on and the
+  site isn't being archived — otherwise there is nothing to sync.
+
+  - `:ptv/no-org`        no PTV org-id on the site
+  - `:ptv/missing-texts` the site should be in PTV but lacks the Finnish
+                         summary/description (see `ptv-ready?`)
+
+  Shared by the site form (save gate + messages) and `save-sports-site!`
+  (hard gate), so both reject exactly the same states."
+  [site]
+  (let [{:keys [sync-enabled delete-existing org-id]} (:ptv site)]
+    (if (or (not sync-enabled) delete-existing)
+      #{}
+      (cond-> #{}
+        (str/blank? org-id)
+        (conj :ptv/no-org)
+
+        (and (ptv-candidate? site) (not (ptv-ready? site)))
+        (conj :ptv/missing-texts)))))
+
+(def user-controlled-ptv-keys
+  "`:ptv` keys an editor sets through the site form. A save that changes any of
+  them is a PTV action and needs :ptv/manage; the rest of `:ptv` is written by
+  the sync itself."
+  [:sync-enabled :org-id :delete-existing :service-ids
+   :summary :description :user-instruction])
+
+(defn ptv-edited?
+  "Did the editor change PTV settings between `prev` and `site`?"
+  [prev site]
+  (let [settings (fn [s]
+                   ;; Absent, nil, false-y defaults and empty colls/strings all
+                   ;; mean "not set" — the edit buffer may materialize them.
+                   (into {}
+                         (remove (fn [[_ v]]
+                                   (or (nil? v) (false? v)
+                                       (and (coll? v) (empty? (remove str/blank? (if (map? v) (vals v) v)))))))
+                         (select-keys (:ptv s) user-controlled-ptv-keys)))]
+    (not= (settings prev) (settings site))))
 
 (defn ptv-service-channel->texts
   "Take PTV ServiceChannel response and build Lipas :summary, :description, :user-instruction"

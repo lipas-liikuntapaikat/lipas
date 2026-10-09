@@ -641,15 +641,22 @@
   (try
     (let [ready? (ptv-data/ptv-ready? sports-site)
           archive? (to-archive? sports-site ptv)]
-      (if (and (not archive?) (not ready?))
-        ;; Safety guard. Reached only for integration-enabled sites (others
-        ;; never get here). The PTV data is incomplete/invalid, so pushing it
-        ;; would fail PTV validation — don't create or update, leave any
-        ;; existing PTV record frozen. No new revision is written here; the
-        ;; site itself was already saved by the caller.
-        (do
-          (log/infof "Skipping PTV sync for %d: PTV data not ready and not archiving" lipas-id)
-          {:ptv ptv :event-date (:event-date sports-site)})
+      (cond
+        ;; Safety guards. core/check-ptv-save! rejects PTV edits that would
+        ;; land here, but an untouched, pre-existing unsyncable :ptv (or a
+        ;; future caller) still can. Never skip silently: the throw is caught
+        ;; below and stored as :ptv :error on a new revision, so the site
+        ;; form and the admin views show it. Any existing PTV record stays
+        ;; frozen.
+        (str/blank? org-id)
+        (throw (ex-info "PTV-organisaatio puuttuu – liikuntapaikkaa ei voi viedä PTV:hen"
+                        {:blockers [:ptv/no-org]}))
+
+        (and (not archive?) (not ready?))
+        (throw (ex-info "PTV-kuvaukset puuttuvat – liikuntapaikkaa ei voi viedä PTV:hen"
+                        {:blockers [:ptv/missing-texts]}))
+
+        :else
         (let [type-code (-> sports-site :type :type-code)
               type-code-changed? (not= type-code (:previous-type-code ptv))
               ptv (if type-code-changed?
@@ -712,6 +719,8 @@
       ;; bearer token. The parsed `:ptv-status`/`:ptv-error` covers
       ;; everything the frontend and operators actually need.
       (let [new-ptv-data (assoc ptv :error (merge {:message (.getMessage e)}
+                                                  ;; our own guards above
+                                                  (select-keys (ex-data e) [:blockers])
                                                   (parse-ptv-error e)))]
         (log/errorf e "Sports site %d updated but PTV sync failed" lipas-id)
         (let [resp (core/upsert-sports-site! tx
@@ -765,6 +774,60 @@
   [db user {:keys [lipas-id audit]}]
   (when-let [site (core/get-sports-site db lipas-id)]
     (audit/save-site-audit! db user site audit)))
+
+(defn ptv-managers-outside-orgs
+  "Active accounts holding a DIRECT `ptv-manager` role for a municipality whose
+  covering PTV org they aren't a member of — one row per (account, city).
+  `:org` is nil when no PTV org covers that city (the org's PTV config is what's
+  missing then). Such managers can do PTV work (authority is city-scoped), but
+  membership drives audit emails and the org's member list, so admins add them.
+  City-less (global) ptv-manager roles are skipped: they aren't tied to an org."
+  [db]
+  (let [orgs (filter #(get-in % [:ptv-data :org-id]) (backend-org/all-orgs db))
+        city->org (into {} (for [o orgs c (get-in o [:ptv-data :city-codes])] [(long c) o]))
+        member? (fn [org user-id]
+                  (some #(= (str user-id) (str (:user-id %))) (:members org)))]
+    (->> (db/get-users db)
+         (filter #(= "active" (:status %)))
+         (mapcat (fn [user]
+                   (for [role (get-in user [:permissions :roles])
+                         :when (= :ptv-manager (keyword (:role role)))
+                         city-code (:city-code role)
+                         :let [org (city->org (long city-code))]
+                         :when (not (and org (member? org (:id user))))]
+                     {:user-id (str (:id user))
+                      :username (:username user)
+                      :email (:email user)
+                      :name (str/trim (str (get-in user [:user-data :firstname]) " "
+                                           (get-in user [:user-data :lastname])))
+                      :city-code (long city-code)
+                      :org (when org {:id (str (:id org)) :name (:name org)})})))
+         (sort-by (juxt #(get-in % [:org :name] "~") :city-code :username))
+         vec)))
+
+(defn ptv-member-suggestions
+  "`ptv-managers-outside-orgs` narrowed to one org, for its org-admins. No
+  emails: org-admins mustn't get a new way to enumerate accounts."
+  [db org-id]
+  (->> (ptv-managers-outside-orgs db)
+       (filter #(= (str org-id) (get-in % [:org :id])))
+       (map #(select-keys % [:user-id :username :name :city-code]))
+       (distinct)
+       vec))
+
+(defn add-suggested-ptv-member!
+  "Adds a suggested PTV manager to the org as a plain member — which roles they
+  get is the org-admin's call (Members tab). Only accounts from
+  `ptv-member-suggestions` are accepted, so this can't add arbitrary accounts by
+  id."
+  [db org-id user-id author-id]
+  (when-not (some #(= (str user-id) (:user-id %)) (ptv-member-suggestions db org-id))
+    (throw (ex-info "Not a suggested member of this organization"
+                    {:type :invalid-selection
+                     :org-id (str org-id)
+                     :user-id (str user-id)})))
+  (backend-org/add-member! db org-id user-id {:roles []} author-id)
+  {:user-id (str user-id)})
 
 (defn get-ptv-managers
   "Returns the org's members who hold the :ptv-manager role for any of the

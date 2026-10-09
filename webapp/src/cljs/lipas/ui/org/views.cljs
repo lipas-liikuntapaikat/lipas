@@ -532,6 +532,22 @@
                             (reset! anchor nil))}
                 (role-label tr catalog rkey)])]])]))))
 
+(defn ptv-member-suggestions
+  "Accounts with PTV rights for this org's municipalities that aren't members.
+  Adding grants plain membership; roles are chosen in the table below."
+  [tr org-id]
+  (let [suggestions @(rf/subscribe [::subs/ptv-member-suggestions])]
+    (when (seq suggestions)
+      [:> Alert {:severity "info" :sx {:mb 2}}
+       [:> Typography {:variant "subtitle2"} (tr :lipas.org/ptv-suggestions-title)]
+       [:> Typography {:variant "body2" :sx {:mb 1}} (tr :lipas.org/ptv-suggestions-note)]
+       (for [{:keys [user-id name username]} suggestions]
+         [:> Box {:key user-id :sx {:display "flex" :alignItems "center" :gap 1 :mb 0.5}}
+          [:> Typography {:variant "body2"} (if (seq name) name username)]
+          [:> Button {:size "small" :variant "outlined"
+                      :on-click #(rf/dispatch [::events/add-suggested-ptv-member org-id user-id])}
+           (tr :lipas.org/ptv-suggestion-add)]])])))
+
 (defn members-tab [tr org-id]
   (let [org-users @(rf/subscribe [::subs/org-users])
         catalog @(rf/subscribe [::subs/org-templates])
@@ -539,6 +555,9 @@
     [:> Box {:sx {:p 2}}
      [:> Typography {:variant "body2" :color "text.secondary" :sx {:mb 2}}
       (tr :lipas.org/members-plane-note)]
+     (when can-manage?
+       [ptv-member-suggestions tr org-id])
+
      (when can-manage?
        [:> Box {:sx {:mb 1}}
         [invite-member tr org-id]

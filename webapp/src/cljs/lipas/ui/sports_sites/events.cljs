@@ -1,5 +1,6 @@
 (ns lipas.ui.sports-sites.events
   (:require [ajax.core :as ajax]
+            [clojure.string :as str]
             [lipas.data.owners :as owners-data]
             [lipas.roles :as roles]
             [lipas.ui.interceptors :as interceptors]
@@ -33,7 +34,10 @@
       ;; NOTE: Does add extra slowness to any ::edit-field calls...
       (cond->
         (:ptv sports-site)
-        (update :ptv #(merge (:default-settings (:ptv db)) %))
+        ;; ...except :sync-enabled: sync is switched on only explicitly (PTV
+        ;; tab switch / wizard). Defaulting it here turned any `:ptv` map
+        ;; lacking the key into sync-on on the next edit.
+        (update :ptv #(merge (dissoc (:default-settings (:ptv db)) :sync-enabled) %))
 
         (and (:sync-enabled (:ptv sports-site))
              (:delete-existing (:ptv sports-site)))
@@ -111,14 +115,33 @@
 
 (rf/reg-event-fx ::save-failure
   (fn [{:keys [db]} [_ on-failure error]]
-    (let [tr     (:translator db)]
+    (let [tr     (:translator db)
+          body   (:response error)
+          ;; PTV gate rejections (lipas.backend.core/check-ptv-save!) say what
+          ;; to fix; everything else keeps the generic message.
+          notification
+          (case (:type body)
+            "ptv-sync-blocked"
+            {:title    (tr :ptv/sync-blocked-title)
+             ;; Inlined (not lipas.ui.ptv.events/blocker-messages): this ns
+             ;; is in the base bundle, the PTV UI is a lazy module.
+             ;; "ptv/no-org" -> :ptv/blocker-no-org
+             :message  (str/join " " (conj (mapv #(tr (keyword "ptv" (str "blocker-" (name (keyword %)))))
+                                                 (sort (:blockers body)))
+                                           (tr :ptv/sync-blocked-hint)))
+             :severity :error
+             :sticky?  true}
+
+            "ptv-org-mismatch"
+            {:message (tr :ptv/org-mismatch) :success? false}
+
+            {:message  (tr :notifications/save-failed)
+             :success? false})]
       {:db           (-> db
                          (assoc-in [:sports-sites :errors (utils/timestamp)] error)
                          (assoc-in [:sports-sites :save-in-progress?] false))
        :dispatch-n   (into
-                       [[:lipas.ui.events/set-active-notification
-                         {:message  (tr :notifications/save-failed)
-                          :success? false}]]
+                       [[:lipas.ui.events/set-active-notification notification]]
                        (when on-failure (on-failure error)))
        :tracker/event! ["error" "save-sports-site-failure"]})))
 

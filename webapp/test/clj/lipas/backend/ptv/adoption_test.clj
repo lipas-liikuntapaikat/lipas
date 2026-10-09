@@ -44,7 +44,7 @@
               {:lipas-id 3 :first-month "2025-03" :city-code 425 :ptv-org-id "o"
                :sync-enabled? true :publishing-status "Published"}]
         {:keys [totals monthly municipalities]} (adoption/summarize rows "2025-04")]
-    (is (= {:sites 3 :integrated 3 :sync-enabled 2 :published 2 :deleted 1 :municipalities 2}
+    (is (= {:sites 3 :integrated 3 :sync-enabled 2 :sync-pending 0 :published 2 :deleted 1 :municipalities 2}
            totals))
     (is (= [["2025-01" 1 1] ["2025-02" 0 1] ["2025-03" 2 3] ["2025-04" 0 3]]
            (map (juxt :month :new :total) monthly))

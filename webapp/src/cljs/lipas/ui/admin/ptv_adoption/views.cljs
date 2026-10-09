@@ -49,11 +49,13 @@
     [:> Grid {:container true :spacing 2 :sx #js{:mb 2}}
      [stat-tile {:value (:sites totals)
                  :label "Liikuntapaikkaa"
-                 :caption "integroitu PTV:hen"}]
+                 :caption "joskus mukana PTV:ssä"}]
      [stat-tile {:value (:municipalities totals)
                  :label "Kuntaa"}]
      [stat-tile {:value (:sync-enabled totals)
-                 :label "Synkronointi päällä"}]
+                 :label "Synkronointi päällä"
+                 :caption (when (pos? (:sync-pending totals))
+                            (str (:sync-pending totals) " ei vielä PTV:ssä"))}]
      [stat-tile {:value (:published totals)
                  :label "Julkaistu PTV:ssä"
                  :caption (when (pos? (:deleted totals))
@@ -122,6 +124,54 @@
        [:> TableCell first-month]
        [:> TableCell latest-month]])]])
 
+(r/defc outside-managers-section
+  "PTV managers (direct city-scoped role) who aren't members of the org covering
+  their municipality. They can do PTV work without membership, but membership
+  drives audit emails and the org's member list. Adding is plain membership —
+  roles stay the org-admin's call."
+  []
+  (let [rows @(rf/subscribe [::subs/outside-managers])
+        loading? @(rf/subscribe [::subs/outside-managers-loading?])]
+    (hooks/use-effect
+      (fn []
+        (rf/dispatch [::events/fetch-outside-managers])
+        js/undefined)
+      [])
+    [:<>
+     [:> Typography {:variant "h6" :sx #js{:mt 3}}
+      "PTV-käsittelijät, jotka eivät ole kuntansa organisaation jäseniä"]
+     [:> Typography {:variant "body2" :color "textSecondary" :sx #js{:mb 1}}
+      (str "Käyttäjillä on PTV-oikeudet kuntaan, mutta he eivät ole kunnan organisaation jäseniä. "
+           "Jäseneksi lisääminen ei anna rooleja: organisaation ylläpitäjä päättää ne Jäsenet-välilehdellä. "
+           "Jos kunnalle ei ole PTV-organisaatiota, sen PTV-asetukset puuttuvat.")]
+     (when loading?
+       [:> LinearProgress])
+     (if (and (some? rows) (empty? rows))
+       [:> Typography {:variant "body2"} "Ei puuttuvia jäsenyyksiä."]
+       [:> Table {:size "small"}
+        [:> TableHead
+         [:> TableRow
+          [:> TableCell "Käyttäjä"]
+          [:> TableCell "Sähköposti"]
+          [:> TableCell {:align "right"} "Kuntakoodi"]
+          [:> TableCell "Organisaatio"]
+          [:> TableCell]]]
+        [:> TableBody
+         (for [{:keys [user-id name username email city-code org] :as row} rows]
+           ^{:key (str user-id "-" city-code)}
+           [:> TableRow
+            [:> TableCell (if (seq name) name username)]
+            [:> TableCell email]
+            [:> TableCell {:align "right"} city-code]
+            [:> TableCell (or (:name org) [:em "Ei PTV-organisaatiota"])]
+            [:> TableCell {:align "right"}
+             (when org
+               [:> Button {:size "small"
+                           :variant "outlined"
+                           :disabled @(rf/subscribe [::subs/adding? email])
+                           :on-click #(rf/dispatch [::events/add-to-org row])}
+                "Lisää jäseneksi"])]])]])]))
+
 (r/defc ptv-adoption-tab []
   (let [stats @(rf/subscribe [::subs/stats])
         chart-data @(rf/subscribe [::subs/chart-data])
@@ -160,4 +210,5 @@
            [:> Typography {:variant "h6"} "Integroidut liikuntapaikat yhteensä"]
            [cumulative-chart {:data chart-data}]]]
          [:> Typography {:variant "h6"} "Kunnittain"]
-         [municipalities-table stats]])]]))
+         [municipalities-table stats]])
+      [outside-managers-section]]]))

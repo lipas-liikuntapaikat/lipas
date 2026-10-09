@@ -1131,3 +1131,63 @@
                   {:timestamp "2026-07-13T15:33:52.689078Z" :auditor-id "x"
                    :description {:status "changes-requested" :feedback ""}})
       "the stored-audit schema still accepts legacy wordless change requests"))
+
+;;; Org resolution + sync gate (fix/ptv-sync-org-gate) ;;;
+
+(def ^:private org-a {:id "a" :name "A" :ptv-data {:org-id "ptv-a" :city-codes [91] :owners ["city" "city-main-owner"]}})
+(def ^:private org-b {:id "b" :name "B" :ptv-data {:org-id "ptv-b" :city-codes [179]}})
+(def ^:private org-a-twin {:id "a2" :name "A twin" :ptv-data {:org-id "ptv-a" :city-codes [91]}})
+(def ^:private unconfigured {:id "x" :name "X" :ptv-data {:city-codes [91]}})
+
+(defn- site [city owner & {:as ptv}]
+  (cond-> {:status "active" :owner owner :type {:type-code 2510}
+           :location {:city {:city-code city}}}
+    ptv (assoc :ptv ptv)))
+
+(deftest resolve-org-id-test
+  (testing "the site's city (and owner) decides the org, not the user's org count"
+    (is (= "ptv-a" (sut/resolve-org-id (site 91 "city") [org-a org-b])))
+    (is (= "ptv-b" (sut/resolve-org-id (site 179 "city") [org-a org-b])))
+    ;; regression: the old "user has exactly one org → that org" rule picked
+    ;; org-a for a Jyväskylä site
+    (is (nil? (sut/resolve-org-id (site 179 "city") [org-a]))))
+  (testing "a persisted org-id is authoritative"
+    (is (= "ptv-b" (sut/resolve-org-id (site 91 "city" :org-id "ptv-b") [org-a]))))
+  (testing "owner restriction"
+    (is (nil? (sut/resolve-org-id (site 91 "private") [org-a]))))
+  (testing "orgs without a PTV org-id never match"
+    (is (nil? (sut/resolve-org-id (site 91 "city") [unconfigured]))))
+  (testing "two LIPAS orgs sharing one PTV org are unambiguous; two PTV orgs aren't"
+    (is (= "ptv-a" (sut/resolve-org-id (site 91 "city") [org-a org-a-twin])))
+    (is (nil? (sut/resolve-org-id (site 91 "city")
+                                  [org-a (assoc-in org-b [:ptv-data :city-codes] [91])])))))
+
+(deftest sync-blockers-test
+  (let [texts {:summary {:fi "Lyhyt kuvaus"} :description {:fi "Pidempi kuvaus"}}]
+    (testing "nothing to block when sync is off or archiving"
+      (is (= #{} (sut/sync-blockers (site 91 "city"))))
+      (is (= #{} (sut/sync-blockers (site 91 "city" :sync-enabled false))))
+      (is (= #{} (sut/sync-blockers (site 91 "city" :sync-enabled true :delete-existing true)))))
+    (testing "sync on: org and (for candidates) texts are required"
+      (is (= #{:ptv/no-org :ptv/missing-texts}
+             (sut/sync-blockers (site 91 "city" :sync-enabled true))))
+      (is (= #{:ptv/missing-texts}
+             (sut/sync-blockers (site 91 "city" :sync-enabled true :org-id "ptv-a"))))
+      (is (= #{} (sut/sync-blockers (apply site 91 "city" :sync-enabled true :org-id "ptv-a"
+                                           (mapcat identity texts))))))
+    (testing "a non-candidate needs an org but not texts"
+      (is (= #{:ptv/no-org} (sut/sync-blockers (site 91 "private" :sync-enabled true)))))))
+
+(deftest ptv-edited?-test
+  (let [prev (site 91 "city" :sync-enabled true :org-id "ptv-a" :service-ids ["s"]
+                   :last-sync "2026-01-01" :publishing-status "Published")]
+    (is (not (sut/ptv-edited? prev prev)))
+    (testing "sync-written keys don't count"
+      (is (not (sut/ptv-edited? prev (assoc-in prev [:ptv :last-sync] "2026-02-02")))))
+    (testing "materialized empty values mean not set"
+      (is (not (sut/ptv-edited? (site 91 "city") (site 91 "city" :service-ids [] :summary {:fi ""}
+                                                       :sync-enabled false)))))
+    (testing "user-controlled keys count"
+      (is (sut/ptv-edited? prev (assoc-in prev [:ptv :sync-enabled] false)))
+      (is (sut/ptv-edited? prev (assoc-in prev [:ptv :org-id] "ptv-b")))
+      (is (sut/ptv-edited? nil (site 91 "city" :sync-enabled true))))))

@@ -137,6 +137,20 @@
                 (deny user (str "no :ptv/manage for the municipality of site " lipas-id)))
             (deny user (str "lipas-id " (pr-str lipas-id) " not found")))))))
 
+(defn- site-in-org?
+  "True when the site exists, lies in one of `org`'s PTV municipalities and the
+  user manages that municipality. Closes the gap where a manager of one city of
+  an org could push any site (e.g. another org's) under that org."
+  [db user org lipas-id what]
+  (if-let [site (db/get-sports-site db lipas-id)]
+    (let [city-code (-> site :location :city :city-code)]
+      (or (and (contains? (set (map ->city-code (-> org :ptv-data :city-codes)))
+                          (->city-code city-code))
+               (manages-city? user [city-code]))
+          (deny user (str "site " lipas-id " is outside org " (:id org)
+                          " or its municipality isn't managed (" what ")"))))
+    (deny user (str "lipas-id " (pr-str lipas-id) " not found (" what ")"))))
+
 (defn ptv-org-write-access?
   "Gate for endpoints that WRITE an organisation's PTV data.
 
@@ -154,12 +168,17 @@
   [db]
   (fn [req]
     (let [user (:identity req)
-          org-id (-> req :parameters :body :org-id)]
+          org-id (-> req :parameters :body :org-id)
+          lipas-id (-> req :parameters :body :lipas-id)]
       (or (roles/check-role user :admin)
           (if-let [org (org/get-org-by-ptv-org-id db org-id)]
-            (or (manages-org-ptv? user org)
-                (deny user (str "no :ptv/manage for any municipality of org "
-                                (:id org) " (write)")))
+            (if (manages-org-ptv? user org)
+              ;; Site-addressed writes (save-ptv-service-location): the site
+              ;; must belong to this org too, not just the caller.
+              (or (nil? lipas-id)
+                  (site-in-org? db user org lipas-id "write"))
+              (deny user (str "no :ptv/manage for any municipality of org "
+                              (:id org) " (write)")))
             (deny user (str "org-id " (pr-str org-id)
                             " does not resolve to a LIPAS org (write)")))))))
 
@@ -173,18 +192,26 @@
   [db]
   (fn [req]
     (let [user (:identity req)
-          org-ids (->> req :parameters :body vals (keep :org-id) distinct)]
+          body (-> req :parameters :body)
+          org-ids (->> body vals (keep :org-id) distinct)]
       (or (roles/check-role user :admin)
           (if (empty? org-ids)
             (deny user "save-ptv-meta body carries no :org-id")
-            (every? (fn [org-id]
-                      (if-let [org (org/get-org-by-ptv-org-id db org-id)]
-                        (or (manages-org-ptv? user org)
-                            (deny user (str "no :ptv/manage for any municipality of org "
-                                            (:id org) " (save-ptv-meta)")))
-                        (deny user (str "org-id " (pr-str org-id)
-                                        " does not resolve to a LIPAS org (save-ptv-meta)"))))
-                    org-ids))))))
+            (let [orgs (into {} (map (juxt identity #(org/get-org-by-ptv-org-id db %))) org-ids)]
+              (and (every? (fn [org-id]
+                             (if-let [org (orgs org-id)]
+                               (or (manages-org-ptv? user org)
+                                   (deny user (str "no :ptv/manage for any municipality of org "
+                                                   (:id org) " (save-ptv-meta)")))
+                               (deny user (str "org-id " (pr-str org-id)
+                                               " does not resolve to a LIPAS org (save-ptv-meta)"))))
+                           org-ids)
+                   ;; ...and every entry's site must belong to its entry's org.
+                   (every? (fn [[lipas-id {:keys [org-id]}]]
+                             (or (nil? org-id)
+                                 (site-in-org? db user (orgs org-id)
+                                               lipas-id "save-ptv-meta")))
+                           body))))))))
 
 (def ^:private decode-ptv-meta
   "Strips keys ptv-meta doesn't know (e.g. :last-sync), as route coercion
@@ -212,6 +239,30 @@
     (or (ptv-auditor? user)
         (roles/check-privilege user {:city-code ::roles/any} :ptv/manage))))
 
+(defn- org-scope-from-body
+  "Role-context for an org-scoped privilege, keyed off :org-id in the body
+  (same as lipas.backend.handler's)."
+  [req]
+  {:org-id #{(str (-> req :parameters :body :org-id))}})
+
+(defn ptv-orgs-for-user
+  "The PTV-configured orgs `user` may act for, by the same rule the write gates
+  use: admins and auditors get all, everyone else the orgs covering a
+  municipality they hold :ptv/manage for — whether that role is a direct
+  account role or projected from an org catalog. Membership is NOT required
+  (see the note at the top of this ns).
+
+  Projected to what the PTV UI needs; never ships the org's members or
+  `:test-credentials`."
+  [db user]
+  (let [all-ptv? (or (roles/check-role user :admin) (ptv-auditor? user))]
+    (->> (org/all-orgs db)
+         (filter #(get-in % [:ptv-data :org-id]))
+         (filter #(or all-ptv? (manages-org-ptv? user %)))
+         (mapv (fn [o]
+                 (-> (select-keys o [:id :name :ptv-data])
+                     (update :ptv-data dissoc :test-credentials)))))))
+
 (defn routes [{:keys [db search ptv emailer] :as _ctx}]
   [""
    {#_#_:middleware [mw/token-auth mw/auth]
@@ -227,6 +278,44 @@
       (fn [_req]
         {:status 200
          :body (adoption/get-adoption-stats db)})}}]
+
+   ["/actions/get-ptv-orgs"
+    {:post
+     {:require-privilege ptv-feature-read-access?
+      :parameters {:body [:map]}
+      :handler
+      (fn [req]
+        {:status 200
+         :body (ptv-orgs-for-user db (:identity req))})}}]
+
+   ["/actions/get-ptv-managers-outside-orgs"
+    {:post
+     {:require-privilege :users/manage
+      :parameters {:body [:map]}
+      :handler
+      (fn [_req]
+        {:status 200
+         :body (ptv-core/ptv-managers-outside-orgs db)})}}]
+
+   ["/actions/get-ptv-member-suggestions"
+    {:post
+     {:require-privilege [org-scope-from-body :org/manage]
+      :parameters {:body [:map [:org-id :uuid]]}
+      :handler
+      (fn [req]
+        {:status 200
+         :body (ptv-core/ptv-member-suggestions db (-> req :parameters :body :org-id))})}}]
+
+   ["/actions/add-suggested-ptv-member"
+    {:post
+     {:require-privilege [org-scope-from-body :org/manage]
+      :parameters {:body [:map [:org-id :uuid] [:user-id :uuid]]}
+      :handler
+      (fn [req]
+        (let [{:keys [org-id user-id]} (-> req :parameters :body)]
+          {:status 200
+           :body (ptv-core/add-suggested-ptv-member! db org-id user-id
+                                                     (-> req :identity :id))}))}}]
 
    ["/actions/get-ptv-integration-candidates"
     {:post

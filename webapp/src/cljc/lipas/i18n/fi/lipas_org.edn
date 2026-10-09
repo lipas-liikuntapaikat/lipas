@@ -192,4 +192,8 @@
  :pending-approvals "Odottavat hyväksynnät"
 
  ;; site-page editing rights
- :editing-rights "Muokkausoikeudet"}
+ :editing-rights "Muokkausoikeudet"
+ ;; PTV member suggestions (members tab)
+ :ptv-suggestions-title "Ehdotetut jäsenet"
+ :ptv-suggestions-note "Näillä käyttäjillä on PTV-oikeudet organisaation kuntaan, mutta he eivät ole organisaation jäseniä. Lisääminen tekee heistä jäseniä ilman rooleja – valitse roolit lisäämisen jälkeen."
+ :ptv-suggestion-add "Lisää jäseneksi"}
