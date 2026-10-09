@@ -14,6 +14,7 @@
             ["@mui/material/TableCell$default" :as TableCell]
             ["@mui/material/TableHead$default" :as TableHead]
             ["@mui/material/TableRow$default" :as TableRow]
+            ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
             ["recharts/es6/cartesian/Bar" :refer [Bar]]
             ["recharts/es6/cartesian/CartesianGrid" :refer [CartesianGrid]]
@@ -36,20 +37,27 @@
 (def chart-font
   {:fontFamily "lato" :fontSize 12})
 
-(r/defc stat-tile [{:keys [value label caption]}]
-  [:> Grid {:size {:xs 12 :sm 6 :md 2.4}}
-   [:> Paper {:sx #js{:p 2 :bgcolor "#f5f5f5"}}
-    [:> Typography {:variant "h4"} (str value)]
-    [:> Typography {:color "textSecondary"} label]
-    [:> Typography {:variant "caption" :color "textSecondary"}
-     (or caption " ")]]])
+(r/defc stat-tile [{:keys [value label caption tooltip]}]
+  ;; height 100%: every tile fills its grid row, so a wrapping caption
+  ;; doesn't make one box taller than the rest
+  (let [tile [:> Paper {:sx #js{:p 2 :bgcolor "#f5f5f5" :height "100%" :boxSizing "border-box"}}
+              [:> Typography {:variant "h4"} (str value)]
+              [:> Typography {:color "textSecondary"} label]
+              [:> Typography {:variant "caption" :color "textSecondary"}
+               (or caption " ")]]]
+    [:> Grid {:size {:xs 12 :sm 6 :md 2.4}}
+     (if tooltip
+       [:> Tooltip {:title tooltip} tile]
+       tile)]))
 
 (r/defc summary-tiles [{:keys [totals monthly]}]
   (let [this-month (peek monthly)]
     [:> Grid {:container true :spacing 2 :sx #js{:mb 2}}
      [stat-tile {:value (:sites totals)
                  :label "Liikuntapaikkaa"
-                 :caption "joskus mukana PTV:ssä"}]
+                 :caption "integroitu elinkaarensa aikana"
+                 :tooltip (str "Kaikki liikuntapaikat, joille on joskus tallennettu PTV-tiedot. "
+                               "Sisältää myös paikat, joiden synkronointi on myöhemmin kytketty pois.")}]
      [stat-tile {:value (:municipalities totals)
                  :label "Kuntaa"}]
      [stat-tile {:value (:sync-enabled totals)
@@ -207,7 +215,7 @@
            [:> Typography {:variant "h6"} "Uudet liikuntapaikat kuukausittain"]
            [monthly-chart {:data chart-data}]]
           [:> Grid {:size {:xs 12 :lg 6}}
-           [:> Typography {:variant "h6"} "Integroidut liikuntapaikat yhteensä"]
+           [:> Typography {:variant "h6"} "Elinkaarensa aikana integroidut liikuntapaikat"]
            [cumulative-chart {:data chart-data}]]]
          [:> Typography {:variant "h6"} "Kunnittain"]
          [municipalities-table stats]])
