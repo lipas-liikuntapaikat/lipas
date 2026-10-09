@@ -59,18 +59,28 @@
                  :tooltip (str "Kaikki liikuntapaikat, joille on joskus tallennettu PTV-tiedot. "
                                "Sisältää myös paikat, joiden synkronointi on myöhemmin kytketty pois.")}]
      [stat-tile {:value (:municipalities totals)
-                 :label "Kuntaa"}]
+                 :label "Kuntaa"
+                 :tooltip "Kunnat, joissa vähintään yksi liikuntapaikka on integroitu elinkaarensa aikana."}]
      [stat-tile {:value (:sync-enabled totals)
                  :label "Synkronointi päällä"
                  :caption (when (pos? (:sync-pending totals))
-                            (str (:sync-pending totals) " ei vielä PTV:ssä"))}]
+                            (str (:sync-pending totals) " ei vielä PTV:ssä"))
+                 :tooltip (str "Liikuntapaikat, joiden PTV-synkronointi on nyt päällä. "
+                               "\"Ei vielä PTV:ssä\" ovat paikkoja, joille ei ole koskaan luotu palvelupaikkaa PTV:hen, "
+                               "esimerkiksi koska tietoja puuttuu tai vienti epäonnistui.")}]
      [stat-tile {:value (:published totals)
                  :label "Julkaistu PTV:ssä"
                  :caption (when (pos? (:deleted totals))
-                            (str (:deleted totals) " poistettu PTV:stä"))}]
+                            (str (:deleted totals) " poistettu PTV:stä"))
+                 ;; publishing status is what PTV returned at the last sync,
+                 ;; not a live PTV read
+                 :tooltip (str "Liikuntapaikat, joiden palvelupaikka on julkaistu PTV:ssä LIPASin viimeisimmän synkronoinnin mukaan. "
+                               "\"Poistettu PTV:stä\" tarkoittaa, että palvelupaikka on arkistoitu PTV:ssä. "
+                               "Luvut koskevat palvelupaikkoja, eivät PTV-palveluita.")}]
      [stat-tile {:value (or (:new this-month) 0)
                  :label "Uusia tässä kuussa"
-                 :caption (:month this-month)}]]))
+                 :caption (:month this-month)
+                 :tooltip "Liikuntapaikat, joille PTV-tiedot tallennettiin ensimmäisen kerran kuluvana kuukautena."}]]))
 
 (defn- month-tooltip
   "Recharts custom tooltip content: month, the value, and for the monthly
