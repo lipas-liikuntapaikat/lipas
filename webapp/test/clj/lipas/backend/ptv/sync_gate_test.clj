@@ -13,9 +13,11 @@
    throw before any PTV request."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [lipas.backend.core :as core]
+            [lipas.backend.email :as email]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.org :as backend-org]
             [lipas.backend.ptv.core :as ptv-core]
+            [lipas.data.ptv :as ptv-data]
             [lipas.test-utils :as tu]
             [ring.mock.request :as mock]))
 
@@ -253,13 +255,19 @@
       (is (contains? (suggested) (str (:id manager))))
       (is (not-any? :email (:parsed (post "/api/actions/get-ptv-member-suggestions"
                                           {:org-id org-id} admin)))))
-    (testing "the admin overview lists them with their org"
-      (let [rows (:parsed (post "/api/actions/get-ptv-managers-outside-orgs" {} admin))
-            row (some #(when (= (str (:id manager)) (:user-id %)) %) rows)]
-        (is (= org-id (get-in row [:org :id])))))
-    (testing "adding makes them a plain member and drops them from the suggestions"
-      (is (= 200 (:status (post "/api/actions/add-suggested-ptv-member"
-                                {:org-id org-id :user-id (str (:id manager))} admin))))
+    (testing "PTV rights from another org's template count too (same rule as the admin list)"
+      (let [other-org (backend-org/create-org (test-db) {:id (random-uuid)
+                                                         :name (str "No-PTV Org " (rand-int 1000000))
+                                                         :data {}})
+            via-other (org-ptv-member other-org own-city)]
+        (is (contains? (suggested) (str (:id via-other))))))
+    (testing "adding makes them a plain member, silently, and drops them from the suggestions"
+      (let [mails (atom [])]
+        (with-redefs [email/send-org-added-email! (fn [_ to _] (swap! mails conj to))
+                      email/send-org-invitation-email! (fn [_ to _] (swap! mails conj to))]
+          (is (= 200 (:status (post "/api/actions/add-suggested-ptv-member"
+                                    {:org-id org-id :user-id (str (:id manager))} admin)))))
+        (is (empty? @mails) "no 'added to an organization' email: users don't see org views"))
       (let [member (some #(when (= (str (:id manager)) (:user-id %)) %)
                          (:members (backend-org/get-org (test-db) (:id org))))]
         (is (some? member))
@@ -272,3 +280,35 @@
     (testing "non-admins of the org can't list or add"
       (is (= 403 (:status (post "/api/actions/get-ptv-member-suggestions"
                                 {:org-id org-id} manager)))))))
+
+;;; Admin PTV user list ;;;
+
+(deftest admin-ptv-user-list-test
+  (testing "/users carries org memberships and org-granted roles, and the PTV
+            user list derived from it covers both role models"
+    (let [org (seed-org! ptv-org-a [own-city])
+          org-id (str (:id org))
+          legacy (ptv-manager own-city)
+          member (org-ptv-member org own-city)
+          admin (tu/gen-admin-user :db-component (test-db))
+          users (tu/<-json (:body (test-app (-> (mock/request :get "/api/users")
+                                                (tu/token-header (jwt/create-token admin))))))
+          ptv-orgs (:parsed (post "/api/actions/get-ptv-orgs" {} admin))
+          rows (ptv-data/ptv-user-rows users ptv-orgs)
+          row-of (fn [user] (some #(when (= (str (:id user)) (:user-id %)) %) rows))
+          member-account (some #(when (= (str (:id member)) (str (:id %))) %) users)]
+      (testing "org-granted roles stay out of the stored :permissions"
+        (is (= [] (get-in member-account [:permissions :roles])))
+        (is (= [org-id] (map :id (:orgs member-account))))
+        (is (some #(= "ptv-manager" (:role %)) (:org-roles member-account))))
+      (testing "legacy: direct role, not a member of the covering org"
+        (is (= {:direct? true :via-org? false :member? false :org-id org-id :city-codes [own-city]}
+               (-> (row-of legacy)
+                   (select-keys [:direct? :via-org? :member? :city-codes])
+                   (assoc :org-id (get-in (row-of legacy) [:org :id]))))))
+      (testing "org member: rights from the org template, already a member"
+        (is (= {:direct? false :via-org? true :member? true :org-id org-id :city-codes [own-city]}
+               (-> (row-of member)
+                   (select-keys [:direct? :via-org? :member? :city-codes])
+                   (assoc :org-id (get-in (row-of member) [:org :id])))))))))
+

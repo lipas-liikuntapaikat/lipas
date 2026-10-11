@@ -116,6 +116,81 @@
                         (contains? (set (:owners ptv-data)) owner))))
              ptv-orgs)))
 
+;;; PTV users (admin list) ;;;
+
+(defn- ptv-manager-city-codes
+  "City-codes of the `ptv-manager` roles in `roles` (stored wire shape or
+  conformed). City-less (global) grants are skipped: they aren't tied to an org."
+  [roles]
+  (for [r roles
+        :when (= :ptv-manager (keyword (:role r)))
+        c (:city-code r)]
+    (long c)))
+
+(defn ptv-user-rows
+  "Accounts holding `ptv-manager` for a municipality, by either route, as rows
+  for the admin user list. `users` are admin user maps carrying the stored
+  `[:permissions :roles]` plus the read-only `:orgs` / `:org-roles` (see
+  `lipas.backend.org/with-org-info`); `ptv-orgs` are LIPAS orgs with
+  `:ptv-data`.
+
+  One row per (account, covering PTV org), or per (account, city) when no PTV
+  org covers the city:
+  - `:direct?`  a direct city-scoped role on the account (the legacy way)
+  - `:via-org?` granted by an org's role template
+  - `:org`      the PTV org covering the cities: the one the account is in,
+                else the only one (nil when none, or several and no membership:
+                `:ambiguous-org?`), and
+    `:member?`  whether the account already belongs to it
+  - `:orgs`     every org the account belongs to
+  Inactive accounts are left out."
+  [users ptv-orgs]
+  (let [city->orgs (reduce (fn [acc o]
+                             (reduce #(update %1 (long %2) (fnil conj []) o)
+                                     acc
+                                     (get-in o [:ptv-data :city-codes])))
+                           {}
+                           (filter #(get-in % [:ptv-data :org-id]) ptv-orgs))]
+    (->> users
+         (filter #(= "active" (:status %)))
+         (mapcat
+           (fn [u]
+             (let [grants (concat (for [c (ptv-manager-city-codes (get-in u [:permissions :roles]))]
+                                    [c :direct])
+                                  (for [c (ptv-manager-city-codes (:org-roles u))]
+                                    [c :org]))
+                   member-ids (set (map (comp str :id) (:orgs u)))
+                   ;; The org a city's PTV work belongs to for this account: one
+                   ;; it's already in, else the only covering org. Several
+                   ;; covering orgs and no membership: nothing to suggest.
+                   org-for (fn [c]
+                             (let [os (city->orgs c)]
+                               (or (some #(when (member-ids (str (:id %))) %) os)
+                                   (when (= 1 (count os)) (first os)))))]
+               (for [[_ gs] (group-by (fn [[c _]]
+                                        (if-let [o (org-for c)]
+                                          (str (:id o))
+                                          (str "city-" c)))
+                                      grants)
+                     :let [city-codes (vec (sort (distinct (map first gs))))
+                           org (org-for (first city-codes))
+                           sources (set (map second gs))]]
+                 {:user-id (str (:id u))
+                  :username (:username u)
+                  :email (:email u)
+                  :name (str/trim (str (get-in u [:user-data :firstname]) " "
+                                       (get-in u [:user-data :lastname])))
+                  :city-codes city-codes
+                  :org (when org {:id (str (:id org)) :name (:name org)})
+                  :ambiguous-org? (and (nil? org) (< 1 (count (city->orgs (first city-codes)))))
+                  :member? (boolean (and org (member-ids (str (:id org)))))
+                  :orgs (vec (:orgs u))
+                  :direct? (contains? sources :direct)
+                  :via-org? (contains? sources :org)}))))
+         (sort-by (juxt #(get-in % [:org :name] "~")
+                        #(str/lower-case (or (not-empty (:name %)) (:username %) ""))))
+         vec)))
+
 (defn resolve-org-id
   "The PTV org-id a site integrates under, or nil when it can't be determined.
    1. The persisted `[:ptv :org-id]` (authoritative once integrated).

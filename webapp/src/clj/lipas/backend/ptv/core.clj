@@ -775,51 +775,32 @@
   (when-let [site (core/get-sports-site db lipas-id)]
     (audit/save-site-audit! db user site audit)))
 
-(defn ptv-managers-outside-orgs
-  "Active accounts holding a DIRECT `ptv-manager` role for a municipality whose
-  covering PTV org they aren't a member of — one row per (account, city).
-  `:org` is nil when no PTV org covers that city (the org's PTV config is what's
-  missing then). Such managers can do PTV work (authority is city-scoped), but
-  membership drives audit emails and the org's member list, so admins add them.
-  City-less (global) ptv-manager roles are skipped: they aren't tied to an org."
-  [db]
-  (let [orgs (filter #(get-in % [:ptv-data :org-id]) (backend-org/all-orgs db))
-        city->org (into {} (for [o orgs c (get-in o [:ptv-data :city-codes])] [(long c) o]))
-        member? (fn [org user-id]
-                  (some #(= (str user-id) (str (:user-id %))) (:members org)))]
-    (->> (db/get-users db)
-         (filter #(= "active" (:status %)))
-         (mapcat (fn [user]
-                   (for [role (get-in user [:permissions :roles])
-                         :when (= :ptv-manager (keyword (:role role)))
-                         city-code (:city-code role)
-                         :let [org (city->org (long city-code))]
-                         :when (not (and org (member? org (:id user))))]
-                     {:user-id (str (:id user))
-                      :username (:username user)
-                      :email (:email user)
-                      :name (str/trim (str (get-in user [:user-data :firstname]) " "
-                                           (get-in user [:user-data :lastname])))
-                      :city-code (long city-code)
-                      :org (when org {:id (str (:id org)) :name (:name org)})})))
-         (sort-by (juxt #(get-in % [:org :name] "~") :city-code :username))
-         vec)))
-
 (defn ptv-member-suggestions
-  "`ptv-managers-outside-orgs` narrowed to one org, for its org-admins. No
-  emails: org-admins mustn't get a new way to enumerate accounts."
+  "Accounts with PTV rights for a municipality that `org-id` covers, but who
+  aren't its members — the same rule as the admin PTV user list
+  (`ptv-data/ptv-user-rows`), so both offer exactly the same people. For the
+  org's admins: names only, no emails, so org-admins don't get a new way to
+  enumerate accounts."
   [db org-id]
-  (->> (ptv-managers-outside-orgs db)
-       (filter #(= (str org-id) (get-in % [:org :id])))
-       (map #(select-keys % [:user-id :username :name :city-code]))
-       (distinct)
-       vec))
+  (let [users (backend-org/with-org-info db (db/get-users db))]
+    (->> (ptv-data/ptv-user-rows users (backend-org/all-orgs db))
+         (filter #(and (= (str org-id) (get-in % [:org :id]))
+                       (not (:member? %))))
+         (map #(select-keys % [:user-id :username :name]))
+         distinct
+         vec)))
 
 (defn add-suggested-ptv-member!
   "Adds a suggested PTV manager to the org as a plain member — which roles they
   get is the org-admin's call (Members tab). Only accounts from
   `ptv-member-suggestions` are accepted, so this can't add arbitrary accounts by
-  id."
+  id.
+
+  Silent on purpose: no email. Org management isn't a public feature; for PTV
+  the org is just where a municipality's PTV config lives, and these users
+  never see the org views, so a \"you've been added to an organization\" mail
+  would only confuse them. (An org invite does email: someone chose to
+  invite.)"
   [db org-id user-id author-id]
   (when-not (some #(= (str user-id) (:user-id %)) (ptv-member-suggestions db org-id))
     (throw (ex-info "Not a suggested member of this organization"

@@ -6,14 +6,23 @@
             ["@mui/material/Card$default" :as Card]
             ["@mui/material/CardContent$default" :as CardContent]
             ["@mui/material/CardHeader$default" :as CardHeader]
+            ["@mui/material/Chip$default" :as Chip]
+            ["@mui/material/FormControlLabel$default" :as FormControlLabel]
             ["@mui/material/Grid$default" :as Grid]
             ["@mui/material/LinearProgress$default" :as LinearProgress]
+            ["@mui/material/MenuItem$default" :as MenuItem]
             ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Stack$default" :as Stack]
+            ["@mui/material/Switch$default" :as Switch]
+            ["@mui/material/Tab$default" :as Tab]
             ["@mui/material/Table$default" :as Table]
             ["@mui/material/TableBody$default" :as TableBody]
             ["@mui/material/TableCell$default" :as TableCell]
             ["@mui/material/TableHead$default" :as TableHead]
             ["@mui/material/TableRow$default" :as TableRow]
+            ["@mui/material/TableSortLabel$default" :as TableSortLabel]
+            ["@mui/material/Tabs$default" :as Tabs]
+            ["@mui/material/TextField$default" :as TextField]
             ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
             ["recharts/es6/cartesian/Bar" :refer [Bar]]
@@ -25,11 +34,13 @@
             ["recharts/es6/chart/LineChart" :refer [LineChart]]
             ["recharts/es6/component/ResponsiveContainer" :refer [ResponsiveContainer]]
             ["recharts/es6/component/Tooltip" :refer [Tooltip] :rename {Tooltip ChartTooltip}]
+            [clojure.string :as str]
             [lipas.ui.admin.ptv-adoption.events :as events]
             [lipas.ui.admin.ptv-adoption.subs :as subs]
             [re-frame.core :as rf]
             [reagent.core :as r]
-            [reagent.hooks :as hooks]))
+            [reagent.hooks :as hooks]
+            [reitit.frontend.easy :as rfe]))
 
 ;; Single-series charts: one hue (the jobs view's validated blue), no legend.
 (def series-color "#2a78d6")
@@ -142,56 +153,141 @@
        [:> TableCell first-month]
        [:> TableCell latest-month]])]])
 
-(r/defc outside-managers-section
-  "PTV managers (direct city-scoped role) who aren't members of the org covering
-  their municipality. They can do PTV work without membership, but membership
-  drives audit emails and the org's member list. Adding is plain membership —
-  roles stay the org-admin's call."
+(r/defc users-filters []
+  (let [{:keys [search source not-member?]} @(rf/subscribe [::subs/users-filter])
+        set-filter (fn [k v] (rf/dispatch [::events/set-users-filter k v]))]
+    [:> Stack {:direction "row" :spacing 2 :alignItems "center"
+               :sx #js{:mb 2 :flexWrap "wrap" :rowGap 1}}
+     [:> TextField {:size "small"
+                    :label "Hae"
+                    :placeholder "Nimi, sähköposti, kunta tai organisaatio"
+                    :value (or search "")
+                    :on-change #(set-filter :search (.. % -target -value))
+                    :sx #js{:minWidth 320}}]
+     [:> TextField {:size "small"
+                    :select true
+                    :label "Oikeuden lähde"
+                    :value (or source "all")
+                    :on-change #(set-filter :source (.. % -target -value))
+                    :sx #js{:minWidth 220}}
+      [:> MenuItem {:value "all"} "Kaikki"]
+      [:> MenuItem {:value "org"} "Organisaation kautta"]
+      [:> MenuItem {:value "direct"} "Suora oikeus kuntaan"]]
+     [:> FormControlLabel
+      {:label "Vain ne, jotka eivät ole kuntansa organisaatiossa"
+       :control (r/as-element
+                  [:> Switch {:checked (boolean not-member?)
+                              :on-change #(set-filter :not-member? (.. % -target -checked))}])}]]))
+
+(r/defc sortable-header [{:keys [column label sort-by sort-dir]}]
+  (let [active? (= column sort-by)]
+    [:> TableCell {:sortDirection (if active? sort-dir false)}
+     [:> TableSortLabel {:active active?
+                         :direction (if active? sort-dir "asc")
+                         :on-click #(rf/dispatch [::events/sort-users column])}
+      label]]))
+
+(r/defc users-table [{:keys [rows]}]
+  (let [{:keys [sort-by sort-dir]} @(rf/subscribe [::subs/users-filter])
+        sort-props {:sort-by (or sort-by "user") :sort-dir (or sort-dir "asc")}]
+    [:> Table {:size "small"}
+     [:> TableHead
+      [:> TableRow
+       [sortable-header (assoc sort-props :column "user" :label "Käyttäjä")]
+       [sortable-header (assoc sort-props :column "cities" :label "Kunnat")]
+       [sortable-header (assoc sort-props :column "orgs" :label "Organisaatiot")]
+       [sortable-header (assoc sort-props :column "source" :label "Oikeuden lähde")]
+       [:> TableCell "Toiminnot"]]]
+     [:> TableBody
+      (for [{:keys [user-id name username email cities orgs org member? direct? via-org?] :as row} rows]
+        ^{:key (str user-id "-" (or (:id org) (first cities)))}
+        [:> TableRow
+         [:> TableCell
+          [:> Typography {:variant "body2"} (if (seq name) name username)]
+          [:> Typography {:variant "caption" :color "textSecondary"} email]]
+         [:> TableCell (str/join ", " cities)]
+         [:> TableCell
+          (if (seq orgs)
+            (str/join ", " (map :name orgs))
+            [:> Typography {:variant "body2" :color "textSecondary"} "–"])]
+         [:> TableCell
+          [:> Stack {:direction "row" :spacing 0.5 :sx #js{:flexWrap "wrap" :rowGap 0.5}}
+           (when via-org?
+             [:> Tooltip {:title "PTV-oikeudet tulevat organisaation roolipohjasta."}
+              [:> Chip {:size "small" :label "Organisaatio"}]])
+           (when direct?
+             [:> Tooltip {:title "PTV-oikeudet on annettu suoraan käyttäjälle kuntaan (vanha tapa)."}
+              [:> Chip {:size "small" :variant "outlined" :label "Suora (kunta)"}]])]]
+         [:> TableCell
+          ;; Only for the org the user's PTV municipality points to (no
+          ;; covering org, or several and no membership: nothing to offer).
+          ;; Not a member yet → add (silently); a member → its member
+          ;; management, where the org-admin picks roles.
+          (when org
+            (if member?
+              [:> Button {:size "small"
+                          :variant "text"
+                          :href (rfe/href :lipas.ui.routes/org
+                                          {:org-id (:id org)}
+                                          {:tab "members"})
+                          :sx #js{:textTransform "none"}}
+               (str "Hallitse jäseniä: " (:name org))]
+              [:> Button {:size "small"
+                          :variant "outlined"
+                          :disabled @(rf/subscribe [::subs/adding? user-id])
+                          ;; Confirmed first: changes membership, no undo here
+                          :on-click #(rf/dispatch
+                                       [:lipas.ui.events/confirm
+                                        (str "Lisätäänkö " (if (seq name) name username)
+                                             " jäseneksi organisaatioon \"" (:name org) "\"? "
+                                             "Jäsenyys ei anna rooleja, eikä käyttäjälle lähetetä sähköpostia.")
+                                        (fn [] (rf/dispatch [::events/add-to-org row]))])
+                          :sx #js{:textTransform "none"}}
+               (str "Lisää jäseneksi: " (:name org))]))]])]]))
+
+(r/defc users-tab
+  "Accounts with PTV rights, by either route: an org role template or a direct
+  city-scoped role (the legacy way). Adding a direct-role user to their city's
+  org is plain membership — roles stay the org-admin's call."
   []
-  (let [rows @(rf/subscribe [::subs/outside-managers])
-        loading? @(rf/subscribe [::subs/outside-managers-loading?])]
+  (let [rows @(rf/subscribe [::subs/filtered-ptv-users])
+        all-rows @(rf/subscribe [::subs/ptv-users])]
     (hooks/use-effect
       (fn []
-        (rf/dispatch [::events/fetch-outside-managers])
+        (rf/dispatch [::events/fetch-users])
         js/undefined)
       [])
     [:<>
-     [:> Typography {:variant "h6" :sx #js{:mt 3}}
-      "PTV-käsittelijät, jotka eivät ole kuntansa organisaation jäseniä"]
-     [:> Typography {:variant "body2" :color "textSecondary" :sx #js{:mb 1}}
-      (str "Käyttäjillä on PTV-oikeudet kuntaan, mutta he eivät ole kunnan organisaation jäseniä. "
-           "Jäseneksi lisääminen ei anna rooleja: organisaation ylläpitäjä päättää ne Jäsenet-välilehdellä. "
-           "Jos kunnalle ei ole PTV-organisaatiota, sen PTV-asetukset puuttuvat.")]
-     (when loading?
-       [:> LinearProgress])
-     (if (and (some? rows) (empty? rows))
-       [:> Typography {:variant "body2"} "Ei puuttuvia jäsenyyksiä."]
-       [:> Table {:size "small"}
-        [:> TableHead
-         [:> TableRow
-          [:> TableCell "Käyttäjä"]
-          [:> TableCell "Sähköposti"]
-          [:> TableCell {:align "right"} "Kuntakoodi"]
-          [:> TableCell "Organisaatio"]
-          [:> TableCell]]]
-        [:> TableBody
-         (for [{:keys [user-id name username email city-code org] :as row} rows]
-           ^{:key (str user-id "-" city-code)}
-           [:> TableRow
-            [:> TableCell (if (seq name) name username)]
-            [:> TableCell email]
-            [:> TableCell {:align "right"} city-code]
-            [:> TableCell (or (:name org) [:em "Ei PTV-organisaatiota"])]
-            [:> TableCell {:align "right"}
-             (when org
-               [:> Button {:size "small"
-                           :variant "outlined"
-                           :disabled @(rf/subscribe [::subs/adding? email])
-                           :on-click #(rf/dispatch [::events/add-to-org row])}
-                "Lisää jäseneksi"])]])]])]))
+     [:> Typography {:variant "body2" :color "textSecondary" :sx #js{:mb 2}}
+      (str "Käyttäjät, joilla on PTV-oikeudet johonkin kuntaan joko organisaation roolipohjan kautta "
+           "tai suoraan käyttäjälle annettuna (vanha tapa). Jäseneksi lisääminen ei anna rooleja: "
+           "organisaation ylläpitäjä päättää ne Jäsenet-välilehdellä.")]
+     [users-filters]
+     (if (nil? all-rows)
+       [:> LinearProgress]
+       [:<>
+        [:> Typography {:variant "body2" :sx #js{:mb 1}}
+         (str (count rows) " / " (count all-rows) " riviä")]
+        (if (empty? rows)
+          [:> Typography {:variant "body2"} "Ei hakuehtoja vastaavia käyttäjiä."]
+          [users-table {:rows rows}])])]))
+
+(r/defc overview-tab [{:keys [stats chart-data]}]
+  [:<>
+   [summary-tiles stats]
+   [:> Grid {:container true :spacing 2 :sx #js{:mb 2}}
+    [:> Grid {:size {:xs 12 :lg 6}}
+     [:> Typography {:variant "h6"} "Uudet liikuntapaikat kuukausittain"]
+     [monthly-chart {:data chart-data}]]
+    [:> Grid {:size {:xs 12 :lg 6}}
+     [:> Typography {:variant "h6"} "Elinkaarensa aikana integroidut liikuntapaikat"]
+     [cumulative-chart {:data chart-data}]]]
+   [:> Typography {:variant "h6"} "Kunnittain"]
+   [municipalities-table stats]])
 
 (r/defc ptv-adoption-tab []
-  (let [stats @(rf/subscribe [::subs/stats])
+  (let [[tab set-tab] (hooks/use-state "overview")
+        stats @(rf/subscribe [::subs/stats])
         chart-data @(rf/subscribe [::subs/chart-data])
         loading? @(rf/subscribe [::subs/loading?])
         error @(rf/subscribe [::subs/error])]
@@ -203,30 +299,30 @@
     [:> Card {:square true}
      [:> CardHeader
       {:title "PTV-integraation käyttöönotto"
-       :subheader (r/as-element
-                    [:<>
-                     "Liikuntapaikka lasketaan sen ensimmäisen PTV-tietoja sisältävän version kuukaudelle."
-                     (when-let [t (:generated-at stats)]
-                       (str " Päivitetty " (.toLocaleString (js/Date. t) "fi-FI") "."))])
+       :subheader (when (= "overview" tab)
+                    "Liikuntapaikka lasketaan sen ensimmäisen PTV-tietoja sisältävän version kuukaudelle.")
        :action (r/as-element
-                 [:> Button {:on-click #(rf/dispatch [::events/fetch])
-                             :disabled loading?}
-                  "Päivitä"])}]
+                 [:> Stack {:alignItems "flex-end"}
+                  [:> Button {:on-click #(rf/dispatch (if (= "overview" tab)
+                                                        [::events/fetch]
+                                                        [::events/fetch-users]))
+                              :disabled loading?}
+                   "Päivitä"]
+                  (when-let [t (and (= "overview" tab) (:generated-at stats))]
+                    [:> Typography {:variant "caption" :color "textSecondary"}
+                     (str "Päivitetty " (.toLocaleString (js/Date. t) "fi-FI"))])])}]
      [:> CardContent
-      (when loading?
-        [:> LinearProgress {:sx #js{:mb 2}}])
-      (when error
-        [:> Alert {:severity "error" :sx #js{:mb 2}} (str error)])
-      (when stats
+      [:> Tabs {:value tab
+                :on-change (fn [_e v] (set-tab v))
+                :sx #js{:mb 2}}
+       [:> Tab {:value "overview" :label "Yleiskatsaus"}]
+       [:> Tab {:value "users" :label "Käyttäjät"}]]
+      (case tab
+        "users" [users-tab]
         [:<>
-         [summary-tiles stats]
-         [:> Grid {:container true :spacing 2 :sx #js{:mb 2}}
-          [:> Grid {:size {:xs 12 :lg 6}}
-           [:> Typography {:variant "h6"} "Uudet liikuntapaikat kuukausittain"]
-           [monthly-chart {:data chart-data}]]
-          [:> Grid {:size {:xs 12 :lg 6}}
-           [:> Typography {:variant "h6"} "Elinkaarensa aikana integroidut liikuntapaikat"]
-           [cumulative-chart {:data chart-data}]]]
-         [:> Typography {:variant "h6"} "Kunnittain"]
-         [municipalities-table stats]])
-      [outside-managers-section]]]))
+         (when loading?
+           [:> LinearProgress {:sx #js{:mb 2}}])
+         (when error
+           [:> Alert {:severity "error" :sx #js{:mb 2}} (str error)])
+         (when stats
+           [overview-tab {:stats stats :chart-data chart-data}])])]]))

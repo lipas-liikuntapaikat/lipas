@@ -417,7 +417,9 @@
            :handler
            (fn [_]
              {:status 200
-              :body (core/get-users db)})}}]
+              ;; + read-only :orgs / :org-roles (org membership grants
+              ;; roles that aren't stored on the account)
+              :body (org/with-org-info db (core/get-users db))})}}]
 
       ;; =====================================================================
       ;; Org management — CQRS actions (POST /actions/<command>,

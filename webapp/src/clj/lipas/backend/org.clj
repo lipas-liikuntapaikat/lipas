@@ -620,6 +620,29 @@
   [db user-id]
   (derive-org-roles user-id (user-orgs db user-id)))
 
+(defn with-org-info
+  "Adds read-only org data to `users` (account maps) for the admin user list:
+  `:orgs` the orgs each belongs to (`{:id :name}`) and `:org-roles` the roles
+  those memberships project — the same `derive-org-roles` login uses, in the
+  stored wire shape. Kept apart from `:permissions` on purpose: these roles
+  aren't stored, and the admin save sends `:permissions` back verbatim. Reads
+  the orgs once for all users."
+  [db users]
+  (let [orgs (all-orgs db)
+        orgs-by-member (reduce (fn [acc o]
+                                 (reduce #(update %1 (str (:user-id %2)) (fnil conj []) o)
+                                         acc
+                                         (:members o)))
+                               {}
+                               orgs)]
+    (for [u users
+          ;; distinct: an org whose member list repeats the account (seen
+          ;; in old data) is still one membership
+          :let [member-of (distinct (orgs-by-member (str (:id u)) []))]]
+      (assoc u
+             :orgs (mapv #(hash-map :id (str (:id %)) :name (:name %)) member-of)
+             :org-roles (derive-org-roles (:id u) member-of)))))
+
 (defn enrich-org-roles
   "Project the user's org-derived roles and merge them into the user's roles.
   Both existing and derived roles are conformed to the same (keyword/set) shape
