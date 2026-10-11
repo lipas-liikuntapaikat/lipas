@@ -1489,6 +1489,15 @@
         (and (ptv-candidate? site) (not (ptv-ready? site)))
         (conj :ptv/missing-texts)))))
 
+(def server-owned-ptv-keys
+  "`:ptv` keys only the PTV sync writes: what PTV returned and when. A user save
+  never sets them — `core/check-ptv-save!` keeps them from the previous
+  revision — so a browser holding an outdated copy of the site can't roll them
+  back. (Seen in prod: a site archived by one save was marked incorrect-data
+  seconds later with its pre-archive :ptv, leaving LIPAS saying Published.)"
+  [:publishing-status :last-sync :source-id :service-channel-ids
+   :previous-type-code :error])
+
 (def user-controlled-ptv-keys
   "`:ptv` keys an editor sets through the site form. A save that changes any of
   them is a PTV action and needs :ptv/manage; the rest of `:ptv` is written by

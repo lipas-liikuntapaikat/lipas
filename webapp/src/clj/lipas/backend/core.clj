@@ -1645,6 +1645,16 @@
   [db]
   (filterv #(get-in % [:ptv-data :org-id]) (org/all-orgs db)))
 
+(defn- keep-server-owned-ptv
+  "`sports-site` with the `ptv-data/server-owned-ptv-keys` taken from `prev`
+  (dropped when `prev` has none), whatever the client sent."
+  [prev sports-site]
+  (if (:ptv sports-site)
+    (update sports-site :ptv
+            #(merge (apply dissoc % ptv-data/server-owned-ptv-keys)
+                    (select-keys (:ptv prev) ptv-data/server-owned-ptv-keys)))
+    sports-site))
+
 (defn check-ptv-save!
   "Hard gate for the `:ptv` part of a user-facing site save. Returns the site
   to persist (org-id filled in when it can be derived) or throws.
@@ -1656,6 +1666,8 @@
   - The org-id must be the site's persisted one or the org whose PTV config
     covers the site — never an arbitrary org that LIPAS would then write to
     with its own PTV credentials.
+  - The PTV sync's own record (`ptv-data/server-owned-ptv-keys`: publishing
+    status, last sync, PTV ids, error) always comes from `prev`.
   - A PTV edit that leaves sync on must leave the site syncable
     (`ptv-data/sync-blockers`), otherwise it's rejected. An untouched-but-
     unsyncable `:ptv` doesn't block unrelated edits; `sync-ptv!` stores a
@@ -1663,7 +1675,8 @@
   [db user prev sports-site draft?]
   (if-not (or (:ptv sports-site) (:ptv prev))
     sports-site
-    (let [edited? (ptv-data/ptv-edited? prev sports-site)
+    (let [sports-site (keep-server-owned-ptv prev sports-site)
+          edited? (ptv-data/ptv-edited? prev sports-site)
           city-code (get-in sports-site [:location :city :city-code])
           orgs (delay (ptv-orgs db))
           derived-org-id (delay (ptv-data/resolve-org-id

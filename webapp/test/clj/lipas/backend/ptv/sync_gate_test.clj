@@ -216,6 +216,49 @@
       (is (= "Uusi nimi" (:name stored)))
       (is (= ["ptv/no-org"] (map name (get-in stored [:ptv :error :blockers])))))))
 
+;;; Server-owned :ptv keys ;;;
+
+(deftest stale-ptv-lifecycle-keys-are-ignored-test
+  (testing "a save carrying an outdated copy of the PTV record can't roll it back
+            (prod: archived, then marked incorrect-data with the pre-archive :ptv,
+            leaving LIPAS saying Published)"
+    (seed-org! ptv-org-a [own-city])
+    (with-sync-stub
+      (fn []
+        (let [published (merge {:sync-enabled true :org-id ptv-org-a
+                                :publishing-status "Published"
+                                :last-sync "2025-11-13T08:33:46.000Z"
+                                :source-id "lipas-src-1"
+                                :service-channel-ids ["channel-1"]
+                                :service-ids ["service-1"]}
+                               texts)
+              ;; what the archive sync stored
+              archived (-> published
+                           (assoc :publishing-status "Deleted"
+                                  :last-sync "2026-01-13T06:06:39.000Z")
+                           (dissoc :source-id :service-channel-ids))
+              site (seed-site! own-city archived)
+              resp (save! (ptv-manager own-city)
+                          (assoc site :status "incorrect-data" :ptv published))
+              stored (:ptv (current (:lipas-id site)))]
+          (is (= 201 (:status resp)))
+          (is (= "Deleted" (:publishing-status stored)))
+          (is (= "2026-01-13T06:06:39.000Z" (:last-sync stored)))
+          (is (nil? (:source-id stored)))
+          (is (empty? (:service-channel-ids stored)))
+          (is (empty? @sync-calls) "nothing in PTV to archive any more"))))
+    (testing "...and a client can't claim lifecycle state for a site never in PTV"
+      (with-sync-stub
+        (fn []
+          (let [site (seed-site! own-city)
+                _ (save! (ptv-manager own-city)
+                         (assoc site :ptv {:sync-enabled false
+                                           :publishing-status "Published"
+                                           :source-id "forged"}))
+                stored (:ptv (current (:lipas-id site)))]
+            (is (nil? (:publishing-status stored)))
+            (is (nil? (:source-id stored)))))))))
+
 ;;; Org listing ;;;
 
 (deftest get-ptv-orgs-test
