@@ -1708,6 +1708,26 @@
 
 ;; TODO refactor upsert-sports-site!, upsert-sports-site!* and
 ;; save-sports-site! to form more sensible API.
+(defn- clamp-future-event-date
+  "`sports-site` with an `:event-date` in the future (per the server clock)
+  replaced by now. The browser dates a user's revision, the server dates the
+  PTV sync's revision written right after it, and the newest revision is the
+  current one. A browser clock running ahead therefore made the user's own,
+  pre-sync revision win over the sync's result (in prod: sites archived in
+  PTV whose current revision still said Published, re-marked incorrect-data
+  by the backdating rule in db/upsert-sports-site!). Backdating is untouched."
+  [sports-site]
+  (let [event-date (:event-date sports-site)
+        submitted (try (some-> event-date java.time.Instant/parse)
+                       (catch Exception _ nil))
+        now (java.time.Instant/now)]
+    (if (and submitted (.isAfter submitted now))
+      (do (log/infof "Clamped future event-date of site %s by %d ms (client clock ahead)"
+                     (:lipas-id sports-site)
+                     (- (.toEpochMilli submitted) (.toEpochMilli now)))
+          (assoc sports-site :event-date (utils/timestamp)))
+      sports-site)))
+
 (defn save-sports-site!
   "Saves sports-site to db and search and appends it to outbound
   integrations queue."
@@ -1719,7 +1739,9 @@
    ;; approve! — they call upsert-sports-site!* directly). This fn serves the
    ;; user-facing save endpoint, so strip it here to keep the audit column
    ;; unforgeable via POST /sports-sites (the save schema is :closed false).
-   (let [sports-site (dissoc sports-site :acting-org-id)
+   (let [sports-site (-> sports-site
+                         (dissoc :acting-org-id)
+                         clamp-future-event-date)
 
          ;; Phase 1: All DB operations inside the transaction.
          ;; ES indexing is deliberately outside the transaction so that

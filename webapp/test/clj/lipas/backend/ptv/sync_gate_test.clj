@@ -259,6 +259,39 @@
             (is (nil? (:publishing-status stored)))
             (is (nil? (:source-id stored)))))))))
 
+(deftest browser-clock-ahead-cant-outrank-ptv-sync-test
+  (testing "closing a site from a browser whose clock runs ahead: the PTV sync's
+            archive revision stays current (prod: the user's browser-dated,
+            pre-archive revision won and was re-marked incorrect-data)"
+    (seed-org! ptv-org-a [own-city])
+    (let [published (merge {:sync-enabled true :org-id ptv-org-a
+                            :publishing-status "Published"
+                            :last-sync "2026-01-01T00:00:00.000Z"
+                            :source-id "lipas-src-1"
+                            :service-channel-ids ["channel-1"]
+                            :service-ids ["service-1"]}
+                           texts)
+          site (seed-site! own-city published)
+          ahead (str (.plusSeconds (java.time.Instant/now) 30))]
+      ;; like the real sync: archive, then write a server-dated revision
+      (with-redefs [ptv-core/sync-ptv! (fn [tx _search _ptv user {:keys [sports-site ptv]}]
+                                         (let [now (str (java.time.Instant/now))
+                                               archived (assoc ptv :publishing-status "Deleted"
+                                                               :last-sync now)]
+                                           (core/upsert-sports-site! tx user (assoc sports-site
+                                                                                    :event-date now
+                                                                                    :ptv archived)
+                                                                     false)
+                                           {:ptv archived :event-date now}))]
+        (is (= 201 (:status (post "/api/sports-sites"
+                                  (assoc site
+                                         :status "out-of-service-permanently"
+                                         :event-date ahead)
+                                  (ptv-manager own-city))))))
+      (let [stored (current (:lipas-id site))]
+        (is (= "out-of-service-permanently" (:status stored)))
+        (is (= "Deleted" (get-in stored [:ptv :publishing-status])))))))
+
 ;;; Org listing ;;;
 
 (deftest get-ptv-orgs-test
