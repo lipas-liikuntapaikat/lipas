@@ -1727,7 +1727,15 @@
          ;; Worst case: data in DB but not in ES, fixable by reindexing.
          {:keys [prev resp]}
          (jdbc/with-db-transaction [tx db]
-           (let [;; The revision this save replaces, read in the same tx,
+           (let [;; Saves of the same site run one at a time: the next one
+                 ;; reads `prev` only after this one (and its PTV sync) has
+                 ;; committed. Without it, two near-simultaneous saves (seen in
+                 ;; prod 70 ms apart) both read the pre-sync revision, and the
+                 ;; second rolls back what the first's sync stored.
+                 _ (when-let [lipas-id (:lipas-id sports-site)]
+                     (jdbc/query tx ["SELECT pg_advisory_xact_lock(hashtext('sports_site'), ?::int)"
+                                     lipas-id]))
+                 ;; The revision this save replaces, read in the same tx,
                  ;; for diffing which background jobs the edit requires
                  prev (when-let [lipas-id (:lipas-id sports-site)]
                         (get-sports-site tx lipas-id))
