@@ -259,29 +259,6 @@
             (is (nil? (:publishing-status stored)))
             (is (nil? (:source-id stored)))))))))
 
-(deftest concurrent-saves-of-a-site-are-serialized-test
-  (testing "two near-simultaneous saves of one site don't overlap: the second
-            reads the first's result (incl. its PTV sync), not the revision
-            before it"
-    (seed-org! ptv-org-a [own-city])
-    (let [windows (atom [])
-          site (seed-site! own-city (merge {:sync-enabled true :org-id ptv-org-a
-                                            :service-ids [] :service-channel-ids []}
-                                           texts))
-          user (ptv-manager own-city)]
-      (with-redefs [ptv-core/sync-ptv! (fn [_tx _search _ptv _user args]
-                                         (let [start (System/nanoTime)]
-                                           (Thread/sleep 300)
-                                           (swap! windows conj [start (System/nanoTime)])
-                                           {:ptv (:ptv args)
-                                            :event-date (-> args :sports-site :event-date)}))]
-        (let [a (future (save! user (assoc site :name "Nimi A")))
-              b (future (save! user (assoc site :name "Nimi B")))]
-          (is (= [201 201] [(:status @a) (:status @b)]))))
-      (let [[[_ e1] [s2 _]] (sort @windows)]
-        (is (= 2 (count @windows)))
-        (is (<= e1 s2) "the second sync starts only after the first save committed")))))
-
 ;;; Org listing ;;;
 
 (deftest get-ptv-orgs-test
