@@ -37,6 +37,7 @@
             [clojure.string :as str]
             [lipas.ui.admin.ptv-adoption.events :as events]
             [lipas.ui.admin.ptv-adoption.subs :as subs]
+            [lipas.ui.utils :as ui-utils]
             [re-frame.core :as rf]
             [reagent.core :as r]
             [reagent.hooks :as hooks]
@@ -48,50 +49,62 @@
 (def chart-font
   {:fontFamily "lato" :fontSize 12})
 
-(r/defc stat-tile [{:keys [value label caption tooltip]}]
+(r/defc stat-tile [{:keys [value label caption tooltip on-click alert?]}]
   ;; height 100%: every tile fills its grid row, so a wrapping caption
   ;; doesn't make one box taller than the rest
-  (let [tile [:> Paper {:sx #js{:p 2 :bgcolor "#f5f5f5" :height "100%" :boxSizing "border-box"}}
-              [:> Typography {:variant "h4"} (str value)]
+  (let [tile [:> Paper {:sx #js{:p 2
+                                :bgcolor (if alert? "#fdecea" "#f5f5f5")
+                                :height "100%"
+                                :boxSizing "border-box"
+                                :cursor (when on-click "pointer")}
+                        :on-click on-click}
+              [:> Typography {:variant "h4" :color (when alert? "error")} (str value)]
               [:> Typography {:color "textSecondary"} label]
               [:> Typography {:variant "caption" :color "textSecondary"}
                (or caption " ")]]]
-    [:> Grid {:size {:xs 12 :sm 6 :md 2.4}}
+    [:> Grid {:size {:xs 12 :sm 6 :md 3}}
      (if tooltip
        [:> Tooltip {:title tooltip} tile]
        tile)]))
 
-(r/defc summary-tiles [{:keys [totals monthly]}]
-  (let [this-month (peek monthly)]
+(defn- join-parts [& parts]
+  (not-empty (str/join " · " (remove nil? parts))))
+
+(r/defc summary-tiles
+  "Four current-state numbers that read as one sentence: N sites in PTV from N
+  municipalities, N need attention, N new this month. History is in the charts."
+  [{:keys [totals on-attention]}]
+  (let [{:keys [in-ptv in-ptv-sync-off municipalities attention attention-never-reached
+                attention-failing warnings new-this-month]} totals]
     [:> Grid {:container true :spacing 2 :sx #js{:mb 2}}
-     [stat-tile {:value (:sites totals)
-                 :label "Liikuntapaikkaa"
-                 :caption "integroitu elinkaarensa aikana"
-                 :tooltip (str "Kaikki liikuntapaikat, joille on joskus tallennettu PTV-tiedot. "
-                               "Sisältää myös paikat, joiden synkronointi on myöhemmin kytketty pois.")}]
-     [stat-tile {:value (:municipalities totals)
-                 :label "Kuntaa"
-                 :tooltip "Kunnat, joissa vähintään yksi liikuntapaikka on integroitu elinkaarensa aikana."}]
-     [stat-tile {:value (:sync-enabled totals)
-                 :label "Synkronointi päällä"
-                 :caption (when (pos? (:sync-pending totals))
-                            (str (:sync-pending totals) " ei vielä PTV:ssä"))
-                 :tooltip (str "Liikuntapaikat, joiden PTV-synkronointi on nyt päällä. "
-                               "\"Ei vielä PTV:ssä\" ovat paikkoja, joille ei ole koskaan luotu palvelupaikkaa PTV:hen, "
-                               "esimerkiksi koska tietoja puuttuu tai vienti epäonnistui.")}]
-     [stat-tile {:value (:published totals)
-                 :label "Julkaistu PTV:ssä"
-                 :caption (when (pos? (:deleted totals))
-                            (str (:deleted totals) " poistettu PTV:stä"))
-                 ;; publishing status is what PTV returned at the last sync,
-                 ;; not a live PTV read
+     [stat-tile {:value in-ptv
+                 :label "Liikuntapaikkaa PTV:ssä"
+                 :caption (when (pos? in-ptv-sync-off)
+                            (str in-ptv-sync-off " ei enää päivity LIPASista"))
                  :tooltip (str "Liikuntapaikat, joiden palvelupaikka on julkaistu PTV:ssä LIPASin viimeisimmän synkronoinnin mukaan. "
-                               "\"Poistettu PTV:stä\" tarkoittaa, että palvelupaikka on arkistoitu PTV:ssä. "
-                               "Luvut koskevat palvelupaikkoja, eivät PTV-palveluita.")}]
-     [stat-tile {:value (or (:new this-month) 0)
-                 :label "Uusia tässä kuussa"
-                 :caption (:month this-month)
-                 :tooltip "Liikuntapaikat, joille PTV-tiedot tallennettiin ensimmäisen kerran kuluvana kuukautena."}]]))
+                               "Luvut koskevat palvelupaikkoja, eivät PTV-palveluita. "
+                               "\"Ei enää päivity\" ovat julkaistuja paikkoja, joiden synkronointi on pois päältä.")}]
+     [stat-tile {:value municipalities
+                 :label "Kuntaa"
+                 :tooltip "Kunnat, joilla on vähintään yksi liikuntapaikka julkaistuna PTV:ssä."}]
+     [stat-tile {:value attention
+                 :label "Vaatii huomiota"
+                 :alert? (pos? attention)
+                 :on-click on-attention
+                 :caption (join-parts
+                            (when (pos? attention-never-reached)
+                              (str attention-never-reached " ei koskaan viety"))
+                            (when (pos? attention-failing)
+                              (str attention-failing " päivitys epäonnistui"))
+                            (when (pos? warnings)
+                              (str "+ " warnings " huomautusta")))
+                 :tooltip (str "Liikuntapaikat, joiden synkronointi on päällä, mutta jotka eivät ole PTV:ssä ajan tasalla: "
+                               "vienti ei ole koskaan onnistunut tai viimeisin päivitys epäonnistui. "
+                               "Huomautukset ovat PTV:ssä olevia paikkoja, joiden tilaa kannattaa tarkistaa. "
+                               "Napsauta nähdäksesi syyt.")}]
+     [stat-tile {:value new-this-month
+                 :label "Uusia PTV:ssä tässä kuussa"
+                 :tooltip "Liikuntapaikat, jotka julkaistiin PTV:ssä ensimmäisen kerran kuluvana kuukautena."}]]))
 
 (defn- month-tooltip
   "Recharts custom tooltip content: month, the value, and for the monthly
@@ -134,24 +147,29 @@
    [:> TableHead
     [:> TableRow
      [:> TableCell "Kunta"]
-     [:> TableCell {:align "right"} "Liikuntapaikkoja"]
+     [:> TableCell {:align "right"} "PTV:ssä"]
+     [:> TableCell {:align "right"} "Vaatii huomiota"]
+     [:> TableCell {:align "right"} "Huomautuksia"]
      [:> TableCell {:align "right"} "Synkronointi päällä"]
-     [:> TableCell {:align "right"} "Julkaistu"]
      [:> TableCell {:align "right"} "Poistettu PTV:stä"]
      [:> TableCell "Ensimmäinen"]
      [:> TableCell "Viimeisin"]]]
    [:> TableBody
-    (for [{:keys [city-code municipality sites sync-enabled published deleted
+    (for [{:keys [city-code municipality in-ptv attention warnings sync-enabled deleted
                   first-month latest-month]} municipalities]
       ^{:key (str city-code)}
       [:> TableRow
        [:> TableCell municipality]
-       [:> TableCell {:align "right"} sites]
+       [:> TableCell {:align "right"} in-ptv]
+       [:> TableCell {:align "right"}
+        (if (pos? attention)
+          [:> Typography {:variant "body2" :color "error" :fontWeight 600} attention]
+          attention)]
+       [:> TableCell {:align "right"} warnings]
        [:> TableCell {:align "right"} sync-enabled]
-       [:> TableCell {:align "right"} published]
        [:> TableCell {:align "right"} deleted]
-       [:> TableCell first-month]
-       [:> TableCell latest-month]])]])
+       [:> TableCell (or first-month "–")]
+       [:> TableCell (or latest-month "–")]])]])
 
 (r/defc users-filters []
   (let [{:keys [search source not-member?]} @(rf/subscribe [::subs/users-filter])
@@ -272,15 +290,172 @@
           [:> Typography {:variant "body2"} "Ei hakuehtoja vastaavia käyttäjiä."]
           [users-table {:rows rows}])])]))
 
-(r/defc overview-tab [{:keys [stats chart-data]}]
+(def ^:private reason-info
+  "Per lipas.data.ptv/attention reason: chip label, what's wrong, what to do."
+  {"no-org" ["PTV-organisaatio puuttuu"
+             "Synkronointi on päällä, mutta liikuntapaikalla ei ole PTV-organisaatiota, joten sitä ei voi viedä PTV:hen."
+             "Varmista, että kunnalla on PTV-organisaatio. Kun PTV-tiedot tallennetaan seuraavan kerran, organisaatio täydentyy kunnan perusteella."]
+   "missing-texts" ["Tekstit puuttuvat"
+                    "Suomenkielinen tiivistelmä ja kuvaus puuttuvat, joten liikuntapaikkaa ei voi viedä PTV:hen."
+                    "Kunta kirjoittaa tekstit (tai luo ne tekoälyllä) liikuntapaikan PTV-välilehdellä ja tallentaa."]
+   "sync-error" ["Vienti epäonnistui"
+                 "Viimeisin vienti PTV:hen epäonnistui (virheilmoitus alla)."
+                 "Korjaa virheilmoituksen mukainen tieto ja tallenna liikuntapaikka uudelleen. Jos virhe on PTV:n päässä (5xx-virhe), pelkkä uudelleentallennus yleensä riittää."]
+   "never-sent" ["Ei viety PTV:hen"
+                 "Synkronointi on päällä ja tiedot ovat valmiina, mutta liikuntapaikkaa ei ole viety PTV:hen."
+                 "Tallenna liikuntapaikka uudelleen."]
+   "published-not-candidate" ["Ei enää PTV-kelpoinen"
+                              "LIPASin mukaan palvelupaikka on julkaistu PTV:ssä, vaikka liikuntapaikka ei enää kuulu sinne (esim. merkitty virheelliseksi tai omistaja ei ole kunta). LIPASin tieto voi myös olla vanhentunut."
+                              "Tarkista palvelupaikan tila PTV:ssä ja arkistoi se tarvittaessa."]
+   "no-service" ["Palvelu puuttuu"
+                 "Palvelupaikka on julkaistu PTV:ssä, mutta sitä ei ole liitetty PTV-palveluun."
+                 "Valitse palvelu liikuntapaikan PTV-välilehdellä ja tallenna."]
+   "published-sync-off" ["Synkronointi pois"
+                         "Palvelupaikka on julkaistu PTV:ssä, mutta synkronointi on pois päältä, joten LIPASin muutokset eivät päivity PTV:hen."
+                         "Kytke synkronointi päälle tai arkistoi palvelupaikka PTV:ssä."]
+   "archived-sync-on" ["Arkistoitu, synkronointi päällä"
+                       "Palvelupaikka on arkistoitu PTV:ssä, vaikka synkronointi on päällä ja liikuntapaikka kuuluisi PTV:hen."
+                       "Tarkista, pitäisikö palvelupaikka palauttaa PTV:hen; tallennus vie sen uudelleen."]})
+
+(def ^:private publishing-status-label
+  {"Published" "Julkaistu" "Deleted" "Poistettu" "Draft" "Luonnos" "Modified" "Muokattu"})
+
+(defn- ptv-channel-url [channel-id]
+  (str (if (ui-utils/prod?)
+         "https://palvelutietovaranto.suomi.fi"
+         "https://palvelutietovaranto.trn.suomi.fi")
+       "/channels/serviceLocation/" channel-id))
+
+(defn- site-org
+  "The LIPAS org holding the site's PTV config: by the site's PTV org-id, else
+  the org covering its municipality."
+  [ptv-orgs {:keys [org-id city-code]}]
+  (or (some #(when (and org-id (= org-id (get-in % [:ptv-data :org-id]))) %) ptv-orgs)
+      (some #(when (some #{city-code} (get-in % [:ptv-data :city-codes])) %) ptv-orgs)))
+
+(r/defc attention-filters []
+  (let [{:keys [search severity]} @(rf/subscribe [::subs/attention-filter])
+        set-filter (fn [k v] (rf/dispatch [::events/set-attention-filter k v]))]
+    [:> Stack {:direction "row" :spacing 2 :alignItems "center"
+               :sx #js{:mb 2 :flexWrap "wrap" :rowGap 1}}
+     [:> TextField {:size "small"
+                    :label "Hae"
+                    :placeholder "Liikuntapaikka, kunta tai LIPAS-ID"
+                    :value (or search "")
+                    :on-change #(set-filter :search (.. % -target -value))
+                    :sx #js{:minWidth 320}}]
+     [:> TextField {:size "small"
+                    :select true
+                    :label "Vakavuus"
+                    :value (or severity "all")
+                    :on-change #(set-filter :severity (.. % -target -value))
+                    :sx #js{:minWidth 200}}
+      [:> MenuItem {:value "all"} "Kaikki"]
+      [:> MenuItem {:value "error"} "Vaatii huomiota"]
+      [:> MenuItem {:value "warning"} "Huomautukset"]]]))
+
+(r/defc attention-row [{:keys [row ptv-orgs]}]
+  (let [{:keys [lipas-id name municipality sync-enabled? publishing-status last-sync
+                service-channel-id error-message reasons]} row
+        org (site-org ptv-orgs row)
+        ;; "ptv/no-org" (JSON) -> "no-org"
+        reason-key #(last (str/split (str (:reason %)) #"/"))]
+    [:> TableRow {:sx #js{:verticalAlign "top"}}
+     [:> TableCell
+      [:> Typography {:variant "body2" :fontWeight 600} (or name (str lipas-id))]
+      [:> Typography {:variant "caption" :color "textSecondary"}
+       (str municipality " · " lipas-id)]]
+     [:> TableCell
+      [:> Typography {:variant "body2"}
+       (str "Synkronointi " (if sync-enabled? "päällä" "pois"))]
+      [:> Typography {:variant "body2"}
+       (str "PTV: " (get publishing-status-label publishing-status "ei PTV:ssä"))]
+      (when last-sync
+        [:> Typography {:variant "caption" :color "textSecondary"}
+         (str "Viimeisin vienti " (.toLocaleDateString (js/Date. last-sync) "fi-FI"))])]
+     [:> TableCell
+      [:> Stack {:spacing 1}
+       (for [r reasons
+             :let [[label what _] (get reason-info (reason-key r))]]
+         ^{:key (reason-key r)}
+         [:> Stack {:spacing 0.5 :alignItems "flex-start"}
+          [:> Chip {:size "small"
+                    :color (if (= "error" (clojure.core/name (:severity r))) "error" "warning")
+                    :label (or label (reason-key r))}]
+          [:> Typography {:variant "body2"} what]])
+       (when error-message
+         [:> Typography {:variant "caption" :component "div"
+                         :sx #js{:fontFamily "monospace" :wordBreak "break-word"
+                                 :bgcolor "#f5f5f5" :p 0.5}}
+          error-message])]]
+     [:> TableCell
+      [:> Stack {:spacing 1 :alignItems "flex-start"}
+       (for [r reasons
+             :let [[_ _ todo] (get reason-info (reason-key r))]
+             :when todo]
+         ^{:key (reason-key r)}
+         [:> Typography {:variant "body2"} todo])
+       [:> Stack {:direction "row" :spacing 1 :sx #js{:flexWrap "wrap" :rowGap 1}}
+        [:> Button {:size "small" :variant "outlined" :sx #js{:textTransform "none"}
+                    :href (rfe/href :lipas.ui.routes.map/details-view {:lipas-id lipas-id})}
+         "Avaa liikuntapaikka"]
+        (when service-channel-id
+          [:> Button {:size "small" :variant "outlined" :sx #js{:textTransform "none"}
+                      :href (ptv-channel-url service-channel-id)
+                      :target "_blank" :rel "noopener"}
+           "Avaa PTV:ssä"])
+        (when org
+          [:> Button {:size "small" :variant "outlined" :sx #js{:textTransform "none"}
+                      :href (rfe/href :lipas.ui.routes/org {:org-id (:id org)} {:tab "ptv"})}
+           (str "Organisaation PTV: " (:name org))])]]]]))
+
+(r/defc attention-tab
+  "Sites whose PTV state needs an admin's attention (lipas.data.ptv/attention):
+  what's wrong, why, and what to do. Errors first, then warnings."
+  []
+  (let [rows @(rf/subscribe [::subs/attention-rows])
+        stats @(rf/subscribe [::subs/stats])
+        ptv-orgs @(rf/subscribe [::subs/ptv-orgs])]
+    (hooks/use-effect
+      (fn []
+        (rf/dispatch [::events/fetch-ptv-orgs])
+        js/undefined)
+      [])
+    [:<>
+     [:> Typography {:variant "body2" :color "textSecondary" :sx #js{:mb 2}}
+      (str "\"Vaatii huomiota\" -paikkojen synkronointi on päällä, mutta ne eivät ole PTV:ssä ajan tasalla. "
+           "Huomautukset ovat PTV:ssä olevia paikkoja, joiden tilaa kannattaa tarkistaa. "
+           "Tila perustuu LIPASin viimeisimpään synkronointiin, ei PTV:n reaaliaikaiseen tietoon.")]
+     [attention-filters]
+     (cond
+       (nil? stats) [:> LinearProgress]
+       (empty? (:attention stats)) [:> Alert {:severity "success"} "Kaikki kunnossa: yksikään liikuntapaikka ei vaadi huomiota."]
+       (empty? rows) [:> Typography {:variant "body2"} "Ei hakuehtoja vastaavia liikuntapaikkoja."]
+       :else
+       [:<>
+        [:> Typography {:variant "body2" :sx #js{:mb 1}}
+         (str (count rows) " / " (count (:attention stats)) " liikuntapaikkaa")]
+        [:> Table {:size "small"}
+         [:> TableHead
+          [:> TableRow
+           [:> TableCell "Liikuntapaikka"]
+           [:> TableCell "Tila"]
+           [:> TableCell "Syy"]
+           [:> TableCell "Toimenpiteet"]]]
+         [:> TableBody
+          (for [row rows]
+            ^{:key (:lipas-id row)}
+            [attention-row {:row row :ptv-orgs ptv-orgs}])]]])]))
+
+(r/defc overview-tab [{:keys [stats chart-data on-attention]}]
   [:<>
-   [summary-tiles stats]
+   [summary-tiles {:totals (:totals stats) :on-attention on-attention}]
    [:> Grid {:container true :spacing 2 :sx #js{:mb 2}}
     [:> Grid {:size {:xs 12 :lg 6}}
-     [:> Typography {:variant "h6"} "Uudet liikuntapaikat kuukausittain"]
+     [:> Typography {:variant "h6"} "Uudet liikuntapaikat PTV:ssä kuukausittain"]
      [monthly-chart {:data chart-data}]]
     [:> Grid {:size {:xs 12 :lg 6}}
-     [:> Typography {:variant "h6"} "Elinkaarensa aikana integroidut liikuntapaikat"]
+     [:> Typography {:variant "h6"} "PTV:hen viedyt liikuntapaikat yhteensä"]
      [cumulative-chart {:data chart-data}]]]
    [:> Typography {:variant "h6"} "Kunnittain"]
    [municipalities-table stats]])
@@ -290,7 +465,8 @@
         stats @(rf/subscribe [::subs/stats])
         chart-data @(rf/subscribe [::subs/chart-data])
         loading? @(rf/subscribe [::subs/loading?])
-        error @(rf/subscribe [::subs/error])]
+        error @(rf/subscribe [::subs/error])
+        stats-tab? (contains? #{"overview" "attention"} tab)]
     (hooks/use-effect
       (fn []
         (rf/dispatch [::events/fetch])
@@ -300,15 +476,15 @@
      [:> CardHeader
       {:title "PTV-integraation käyttöönotto"
        :subheader (when (= "overview" tab)
-                    "Liikuntapaikka lasketaan sen ensimmäisen PTV-tietoja sisältävän version kuukaudelle.")
+                    "Liikuntapaikka lasketaan sen kuukauden lukuihin, jolloin se julkaistiin ensimmäisen kerran PTV:ssä.")
        :action (r/as-element
                  [:> Stack {:alignItems "flex-end"}
-                  [:> Button {:on-click #(rf/dispatch (if (= "overview" tab)
+                  [:> Button {:on-click #(rf/dispatch (if stats-tab?
                                                         [::events/fetch]
                                                         [::events/fetch-users]))
                               :disabled loading?}
                    "Päivitä"]
-                  (when-let [t (and (= "overview" tab) (:generated-at stats))]
+                  (when-let [t (and stats-tab? (:generated-at stats))]
                     [:> Typography {:variant "caption" :color "textSecondary"}
                      (str "Päivitetty " (.toLocaleString (js/Date. t) "fi-FI"))])])}]
      [:> CardContent
@@ -316,13 +492,19 @@
                 :on-change (fn [_e v] (set-tab v))
                 :sx #js{:mb 2}}
        [:> Tab {:value "overview" :label "Yleiskatsaus"}]
+       [:> Tab {:value "attention"
+                :label (if-let [n (get-in stats [:totals :attention])]
+                         (str "Vaatii huomiota (" n ")")
+                         "Vaatii huomiota")}]
        [:> Tab {:value "users" :label "Käyttäjät"}]]
+      (when (and stats-tab? loading?)
+        [:> LinearProgress {:sx #js{:mb 2}}])
+      (when (and stats-tab? error)
+        [:> Alert {:severity "error" :sx #js{:mb 2}} (str error)])
       (case tab
         "users" [users-tab]
-        [:<>
-         (when loading?
-           [:> LinearProgress {:sx #js{:mb 2}}])
-         (when error
-           [:> Alert {:severity "error" :sx #js{:mb 2}} (str error)])
-         (when stats
-           [overview-tab {:stats stats :chart-data chart-data}])])]]))
+        "attention" [attention-tab]
+        (when stats
+          [overview-tab {:stats stats
+                         :chart-data chart-data
+                         :on-attention #(set-tab "attention")}]))]]))

@@ -104,3 +104,30 @@
   :<- [::state]
   (fn [state [_ user-id]]
     (boolean (get-in state [:adding user-id]))))
+
+;;; Vaatii huomiota tab ;;;
+
+(rf/reg-sub ::attention-filter
+  :<- [::state]
+  (fn [state _]
+    (:attention-filter state)))
+
+(defn- error-row? [{:keys [reasons]}]
+  (some #(= "error" (name (:severity %))) reasons))
+
+(rf/reg-sub ::attention-rows
+  :<- [::stats]
+  :<- [::attention-filter]
+  (fn [[stats {:keys [search severity]}] _]
+    (let [q (some-> search str/trim str/lower-case not-empty)]
+      (cond->> (:attention stats)
+        (= "error" severity) (filter error-row?)
+        (= "warning" severity) (remove error-row?)
+        q (filter #(str/includes? (str/lower-case (str (:name %) " " (:municipality %) " " (:lipas-id %))) q))
+        true vec))))
+
+(rf/reg-sub ::ptv-orgs
+  :<- [::state]
+  (fn [state _]
+    (:ptv-orgs state)))
+

@@ -64,6 +64,10 @@
                                     "desc"
                                     "asc"))))))
 
+(rf/reg-event-db ::set-attention-filter
+  (fn [db [_ k v]]
+    (assoc-in db [:admin :ptv-adoption :attention-filter k] v)))
+
 (rf/reg-event-db ::set-users-filter
   (fn [db [_ k v]]
     (assoc-in db [:admin :ptv-adoption :users-filter k] v)))

@@ -1419,6 +1419,54 @@
     (boolean (and (some-> description :fi count (> 5))
                   (some-> summary :fi count (> 5))))))
 
+(def attention-reasons
+  "Why a site's PTV integration needs an admin's attention, most severe first.
+  `:error` = it isn't (correctly) in PTV although it should be; `:warning` = it
+  is in PTV, but in a state someone should look at."
+  [[:ptv/no-org :error]
+   [:ptv/missing-texts :error]
+   [:ptv/sync-error :error]
+   [:ptv/never-sent :error]
+   [:ptv/published-not-candidate :warning]
+   [:ptv/no-service :warning]
+   [:ptv/published-sync-off :warning]
+   [:ptv/archived-sync-on :warning]])
+
+(defn attention
+  "The `attention-reasons` that apply to `site` (current revision), in that
+  order, as `[{:reason kw :severity kw}]`; empty when its PTV state is fine.
+  Shared by the admin adoption view's tiles, its attention list and the
+  municipality table, so they can't disagree.
+
+  A sync error is only stored by a failed sync and cleared by the next
+  successful one (it isn't a persisted PTV key), so it's always current."
+  [site]
+  (let [{:keys [sync-enabled org-id error publishing-status
+                service-ids service-channel-ids]} (:ptv site)
+        published? (= "Published" publishing-status)
+        candidate? (ptv-candidate? site)
+        hits (set [(when (and sync-enabled (str/blank? org-id))
+                     :ptv/no-org)
+                   (when (and sync-enabled candidate? (not (ptv-ready? site)))
+                     :ptv/missing-texts)
+                   (when (and sync-enabled error)
+                     :ptv/sync-error)
+                   (when (and sync-enabled candidate? (not error)
+                              (not (str/blank? org-id)) (ptv-ready? site)
+                              (empty? service-channel-ids) (nil? publishing-status))
+                     :ptv/never-sent)
+                   (when (and published? (not candidate?))
+                     :ptv/published-not-candidate)
+                   (when (and published? candidate? (empty? service-ids))
+                     :ptv/no-service)
+                   (when (and published? (not sync-enabled))
+                     :ptv/published-sync-off)
+                   (when (and sync-enabled candidate? (= "Deleted" publishing-status))
+                     :ptv/archived-sync-on)])]
+    (vec (for [[reason severity] attention-reasons
+               :when (hits reason)]
+           {:reason reason :severity severity}))))
+
 (defn sync-blockers
   "What stops `site` from syncing to PTV, as a set of keywords (empty when
   nothing does). Only meaningful while `[:ptv :sync-enabled]` is on and the

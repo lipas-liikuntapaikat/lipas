@@ -1245,3 +1245,42 @@
     (testing "accounts without ptv-manager, and inactive accounts, are left out"
       (is (not (contains? rows "editor")))
       (is (not (contains? rows "gone"))))))
+
+;;; attention (admin "Vaatii huomiota") ;;;
+
+(def ^:private healthy-ptv
+  {:sync-enabled true :org-id "o" :publishing-status "Published"
+   :summary {:fi "Lyhyt kuvaus"} :description {:fi "Pidempi kuvaus"}
+   :service-ids ["s"] :service-channel-ids ["c"] :source-id "src"})
+
+(defn- attention-site [ptv & {:keys [status owner] :or {status "active" owner "city"}}]
+  {:status status :owner owner :type {:type-code 1340} :ptv ptv})
+
+(defn- reasons [site] (mapv :reason (sut/attention site)))
+
+(deftest attention-test
+  (testing "a healthy integrated site needs nothing"
+    (is (= [] (sut/attention (attention-site healthy-ptv)))))
+  (testing "errors: sync on but not (correctly) in PTV"
+    (is (= [:ptv/no-org :ptv/missing-texts]
+           (reasons (attention-site {:sync-enabled true}))))
+    (is (= [:ptv/sync-error]
+           (reasons (attention-site (assoc healthy-ptv :error {:message "HTTP Error: 500"})))))
+    (is (= [:ptv/never-sent]
+           (reasons (attention-site (assoc healthy-ptv :publishing-status nil :service-channel-ids []))))))
+  (testing "warnings: in PTV but in a state to look at"
+    (is (= [:ptv/published-not-candidate]
+           (reasons (attention-site healthy-ptv :status "incorrect-data"))))
+    (is (= [:ptv/no-service]
+           (reasons (attention-site (assoc healthy-ptv :service-ids [])))))
+    (is (= [:ptv/published-sync-off]
+           (reasons (attention-site (assoc healthy-ptv :sync-enabled false)))))
+    (is (= [:ptv/archived-sync-on]
+           (reasons (attention-site (assoc healthy-ptv :publishing-status "Deleted"))))))
+  (testing "nothing to do"
+    (is (= [] (sut/attention (attention-site (assoc healthy-ptv :publishing-status "Deleted")
+                                             :status "out-of-service-permanently")))
+        "archived because the site closed down, even with sync still on")
+    (is (= [] (sut/attention (attention-site {:sync-enabled false})))
+        "PTV data saved but never switched on")
+    (is (every? #(= :error (:severity %)) (sut/attention (attention-site {:sync-enabled true}))))))
