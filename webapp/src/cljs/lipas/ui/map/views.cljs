@@ -1109,8 +1109,14 @@
            {:style {:min-width 0}
             :value 6
             ;; Flag the tab so a blocked Save can be traced from other tabs.
+            ;; Missing texts are an unfinished step (warning); no org is a
+            ;; real problem (error).
             :label (if (seq ptv-save-blockers)
-                     (r/as-element [:> Badge {:color "error" :variant "dot"} "PTV"])
+                     (r/as-element [:> Badge {:color (if (= #{:ptv/missing-texts} ptv-save-blockers)
+                                                       "warning"
+                                                       "error")
+                                              :variant "dot"}
+                                    "PTV"])
                      "PTV")}])
 
         (when view-images?
@@ -1495,9 +1501,14 @@
                   :edit-tooltip (tr :actions/edit)
                   :on-publish #(==> [::events/save-edits lipas-id])
                   :publish-tooltip (tr :actions/save)
-                  :invalid-message (if (seq ptv-save-blockers)
+                  :invalid-message (cond
+                                     (= #{:ptv/missing-texts} ptv-save-blockers)
+                                     (tr :ptv/save-needs-texts)
+
+                                     (seq ptv-save-blockers)
                                      (tr :ptv/sync-blocked-title)
-                                     (tr :error/invalid-form))
+
+                                     :else (tr :error/invalid-form))
                   :on-delete #(==> [::events/delete-site])
                   :delete-tooltip (tr :lipas.sports-site/delete-tooltip)}))
 

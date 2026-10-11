@@ -74,4 +74,13 @@
  :sync-blocked-hint "Täydennä puuttuvat tiedot tai kytke PTV-integraatio pois päältä, niin voit tallentaa."
  :no-org-for-site "Liikuntapaikan kunnalle ei löydy PTV-organisaatiota, johon sinulla on PTV-oikeudet, joten integraatiota ei voi kytkeä päälle. Ota yhteyttä LIPAS-ylläpitoon."
  :org-mismatch "PTV-organisaatio ei vastaa liikuntapaikan kuntaa."
- :no-ptv-permission "Sinulla ei ole PTV-oikeuksia tämän liikuntapaikan kuntaan, joten PTV-asetuksia ei voi muuttaa."}
+ :no-ptv-permission "Sinulla ei ole PTV-oikeuksia tämän liikuntapaikan kuntaan, joten PTV-asetuksia ei voi muuttaa."
+ ;; Site PTV tab: steps left before the site can be exported
+ :finish-title "Viimeistele PTV-tiedot"
+ :step-org "Organisaatio"
+ :step-service "Palvelu"
+ :step-service-none "Ei vielä valittu. Valitse tai luo palvelu alta."
+ :step-texts "Tiivistelmä ja kuvaus suomeksi"
+ :step-texts-hint "Kirjoita ne alle tai luo ne tekoälyllä."
+ :finish-footer "Liikuntapaikka viedään PTV:hen, kun tallennat."
+ :save-needs-texts "Täydennä PTV-välilehdeltä tiivistelmä ja kuvaus, tai kytke PTV-integraatio pois."}
