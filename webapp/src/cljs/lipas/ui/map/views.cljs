@@ -975,6 +975,19 @@
                          (:sync-enabled (:ptv display-data)))
                        (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :ptv/manage]))
 
+        ;; Tabs come and go (e.g. PTV is edit-only for non-synced sites). When
+        ;; the selected one isn't shown — after Cancel, another site, … — fall
+        ;; back to basic data instead of rendering a tab-less body.
+        visible-tabs (cond-> #{0 1}
+                       (and (not (utils/prod?)) accessibility-type?) (conj 2)
+                       view-floorball? (conj 3)
+                       (#{"LineString"} geom-type) (conj 4)
+                       view-activities? (conj 5)
+                       view-ptv? (conj 6)
+                       view-images? (conj 7)
+                       (:owner-org-id display-data) (conj 8))
+        selected-tab (if (contains? visible-tabs selected-tab) selected-tab 0)
+
         ;; Same rule as the backend gate; non-empty blocks Save.
         ptv-save-blockers (<== [::subs/ptv-save-blockers lipas-id])
 

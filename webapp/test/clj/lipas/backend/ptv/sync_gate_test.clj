@@ -80,6 +80,19 @@
   (user-with-roles [{:role "city-manager" :city-code [city-code]}
                     {:role "ptv-manager" :city-code [city-code]}]))
 
+(defn- org-ptv-member
+  "Org plane: no account roles; PTV and site-editing rights come from the
+  `org`'s role-template catalog, projected into the token the way login does
+  (`enrich-org-roles`)."
+  [org city-code]
+  (backend-org/update-catalog! (test-db) (:id org)
+                               {:ptv {:roles [{:role "ptv-manager" :city-code [city-code]}
+                                              {:role "city-manager" :city-code [city-code]}]}}
+                               nil)
+  (let [user (user-with-roles [])]
+    (backend-org/add-member! (test-db) (:id org) (:id user) {:roles ["ptv"]} nil)
+    (backend-org/enrich-org-roles (test-db) user)))
+
 (defn- city-manager [city-code]
   (user-with-roles [{:role "city-manager" :city-code [city-code]}]))
 
@@ -110,6 +123,18 @@
   (core/get-sports-site (test-db) lipas-id))
 
 ;;; Save gate ;;;
+
+(deftest org-member-enables-sync-test
+  (testing "an org member whose PTV rights come from the org catalog enables sync: org-id is derived"
+    (let [org (seed-org! ptv-org-a [own-city])
+          member (org-ptv-member org own-city)]
+      (with-sync-stub
+        (fn []
+          (let [site (seed-site! own-city)
+                resp (save! member (assoc site :ptv (merge {:sync-enabled true} texts)))]
+            (is (= 201 (:status resp)))
+            (is (= ptv-org-a (get-in (current (:lipas-id site)) [:ptv :org-id])))
+            (is (= [ptv-org-a] (map :org-id @sync-calls)))))))))
 
 (deftest legacy-ptv-manager-enables-sync-test
   (testing "a non-member, city-scoped ptv-manager enables sync: org-id is derived server-side"
@@ -197,6 +222,10 @@
         ids (fn [resp] (set (map :id (:parsed resp))))]
     (testing "a non-member ptv-manager gets the org covering their city — and only it"
       (let [resp (post "/api/actions/get-ptv-orgs" {} (ptv-manager own-city))]
+        (is (= 200 (:status resp)))
+        (is (= #{(str (:id org-a))} (ids resp)))))
+    (testing "an org member with catalog PTV rights gets the same org"
+      (let [resp (post "/api/actions/get-ptv-orgs" {} (org-ptv-member org-a own-city))]
         (is (= 200 (:status resp)))
         (is (= #{(str (:id org-a))} (ids resp)))))
     (testing "admins get every PTV org"

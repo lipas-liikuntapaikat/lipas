@@ -399,6 +399,9 @@
            ;; the tab's visibility for users without :site/edit-images).
            :images (:images latest)
 
+           ;; Gates the read-only PTV tab (shown when sync is on, map/views)
+           :ptv (:ptv latest)
+
            ;; org-management: surface ownership so the site-page editing-rights
            ;; tab (map/views) can gate on it
            :owner-org-id (-> latest :owner-org-id)
