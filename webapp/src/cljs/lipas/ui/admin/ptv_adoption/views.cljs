@@ -80,8 +80,8 @@
      [stat-tile {:value in-ptv
                  :label "Liikuntapaikkaa PTV:ssä"
                  :caption (when (pos? in-ptv-sync-off)
-                            (str in-ptv-sync-off " ei enää päivity LIPASista"))
-                 :tooltip (str "Liikuntapaikat, joiden palvelupaikka on julkaistu PTV:ssä LIPASin viimeisimmän synkronoinnin mukaan. "
+                            (str in-ptv-sync-off " ei enää päivity Lipaksesta"))
+                 :tooltip (str "Liikuntapaikat, joiden palvelupaikka on julkaistu PTV:ssä Lipaksen viimeisimmän synkronoinnin mukaan. "
                                "Luvut koskevat palvelupaikkoja, eivät PTV-palveluita. "
                                "\"Ei enää päivity\" ovat julkaistuja paikkoja, joiden synkronointi on pois päältä.")}]
      [stat-tile {:value municipalities
@@ -305,13 +305,13 @@
                  "Synkronointi on päällä ja tiedot ovat valmiina, mutta liikuntapaikkaa ei ole viety PTV:hen."
                  "Tallenna liikuntapaikka uudelleen."]
    "published-not-candidate" ["Ei enää PTV-kelpoinen"
-                              "LIPASin mukaan palvelupaikka on julkaistu PTV:ssä, vaikka liikuntapaikka ei enää kuulu sinne (esim. merkitty virheelliseksi tai omistaja ei ole kunta). LIPASin tieto voi myös olla vanhentunut."
+                              "Lipaksen mukaan palvelupaikka on julkaistu PTV:ssä, vaikka liikuntapaikka ei enää kuulu sinne (esim. merkitty virheelliseksi tai omistaja ei ole kunta). Lipaksen tieto voi myös olla vanhentunut."
                               "Tarkista palvelupaikan tila PTV:ssä ja arkistoi se tarvittaessa."]
    "no-service" ["Palvelu puuttuu"
                  "Palvelupaikka on julkaistu PTV:ssä, mutta sitä ei ole liitetty PTV-palveluun."
                  "Valitse palvelu liikuntapaikan PTV-välilehdellä ja tallenna."]
    "published-sync-off" ["Synkronointi pois"
-                         "Palvelupaikka on julkaistu PTV:ssä, mutta synkronointi on pois päältä, joten LIPASin muutokset eivät päivity PTV:hen."
+                         "Palvelupaikka on julkaistu PTV:ssä, mutta synkronointi on pois päältä, joten Lipaksen muutokset eivät päivity PTV:hen."
                          "Kytke synkronointi päälle tai arkistoi palvelupaikka PTV:ssä."]
    "archived-sync-on" ["Arkistoitu, synkronointi päällä"
                        "Palvelupaikka on arkistoitu PTV:ssä, vaikka synkronointi on päällä ja liikuntapaikka kuuluisi PTV:hen."
@@ -425,7 +425,7 @@
      [:> Typography {:variant "body2" :color "textSecondary" :sx #js{:mb 2}}
       (str "\"Vaatii huomiota\" -paikkojen synkronointi on päällä, mutta ne eivät ole PTV:ssä ajan tasalla. "
            "Huomautukset ovat PTV:ssä olevia paikkoja, joiden tilaa kannattaa tarkistaa. "
-           "Tila perustuu LIPASin viimeisimpään synkronointiin, ei PTV:n reaaliaikaiseen tietoon.")]
+           "Tila perustuu Lipaksen viimeisimpään synkronointiin, ei PTV:n reaaliaikaiseen tietoon.")]
      [attention-filters]
      (cond
        (nil? stats) [:> LinearProgress]
