@@ -95,6 +95,8 @@
         [:month :string]
         [:new :int]
         [:total :int]
+        [:left :int]
+        [:left-total :int]
         [:by-municipality [:vector [:map [:municipality :string] [:new :int]]]]]]]
      [:municipalities
       [:vector

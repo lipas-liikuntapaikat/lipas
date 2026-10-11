@@ -236,14 +236,16 @@
 (defn get-ptv-adoption
   "One row per site that has ever had a :ptv subtree: `:first-month` of its
   first :ptv revision, `:first-published-month` of its first revision published
-  in PTV (nil if never; both \"YYYY-MM\", Helsinki time), and `:site`, the
-  current revision's name/status/owner/type/:ptv."
+  in PTV (nil if never), `:left-month` of leaving PTV after its last
+  publication (nil if still in PTV; all \"YYYY-MM\", Helsinki time), and
+  `:site`, the current revision's name/status/owner/type/:ptv."
   [db-spec]
   (->> (sports-site/get-ptv-adoption db-spec)
-       (map (fn [{:keys [lipas_id first_month first_published_month city_code site]}]
+       (map (fn [{:keys [lipas_id first_month first_published_month left_month city_code site]}]
               {:lipas-id lipas_id
                :first-month first_month
                :first-published-month first_published_month
+               :left-month left_month
                :city-code (some-> city_code parse-long)
                :site site}))))
 

@@ -32,6 +32,7 @@
             ["recharts/es6/cartesian/YAxis" :refer [YAxis]]
             ["recharts/es6/chart/BarChart" :refer [BarChart]]
             ["recharts/es6/chart/LineChart" :refer [LineChart]]
+            ["recharts/es6/component/Legend" :refer [Legend]]
             ["recharts/es6/component/ResponsiveContainer" :refer [ResponsiveContainer]]
             ["recharts/es6/component/Tooltip" :refer [Tooltip] :rename {Tooltip ChartTooltip}]
             [clojure.string :as str]
@@ -131,15 +132,39 @@
     [:> Bar {:dataKey :new :name "Uusia" :fill series-color
              :radius #js[4 4 0 0] :maxBarSize 24}]]])
 
-(r/defc cumulative-chart [{:keys [data]}]
+(def ^:private left-color "#d32f2f")
+
+(defn- cumulative-tooltip
+  "Month, ever in PTV, left PTV, and their difference: in PTV at month end."
+  [^js props]
+  (when-let [^js row (and (.-active props) (some-> (.-payload props) (aget 0) .-payload))]
+    (r/as-element
+      [:> Paper {:sx #js{:p 1}}
+       [:> Typography {:variant "subtitle2"} (unchecked-get row "month")]
+       [:> Typography {:variant "body2"}
+        (str "Viety PTV:hen: " (unchecked-get row "total"))]
+       [:> Typography {:variant "body2" :sx #js{:color left-color}}
+        (str "Poistunut PTV:stä: " (unchecked-get row "left-total"))]
+       [:> Typography {:variant "body2" :fontWeight 600}
+        (str "PTV:ssä: " (unchecked-get row "in-ptv"))]])))
+
+(r/defc cumulative-chart
+  "Blue: sites ever in PTV. Red: sites that have since left PTV (archived or
+  PTV data gone). Their gap is the number in PTV; at the right edge it equals
+  the PTV:ssä tile."
+  [{:keys [data]}]
   [:> ResponsiveContainer {:width "100%" :height 260}
    [:> LineChart {:data data :margin #js{:top 8 :right 8 :left 0 :bottom 0}}
     [:> CartesianGrid {:vertical false :stroke "#e1e0d9"}]
     [:> XAxis {:dataKey :month :tick chart-font :interval "preserveStartEnd"}]
     [:> YAxis {:tick chart-font :allowDecimals false}]
-    [:> ChartTooltip {:content #(month-tooltip % "Yhteensä" "total")}]
-    [:> Line {:dataKey :total :name "Yhteensä" :type "stepAfter"
+    [:> ChartTooltip {:content cumulative-tooltip}]
+    [:> Legend {:wrapperStyle #js{:fontFamily "lato" :fontSize 12}}]
+    [:> Line {:dataKey :total :name "Viety PTV:hen" :type "stepAfter"
               :stroke series-color :strokeWidth 2 :dot false
+              :activeDot #js{:r 4}}]
+    [:> Line {:dataKey :left-total :name "Poistunut PTV:stä" :type "stepAfter"
+              :stroke left-color :strokeWidth 2 :dot false
               :activeDot #js{:r 4}}]]])
 
 (r/defc municipalities-table [{:keys [municipalities]}]
