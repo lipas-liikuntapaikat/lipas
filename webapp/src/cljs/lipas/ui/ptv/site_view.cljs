@@ -80,7 +80,7 @@
   "What's left before a site with sync switched on can be exported. Shown in
   place of an error: missing texts are the user's next step, not a failure.
   Save stays blocked meanwhile (same rule as the backend gate)."
-  [{:keys [tr org-name service-names texts-done? loading? read-only? on-generate]}]
+  [{:keys [tr org-name service-names texts-done?]}]
   [:> Alert {:severity "info" :variant "outlined" :icon false}
    [:> AlertTitle (tr :ptv/finish-title)]
    [:> Stack {:spacing 1}
@@ -93,15 +93,7 @@
         (tr :ptv/step-service-none))]]
     [finish-step {:done? texts-done? :label (tr :ptv/step-texts)}
      (when-not texts-done?
-       [:> Stack {:direction "row" :spacing 1 :alignItems "center" :sx #js {:flexWrap "wrap"}}
-        [:> Typography {:variant "body2"} (tr :ptv/step-texts-hint)]
-        [:> Button {:variant "outlined" :size "small"
-                    :disabled (or loading? read-only?)
-                    :sx #js {:textTransform "none"}
-                    :startIcon (when loading?
-                                 (r/as-element [:> CircularProgress {:size 16 :color "inherit"}]))
-                    :on-click on-generate}
-         (tr :ptv.actions/generate-with-ai)]])]
+       [:> Typography {:variant "body2"} (tr :ptv/step-texts-hint)])]
     [:> Typography {:variant "body2" :sx #js {:mt 1}}
      (tr :ptv/finish-footer)]]])
 
@@ -312,10 +304,7 @@
            :service-names (let [ids (set (:service-ids (:ptv site)))]
                             (for [s services* :when (ids (:service-id s))]
                               (:label s)))
-           :texts-done? ready?
-           :loading? loading?
-           :read-only? read-only?
-           :on-generate #(rf/dispatch [::events/generate-descriptions-from-data lipas-id])}]
+           :texts-done? ready?}]
 
          ;; Sync on but no org (sites saved before the gate): a real problem.
          ;; Save is blocked meanwhile.
