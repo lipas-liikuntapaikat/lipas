@@ -975,6 +975,19 @@
                          (:sync-enabled (:ptv display-data)))
                        (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :ptv/manage]))
 
+        ;; Tabs come and go (e.g. PTV is edit-only for non-synced sites). When
+        ;; the selected one isn't shown — after Cancel, another site, … — fall
+        ;; back to basic data instead of rendering a tab-less body.
+        visible-tabs (cond-> #{0 1}
+                       (and (not (utils/prod?)) accessibility-type?) (conj 2)
+                       view-floorball? (conj 3)
+                       (#{"LineString"} geom-type) (conj 4)
+                       view-activities? (conj 5)
+                       view-ptv? (conj 6)
+                       view-images? (conj 7)
+                       (:owner-org-id display-data) (conj 8))
+        selected-tab (if (contains? visible-tabs selected-tab) selected-tab 0)
+
         ;; Same rule as the backend gate; non-empty blocks Save.
         ptv-save-blockers (<== [::subs/ptv-save-blockers lipas-id])
 
@@ -1096,8 +1109,14 @@
            {:style {:min-width 0}
             :value 6
             ;; Flag the tab so a blocked Save can be traced from other tabs.
+            ;; Missing texts are an unfinished step (warning); no org is a
+            ;; real problem (error).
             :label (if (seq ptv-save-blockers)
-                     (r/as-element [:> Badge {:color "error" :variant "dot"} "PTV"])
+                     (r/as-element [:> Badge {:color (if (= #{:ptv/missing-texts} ptv-save-blockers)
+                                                       "warning"
+                                                       "error")
+                                              :variant "dot"}
+                                    "PTV"])
                      "PTV")}])
 
         (when view-images?
@@ -1482,9 +1501,14 @@
                   :edit-tooltip (tr :actions/edit)
                   :on-publish #(==> [::events/save-edits lipas-id])
                   :publish-tooltip (tr :actions/save)
-                  :invalid-message (if (seq ptv-save-blockers)
+                  :invalid-message (cond
+                                     (= #{:ptv/missing-texts} ptv-save-blockers)
+                                     (tr :ptv/save-needs-texts)
+
+                                     (seq ptv-save-blockers)
                                      (tr :ptv/sync-blocked-title)
-                                     (tr :error/invalid-form))
+
+                                     :else (tr :error/invalid-form))
                   :on-delete #(==> [::events/delete-site])
                   :delete-tooltip (tr :lipas.sports-site/delete-tooltip)}))
 

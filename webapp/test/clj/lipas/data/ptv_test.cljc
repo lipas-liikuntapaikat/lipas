@@ -1191,3 +1191,96 @@
       (is (sut/ptv-edited? prev (assoc-in prev [:ptv :sync-enabled] false)))
       (is (sut/ptv-edited? prev (assoc-in prev [:ptv :org-id] "ptv-b")))
       (is (sut/ptv-edited? nil (site 91 "city" :sync-enabled true))))))
+
+;;; ptv-user-rows (admin PTV user list) ;;;
+
+(def ^:private users-org-a {:id "a" :name "A" :ptv-data {:org-id "ptv-a" :city-codes [91]}})
+(def ^:private users-org-b {:id "b" :name "B" :ptv-data {:org-id "ptv-b" :city-codes [92]}})
+(def ^:private users-org-b2 {:id "b2" :name "B2" :ptv-data {:org-id "ptv-b2" :city-codes [92]}})
+
+(defn- account [id & {:keys [roles org-roles orgs status] :or {status "active"}}]
+  {:id id :username id :status status
+   :permissions {:roles (vec roles)}
+   :org-roles (vec org-roles)
+   :orgs (vec orgs)})
+
+(defn- rows-by-user [users orgs]
+  (into {} (map (juxt :user-id identity)) (sut/ptv-user-rows users orgs)))
+
+(deftest ptv-user-rows-test
+  (let [rows (rows-by-user
+               [(account "legacy" :roles [{:role "ptv-manager" :city-code [91]}])
+                (account "member" :org-roles [{:role "ptv-manager" :city-code [91]}]
+                         :orgs [{:id "a" :name "A"}])
+                (account "both" :roles [{:role "ptv-manager" :city-code [91]}]
+                         :org-roles [{:role "ptv-manager" :city-code [91]}]
+                         :orgs [{:id "a" :name "A"}])
+                (account "in-b2" :org-roles [{:role "ptv-manager" :city-code [92]}]
+                         :orgs [{:id "b2" :name "B2"}])
+                (account "unsure" :roles [{:role "ptv-manager" :city-code [92]}])
+                (account "no-org" :roles [{:role "ptv-manager" :city-code [93]}])
+                (account "editor" :roles [{:role "city-manager" :city-code [91]}])
+                (account "gone" :status "archived" :roles [{:role "ptv-manager" :city-code [91]}])]
+               [users-org-a users-org-b users-org-b2])
+        pick #(select-keys % [:direct? :via-org? :member? :org :ambiguous-org?])]
+    (testing "legacy direct role: covering org suggested, not a member"
+      (is (= {:direct? true :via-org? false :member? false
+              :org {:id "a" :name "A"} :ambiguous-org? false}
+             (pick (rows "legacy")))))
+    (testing "rights from the org template: already a member"
+      (is (= {:direct? false :via-org? true :member? true
+              :org {:id "a" :name "A"} :ambiguous-org? false}
+             (pick (rows "member")))))
+    (testing "both routes collapse into one row"
+      (is (= [true true] ((juxt :direct? :via-org?) (rows "both")))))
+    (testing "two orgs cover the city: the one the account is in wins"
+      (is (= "b2" (get-in (rows "in-b2") [:org :id])))
+      (is (:member? (rows "in-b2"))))
+    (testing "two orgs cover the city and the account is in neither: no suggestion"
+      (is (nil? (:org (rows "unsure"))))
+      (is (:ambiguous-org? (rows "unsure"))))
+    (testing "no PTV org covers the city"
+      (is (nil? (:org (rows "no-org"))))
+      (is (false? (:ambiguous-org? (rows "no-org")))))
+    (testing "accounts without ptv-manager, and inactive accounts, are left out"
+      (is (not (contains? rows "editor")))
+      (is (not (contains? rows "gone"))))))
+
+;;; attention (admin "Vaatii huomiota") ;;;
+
+(def ^:private healthy-ptv
+  {:sync-enabled true :org-id "o" :publishing-status "Published"
+   :summary {:fi "Lyhyt kuvaus"} :description {:fi "Pidempi kuvaus"}
+   :service-ids ["s"] :service-channel-ids ["c"] :source-id "src"})
+
+(defn- attention-site [ptv & {:keys [status owner] :or {status "active" owner "city"}}]
+  {:status status :owner owner :type {:type-code 1340} :ptv ptv})
+
+(defn- reasons [site] (mapv :reason (sut/attention site)))
+
+(deftest attention-test
+  (testing "a healthy integrated site needs nothing"
+    (is (= [] (sut/attention (attention-site healthy-ptv)))))
+  (testing "errors: sync on but not (correctly) in PTV"
+    (is (= [:ptv/no-org :ptv/missing-texts]
+           (reasons (attention-site {:sync-enabled true}))))
+    (is (= [:ptv/sync-error]
+           (reasons (attention-site (assoc healthy-ptv :error {:message "HTTP Error: 500"})))))
+    (is (= [:ptv/never-sent]
+           (reasons (attention-site (assoc healthy-ptv :publishing-status nil :service-channel-ids []))))))
+  (testing "warnings: in PTV but in a state to look at"
+    (is (= [:ptv/published-not-candidate]
+           (reasons (attention-site healthy-ptv :status "incorrect-data"))))
+    (is (= [:ptv/no-service]
+           (reasons (attention-site (assoc healthy-ptv :service-ids [])))))
+    (is (= [:ptv/published-sync-off]
+           (reasons (attention-site (assoc healthy-ptv :sync-enabled false)))))
+    (is (= [:ptv/archived-sync-on]
+           (reasons (attention-site (assoc healthy-ptv :publishing-status "Deleted"))))))
+  (testing "nothing to do"
+    (is (= [] (sut/attention (attention-site (assoc healthy-ptv :publishing-status "Deleted")
+                                             :status "out-of-service-permanently")))
+        "archived because the site closed down, even with sync still on")
+    (is (= [] (sut/attention (attention-site {:sync-enabled false})))
+        "PTV data saved but never switched on")
+    (is (every? #(= :error (:severity %)) (sut/attention (attention-site {:sync-enabled true}))))))

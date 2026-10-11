@@ -534,9 +534,11 @@
 
 (defn ptv-member-suggestions
   "Accounts with PTV rights for this org's municipalities that aren't members.
-  Adding grants plain membership; roles are chosen in the table below."
+  Adding grants plain membership; roles are chosen in the table below. Confirmed
+  first: it changes membership and a stray click has no undo here."
   [tr org-id]
-  (let [suggestions @(rf/subscribe [::subs/ptv-member-suggestions])]
+  (let [suggestions @(rf/subscribe [::subs/ptv-member-suggestions])
+        org-name (:name @(rf/subscribe [::subs/editing-org]))]
     (when (seq suggestions)
       [:> Alert {:severity "info" :sx {:mb 2}}
        [:> Typography {:variant "subtitle2"} (tr :lipas.org/ptv-suggestions-title)]
@@ -545,7 +547,12 @@
          [:> Box {:key user-id :sx {:display "flex" :alignItems "center" :gap 1 :mb 0.5}}
           [:> Typography {:variant "body2"} (if (seq name) name username)]
           [:> Button {:size "small" :variant "outlined"
-                      :on-click #(rf/dispatch [::events/add-suggested-ptv-member org-id user-id])}
+                      :on-click #(rf/dispatch
+                                   [:lipas.ui.events/confirm
+                                    (tr :lipas.org/ptv-suggestion-confirm
+                                        (if (seq name) name username) org-name)
+                                    (fn []
+                                      (rf/dispatch [::events/add-suggested-ptv-member org-id user-id]))])}
            (tr :lipas.org/ptv-suggestion-add)]])])))
 
 (defn members-tab [tr org-id]

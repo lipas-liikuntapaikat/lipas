@@ -62,8 +62,12 @@
   (when org
     (update org :ptv-data init-ptv-data)))
 
+(def ^:private org-tabs
+  #{"instructions" "our-sites" "overview" "members" "roles-templates" "ptv" "history"})
+
 (rf/reg-event-fx ::init-view
-  (fn [{:keys [db]} [_ org-id]]
+  ;; `tab` (optional, from ?tab=) picks the landing tab; unknown → default.
+  (fn [{:keys [db]} [_ org-id tab]]
     (let [user-data (get-in db [:user :login])
           is-lipas-admin? (roles/check-privilege user-data {} :users/manage)
           user-orgs (-> db :user :orgs)
@@ -86,12 +90,12 @@
                               ;; Land on the default "our-sites" tab and load its
                               ;; data via the normal tab path (also fetches the
                               ;; owned-site count for the setup-checklist step ③).
-               (not is-new?) (conj [:dispatch [::set-current-tab "our-sites"]])
+               (not is-new?) (conj [:dispatch [::set-current-tab (or (org-tabs tab) "our-sites")]])
                               ;; Orgs not loaded yet (e.g. direct navigation /
                               ;; page refresh) → fetch them and re-init once
                               ;; they've landed in app-db.
                (and (nil? user-orgs) (not is-new?))
-               (conj [:dispatch [::get-user-orgs {:then [::init-view org-id]}]]))]
+               (conj [:dispatch [::get-user-orgs {:then [::init-view org-id tab]}]]))]
       {:fx fx
        :db (assoc db :org {:org-id org-id
                            :editing-org current-org})})))

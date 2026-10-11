@@ -78,4 +78,13 @@
  :sync-blocked-hint "Fill in the missing information or switch the PTV integration off to save."
  :no-org-for-site "No PTV organisation you have PTV rights for covers this site's municipality, so the integration can't be switched on. Contact LIPAS support."
  :org-mismatch "The PTV organisation doesn't match the site's municipality."
- :no-ptv-permission "You don't have PTV rights for this site's municipality, so the PTV settings can't be changed."}
+ :no-ptv-permission "You don't have PTV rights for this site's municipality, so the PTV settings can't be changed."
+ ;; Site PTV tab: steps left before the site can be exported
+ :finish-title "Finish the PTV details"
+ :step-org "Organisation"
+ :step-service "Service"
+ :step-service-none "Not selected yet. Pick or create a service below."
+ :step-texts "Summary and description in Finnish"
+ :step-texts-hint "Write them below or generate them with AI."
+ :finish-footer "The sports site is exported to PTV when you save."
+ :save-needs-texts "Fill in the summary and description on the PTV tab, or switch the PTV integration off."}

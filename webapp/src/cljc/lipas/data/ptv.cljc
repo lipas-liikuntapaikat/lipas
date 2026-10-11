@@ -116,6 +116,81 @@
                         (contains? (set (:owners ptv-data)) owner))))
              ptv-orgs)))
 
+;;; PTV users (admin list) ;;;
+
+(defn- ptv-manager-city-codes
+  "City-codes of the `ptv-manager` roles in `roles` (stored wire shape or
+  conformed). City-less (global) grants are skipped: they aren't tied to an org."
+  [roles]
+  (for [r roles
+        :when (= :ptv-manager (keyword (:role r)))
+        c (:city-code r)]
+    (long c)))
+
+(defn ptv-user-rows
+  "Accounts holding `ptv-manager` for a municipality, by either route, as rows
+  for the admin user list. `users` are admin user maps carrying the stored
+  `[:permissions :roles]` plus the read-only `:orgs` / `:org-roles` (see
+  `lipas.backend.org/with-org-info`); `ptv-orgs` are LIPAS orgs with
+  `:ptv-data`.
+
+  One row per (account, covering PTV org), or per (account, city) when no PTV
+  org covers the city:
+  - `:direct?`  a direct city-scoped role on the account (the legacy way)
+  - `:via-org?` granted by an org's role template
+  - `:org`      the PTV org covering the cities: the one the account is in,
+                else the only one (nil when none, or several and no membership:
+                `:ambiguous-org?`), and
+    `:member?`  whether the account already belongs to it
+  - `:orgs`     every org the account belongs to
+  Inactive accounts are left out."
+  [users ptv-orgs]
+  (let [city->orgs (reduce (fn [acc o]
+                             (reduce #(update %1 (long %2) (fnil conj []) o)
+                                     acc
+                                     (get-in o [:ptv-data :city-codes])))
+                           {}
+                           (filter #(get-in % [:ptv-data :org-id]) ptv-orgs))]
+    (->> users
+         (filter #(= "active" (:status %)))
+         (mapcat
+           (fn [u]
+             (let [grants (concat (for [c (ptv-manager-city-codes (get-in u [:permissions :roles]))]
+                                    [c :direct])
+                                  (for [c (ptv-manager-city-codes (:org-roles u))]
+                                    [c :org]))
+                   member-ids (set (map (comp str :id) (:orgs u)))
+                   ;; The org a city's PTV work belongs to for this account: one
+                   ;; it's already in, else the only covering org. Several
+                   ;; covering orgs and no membership: nothing to suggest.
+                   org-for (fn [c]
+                             (let [os (city->orgs c)]
+                               (or (some #(when (member-ids (str (:id %))) %) os)
+                                   (when (= 1 (count os)) (first os)))))]
+               (for [[_ gs] (group-by (fn [[c _]]
+                                        (if-let [o (org-for c)]
+                                          (str (:id o))
+                                          (str "city-" c)))
+                                      grants)
+                     :let [city-codes (vec (sort (distinct (map first gs))))
+                           org (org-for (first city-codes))
+                           sources (set (map second gs))]]
+                 {:user-id (str (:id u))
+                  :username (:username u)
+                  :email (:email u)
+                  :name (str/trim (str (get-in u [:user-data :firstname]) " "
+                                       (get-in u [:user-data :lastname])))
+                  :city-codes city-codes
+                  :org (when org {:id (str (:id org)) :name (:name org)})
+                  :ambiguous-org? (and (nil? org) (< 1 (count (city->orgs (first city-codes)))))
+                  :member? (boolean (and org (member-ids (str (:id org)))))
+                  :orgs (vec (:orgs u))
+                  :direct? (contains? sources :direct)
+                  :via-org? (contains? sources :org)}))))
+         (sort-by (juxt #(get-in % [:org :name] "~")
+                        #(str/lower-case (or (not-empty (:name %)) (:username %) ""))))
+         vec)))
+
 (defn resolve-org-id
   "The PTV org-id a site integrates under, or nil when it can't be determined.
    1. The persisted `[:ptv :org-id]` (authoritative once integrated).
@@ -1344,6 +1419,54 @@
     (boolean (and (some-> description :fi count (> 5))
                   (some-> summary :fi count (> 5))))))
 
+(def attention-reasons
+  "Why a site's PTV integration needs an admin's attention, most severe first.
+  `:error` = it isn't (correctly) in PTV although it should be; `:warning` = it
+  is in PTV, but in a state someone should look at."
+  [[:ptv/no-org :error]
+   [:ptv/missing-texts :error]
+   [:ptv/sync-error :error]
+   [:ptv/never-sent :error]
+   [:ptv/published-not-candidate :warning]
+   [:ptv/no-service :warning]
+   [:ptv/published-sync-off :warning]
+   [:ptv/archived-sync-on :warning]])
+
+(defn attention
+  "The `attention-reasons` that apply to `site` (current revision), in that
+  order, as `[{:reason kw :severity kw}]`; empty when its PTV state is fine.
+  Shared by the admin adoption view's tiles, its attention list and the
+  municipality table, so they can't disagree.
+
+  A sync error is only stored by a failed sync and cleared by the next
+  successful one (it isn't a persisted PTV key), so it's always current."
+  [site]
+  (let [{:keys [sync-enabled org-id error publishing-status
+                service-ids service-channel-ids]} (:ptv site)
+        published? (= "Published" publishing-status)
+        candidate? (ptv-candidate? site)
+        hits (set [(when (and sync-enabled (str/blank? org-id))
+                     :ptv/no-org)
+                   (when (and sync-enabled candidate? (not (ptv-ready? site)))
+                     :ptv/missing-texts)
+                   (when (and sync-enabled error)
+                     :ptv/sync-error)
+                   (when (and sync-enabled candidate? (not error)
+                              (not (str/blank? org-id)) (ptv-ready? site)
+                              (empty? service-channel-ids) (nil? publishing-status))
+                     :ptv/never-sent)
+                   (when (and published? (not candidate?))
+                     :ptv/published-not-candidate)
+                   (when (and published? candidate? (empty? service-ids))
+                     :ptv/no-service)
+                   (when (and published? (not sync-enabled))
+                     :ptv/published-sync-off)
+                   (when (and sync-enabled candidate? (= "Deleted" publishing-status))
+                     :ptv/archived-sync-on)])]
+    (vec (for [[reason severity] attention-reasons
+               :when (hits reason)]
+           {:reason reason :severity severity}))))
+
 (defn sync-blockers
   "What stops `site` from syncing to PTV, as a set of keywords (empty when
   nothing does). Only meaningful while `[:ptv :sync-enabled]` is on and the
@@ -1365,6 +1488,15 @@
 
         (and (ptv-candidate? site) (not (ptv-ready? site)))
         (conj :ptv/missing-texts)))))
+
+(def server-owned-ptv-keys
+  "`:ptv` keys only the PTV sync writes: what PTV returned and when. A user save
+  never sets them — `core/check-ptv-save!` keeps them from the previous
+  revision — so a browser holding an outdated copy of the site can't roll them
+  back. (Seen in prod: a site archived by one save was marked incorrect-data
+  seconds later with its pre-archive :ptv, leaving LIPAS saying Published.)"
+  [:publishing-status :last-sync :source-id :service-channel-ids
+   :previous-type-code :error])
 
 (def user-controlled-ptv-keys
   "`:ptv` keys an editor sets through the site form. A save that changes any of

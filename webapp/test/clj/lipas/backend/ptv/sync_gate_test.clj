@@ -13,9 +13,11 @@
    throw before any PTV request."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [lipas.backend.core :as core]
+            [lipas.backend.email :as email]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.org :as backend-org]
             [lipas.backend.ptv.core :as ptv-core]
+            [lipas.data.ptv :as ptv-data]
             [lipas.test-utils :as tu]
             [ring.mock.request :as mock]))
 
@@ -80,6 +82,19 @@
   (user-with-roles [{:role "city-manager" :city-code [city-code]}
                     {:role "ptv-manager" :city-code [city-code]}]))
 
+(defn- org-ptv-member
+  "Org plane: no account roles; PTV and site-editing rights come from the
+  `org`'s role-template catalog, projected into the token the way login does
+  (`enrich-org-roles`)."
+  [org city-code]
+  (backend-org/update-catalog! (test-db) (:id org)
+                               {:ptv {:roles [{:role "ptv-manager" :city-code [city-code]}
+                                              {:role "city-manager" :city-code [city-code]}]}}
+                               nil)
+  (let [user (user-with-roles [])]
+    (backend-org/add-member! (test-db) (:id org) (:id user) {:roles ["ptv"]} nil)
+    (backend-org/enrich-org-roles (test-db) user)))
+
 (defn- city-manager [city-code]
   (user-with-roles [{:role "city-manager" :city-code [city-code]}]))
 
@@ -110,6 +125,18 @@
   (core/get-sports-site (test-db) lipas-id))
 
 ;;; Save gate ;;;
+
+(deftest org-member-enables-sync-test
+  (testing "an org member whose PTV rights come from the org catalog enables sync: org-id is derived"
+    (let [org (seed-org! ptv-org-a [own-city])
+          member (org-ptv-member org own-city)]
+      (with-sync-stub
+        (fn []
+          (let [site (seed-site! own-city)
+                resp (save! member (assoc site :ptv (merge {:sync-enabled true} texts)))]
+            (is (= 201 (:status resp)))
+            (is (= ptv-org-a (get-in (current (:lipas-id site)) [:ptv :org-id])))
+            (is (= [ptv-org-a] (map :org-id @sync-calls)))))))))
 
 (deftest legacy-ptv-manager-enables-sync-test
   (testing "a non-member, city-scoped ptv-manager enables sync: org-id is derived server-side"
@@ -189,6 +216,82 @@
       (is (= "Uusi nimi" (:name stored)))
       (is (= ["ptv/no-org"] (map name (get-in stored [:ptv :error :blockers])))))))
 
+;;; Server-owned :ptv keys ;;;
+
+(deftest stale-ptv-lifecycle-keys-are-ignored-test
+  (testing "a save carrying an outdated copy of the PTV record can't roll it back
+            (prod: archived, then marked incorrect-data with the pre-archive :ptv,
+            leaving LIPAS saying Published)"
+    (seed-org! ptv-org-a [own-city])
+    (with-sync-stub
+      (fn []
+        (let [published (merge {:sync-enabled true :org-id ptv-org-a
+                                :publishing-status "Published"
+                                :last-sync "2025-11-13T08:33:46.000Z"
+                                :source-id "lipas-src-1"
+                                :service-channel-ids ["channel-1"]
+                                :service-ids ["service-1"]}
+                               texts)
+              ;; what the archive sync stored
+              archived (-> published
+                           (assoc :publishing-status "Deleted"
+                                  :last-sync "2026-01-13T06:06:39.000Z")
+                           (dissoc :source-id :service-channel-ids))
+              site (seed-site! own-city archived)
+              resp (save! (ptv-manager own-city)
+                          (assoc site :status "incorrect-data" :ptv published))
+              stored (:ptv (current (:lipas-id site)))]
+          (is (= 201 (:status resp)))
+          (is (= "Deleted" (:publishing-status stored)))
+          (is (= "2026-01-13T06:06:39.000Z" (:last-sync stored)))
+          (is (nil? (:source-id stored)))
+          (is (empty? (:service-channel-ids stored)))
+          (is (empty? @sync-calls) "nothing in PTV to archive any more"))))
+    (testing "...and a client can't claim lifecycle state for a site never in PTV"
+      (with-sync-stub
+        (fn []
+          (let [site (seed-site! own-city)
+                _ (save! (ptv-manager own-city)
+                         (assoc site :ptv {:sync-enabled false
+                                           :publishing-status "Published"
+                                           :source-id "forged"}))
+                stored (:ptv (current (:lipas-id site)))]
+            (is (nil? (:publishing-status stored)))
+            (is (nil? (:source-id stored)))))))))
+
+(deftest browser-clock-ahead-cant-outrank-ptv-sync-test
+  (testing "closing a site from a browser whose clock runs ahead: the PTV sync's
+            archive revision stays current (prod: the user's browser-dated,
+            pre-archive revision won and was re-marked incorrect-data)"
+    (seed-org! ptv-org-a [own-city])
+    (let [published (merge {:sync-enabled true :org-id ptv-org-a
+                            :publishing-status "Published"
+                            :last-sync "2026-01-01T00:00:00.000Z"
+                            :source-id "lipas-src-1"
+                            :service-channel-ids ["channel-1"]
+                            :service-ids ["service-1"]}
+                           texts)
+          site (seed-site! own-city published)
+          ahead (str (.plusSeconds (java.time.Instant/now) 30))]
+      ;; like the real sync: archive, then write a server-dated revision
+      (with-redefs [ptv-core/sync-ptv! (fn [tx _search _ptv user {:keys [sports-site ptv]}]
+                                         (let [now (str (java.time.Instant/now))
+                                               archived (assoc ptv :publishing-status "Deleted"
+                                                               :last-sync now)]
+                                           (core/upsert-sports-site! tx user (assoc sports-site
+                                                                                    :event-date now
+                                                                                    :ptv archived)
+                                                                     false)
+                                           {:ptv archived :event-date now}))]
+        (is (= 201 (:status (post "/api/sports-sites"
+                                  (assoc site
+                                         :status "out-of-service-permanently"
+                                         :event-date ahead)
+                                  (ptv-manager own-city))))))
+      (let [stored (current (:lipas-id site))]
+        (is (= "out-of-service-permanently" (:status stored)))
+        (is (= "Deleted" (get-in stored [:ptv :publishing-status])))))))
+
 ;;; Org listing ;;;
 
 (deftest get-ptv-orgs-test
@@ -197,6 +300,10 @@
         ids (fn [resp] (set (map :id (:parsed resp))))]
     (testing "a non-member ptv-manager gets the org covering their city — and only it"
       (let [resp (post "/api/actions/get-ptv-orgs" {} (ptv-manager own-city))]
+        (is (= 200 (:status resp)))
+        (is (= #{(str (:id org-a))} (ids resp)))))
+    (testing "an org member with catalog PTV rights gets the same org"
+      (let [resp (post "/api/actions/get-ptv-orgs" {} (org-ptv-member org-a own-city))]
         (is (= 200 (:status resp)))
         (is (= #{(str (:id org-a))} (ids resp)))))
     (testing "admins get every PTV org"
@@ -224,13 +331,19 @@
       (is (contains? (suggested) (str (:id manager))))
       (is (not-any? :email (:parsed (post "/api/actions/get-ptv-member-suggestions"
                                           {:org-id org-id} admin)))))
-    (testing "the admin overview lists them with their org"
-      (let [rows (:parsed (post "/api/actions/get-ptv-managers-outside-orgs" {} admin))
-            row (some #(when (= (str (:id manager)) (:user-id %)) %) rows)]
-        (is (= org-id (get-in row [:org :id])))))
-    (testing "adding makes them a plain member and drops them from the suggestions"
-      (is (= 200 (:status (post "/api/actions/add-suggested-ptv-member"
-                                {:org-id org-id :user-id (str (:id manager))} admin))))
+    (testing "PTV rights from another org's template count too (same rule as the admin list)"
+      (let [other-org (backend-org/create-org (test-db) {:id (random-uuid)
+                                                         :name (str "No-PTV Org " (rand-int 1000000))
+                                                         :data {}})
+            via-other (org-ptv-member other-org own-city)]
+        (is (contains? (suggested) (str (:id via-other))))))
+    (testing "adding makes them a plain member, silently, and drops them from the suggestions"
+      (let [mails (atom [])]
+        (with-redefs [email/send-org-added-email! (fn [_ to _] (swap! mails conj to))
+                      email/send-org-invitation-email! (fn [_ to _] (swap! mails conj to))]
+          (is (= 200 (:status (post "/api/actions/add-suggested-ptv-member"
+                                    {:org-id org-id :user-id (str (:id manager))} admin)))))
+        (is (empty? @mails) "no 'added to an organization' email: users don't see org views"))
       (let [member (some #(when (= (str (:id manager)) (:user-id %)) %)
                          (:members (backend-org/get-org (test-db) (:id org))))]
         (is (some? member))
@@ -243,3 +356,35 @@
     (testing "non-admins of the org can't list or add"
       (is (= 403 (:status (post "/api/actions/get-ptv-member-suggestions"
                                 {:org-id org-id} manager)))))))
+
+;;; Admin PTV user list ;;;
+
+(deftest admin-ptv-user-list-test
+  (testing "/users carries org memberships and org-granted roles, and the PTV
+            user list derived from it covers both role models"
+    (let [org (seed-org! ptv-org-a [own-city])
+          org-id (str (:id org))
+          legacy (ptv-manager own-city)
+          member (org-ptv-member org own-city)
+          admin (tu/gen-admin-user :db-component (test-db))
+          users (tu/<-json (:body (test-app (-> (mock/request :get "/api/users")
+                                                (tu/token-header (jwt/create-token admin))))))
+          ptv-orgs (:parsed (post "/api/actions/get-ptv-orgs" {} admin))
+          rows (ptv-data/ptv-user-rows users ptv-orgs)
+          row-of (fn [user] (some #(when (= (str (:id user)) (:user-id %)) %) rows))
+          member-account (some #(when (= (str (:id member)) (str (:id %))) %) users)]
+      (testing "org-granted roles stay out of the stored :permissions"
+        (is (= [] (get-in member-account [:permissions :roles])))
+        (is (= [org-id] (map :id (:orgs member-account))))
+        (is (some #(= "ptv-manager" (:role %)) (:org-roles member-account))))
+      (testing "legacy: direct role, not a member of the covering org"
+        (is (= {:direct? true :via-org? false :member? false :org-id org-id :city-codes [own-city]}
+               (-> (row-of legacy)
+                   (select-keys [:direct? :via-org? :member? :city-codes])
+                   (assoc :org-id (get-in (row-of legacy) [:org :id]))))))
+      (testing "org member: rights from the org template, already a member"
+        (is (= {:direct? false :via-org? true :member? true :org-id org-id :city-codes [own-city]}
+               (-> (row-of member)
+                   (select-keys [:direct? :via-org? :member? :city-codes])
+                   (assoc :org-id (get-in (row-of member) [:org :id])))))))))
+

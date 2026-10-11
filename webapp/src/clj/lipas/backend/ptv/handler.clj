@@ -288,15 +288,6 @@
         {:status 200
          :body (ptv-orgs-for-user db (:identity req))})}}]
 
-   ["/actions/get-ptv-managers-outside-orgs"
-    {:post
-     {:require-privilege :users/manage
-      :parameters {:body [:map]}
-      :handler
-      (fn [_req]
-        {:status 200
-         :body (ptv-core/ptv-managers-outside-orgs db)})}}]
-
    ["/actions/get-ptv-member-suggestions"
     {:post
      {:require-privilege [org-scope-from-body :org/manage]

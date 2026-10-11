@@ -1645,6 +1645,16 @@
   [db]
   (filterv #(get-in % [:ptv-data :org-id]) (org/all-orgs db)))
 
+(defn- keep-server-owned-ptv
+  "`sports-site` with the `ptv-data/server-owned-ptv-keys` taken from `prev`
+  (dropped when `prev` has none), whatever the client sent."
+  [prev sports-site]
+  (if (:ptv sports-site)
+    (update sports-site :ptv
+            #(merge (apply dissoc % ptv-data/server-owned-ptv-keys)
+                    (select-keys (:ptv prev) ptv-data/server-owned-ptv-keys)))
+    sports-site))
+
 (defn check-ptv-save!
   "Hard gate for the `:ptv` part of a user-facing site save. Returns the site
   to persist (org-id filled in when it can be derived) or throws.
@@ -1656,6 +1666,8 @@
   - The org-id must be the site's persisted one or the org whose PTV config
     covers the site — never an arbitrary org that LIPAS would then write to
     with its own PTV credentials.
+  - The PTV sync's own record (`ptv-data/server-owned-ptv-keys`: publishing
+    status, last sync, PTV ids, error) always comes from `prev`.
   - A PTV edit that leaves sync on must leave the site syncable
     (`ptv-data/sync-blockers`), otherwise it's rejected. An untouched-but-
     unsyncable `:ptv` doesn't block unrelated edits; `sync-ptv!` stores a
@@ -1663,7 +1675,8 @@
   [db user prev sports-site draft?]
   (if-not (or (:ptv sports-site) (:ptv prev))
     sports-site
-    (let [edited? (ptv-data/ptv-edited? prev sports-site)
+    (let [sports-site (keep-server-owned-ptv prev sports-site)
+          edited? (ptv-data/ptv-edited? prev sports-site)
           city-code (get-in sports-site [:location :city :city-code])
           orgs (delay (ptv-orgs db))
           derived-org-id (delay (ptv-data/resolve-org-id
@@ -1695,6 +1708,26 @@
 
 ;; TODO refactor upsert-sports-site!, upsert-sports-site!* and
 ;; save-sports-site! to form more sensible API.
+(defn- clamp-future-event-date
+  "`sports-site` with an `:event-date` in the future (per the server clock)
+  replaced by now. The browser dates a user's revision, the server dates the
+  PTV sync's revision written right after it, and the newest revision is the
+  current one. A browser clock running ahead therefore made the user's own,
+  pre-sync revision win over the sync's result (in prod: sites archived in
+  PTV whose current revision still said Published, re-marked incorrect-data
+  by the backdating rule in db/upsert-sports-site!). Backdating is untouched."
+  [sports-site]
+  (let [event-date (:event-date sports-site)
+        submitted (try (some-> event-date java.time.Instant/parse)
+                       (catch Exception _ nil))
+        now (java.time.Instant/now)]
+    (if (and submitted (.isAfter submitted now))
+      (do (log/infof "Clamped future event-date of site %s by %d ms (client clock ahead)"
+                     (:lipas-id sports-site)
+                     (- (.toEpochMilli submitted) (.toEpochMilli now)))
+          (assoc sports-site :event-date (utils/timestamp)))
+      sports-site)))
+
 (defn save-sports-site!
   "Saves sports-site to db and search and appends it to outbound
   integrations queue."
@@ -1706,7 +1739,9 @@
    ;; approve! — they call upsert-sports-site!* directly). This fn serves the
    ;; user-facing save endpoint, so strip it here to keep the audit column
    ;; unforgeable via POST /sports-sites (the save schema is :closed false).
-   (let [sports-site (dissoc sports-site :acting-org-id)
+   (let [sports-site (-> sports-site
+                         (dissoc :acting-org-id)
+                         clamp-future-event-date)
 
          ;; Phase 1: All DB operations inside the transaction.
          ;; ES indexing is deliberately outside the transaction so that
