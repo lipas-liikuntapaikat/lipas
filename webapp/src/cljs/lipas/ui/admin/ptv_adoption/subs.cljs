@@ -26,7 +26,9 @@
   :<- [::stats]
   (fn [stats _]
     (mapv (fn [{:keys [by-municipality] :as m}]
-            (-> (select-keys m [:month :new :total])
+            (-> (select-keys m [:month :new :total :left-total])
+                ;; ever published - left = in PTV at the end of the month
+                (assoc :in-ptv (- (:total m) (:left-total m 0)))
                 ;; Pre-rendered for the custom tooltip
                 (assoc :details (mapv (fn [{:keys [municipality new]}]
                                         (str municipality " " new))

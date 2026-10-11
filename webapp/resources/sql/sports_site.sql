@@ -144,7 +144,8 @@ WHERE document #> '{ptv,service-channel-ids}' @> to_jsonb(:service_channel_id ::
 -- :result :many
 -- :doc One row per site that has ever had a :ptv subtree: the Helsinki-local
 -- :doc month of its first :ptv revision and of its first revision published in
--- :doc PTV (NULL if never), plus the current revision's fields the PTV state
+-- :doc PTV (NULL if never) and of leaving PTV after its last publication (NULL
+-- :doc if still in PTV), plus the current revision's fields the PTV state
 -- :doc rules need (lipas.data.ptv/attention). Feeds the admin PTV adoption view.
 WITH first_ptv AS (
   SELECT lipas_id,
@@ -159,10 +160,30 @@ first_published AS (
   FROM sports_site
   WHERE document #>> '{ptv,publishing-status}' = 'Published'
   GROUP BY lipas_id
+),
+last_published AS (
+  SELECT lipas_id, max(event_date) AS last_published_at
+  FROM sports_site
+  WHERE status = 'published'
+    AND document #>> '{ptv,publishing-status}' = 'Published'
+  GROUP BY lipas_id
+),
+left_ptv AS (
+  -- The first revision after the last Published one that isn't Published
+  -- (archived, or the PTV data gone): when the site left PTV.
+  SELECT s.lipas_id,
+         to_char(min(s.event_date) AT TIME ZONE 'Europe/Helsinki', 'YYYY-MM') AS left_month
+  FROM sports_site s
+  JOIN last_published lp USING (lipas_id)
+  WHERE s.status = 'published'
+    AND s.event_date > lp.last_published_at
+    AND coalesce(s.document #>> '{ptv,publishing-status}', '') <> 'Published'
+  GROUP BY s.lipas_id
 )
 SELECT f.lipas_id,
        f.first_month,
        p.first_published_month,
+       l.left_month,
        c.city_code,
        jsonb_build_object('lipas-id', c.lipas_id,
                           'name', c.document -> 'name',
@@ -173,6 +194,7 @@ SELECT f.lipas_id,
 FROM first_ptv f
 JOIN sports_site_current c USING (lipas_id)
 LEFT JOIN first_published p USING (lipas_id)
+LEFT JOIN left_ptv l USING (lipas_id)
 
 -- :name invalidate-since!
 -- :command :execute

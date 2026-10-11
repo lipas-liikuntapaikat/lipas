@@ -9,6 +9,9 @@
     what PTV returned at LIPAS's last sync, not a live PTV read.
   - Adoption over time counts a site from the month it was FIRST published in
     PTV. Sites that got PTV data but never reached PTV don't count as adopted.
+    Sites that later left PTV (archived, or the PTV data gone) are counted
+    separately by the month they left, so total - left-total is the number in
+    PTV at the end of each month and, for the last one, equals the tile.
   - What needs an admin's attention comes from `ptv-data/attention`, the same
     rules the attention list uses."
   (:require [lipas.backend.db.db :as db]
@@ -85,6 +88,11 @@
   (let [rows (map with-state rows)
         published (filter :first-published-month rows)
         by-month (group-by :first-published-month published)
+        ;; ever published but not in PTV now, by when they left
+        left-by-month (group-by :left-month (filter #(and (:first-published-month %)
+                                                          (:left-month %)
+                                                          (not (in-ptv? %)))
+                                                    rows))
         months (if (seq published)
                  (month-range (reduce #(if (neg? (compare %1 %2)) %1 %2)
                                       (keys by-month))
@@ -95,17 +103,20 @@
                     :new-this-month (count (by-month current-month)))
      :monthly (->> months
                    (reductions
-                     (fn [{:keys [total]} month]
-                       (let [new-rows (by-month month)]
+                     (fn [{:keys [total left-total]} month]
+                       (let [new-rows (by-month month)
+                             left-rows (left-by-month month)]
                          {:month month
                           :new (count new-rows)
                           :total (+ total (count new-rows))
+                          :left (count left-rows)
+                          :left-total (+ left-total (count left-rows))
                           :by-municipality (->> new-rows
                                                 (group-by :municipality)
                                                 (map (fn [[m rs]] {:municipality m :new (count rs)}))
                                                 (sort-by (juxt (comp - :new) :municipality))
                                                 vec)}))
-                     {:total 0})
+                     {:total 0 :left-total 0})
                    rest
                    vec)
      :municipalities (->> (group-by :city-code rows)
