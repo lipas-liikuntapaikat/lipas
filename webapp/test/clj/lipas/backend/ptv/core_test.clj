@@ -145,6 +145,32 @@
         (is (not (re-find #"-4300$" (:sourceId @captured)))
             "the sub-category-style sourceId is not used")))))
 
+(deftest upsert-service-uses-live-org-languages
+  ;; The request's :languages is the browser's cached copy of the org config;
+  ;; the live config wins, as in the service-location sync.
+  (let [captured (atom nil)
+        org-id "org-x"
+        save! (fn [live-langs request-langs]
+                (with-redefs [ptv/update-service (fn [_ _ data]
+                                                   (reset! captured data)
+                                                   data)
+                              ptv-core/persist-ptv-service-revision! (fn [& _])]
+                  (ptv-core/upsert-ptv-service!
+                    :db-stub
+                    {:get-config-by-ptv-org-id-fn (fn [_] {:supported-languages live-langs})}
+                    {:id "test-user"}
+                    {:org-id org-id
+                     :sub-category-id 4300
+                     :city-codes [425]
+                     :languages request-langs
+                     :summary {:fi "s" :en "s-en"}
+                     :description {:fi "d" :en "d-en"}}))
+                (set (:languages @captured)))]
+    (testing "a language the request claims but the org doesn't have is not published"
+      (is (= #{"fi"} (save! ["fi"] ["fi" "en"]))))
+    (testing "a language the org has enabled is published even if a stale client omits it"
+      (is (= #{"fi" "en"} (save! ["fi" "en"] ["fi"]))))))
+
 (deftest select-translation-test
   ;; The model's response schema makes it return every language and a
   ;; user-instruction even when neither was asked for. Before, all of it was
