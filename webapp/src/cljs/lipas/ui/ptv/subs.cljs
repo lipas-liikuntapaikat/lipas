@@ -79,11 +79,11 @@
  ;; New subscriptions to get PTV config from organizations in app-db
 
 (rf/reg-sub ::all-orgs
-  :<- [:lipas.ui.org.subs/user-orgs]
-  (fn [user-orgs _]
-              ;; Backend already filters organizations by user role
-              ;; Admins see all orgs, auditors see all orgs, regular users see assigned orgs
-    user-orgs))
+  ;; The PTV orgs the user may act for (see ::events/fetch-ptv-orgs) — by PTV
+  ;; rights, not org membership. nil until loaded.
+  :<- [::ptv]
+  (fn [ptv _]
+    (:ptv-orgs ptv)))
 
 (rf/reg-sub ::ptv-config-by-ptv-org-id
   :<- [::all-orgs]

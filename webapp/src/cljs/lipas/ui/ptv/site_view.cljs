@@ -1,5 +1,7 @@
 (ns lipas.ui.ptv.site-view
-  (:require ["@mui/material/Alert$default" :as Alert]
+  (:require ["@mui/icons-material/CheckCircle$default" :as CheckCircleIcon]
+            ["@mui/icons-material/PendingOutlined$default" :as PendingIcon]
+            ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/AlertTitle$default" :as AlertTitle]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/CircularProgress$default" :as CircularProgress]
@@ -62,6 +64,39 @@
      {:tr tr
       :field-audit field-audit}]))
 
+(defn- finish-step
+  "One row of `finish-steps`: a done/open marker, the step and its state."
+  [{:keys [done? label]} & body]
+  [:> Stack {:direction "row" :spacing 1 :alignItems "flex-start"}
+   (if done?
+     [:> CheckCircleIcon {:fontSize "small" :color "success" :sx #js {:mt "2px"}}]
+     [:> PendingIcon {:fontSize "small" :color "warning" :sx #js {:mt "2px"}}])
+   (into [:> Stack {:spacing 0.5}
+          [:> Typography {:variant "body2" :sx #js {:fontWeight (when-not done? 600)}}
+           label]]
+         body)])
+
+(defn- finish-steps
+  "What's left before a site with sync switched on can be exported. Shown in
+  place of an error: missing texts are the user's next step, not a failure.
+  Save stays blocked meanwhile (same rule as the backend gate)."
+  [{:keys [tr org-name service-names texts-done?]}]
+  [:> Alert {:severity "info" :variant "outlined" :icon false}
+   [:> AlertTitle (tr :ptv/finish-title)]
+   [:> Stack {:spacing 1}
+    [finish-step {:done? true :label (tr :ptv/step-org)}
+     [:> Typography {:variant "body2"} org-name]]
+    [finish-step {:done? (boolean (seq service-names)) :label (tr :ptv/step-service)}
+     [:> Typography {:variant "body2"}
+      (if (seq service-names)
+        (str/join ", " service-names)
+        (tr :ptv/step-service-none))]]
+    [finish-step {:done? texts-done? :label (tr :ptv/step-texts)}
+     (when-not texts-done?
+       [:> Typography {:variant "body2"} (tr :ptv/step-texts-hint)])]
+    [:> Typography {:variant "body2" :sx #js {:mt 1}}
+     (tr :ptv/finish-footer)]]])
+
 (r/defc site-view [{:keys [tr lipas-id can-edit? edit-data]}]
   (let [[selected-tab set-selected-tab] (hooks/use-state :fi)
         [editing-org? set-editing-org?] (hooks/use-state false)
@@ -82,8 +117,12 @@
                sports-site)
 
         {:keys [sync-enabled delete-existing]} (:ptv site)
+        ;; Everything that keeps this site from syncing (shown while editing;
+        ;; the Save gate only counts it for PTV edits, see map/subs).
+        blockers (ptv-data/sync-blockers site)
 
         orgs @(rf/subscribe [::subs/all-orgs])
+        orgs-loaded? (some? orgs)
         ;; Single source of truth for "which org is this site's PTV integration
         ;; scoped to": persisted value → single org → city-code match → nil.
         org-id @(rf/subscribe [::subs/resolved-org-id lipas-id])
@@ -131,12 +170,22 @@
         service-channel-modified? (= "Modified" (-> site :ptv :service-channel-publishing-status))
         double-link-others @(rf/subscribe [::subs/double-link-others lipas-id])]
 
-    ;; Load user orgs on mount if not already loaded
-    ;; Note: orgs is nil when not loaded, empty vector [] when loaded but user has no orgs
+    ;; Load the PTV orgs the user may act for (by PTV rights, not membership)
+    ;; on mount. nil = not loaded, [] = loaded but none.
     (hooks/use-effect (fn []
                         (when (nil? orgs)
-                          (rf/dispatch [:lipas.ui.org.events/get-user-orgs])))
+                          (rf/dispatch [::events/fetch-ptv-orgs])))
                       [orgs])
+
+    ;; Repair path for sites saved with sync on but no org-id (possible before
+    ;; the save gate): once the org resolves, write it into the edit buffer so
+    ;; the services/texts sections appear and the blockers name what's left.
+    (hooks/use-effect (fn []
+                        (when (and editing? sync-enabled org-id
+                                   (str/blank? (get-in site [:ptv :org-id])))
+                          (rf/dispatch [:lipas.ui.sports-sites.events/edit-field
+                                        lipas-id [:ptv :org-id] org-id])))
+                      [editing? sync-enabled org-id (get-in site [:ptv :org-id])])
 
     ;; Fetch PTV org data, services, and integration candidates when org-id is
     ;; selected. Integration candidates are the org's peer sites — needed so
@@ -202,7 +251,31 @@
          [:> CircularProgress]
          (tr :ptv/loading-from-ptv)]])
 
-     ;; 1. Status alert — always visible when relevant. PTV links inline.
+     ;; 1. Sync + archive switches.
+     [:> Stack
+      {:direction "row"}
+      [:> FormControlLabel
+       {:label (tr :ptv.actions/integration-enabled)
+        :control (r/as-element
+                   [:> Switch
+                    {:disabled (or read-only?
+                                   ;; can't switch ON without an org
+                                   (and (not sync-enabled) (not org-id)))
+                     :checked (boolean sync-enabled)
+                     :on-change (fn [_e v]
+                                  (rf/dispatch [::events/toggle-site-sync-enabled lipas-id v]))}])}]
+      (when (and (not sync-enabled)
+                 previous-sent?)
+        [:> FormControlLabel
+         {:label (tr :ptv.actions/archive-in-ptv)
+          :control (r/as-element
+                     [:> Switch
+                      {:disabled read-only?
+                       :checked (or delete-existing false)
+                       :on-change (fn [_e v]
+                                    (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :delete-existing] v]))}])}])]
+
+     ;; 2. Status alert (below the switch it explains) — always visible when relevant. PTV links inline.
      (let [channel-id (first (:service-channel-ids (:ptv site)))
            ptv-links (when channel-id
                        [:> Stack {:direction "row" :spacing 2
@@ -222,10 +295,36 @@
                      body
                      ptv-links]))]
        (cond
+         ;; Sync on, only the texts left: the user's next step, not an
+         ;; error. Save is blocked meanwhile (map/subs ::ptv-save-blockers).
+         (and editing? (= #{:ptv/missing-texts} blockers))
+         [finish-steps
+          {:tr tr
+           :org-name (some #(when (= org-id (get-in % [:ptv-data :org-id])) (:name %)) orgs)
+           :service-names (let [ids (set (:service-ids (:ptv site)))]
+                            (for [s services* :when (ids (:service-id s))]
+                              (:label s)))
+           :texts-done? ready?}]
+
+         ;; Sync on but no org (sites saved before the gate): a real problem.
+         ;; Save is blocked meanwhile.
+         (and editing? (seq blockers))
+         (alert "error"
+                (tr :ptv/sync-blocked-title)
+                [:<>
+                 (for [msg (events/blocker-messages tr blockers)]
+                   ^{:key msg} [:div msg])
+                 [:div {:style {:marginTop "0.5em"}} (tr :ptv/sync-blocked-hint)]])
+
          (:error (:ptv site))
          (alert "error"
                 (tr :ptv/integration-error)
                 (events/ptv-error-body tr (:error (:ptv site))))
+
+         ;; Sync can't be switched on: no PTV org the user may act for
+         ;; covers the site.
+         (and editing? candidate-now? (not sync-enabled) orgs-loaded? (not org-id))
+         (alert "error" (tr :ptv/no-org-for-site))
 
          (and previous-sent? candidate-now? ready?)
          (cond
@@ -239,35 +338,10 @@
          (and candidate-now? ready? sync-enabled)
          (alert "info" (tr :ptv/new-service-location-will-be-created))
 
-         (and candidate-now? (not ready?) sync-enabled)
-         (alert "info" (tr :ptv/data-incomplete))
-
          (and (not candidate-now?) sync-enabled)
          (alert "warning" (tr :ptv/not-suitable-for-export))
 
          :else nil))
-
-     ;; 2. Sync + archive switches.
-     [:> Stack
-      {:direction "row"}
-      [:> FormControlLabel
-       {:label (tr :ptv.actions/integration-enabled)
-        :control (r/as-element
-                   [:> Switch
-                    {:disabled read-only?
-                     :checked sync-enabled
-                     :on-change (fn [_e v]
-                                  (rf/dispatch [::events/toggle-site-sync-enabled lipas-id v]))}])}]
-      (when (and (not sync-enabled)
-                 previous-sent?)
-        [:> FormControlLabel
-         {:label (tr :ptv.actions/archive-in-ptv)
-          :control (r/as-element
-                     [:> Switch
-                      {:disabled read-only?
-                       :checked (or delete-existing false)
-                       :on-change (fn [_e v]
-                                    (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :delete-existing] v]))}])}])]
 
      ;; 3. Organization selector — only relevant once the user opts in to sync.
      ;; Pre-filled from ::resolved-org-id. Shown as a caption + edit affordance
@@ -454,7 +528,7 @@
             :variant "outlined"
             :on-change (fn [v]
                          (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :summary selected-tab] v]))
-            :label (tr :ptv/summary)
+            :label (str (tr :ptv/summary) " *")
             :value v
             :inputProps #js {:maxLength ptv-data/max-summary-length}
             :helperText (str (count v) "/" ptv-data/max-summary-length)
@@ -482,7 +556,7 @@
             :multiline true
             :on-change (fn [v]
                          (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :description selected-tab] v]))
-            :label (tr :ptv/description)
+            :label (str (tr :ptv/description) " *")
             :value v
             :inputProps #js {:maxLength ptv-data/max-description-length}
             :helperText (str (count v) "/" ptv-data/max-description-length)

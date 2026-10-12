@@ -2,6 +2,7 @@
   (:require ["@mui/icons-material/Close$default" :as CloseIcon]
             ["@mui/icons-material/ContentCopy$default" :as ContentCopyIcon]
             ["@mui/material/Alert$default" :as Alert]
+            ["@mui/material/Badge$default" :as Badge]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Checkbox$default" :as Checkbox]
             ["@mui/material/CircularProgress$default" :as CircularProgress]
@@ -1146,10 +1147,28 @@
 
         ;; Show PTV tab in read-only mode only when sync is enabled.
         ;; In edit mode show only when it's possible to sync.
+        ;; PTV rights for THIS site's municipality — the backend gate
+        ;; (core/check-ptv-save!) rejects PTV edits without them.
         view-ptv? (and (if editing?
                          (ptv-data/ptv-candidate? edit-data)
                          (:sync-enabled (:ptv display-data)))
-                       (<== [:lipas.ui.user.subs/check-privilege {:city-code ::roles/any} :ptv/manage]))
+                       (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :ptv/manage]))
+
+        ;; Tabs come and go (e.g. PTV is edit-only for non-synced sites). When
+        ;; the selected one isn't shown — after Cancel, another site, … — fall
+        ;; back to basic data instead of rendering a tab-less body.
+        visible-tabs (cond-> #{0 1}
+                       (and (not (utils/prod?)) accessibility-type?) (conj 2)
+                       view-floorball? (conj 3)
+                       (#{"LineString"} geom-type) (conj 4)
+                       view-activities? (conj 5)
+                       view-ptv? (conj 6)
+                       view-images? (conj 7)
+                       (:owner-org-id display-data) (conj 8))
+        selected-tab (if (contains? visible-tabs selected-tab) selected-tab 0)
+
+        ;; Same rule as the backend gate; non-empty blocks Save.
+        ptv-save-blockers (<== [::subs/ptv-save-blockers lipas-id])
 
         can-edit-map? can-publish?
 
@@ -1268,7 +1287,16 @@
           [:> Tab
            {:style {:min-width 0}
             :value 6
-            :label "PTV"}])
+            ;; Flag the tab so a blocked Save can be traced from other tabs.
+            ;; Missing texts are an unfinished step (warning); no org is a
+            ;; real problem (error).
+            :label (if (seq ptv-save-blockers)
+                     (r/as-element [:> Badge {:color (if (= #{:ptv/missing-texts} ptv-save-blockers)
+                                                       "warning"
+                                                       "error")
+                                              :variant "dot"}
+                                    "PTV"])
+                     "PTV")}])
 
         (when view-images?
           [:> Tab
@@ -1643,7 +1671,7 @@
                   :edit-activities? edit-activities?
                   :edit-floorball? edit-floorball?
                   :save-in-progress? save-in-progress?
-                  :valid? edits-valid?
+                  :valid? (and edits-valid? (empty? ptv-save-blockers))
                   :logged-in? logged-in?
                   :user-can-publish? can-publish?
                   :on-discard #(==> [::events/discard-edits lipas-id])
@@ -1652,7 +1680,14 @@
                   :edit-tooltip (tr :actions/edit)
                   :on-publish #(==> [::events/save-edits lipas-id])
                   :publish-tooltip (tr :actions/save)
-                  :invalid-message (tr :error/invalid-form)
+                  :invalid-message (cond
+                                     (= #{:ptv/missing-texts} ptv-save-blockers)
+                                     (tr :ptv/save-needs-texts)
+
+                                     (seq ptv-save-blockers)
+                                     (tr :ptv/sync-blocked-title)
+
+                                     :else (tr :error/invalid-form))
                   :on-delete #(==> [::events/delete-site])
                   :delete-tooltip (tr :lipas.sports-site/delete-tooltip)}))
 

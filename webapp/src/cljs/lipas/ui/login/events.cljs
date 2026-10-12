@@ -32,6 +32,9 @@
         {:db (-> db
                  (assoc-in [:logged-in?] true)
                  (assoc-in [:user :login] body)
+                 ;; PTV orgs are per-user (by PTV rights); refetched lazily.
+                 ;; Dropped on every login so impersonation can't reuse them.
+                 (cond-> (not= :refresh login-type) (update :ptv dissoc :ptv-orgs))
                  (assoc-in [:analysis :diversity :user-category-presets]
                            (utils/index-by :name
                                            (get-in body [:user-data

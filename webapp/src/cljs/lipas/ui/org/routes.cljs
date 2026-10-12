@@ -12,14 +12,18 @@
     :tr-key :lipas.org/headline
     :navbar-link :lipas.ui.routes/orgs
     :view lazy/org-detail-page
+    ;; ?tab= opens a given tab (e.g. "members" from the admin PTV user list)
     :parameters {:path [:map
-                        [:org-id :string]]}
+                        [:org-id :string]]
+                 :query [:map
+                         [:tab {:optional true} :string]]}
     :controllers
     [{:identity (fn [match]
-                  (-> match :parameters :path :org-id))
+                  [(-> match :parameters :path :org-id)
+                   (-> match :parameters :query :tab)])
       :start
-      (fn [org-id]
-        (rf/dispatch [::events/init-view org-id]))}]}])
+      (fn [[org-id tab]]
+        (rf/dispatch [::events/init-view org-id tab]))}]}])
 
 (def org-list-routes
   ["organisaatiot"

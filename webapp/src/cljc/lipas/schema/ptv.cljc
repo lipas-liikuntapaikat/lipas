@@ -51,31 +51,59 @@
      [:audit {:optional true} #'ss-ptv/ptv-audit]]))
 
 (def adoption-status-counts
-  [[:sites :int]
-   [:integrated :int]
+  [[:in-ptv :int]
+   [:in-ptv-sync-off :int]
    [:sync-enabled :int]
-   [:published :int]
-   [:deleted :int]])
+   [:deleted :int]
+   [:attention :int]
+   [:attention-never-reached :int]
+   [:attention-failing :int]
+   [:warnings :int]])
+
+(def adoption-attention-row
+  "A site whose PTV state needs an admin's attention (lipas.data.ptv/attention)."
+  [:map
+   [:lipas-id :int]
+   [:name [:maybe :string]]
+   [:city-code [:maybe :int]]
+   [:municipality :string]
+   [:type-code [:maybe :int]]
+   [:status [:maybe :string]]
+   [:owner [:maybe :string]]
+   [:sync-enabled? :boolean]
+   [:publishing-status [:maybe :string]]
+   [:last-sync [:maybe :string]]
+   [:org-id [:maybe :string]]
+   [:service-channel-id [:maybe :string]]
+   [:error-message [:maybe :string]]
+   [:reasons [:vector [:map [:reason :keyword] [:severity :keyword]]]]])
 
 (def adoption-stats
   "Response of /actions/get-ptv-adoption-stats (admin PTV adoption view).
-   Months are \"YYYY-MM\" in Helsinki time."
+   Months are \"YYYY-MM\" in Helsinki time; adoption is counted from a site's
+   first publication in PTV."
   (m/schema
     [:map
      [:generated-at :string]
-     [:totals (into [:map [:municipalities :int]] adoption-status-counts)]
+     [:totals (into [:map
+                     [:municipalities :int]
+                     [:new-this-month :int]]
+                    adoption-status-counts)]
      [:monthly
       [:vector
        [:map
         [:month :string]
         [:new :int]
         [:total :int]
+        [:left :int]
+        [:left-total :int]
         [:by-municipality [:vector [:map [:municipality :string] [:new :int]]]]]]]
      [:municipalities
       [:vector
        (into [:map
               [:city-code [:maybe :int]]
               [:municipality :string]
-              [:first-month :string]
-              [:latest-month :string]]
-             adoption-status-counts)]]]))
+              [:first-month [:maybe :string]]
+              [:latest-month [:maybe :string]]]
+             adoption-status-counts)]]
+     [:attention [:vector adoption-attention-row]]]))

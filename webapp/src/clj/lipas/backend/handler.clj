@@ -87,6 +87,15 @@
    ;; lipas.backend.core/upload-utp-image! — client error, never a 500.
    :invalid-image (exception-handler 400 :invalid-image)
    :roles-outside-catalog (exception-handler 400 :roles-outside-catalog)
+   ;; site save rejected by core/check-ptv-save! — :blockers tells the client
+   ;; what to fix (same keys as lipas.data.ptv/sync-blockers)
+   :ptv-sync-blocked (fn [^Exception e _request]
+                       (-> {:status 400
+                            :body {:message (.getMessage e)
+                                   :type :ptv-sync-blocked
+                                   :blockers (:blockers (ex-data e))}}
+                           mw/add-cors-headers))
+   :ptv-org-mismatch (exception-handler 400 :ptv-org-mismatch)
    ;; inviting an email that is already a member must not silently replace
    ;; their roles — conflict, like :username-conflict
    :already-member (exception-handler 409 :already-member)
@@ -423,7 +432,9 @@
            :handler
            (fn [_]
              {:status 200
-              :body (core/get-users db)})}}]
+              ;; + read-only :orgs / :org-roles (org membership grants
+              ;; roles that aren't stored on the account)
+              :body (org/with-org-info db (core/get-users db))})}}]
 
       ;; =====================================================================
       ;; Org management — CQRS actions (POST /actions/<command>,

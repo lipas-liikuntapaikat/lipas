@@ -117,6 +117,17 @@
         (:token x))
       (:token x))))
 
+(defn- printable-body
+  "The request body for a log line. Must never throw: it runs while
+  reporting a PTV error, and an exception here would replace that error.
+  Non-ASCII is escaped (\\u00e4) because the prod log pipeline turns
+  ä/ö into '?'; anything cheshire can't encode falls back to pr-str."
+  [form-params]
+  (try
+    (json/generate-string form-params {:escape-non-ascii true})
+    (catch Exception _
+      (pr-str form-params))))
+
 (defn http
   ([ptv auth-org-id req] (http ptv auth-org-id req false))
   ([ptv auth-org-id req retried?]
@@ -142,10 +153,24 @@
                (log/debug "Invalid token, retrying with new token")
                (swap! (:tokens ptv) dissoc auth-org-id)
                (http ptv auth-org-id req true))
-             (throw (ex-info (format "HTTP Error: %s %s" (:status d) (:body d))
-                             {:resp d
-                              :req req*}
-                             nil)))))))))
+             (do
+               ;; PTV's 5xx bodies only say "An unexpected error occurred.
+               ;; Trace id: …", and the exception's printed :req is
+               ;; truncated, so log exactly what we sent: the trace id plus
+               ;; this payload is what PTV support needs.
+               (when (and (:status d) (>= (:status d) 500))
+                 (log/warnf "PTV %s %s -> %s %s\nRequest body: %s"
+                            (some-> (:method req*) name str/upper-case)
+                            (:url req*)
+                            (:status d)
+                            (:body d)
+                            (some-> (:form-params req*) printable-body)))
+               (throw (ex-info (format "HTTP Error: %s %s" (:status d) (:body d))
+                               {:resp d
+                                ;; No bearer token: this ex-data is printed
+                                ;; into the logs with the stack trace.
+                                :req (update req* :headers dissoc :Authorization)}
+                               nil))))))))))
 
 (defn get-org
   [ptv org-id]
