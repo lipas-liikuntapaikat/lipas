@@ -863,8 +863,11 @@
              (sut/unpublished-ptv-languages fi-site (channel "fi" "en") ["fi" "en"]))))
 
     (testing "a language LIPAS doesn't support at all"
-      (is (= {:not-enabled ["ru"]}
-             (sut/unpublished-ptv-languages fi-site (channel "fi" "ru") ["fi"]))))
+      (is (= {:not-enabled ["RU"]}
+             (sut/unpublished-ptv-languages fi-site (channel "fi" "ru") ["fi"])))
+      (is (= {:not-enabled ["SE"]}
+             (sut/unpublished-ptv-languages fi-site (channel "fi" "se") ["fi"]))
+          "PTV's se is Northern Sámi, not LIPAS se (Swedish)"))
 
     (testing "blank PTV values don't count as texts"
       (is (nil? (sut/unpublished-ptv-languages

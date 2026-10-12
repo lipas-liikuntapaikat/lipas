@@ -170,6 +170,7 @@
         service-channel-modified? (= "Modified" (-> site :ptv :service-channel-publishing-status))
         double-link-others @(rf/subscribe [::subs/double-link-others lipas-id])
         channel-id (first (:service-channel-ids (:ptv site)))
+        last-sync (-> sports-site :ptv :last-sync)
         linked-channel @(rf/subscribe [::subs/site-service-channel lipas-id])
         ;; nil until the linked channel is fetched, and for a channel that
         ;; was fetched for a previous link
@@ -224,10 +225,11 @@
 
     ;; Fetch the linked channel so the view can warn about PTV texts in
     ;; languages the next sync wouldn't publish (and so would remove).
+    ;; Refetched after each sync, which removes them.
     (hooks/use-effect (fn []
                         (when (and channel-id org-id)
                           (rf/dispatch [::events/fetch-site-service-channel lipas-id org-id channel-id])))
-                      [lipas-id org-id channel-id])
+                      [lipas-id org-id channel-id last-sync])
 
     ;; Detect a pre-existing double-link: another sports-site bound to the same
     ;; PTV service-location. This view loads neither the org's channels nor its
