@@ -2094,7 +2094,12 @@
                      :user-instruction (:user-instruction service)}
           edited-name (get-in descriptions [:name :fi])
           name-changed? (and edited-name (not= edited-name (:label service)))
-          has-local-edits? (or (not (ptv-data/texts-match? current-texts ptv-texts))
+          ;; Compare only the languages the org publishes: a generated text
+          ;; in any other language (the generator writes fi/se/en) never
+          ;; reaches PTV, and would read as a difference forever.
+          has-local-edits? (or (not (ptv-data/texts-match? current-texts ptv-texts
+                                                           [:summary :description :user-instruction]
+                                                           (map keyword org-languages)))
                                name-changed?)
           data (cond-> (merge {:org-id org-id
                                :source-id source-id

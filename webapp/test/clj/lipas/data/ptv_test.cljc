@@ -718,6 +718,17 @@
            (sut/normalize-ws "Rantakylän stadionalueen puolikota")
            "Rantakylän stadionalueen puolikota"))))
 
+(deftest texts-match?-locales-test
+  (testing "a draft in a language the org doesn't publish isn't a difference"
+    ;; Regression: a generated service has fi/se/en texts; an org publishing
+    ;; fi+en never sends the Swedish, so the panel showed differences forever.
+    (let [draft {:summary {:fi "a" :se "b" :en "c"}}
+          ptv {:summary {:fi "a" :en "c"}}]
+      (is (not (sut/texts-match? draft ptv)))
+      (is (sut/texts-match? draft ptv [:summary] [:fi :en]))
+      (is (not (sut/texts-match? (assoc-in draft [:summary :en] "changed") ptv
+                                 [:summary] [:fi :en]))))))
+
 (deftest texts-match?-whitespace-test
   (testing "texts differing only by collapsible whitespace match"
     (is (sut/texts-match? {:summary {:fi "a  b"}}
