@@ -83,4 +83,7 @@
  :step-texts "Tiivistelmä ja kuvaus suomeksi"
  :step-texts-hint "Kirjoita ne alle tai luo ne tekoälyllä."
  :finish-footer "Liikuntapaikka viedään PTV:hen, kun tallennat."
- :save-needs-texts "Täydennä PTV-välilehdeltä tiivistelmä ja kuvaus, tai kytke PTV-integraatio pois."}
+ :save-needs-texts "Täydennä PTV-välilehdeltä tiivistelmä ja kuvaus, tai kytke PTV-integraatio pois."
+ :unpublished-languages-title "PTV:ssä on tekstejä kielillä, joita ei julkaista"
+ :unpublished-languages-not-enabled "Tällä palvelupaikalla on PTV:ssä tekstejä kielillä, joita Lipas ei julkaise organisaatiollenne: {1}. Ne poistuvat PTV:stä seuraavassa synkronoinnissa. Jos haluatte julkaista myös näillä kielillä, ottakaa ennen synkronointia yhteyttä lipasinfo@jyu.fi."
+ :unpublished-languages-missing-texts "Tällä palvelupaikalla on PTV:ssä tekstejä kielillä, joilla sillä ei ole Lipaksessa tiivistelmää ja kuvausta: {1}. Ne poistuvat PTV:stä seuraavassa synkronoinnissa, ellei niitä lisätä Lipakseen (esim. \"Lataa tekstit PTV:stä\")."}

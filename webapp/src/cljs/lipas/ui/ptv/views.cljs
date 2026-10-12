@@ -398,6 +398,10 @@
           [:> Typography {:variant "body2"}
            (tr :ptv/modified-in-ptv)]])
 
+       ;; Texts in PTV that the next sync would remove
+       [ptv-components/unpublished-languages-alert
+        {:tr tr :unpublished (:unpublished-ptv-languages site)}]
+
        ;; Sync / Export button with helper text
        (let [sync-enabled? (:sync-enabled site)
              has-service? (seq (:service-ids site))
@@ -1476,6 +1480,11 @@
                                 (==> [::events/select-service-channels site v])
                                 (set-link-expanded false))
                    :label (tr :ptv.wizard/select-existing-service-channel)}])])]
+
+           ;; Texts in PTV that the first sync would remove (e.g. after linking
+           ;; an existing service location)
+           [ptv-components/unpublished-languages-alert
+            {:tr tr :unpublished (:unpublished-ptv-languages site)}]
 
 ;; AI generate + translate buttons
            (let [generating? @(rf/subscribe [::subs/generating-descriptions?])

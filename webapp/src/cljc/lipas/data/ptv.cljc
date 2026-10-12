@@ -1321,6 +1321,35 @@
                          :removed (mk-entries (set/difference lipas-service-ids ptv-service-ids))}])]
       (vec (concat drifted link-drift)))))
 
+(defn unpublished-ptv-languages
+  "Languages the linked PTV service location has texts in that the next sync
+   won't publish — and so will remove, since a service location sync replaces
+   the whole channel. Returns nil when there are none (or no channel), else a
+   map of upper-case language codes:
+   - :not-enabled   not in the org's PTV languages (only LIPAS admins can
+                    enable one) or not supported by LIPAS at all
+   - :missing-texts enabled for the org, but the site has no summary and
+                    description in it"
+  [site ptv-channel org-langs]
+  (when ptv-channel
+    (let [ptv-langs (->> (concat (:serviceChannelNames ptv-channel)
+                                 (:serviceChannelDescriptions ptv-channel))
+                         (remove (comp str/blank? :value))
+                         (keep :language)
+                         set)
+          published (set (effective-languages site org-langs))
+          enabled (set org-langs)]
+      (not-empty
+        (reduce (fn [acc ptv-lang]
+                  (let [lang (some-> (lang->locale ptv-lang) name)]
+                    (cond
+                      (contains? published lang) acc
+                      (contains? enabled lang) (update acc :missing-texts (fnil conj []) (str/upper-case lang))
+                      :else (update acc :not-enabled (fnil conj [])
+                                    (str/upper-case (or lang ptv-lang))))))
+                {}
+                (sort ptv-langs))))))
+
 (defn sports-site->ptv-input [{:keys [types org-id org-langs]} service-channels services site]
   (let [service-id (-> site :ptv :service-ids first)
         service-channel-id (-> site :ptv :service-channel-ids first)
@@ -1410,6 +1439,8 @@
                     :else :out-of-date)
 
      :drift-fields drift-fields
+     :unpublished-ptv-languages (unpublished-ptv-languages site ptv-channel
+                                                           (or org-langs fallback-languages))
 
      :ptv-texts ptv-texts
 

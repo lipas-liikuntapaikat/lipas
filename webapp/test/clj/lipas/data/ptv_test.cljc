@@ -839,6 +839,40 @@
       (is (= ["fi"] (:languages (sut/sports-site->ptv-input
                                   {:types {} :org-langs ["fi" "en"]} {} {} base)))))))
 
+(deftest unpublished-ptv-languages-test
+  ;; Linking a site to an existing PTV service location whose texts exist in
+  ;; languages LIPAS won't publish: the first sync removes them (Uusikaupunki
+  ;; lost their English this way). The UI warns from this.
+  (let [channel (fn [& langs]
+                  {:serviceChannelNames (for [l langs] {:type "Name" :language l :value "n"})
+                   :serviceChannelDescriptions (for [l langs] {:type "Summary" :language l :value "s"})})
+        fi-site {:ptv {:summary {:fi "s"} :description {:fi "d"}}}
+        en-site {:ptv {:summary {:fi "s" :en "s"} :description {:fi "d" :en "d"}}}]
+    (testing "nothing to warn about"
+      (is (nil? (sut/unpublished-ptv-languages fi-site nil ["fi"])) "no channel")
+      (is (nil? (sut/unpublished-ptv-languages fi-site (channel "fi") ["fi"])))
+      (is (nil? (sut/unpublished-ptv-languages en-site (channel "fi" "en") ["fi" "en"]))))
+
+    (testing "a language the org hasn't enabled"
+      (is (= {:not-enabled ["EN" "SE"]}
+             (sut/unpublished-ptv-languages fi-site (channel "fi" "sv" "en") ["fi"]))
+          "PTV's sv is LIPAS se"))
+
+    (testing "an enabled language the site has no texts in"
+      (is (= {:missing-texts ["EN"]}
+             (sut/unpublished-ptv-languages fi-site (channel "fi" "en") ["fi" "en"]))))
+
+    (testing "a language LIPAS doesn't support at all"
+      (is (= {:not-enabled ["RU"]}
+             (sut/unpublished-ptv-languages fi-site (channel "fi" "ru") ["fi"]))))
+
+    (testing "blank PTV values don't count as texts"
+      (is (nil? (sut/unpublished-ptv-languages
+                  fi-site
+                  {:serviceChannelNames [{:type "Name" :language "fi" :value "n"}
+                                         {:type "Name" :language "en" :value " "}]}
+                  ["fi"]))))))
+
 (deftest sync-status-archived-resync-test
   (let [ctx {:org-id "o" :types {} :org-defaults {} :org-langs ["fi"]}
         status (fn [site] (:sync-status (sut/sports-site->ptv-input ctx {} {} site)))
