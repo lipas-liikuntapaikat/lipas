@@ -11,12 +11,14 @@
    PTV is never called: `sync-ptv!` is stubbed where a test needs a sync to
    'succeed', and the real one is only run for its LIPAS-side guards, which
    throw before any PTV request."
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [lipas.backend.core :as core]
             [lipas.backend.email :as email]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.org :as backend-org]
             [lipas.backend.ptv.core :as ptv-core]
+            [lipas.backend.ptv.integration :as ptv-integ]
             [lipas.data.ptv :as ptv-data]
             [lipas.test-utils :as tu]
             [ring.mock.request :as mock]))
@@ -225,7 +227,8 @@
           :publishing-status "Published"
           :last-sync "2026-01-13T06:06:39.000Z"
           :source-id "lipas-src-1"
-          :service-channel-ids ["channel-1"]}
+          :service-channel-ids ["channel-1"]
+          :previous-type-code 2510}
          texts))
 
 (defn- org-editor
@@ -307,6 +310,135 @@
           (is (= 201 (:status resp)))
           (is (= "Uusi nimi" (:name (current (:lipas-id site)))))
           (is (empty? @sync-calls)))))))
+
+;;; Full sync against a fake PTV ;;;
+
+;; The real `sync-ptv!` runs; only `ptv-integ/http`, the single function every
+;; PTV request goes through, is replaced. The PTV test environment is shared
+;; and changes under us, so tests never call it. Response shapes follow what
+;; it returned (2026-10-12, create → rename → archive → GET of a throwaway
+;; channel): a channel GET is the full entity with services as
+;; `{:service {:id :name}}`; a ServiceLocation POST/PUT, the status-only
+;; archive included, answers with the full updated channel; an archived
+;; channel 404s on reads.
+
+(def ^:private ptv-requests (atom []))
+
+(defn- ptv-channel [id {:keys [services publishing-status name]}]
+  {:id id
+   :sourceId "lipas-src-1"
+   :organizationId ptv-org-a
+   :serviceChannelType "ServiceLocation"
+   :publishingStatus publishing-status
+   :serviceChannelNames [{:language "fi" :value name :type "Name"}]
+   :serviceChannelDescriptions []
+   :services (mapv (fn [sid] {:service {:id sid :name "Palvelu"}}) services)})
+
+(defn- with-fake-ptv
+  "Runs `f` against a PTV holding one published channel-1 linked to
+  service-1, recording each request as [auth-org-id method path body]. `fail`
+  answers the ServiceLocation PUT with that HTTP status instead."
+  ([f] (with-fake-ptv nil f))
+  ([fail f]
+   (reset! ptv-requests [])
+   (let [channels (atom {"channel-1" (ptv-channel "channel-1" {:services ["service-1"]
+                                                               :publishing-status "Published"
+                                                               :name "Vanha nimi"})})
+         http-error (fn [status] (ex-info (str "HTTP Error: " status)
+                                          {:resp {:status status :body {:message "fake"}}}))]
+     (with-redefs [ptv-integ/http
+                   (fn [_ptv auth-org-id {:keys [url method form-params]}]
+                     (let [path (subs url (str/index-of url "/v11/"))]
+                       (swap! ptv-requests conj [auth-org-id method path form-params])
+                       (condp re-matches path
+                         #"/v11/ServiceChannel/ServiceLocation/(.+)"
+                         :>> (fn [[_ id]]
+                               (when fail (throw (http-error fail)))
+                               (let [ch (swap! channels update id
+                                               (fn [ch]
+                                                 (cond-> (assoc ch :publishingStatus (:publishingStatus form-params))
+                                                   (:serviceChannelNames form-params)
+                                                   (assoc :serviceChannelNames (:serviceChannelNames form-params)))))]
+                                 {:body (get ch id)}))
+
+                         #"/v11/ServiceChannel/(.+)"
+                         :>> (fn [[_ id]]
+                               (let [ch (get @channels id)]
+                                 (if (and ch (not= "Deleted" (:publishingStatus ch)))
+                                   {:body ch}
+                                   (throw (http-error 404)))))
+
+                         (throw (ex-info (str "Fake PTV doesn't serve " method " " path) {})))))]
+       (f)))))
+
+(deftest no-ptv-rights-edit-syncs-to-ptv-test
+  (testing "a site editor without PTV rights renames an integrated site: the
+            stored settings are written to the site's existing channel, under
+            the site's org, and the sync's result is stored"
+    (seed-org! ptv-org-a [own-city])
+    (with-fake-ptv
+      (fn []
+        (let [site (seed-site! own-city integrated-ptv)
+              resp (save! (city-manager own-city) (assoc site :name "Uusi nimi"))
+              stored (current (:lipas-id site))
+              writes (remove (comp #{:get} second) @ptv-requests)
+              [[org-id _ path body]] writes]
+          (is (= 201 (:status resp)))
+          (is (= 1 (count writes)) "one PUT, no create, no service connection changes")
+          (is (= ptv-org-a org-id))
+          (is (= "/v11/ServiceChannel/ServiceLocation/channel-1" path))
+          (is (= "lipas-src-1" (:sourceId body)))
+          (is (= "Published" (:publishingStatus body)))
+          (is (some #{{:language "fi" :value "Uusi nimi" :type "Name"}}
+                    (:serviceChannelNames body)))
+          (is (some #(= "Pidempi kuvaus paikasta" (:value %))
+                    (:serviceChannelDescriptions body)))
+          (testing "stored after the sync"
+            (is (= "Uusi nimi" (:name stored)))
+            (is (= (select-keys integrated-ptv ptv-data/user-controlled-ptv-keys)
+                   (select-keys (:ptv stored) ptv-data/user-controlled-ptv-keys)))
+            (is (= "Published" (get-in stored [:ptv :publishing-status])))
+            (is (= ["channel-1"] (get-in stored [:ptv :service-channel-ids])))
+            (is (not= (:last-sync integrated-ptv) (get-in stored [:ptv :last-sync])))
+            (is (nil? (get-in stored [:ptv :error])))))))))
+
+(deftest no-ptv-rights-removal-archives-in-ptv-test
+  (seed-org! ptv-org-a [own-city])
+  (doseq [status ["out-of-service-permanently" "incorrect-data"]]
+    (testing (str "a site editor without PTV rights sets an integrated site "
+                  status ": its channel is archived with a status-only PUT")
+      (with-fake-ptv
+        (fn []
+          (let [site (seed-site! own-city integrated-ptv)
+                resp (save! (city-manager own-city) (assoc site :status status))
+                stored (current (:lipas-id site))
+                writes (remove (comp #{:get} second) @ptv-requests)]
+            (is (= 201 (:status resp)))
+            (is (= [[ptv-org-a :put "/v11/ServiceChannel/ServiceLocation/channel-1"
+                     {:publishingStatus "Deleted"}]]
+                   writes))
+            (is (= status (:status stored)))
+            (is (= "Deleted" (get-in stored [:ptv :publishing-status])))
+            (testing "the LIPAS↔PTV link survives, so re-activating re-publishes the same channel"
+              (is (= "lipas-src-1" (get-in stored [:ptv :source-id])))
+              (is (= ["channel-1"] (get-in stored [:ptv :service-channel-ids]))))))))))
+
+(deftest no-ptv-rights-edit-survives-ptv-failure-test
+  (testing "PTV failing doesn't fail a save by a site editor without PTV rights;
+            the edit is stored and the error is shown on the site"
+    (seed-org! ptv-org-a [own-city])
+    (with-fake-ptv 500
+      (fn []
+        (let [site (seed-site! own-city integrated-ptv)
+              resp (save! (city-manager own-city) (assoc site :name "Uusi nimi"))
+              stored (current (:lipas-id site))]
+          (is (= 201 (:status resp)))
+          (is (= "Uusi nimi" (:name stored)))
+          (is (some? (get-in stored [:ptv :error :message])))
+          (testing "the sync's record of what is in PTV is unchanged"
+            (is (= "Published" (get-in stored [:ptv :publishing-status])))
+            (is (= (:last-sync integrated-ptv) (get-in stored [:ptv :last-sync])))
+            (is (= ["channel-1"] (get-in stored [:ptv :service-channel-ids])))))))))
 
 ;;; Server-owned :ptv keys ;;;
 
