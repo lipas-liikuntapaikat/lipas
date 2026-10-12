@@ -95,15 +95,29 @@
         :content
         enforce-summary-limit)))
 
+(defn select-translation
+  "Narrows a model translation `result` to what `doc` asked for. The response
+   schema makes the model fill every language, and fill a :user-instruction
+   even when none was sent, so: keep only the :to languages, drop
+   :user-instruction unless the source had one, and put the :from texts back
+   exactly as written."
+  [{:keys [from to user-instruction] :as doc} result]
+  (let [from (keyword from)
+        keep-langs (conj (set (map keyword to)) from)
+        fields (cond-> [:summary :description]
+                 user-instruction (conj :user-instruction))]
+    (into {}
+          (for [field fields]
+            [field (-> (select-keys (get result field) keep-langs)
+                       (assoc from (get doc field)))]))))
+
 (defn translate-to-other-langs
   [doc]
-  (-> (ai/translate-to-other-langs doc)
-      :message
-      :content
-      (enforce-summary-limit :skip-langs #{(keyword (:from doc))})
-      ;; Ensure the original from texts are kept as-is
-      (assoc-in [:summary (keyword (:from doc))] (:summary doc))
-      (assoc-in [:description (keyword (:from doc))] (:description doc))))
+  (let [content (-> (ai/translate-to-other-langs doc) :message :content)]
+    (if (map? content)
+      (-> (select-translation doc content)
+          (enforce-summary-limit :skip-langs #{(keyword (:from doc))}))
+      content)))
 
 (defn make-overview
   [sites]
@@ -416,7 +430,10 @@
         org-config (ptv/get-org-ptv-config-with-fallback ptv-component org-id)
         org-langs (or (:supported-languages org-config)
                       ptv-data/fallback-languages)
-        ptv (assoc ptv :languages org-langs)
+        ;; ...narrowed to the languages the site has texts for, so the stored
+        ;; :languages records what PTV actually got.
+        ptv (assoc ptv :languages (ptv-data/effective-languages (update site :ptv merge ptv)
+                                                                org-langs))
 
         ;; Fetch the stored channel for service-connection diffing below.
         ;; Drift detection in `sports-site->ptv-input` uses a separately

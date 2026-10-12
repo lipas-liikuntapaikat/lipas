@@ -405,7 +405,7 @@
 (def ^:private base-site
   {:ptv {:languages ["fi" "se" "en"]
          :summary {:fi "summary-fi" :se "summary-sv" :en "summary-en"}
-         :description {:fi "desc-fi"}}
+         :description {:fi "desc-fi" :se "desc-sv" :en "desc-en"}}
    :search-meta {:location {:wgs84-point [0 0]}}
    :location {:city {:city-code 889} :address "Katu 1" :postal-code "99999"}})
 
@@ -448,10 +448,40 @@
 
   (testing "descriptions: every declared language has a Summary and a Description"
     (let [p (build-location (assoc base-site :name "Halli"))]
-      (is (= #{"fi" "sv" "en"} (desc-langs p "Summary"))
-          "ptv map has summary in all three languages")
-      (is (= #{"fi" "sv" "en"} (desc-langs p "Description"))
-          "ptv map only has fi description, but sv/en fall back to fi"))))
+      (is (= #{"fi" "sv" "en"} (desc-langs p "Summary")))
+      (is (= #{"fi" "sv" "en"} (desc-langs p "Description")))))
+
+  (testing "a language without its own summary and description is not declared"
+    ;; Regression: an org enabling English pushed the Finnish texts to PTV
+    ;; labelled as English for every site that had no English texts yet.
+    (doseq [[label ptv] [["no en texts" {:summary {:fi "s-fi" :se "s-sv"}
+                                         :description {:fi "d-fi" :se "d-sv"}}]
+                         ["en summary only" {:summary {:fi "s-fi" :se "s-sv" :en "s-en"}
+                                             :description {:fi "d-fi" :se "d-sv"}}]
+                         ["blank en description" {:summary {:fi "s-fi" :se "s-sv" :en "s-en"}
+                                                  :description {:fi "d-fi" :se "d-sv" :en "  "}}]]]
+      (let [p (build-location (-> base-site
+                                  (assoc :name "Halli")
+                                  (update :ptv merge ptv)))]
+        (is (= #{"fi" "sv"} (set (:languages p))) label)
+        (is (= #{"fi" "sv"} (desc-langs p "Summary")) label)
+        (is (= #{"fi" "sv"} (desc-langs p "Description")) label)
+        (is (= #{"fi" "sv"} (set (map :language (:displayNameType p)))) label)
+        (is (not-any? #(= "en" (:language %)) (:serviceChannelNames p)) label)))))
+
+(deftest effective-languages-test
+  (let [site (fn [summary description] {:ptv {:summary summary :description description}})]
+    (testing "fi is always published, whatever its texts"
+      (is (= ["fi"] (sut/effective-languages (site {} {}) ["fi"]))))
+    (testing "se/en only with both a summary and a description"
+      (is (= ["fi" "en"] (sut/effective-languages (site {:fi "a" :se "b" :en "c"}
+                                                        {:fi "a" :en "c"})
+                                                  ["fi" "se" "en"])))
+      (is (= ["fi"] (sut/effective-languages (site {:fi "a" :en ""} {:fi "a" :en "c"})
+                                             ["fi" "en"]))))
+    (testing "languages the org doesn't support are never published"
+      (is (= ["fi"] (sut/effective-languages (site {:fi "a" :en "c"} {:fi "a" :en "c"})
+                                             ["fi"]))))))
 
 (defn- area-codes [payload]
   (mapv :areaCodes (:areas payload)))
@@ -723,6 +753,50 @@
         (is (= :out-of-date
                (status (assoc-in base [:ptv :service-channel-ids] cleared)))
             (str "cleared as " (pr-str cleared)))))))
+
+(deftest sync-status-languages-test
+  ;; An org enabling a language must make its already-synced sites need a sync
+  ;; once they have texts in it. Before, change detection compared only the
+  ;; languages stored at the last sync (["fi"]), so English texts never
+  ;; activated the sync button.
+  (let [status (fn [org-langs channels site]
+                 (:sync-status (sut/sports-site->ptv-input
+                                 {:org-id "o" :types {} :org-defaults {} :org-langs org-langs}
+                                 channels {} site)))
+        base {:lipas-id 1 :name "X" :event-date "T1"
+              :ptv {:last-sync "T1"
+                    :languages ["fi"]
+                    :service-channel-ids ["C1"]
+                    :summary {:fi "aaaaaa"}
+                    :description {:fi "bbbbbb"}}}
+        with-en (-> base
+                    (assoc-in [:ptv :summary :en] "summary")
+                    (assoc-in [:ptv :description :en] "description"))
+        fi-channel {"C1" {:id "C1"
+                          :languages ["fi"]
+                          :serviceChannelNames [{:type "Name" :language "fi" :value "X"}]
+                          :serviceChannelDescriptions [{:type "Summary" :language "fi" :value "aaaaaa"}
+                                                       {:type "Description" :language "fi" :value "bbbbbb"}]}}]
+    (testing "org enabled en, site has no en texts yet: nothing to sync"
+      (is (= :ok (status ["fi" "en"] {} base)))
+      (is (= :ok (status ["fi" "en"] fi-channel base))))
+
+    (testing "en texts written: needs a sync, channel cached or not"
+      (is (= :out-of-date (status ["fi" "en"] {} with-en)))
+      (is (= :content-drift (status ["fi" "en"] fi-channel with-en))))
+
+    (testing "en texts in LIPAS but the org doesn't publish en: nothing to sync"
+      (is (= :ok (status ["fi"] {} with-en)))
+      (is (= :ok (status ["fi"] fi-channel with-en))))
+
+    (testing "a language published in PTV that LIPAS would no longer send needs a sync"
+      (is (= :out-of-date (status ["fi"] {} (assoc-in with-en [:ptv :languages] ["fi" "en"])))))
+
+    (testing ":languages reports what the next sync publishes"
+      (is (= ["fi" "en"] (:languages (sut/sports-site->ptv-input
+                                       {:types {} :org-langs ["fi" "en"]} {} {} with-en))))
+      (is (= ["fi"] (:languages (sut/sports-site->ptv-input
+                                  {:types {} :org-langs ["fi" "en"]} {} {} base)))))))
 
 (deftest sync-status-archived-resync-test
   (let [ctx {:org-id "o" :types {} :org-defaults {} :org-langs ["fi"]}

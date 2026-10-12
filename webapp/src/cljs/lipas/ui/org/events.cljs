@@ -129,13 +129,21 @@
                   (get-in db [:org :editing-org :role-templates] {}))))))
 
 (rf/reg-event-fx ::save-org-success
-  (fn [{:keys [db]} [_ _org new? _resp]]
+  (fn [{:keys [db]} [_ org new? _resp]]
     (let [tr (:translator db)
           base-fx [[:dispatch [::get-user-orgs]]
                    [:dispatch [:lipas.ui.events/set-active-notification
                                {:message (tr :notifications/save-success)
-                                :success? true}]]]]
-      {:fx (if new?
+                                :success? true}]]]
+          selected-ptv-org? (and (:id org)
+                                 (= (str (:id org)) (str (get-in db [:ptv :selected-org :id]))))]
+      ;; The PTV views cache the orgs' PTV config (e.g. :supported-languages).
+      ;; Drop the cache so the next PTV view refetches it, and refresh the
+      ;; selected org in place, so a language enabled here shows up without a
+      ;; page reload.
+      {:db (cond-> (update db :ptv dissoc :ptv-orgs)
+             selected-ptv-org? (assoc-in [:ptv :selected-org :ptv-data] (:ptv-data org)))
+       :fx (if new?
              (conj base-fx
                    [:dispatch [:lipas.ui.events/navigate :lipas.ui.routes/orgs]])
              base-fx)})))

@@ -156,8 +156,8 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
 
               :license
               {:name "Creative Commons Attribution 4.0 International"
-               :identifier "CC-BY-SA-4.0"
-               :url "https://creativecommons.org/licenses/by-sa/4.0/"}}
+               :identifier "CC-BY-4.0"
+               :url "https://creativecommons.org/licenses/by/4.0/"}}
 
        ;; These get merged in a wild way
        #_#_:tags [{:name        "Sports Sites"

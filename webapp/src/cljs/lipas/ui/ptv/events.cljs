@@ -748,6 +748,13 @@
     (let [org-id (-get-ptv-org-id db)]
       (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :description locale] v))))
 
+(defn- merge-translation
+  "Merges a translate response into `texts` language by language: the
+   response carries only the source and target languages, so a whole-field
+   merge would drop the others (e.g. Swedish when translating to English)."
+  [texts resp]
+  (merge-with merge texts resp))
+
 (rf/reg-event-fx ::translate-site-descriptions
   (fn [{:keys [db]} [_ lipas-id from-lang to-langs]]
     (let [token (-> db :user :login :token)
@@ -782,7 +789,7 @@
                                           {} m)))]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :descriptions] false)
-               (update-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] merge resp))
+               (update-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] merge-translation resp))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification
                         {:message (tr :notifications/translate-success) :success? true}]]]})))
 
@@ -916,7 +923,7 @@
     (let [tr (:translator db)]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :descriptions] false)
-               (update-in [:sports-sites lipas-id :editing :ptv] merge resp))
+               (update-in [:sports-sites lipas-id :editing :ptv] merge-translation resp))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification
                         {:message (tr :notifications/translate-success) :success? true}]]]})))
 
@@ -1208,7 +1215,7 @@
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :descriptions] false)
                (update-in [:ptv :syncing :service-descriptions] dissoc source-id)
-               (update-in [:ptv :org org-id :data :service-candidates source-id] merge resp))
+               (update-in [:ptv :org org-id :data :service-candidates source-id] merge-translation resp))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification
                         {:message (tr :notifications/translate-success) :success? true}]]]})))
 
