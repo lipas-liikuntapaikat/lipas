@@ -322,6 +322,18 @@
         m (cond-> m
             service-id (assoc :source-id
                               (ptv-data/->adopted-service-source-id org-id service-id)))
+        ;; Languages come from the org's live PTV config, like the
+        ;; service-location sync — not from the request, which carries the
+        ;; browser's possibly stale copy of it.
+        m (assoc m :languages (or (:supported-languages
+                                    (ptv/get-org-ptv-config-with-fallback ptv org-id))
+                                  ptv-data/fallback-languages))
+        ;; Languages come from the org's live PTV config, like the
+        ;; service-location sync — not from the request, which carries the
+        ;; browser's possibly stale copy of it.
+        m (assoc m :languages (or (:supported-languages
+                                    (ptv/get-org-ptv-config-with-fallback ptv org-id))
+                                  ptv-data/fallback-languages))
         lipas-data (ptv-data/->ptv-service m)
         resp
         (if service-id
