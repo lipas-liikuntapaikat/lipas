@@ -85,9 +85,9 @@
  :finish-footer "Liikuntapaikka viedään PTV:hen, kun tallennat."
  :save-needs-texts "Täydennä PTV-välilehdeltä tiivistelmä ja kuvaus, tai kytke PTV-integraatio pois."
  :unpublished-languages-title "Osa PTV:n kieliversioista poistuu synkronoinnissa"
- :unpublished-languages-intro "PTV:ssä on tälle palvelupaikalle tekstejä kielillä, joita ei ole otettu käyttöön integraatiossa. Seuraava synkronointi poistaa ne PTV:stä."
- :unpublished-languages-not-enabled "ei käytössä organisaatiollanne. Jos haluatte säilyttää kieliversion, ottakaa yhteyttä lipasinfo@jyu.fi ennen synkronointia."
- :unpublished-languages-missing-texts "tiivistelmä ja kuvaus puuttuvat Lipaksesta. Lisää ne ennen synkronointia, esimerkiksi toiminnolla \"Lataa tekstit PTV:stä\"."
+ :unpublished-languages-intro "Seuraava synkronointi poistaa PTV:stä nämä kieliversiot:"
+ :unpublished-languages-not-enabled "ei otettu käyttöön integraatiossa. Jos haluat säilyttää kieliversion, ota yhteyttä lipasinfo@jyu.fi ennen synkronointia."
+ :unpublished-languages-missing-texts "tiivistelmä ja kuvaus puuttuvat Lipaksesta. Lisää ne kielen välilehdelle ennen synkronointia: kirjoita ne itse, käännä suomenkielisistä teksteistä (\"Käännä muille kielille\") tai laadi tekoälyllä (\"Laadi luonnokset tekoälyllä\")."
  :lang-fi "suomi"
  :lang-se "ruotsi"
  :lang-en "englanti"}
