@@ -527,6 +527,9 @@
                           [:city-codes [:vector :int]]
                           [:source-id {:optional true} [:maybe :string]]
                           [:sub-category-id {:optional true} [:maybe :int]]
+                          ;; Ignored: upsert-ptv-service! uses the org's live
+                          ;; PTV config. Still accepted so clients that send it
+                          ;; keep working.
                           [:languages [:vector [:enum "fi" "se" "en"]]]
                           [:summary (ptv-schema/localized-string-schema {:max 150})]
                           [:description (ptv-schema/localized-string-schema nil)]

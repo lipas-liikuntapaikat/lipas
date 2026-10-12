@@ -87,4 +87,11 @@
  :step-texts "Summary and description in Finnish"
  :step-texts-hint "Write them below or generate them with AI."
  :finish-footer "The sports site is exported to PTV when you save."
- :save-needs-texts "Fill in the summary and description on the PTV tab, or switch the PTV integration off."}
+ :save-needs-texts "Fill in the summary and description on the PTV tab, or switch the PTV integration off."
+ :unpublished-languages-title "Some PTV language versions will be removed on sync"
+ :unpublished-languages-intro "The next sync will remove these language versions from PTV:"
+ :unpublished-languages-not-enabled "not enabled in the integration. To keep this language version, contact lipasinfo@jyu.fi before syncing."
+ :unpublished-languages-missing-texts "summary and description missing in Lipas. Add them on the language's tab before syncing: write them yourself, translate from the Finnish texts (\"Translate to other languages\") or generate them with AI (\"Generate descriptions with AI\")."
+ :lang-fi "Finnish"
+ :lang-se "Swedish"
+ :lang-en "English"}

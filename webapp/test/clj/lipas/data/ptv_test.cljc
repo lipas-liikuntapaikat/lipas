@@ -405,7 +405,7 @@
 (def ^:private base-site
   {:ptv {:languages ["fi" "se" "en"]
          :summary {:fi "summary-fi" :se "summary-sv" :en "summary-en"}
-         :description {:fi "desc-fi"}}
+         :description {:fi "desc-fi" :se "desc-sv" :en "desc-en"}}
    :search-meta {:location {:wgs84-point [0 0]}}
    :location {:city {:city-code 889} :address "Katu 1" :postal-code "99999"}})
 
@@ -448,13 +448,73 @@
 
   (testing "descriptions: every declared language has a Summary and a Description"
     (let [p (build-location (assoc base-site :name "Halli"))]
-      (is (= #{"fi" "sv" "en"} (desc-langs p "Summary"))
-          "ptv map has summary in all three languages")
-      (is (= #{"fi" "sv" "en"} (desc-langs p "Description"))
-          "ptv map only has fi description, but sv/en fall back to fi"))))
+      (is (= #{"fi" "sv" "en"} (desc-langs p "Summary")))
+      (is (= #{"fi" "sv" "en"} (desc-langs p "Description")))))
+
+  (testing "a language without its own summary and description is not declared"
+    ;; Regression: an org enabling English pushed the Finnish texts to PTV
+    ;; labelled as English for every site that had no English texts yet.
+    (doseq [[label ptv] [["no en texts" {:summary {:fi "s-fi" :se "s-sv"}
+                                         :description {:fi "d-fi" :se "d-sv"}}]
+                         ["en summary only" {:summary {:fi "s-fi" :se "s-sv" :en "s-en"}
+                                             :description {:fi "d-fi" :se "d-sv"}}]
+                         ["blank en description" {:summary {:fi "s-fi" :se "s-sv" :en "s-en"}
+                                                  :description {:fi "d-fi" :se "d-sv" :en "  "}}]]]
+      (let [p (build-location (-> base-site
+                                  (assoc :name "Halli")
+                                  (update :ptv merge ptv)))]
+        (is (= #{"fi" "sv"} (set (:languages p))) label)
+        (is (= #{"fi" "sv"} (desc-langs p "Summary")) label)
+        (is (= #{"fi" "sv"} (desc-langs p "Description")) label)
+        (is (= #{"fi" "sv"} (set (map :language (:displayNameType p)))) label)
+        (is (not-any? #(= "en" (:language %)) (:serviceChannelNames p)) label)))))
+
+(deftest effective-languages-test
+  (let [site (fn [summary description] {:ptv {:summary summary :description description}})]
+    (testing "fi is always published, whatever its texts"
+      (is (= ["fi"] (sut/effective-languages (site {} {}) ["fi"]))))
+    (testing "se/en only with both a summary and a description"
+      (is (= ["fi" "en"] (sut/effective-languages (site {:fi "a" :se "b" :en "c"}
+                                                        {:fi "a" :en "c"})
+                                                  ["fi" "se" "en"])))
+      (is (= ["fi"] (sut/effective-languages (site {:fi "a" :en ""} {:fi "a" :en "c"})
+                                             ["fi" "en"]))))
+    (testing "languages the org doesn't support are never published"
+      (is (= ["fi"] (sut/effective-languages (site {:fi "a" :en "c"} {:fi "a" :en "c"})
+                                             ["fi"]))))))
 
 (defn- area-codes [payload]
   (mapv :areaCodes (:areas payload)))
+
+(deftest ->ptv-service-languages
+  ;; Regression: a language without texts was sent with the placeholder
+  ;; "TODO: Value missing!", which PTV published as the service's text. With
+  ;; only Finnish texts in LIPAS (Uusikaupunki's 12 LIPAS-created services),
+  ;; enabling English would have published it for every service synced.
+  (let [base {:org-id "org-x" :city-codes [895] :sub-category-id 2200
+              :languages ["fi" "se" "en"]
+              :summary {:fi "s-fi"} :description {:fi "d-fi"} :user-instruction {:fi "u-fi"}}
+        descs (fn [p] (set (map (juxt :type :language) (:serviceDescriptions p))))
+        name-langs (fn [p] (set (map :language (:serviceNames p))))]
+    (testing "Finnish-only texts: only the Finnish version, no placeholder"
+      (let [p (sut/->ptv-service base)]
+        (is (= #{"fi"} (:languages p)))
+        (is (= #{"fi"} (name-langs p)))
+        (is (= #{["Summary" "fi"] ["Description" "fi"] ["UserInstruction" "fi"]} (descs p)))
+        (is (not-any? #(= sut/placeholder (:value %)) (:serviceDescriptions p)))))
+
+    (testing "a language with summary and description is published; a missing instruction is left out"
+      (let [p (sut/->ptv-service (-> base
+                                     (assoc-in [:summary :en] "s-en")
+                                     (assoc-in [:description :en] "d-en")))]
+        (is (= #{"fi" "en"} (:languages p)))
+        (is (= #{"fi" "en"} (name-langs p)))
+        (is (= #{["Summary" "fi"] ["Description" "fi"] ["UserInstruction" "fi"]
+                 ["Summary" "en"] ["Description" "en"]}
+               (descs p)))))
+
+    (testing "a summary alone doesn't publish the language"
+      (is (= #{"fi"} (:languages (sut/->ptv-service (assoc-in base [:summary :se] "s-sv"))))))))
 
 (deftest ->ptv-service-area-codes
   (testing "city-codes < 100 are zero-padded to 3 digits (PTV's expected format)"
@@ -658,6 +718,17 @@
            (sut/normalize-ws "Rantakylän stadionalueen puolikota")
            "Rantakylän stadionalueen puolikota"))))
 
+(deftest texts-match?-locales-test
+  (testing "a draft in a language the org doesn't publish isn't a difference"
+    ;; Regression: a generated service has fi/se/en texts; an org publishing
+    ;; fi+en never sends the Swedish, so the panel showed differences forever.
+    (let [draft {:summary {:fi "a" :se "b" :en "c"}}
+          ptv {:summary {:fi "a" :en "c"}}]
+      (is (not (sut/texts-match? draft ptv)))
+      (is (sut/texts-match? draft ptv [:summary] [:fi :en]))
+      (is (not (sut/texts-match? (assoc-in draft [:summary :en] "changed") ptv
+                                 [:summary] [:fi :en]))))))
+
 (deftest texts-match?-whitespace-test
   (testing "texts differing only by collapsible whitespace match"
     (is (sut/texts-match? {:summary {:fi "a  b"}}
@@ -723,6 +794,87 @@
         (is (= :out-of-date
                (status (assoc-in base [:ptv :service-channel-ids] cleared)))
             (str "cleared as " (pr-str cleared)))))))
+
+(deftest sync-status-languages-test
+  ;; An org enabling a language must make its already-synced sites need a sync
+  ;; once they have texts in it. Before, change detection compared only the
+  ;; languages stored at the last sync (["fi"]), so English texts never
+  ;; activated the sync button.
+  (let [status (fn [org-langs channels site]
+                 (:sync-status (sut/sports-site->ptv-input
+                                 {:org-id "o" :types {} :org-defaults {} :org-langs org-langs}
+                                 channels {} site)))
+        base {:lipas-id 1 :name "X" :event-date "T1"
+              :ptv {:last-sync "T1"
+                    :languages ["fi"]
+                    :service-channel-ids ["C1"]
+                    :summary {:fi "aaaaaa"}
+                    :description {:fi "bbbbbb"}}}
+        with-en (-> base
+                    (assoc-in [:ptv :summary :en] "summary")
+                    (assoc-in [:ptv :description :en] "description"))
+        fi-channel {"C1" {:id "C1"
+                          :languages ["fi"]
+                          :serviceChannelNames [{:type "Name" :language "fi" :value "X"}]
+                          :serviceChannelDescriptions [{:type "Summary" :language "fi" :value "aaaaaa"}
+                                                       {:type "Description" :language "fi" :value "bbbbbb"}]}}]
+    (testing "org enabled en, site has no en texts yet: nothing to sync"
+      (is (= :ok (status ["fi" "en"] {} base)))
+      (is (= :ok (status ["fi" "en"] fi-channel base))))
+
+    (testing "en texts written: needs a sync, channel cached or not"
+      (is (= :out-of-date (status ["fi" "en"] {} with-en)))
+      (is (= :content-drift (status ["fi" "en"] fi-channel with-en))))
+
+    (testing "en texts in LIPAS but the org doesn't publish en: nothing to sync"
+      (is (= :ok (status ["fi"] {} with-en)))
+      (is (= :ok (status ["fi"] fi-channel with-en))))
+
+    (testing "a language published in PTV that LIPAS would no longer send needs a sync"
+      (is (= :out-of-date (status ["fi"] {} (assoc-in with-en [:ptv :languages] ["fi" "en"])))))
+
+    (testing ":languages reports what the next sync publishes"
+      (is (= ["fi" "en"] (:languages (sut/sports-site->ptv-input
+                                       {:types {} :org-langs ["fi" "en"]} {} {} with-en))))
+      (is (= ["fi"] (:languages (sut/sports-site->ptv-input
+                                  {:types {} :org-langs ["fi" "en"]} {} {} base)))))))
+
+(deftest unpublished-ptv-languages-test
+  ;; Linking a site to an existing PTV service location whose texts exist in
+  ;; languages LIPAS won't publish: the first sync removes them (Uusikaupunki
+  ;; lost their English this way). The UI warns from this.
+  (let [channel (fn [& langs]
+                  {:serviceChannelNames (for [l langs] {:type "Name" :language l :value "n"})
+                   :serviceChannelDescriptions (for [l langs] {:type "Summary" :language l :value "s"})})
+        fi-site {:ptv {:summary {:fi "s"} :description {:fi "d"}}}
+        en-site {:ptv {:summary {:fi "s" :en "s"} :description {:fi "d" :en "d"}}}]
+    (testing "nothing to warn about"
+      (is (nil? (sut/unpublished-ptv-languages fi-site nil ["fi"])) "no channel")
+      (is (nil? (sut/unpublished-ptv-languages fi-site (channel "fi") ["fi"])))
+      (is (nil? (sut/unpublished-ptv-languages en-site (channel "fi" "en") ["fi" "en"]))))
+
+    (testing "a language the org hasn't enabled"
+      (is (= {:not-enabled ["en" "se"]}
+             (sut/unpublished-ptv-languages fi-site (channel "fi" "sv" "en") ["fi"]))
+          "PTV's sv is LIPAS se"))
+
+    (testing "an enabled language the site has no texts in"
+      (is (= {:missing-texts ["en"]}
+             (sut/unpublished-ptv-languages fi-site (channel "fi" "en") ["fi" "en"]))))
+
+    (testing "a language LIPAS doesn't support at all"
+      (is (= {:not-enabled ["RU"]}
+             (sut/unpublished-ptv-languages fi-site (channel "fi" "ru") ["fi"])))
+      (is (= {:not-enabled ["SE"]}
+             (sut/unpublished-ptv-languages fi-site (channel "fi" "se") ["fi"]))
+          "PTV's se is Northern Sámi, not LIPAS se (Swedish)"))
+
+    (testing "blank PTV values don't count as texts"
+      (is (nil? (sut/unpublished-ptv-languages
+                  fi-site
+                  {:serviceChannelNames [{:type "Name" :language "fi" :value "n"}
+                                         {:type "Name" :language "en" :value " "}]}
+                  ["fi"]))))))
 
 (deftest sync-status-archived-resync-test
   (let [ctx {:org-id "o" :types {} :org-defaults {} :org-langs ["fi"]}

@@ -168,7 +168,14 @@
                                     [orgs])
         single-org? (= 1 (count org-options))
         service-channel-modified? (= "Modified" (-> site :ptv :service-channel-publishing-status))
-        double-link-others @(rf/subscribe [::subs/double-link-others lipas-id])]
+        double-link-others @(rf/subscribe [::subs/double-link-others lipas-id])
+        channel-id (first (:service-channel-ids (:ptv site)))
+        last-sync (-> sports-site :ptv :last-sync)
+        linked-channel @(rf/subscribe [::subs/site-service-channel lipas-id])
+        ;; nil until the linked channel is fetched, and for a channel that
+        ;; was fetched for a previous link
+        unpublished (when (and channel-id (= channel-id (:id linked-channel)))
+                      (ptv-data/unpublished-ptv-languages site linked-channel org-languages))]
 
     ;; Load the PTV orgs the user may act for (by PTV rights, not membership)
     ;; on mount. nil = not loaded, [] = loaded but none.
@@ -215,6 +222,14 @@
                           (rf/dispatch [:lipas.ui.sports-sites.events/edit-field
                                         lipas-id [:ptv :service-ids] [matching-service-id]])))
                       [editing? sync-enabled candidate-now? matching-service-id])
+
+    ;; Fetch the linked channel so the view can warn about PTV texts in
+    ;; languages the next sync wouldn't publish (and so would remove).
+    ;; Refetched after each sync, which removes them.
+    (hooks/use-effect (fn []
+                        (when (and channel-id org-id)
+                          (rf/dispatch [::events/fetch-site-service-channel lipas-id org-id channel-id])))
+                      [lipas-id org-id channel-id last-sync])
 
     ;; Detect a pre-existing double-link: another sports-site bound to the same
     ;; PTV service-location. This view loads neither the org's channels nor its
@@ -446,6 +461,13 @@
          (tr :ptv.double-link/explanation)]
         [:> Typography {:variant "body2" :sx #js {:mt 1}}
          (tr :ptv.double-link/remediation)]])
+
+     ;; Texts in PTV that the next sync would remove, e.g. after linking a
+     ;; service location that exists in PTV in more languages than the org
+     ;; publishes.
+     (when sync-enabled
+       [ptv-components/unpublished-languages-alert
+        {:tr tr :unpublished unpublished}])
 
      ;; 5. Descriptions and everything below — gated on sync-enabled + org-id.
      (when (and sync-enabled org-id)

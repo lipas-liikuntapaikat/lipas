@@ -144,3 +144,60 @@
             "sourceId is overridden to the adopted pattern")
         (is (not (re-find #"-4300$" (:sourceId @captured)))
             "the sub-category-style sourceId is not used")))))
+
+(deftest upsert-service-uses-live-org-languages
+  ;; The request's :languages is the browser's cached copy of the org config;
+  ;; the live config wins, as in the service-location sync.
+  (let [captured (atom nil)
+        org-id "org-x"
+        save! (fn [live-langs request-langs]
+                (with-redefs [ptv/update-service (fn [_ _ data]
+                                                   (reset! captured data)
+                                                   data)
+                              ptv-core/persist-ptv-service-revision! (fn [& _])]
+                  (ptv-core/upsert-ptv-service!
+                    :db-stub
+                    {:get-config-by-ptv-org-id-fn (fn [_] {:supported-languages live-langs})}
+                    {:id "test-user"}
+                    {:org-id org-id
+                     :sub-category-id 4300
+                     :city-codes [425]
+                     :languages request-langs
+                     :summary {:fi "s" :en "s-en"}
+                     :description {:fi "d" :en "d-en"}}))
+                (set (:languages @captured)))]
+    (testing "a language the request claims but the org doesn't have is not published"
+      (is (= #{"fi"} (save! ["fi"] ["fi" "en"]))))
+    (testing "a language the org has enabled is published even if a stale client omits it"
+      (is (= #{"fi" "en"} (save! ["fi" "en"] ["fi"]))))))
+
+(deftest select-translation-test
+  ;; The model's response schema makes it return every language and a
+  ;; user-instruction even when neither was asked for. Before, all of it was
+  ;; merged into the site: translating fi→en overwrote existing Swedish texts
+  ;; and invented a (Finnish!) user instruction.
+  (let [model-output {:summary {:fi "rewritten fi" :se "model sv" :en "model en"}
+                      :description {:fi "rewritten fi" :se "model sv" :en "model en"}
+                      :user-instruction {:fi "invented" :se "invented" :en "invented"}}]
+    (testing "keeps only the target languages and the source texts as written"
+      (is (= {:summary {:fi "source summary" :en "model en"}
+              :description {:fi "source description" :en "model en"}}
+             (ptv-core/select-translation {:from "fi" :to #{"en"}
+                                           :summary "source summary"
+                                           :description "source description"}
+                                          model-output))))
+
+    (testing "user-instruction is translated only when the source had one"
+      (is (= {:fi "source ui" :se "model ui sv" :en "model ui en"}
+             (:user-instruction
+               (ptv-core/select-translation {:from "fi" :to #{"se" "en"}
+                                             :summary "s" :description "d"
+                                             :user-instruction "source ui"}
+                                            (assoc model-output :user-instruction
+                                                   {:fi "x" :se "model ui sv" :en "model ui en"}))))))
+
+    (testing "a missing target language stays missing rather than becoming nil text"
+      (is (= {:fi "s"}
+             (:summary (ptv-core/select-translation {:from "fi" :to #{"en"}
+                                                     :summary "s" :description "d"}
+                                                    {:summary {:se "only sv"}})))))))

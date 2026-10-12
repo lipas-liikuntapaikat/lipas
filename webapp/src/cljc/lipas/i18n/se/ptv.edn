@@ -83,4 +83,11 @@
  :step-texts "Sammanfattning och beskrivning på finska"
  :step-texts-hint "Skriv dem nedan eller skapa dem med AI."
  :finish-footer "Idrottsanläggningen exporteras till PTV när du sparar."
- :save-needs-texts "Fyll i sammanfattning och beskrivning på PTV-fliken, eller stäng av PTV-integrationen."}
+ :save-needs-texts "Fyll i sammanfattning och beskrivning på PTV-fliken, eller stäng av PTV-integrationen."
+ :unpublished-languages-title "En del av språkversionerna i PTV tas bort vid synkroniseringen"
+ :unpublished-languages-intro "Nästa synkronisering tar bort de här språkversionerna från PTV:"
+ :unpublished-languages-not-enabled "inte i bruk i integrationen. Om du vill behålla språkversionen, kontakta lipasinfo@jyu.fi före synkroniseringen."
+ :unpublished-languages-missing-texts "sammandrag och beskrivning saknas i Lipas. Lägg till dem på språkets flik före synkroniseringen: skriv dem själv, översätt från de finska texterna (\"Översätt till andra språk\") eller låt AI skapa dem (\"Generera beskrivningar med artificiell intelligens\")."
+ :lang-fi "finska"
+ :lang-se "svenska"
+ :lang-en "engelska"}

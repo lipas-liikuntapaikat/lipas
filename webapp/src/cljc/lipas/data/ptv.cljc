@@ -230,6 +230,28 @@
         :when ptv-lang]
     [ptv-lang (keyword lipas-lang)]))
 
+(defn languages-with-texts
+  "`org-langs` (LIPAS language codes) minus every language other than Finnish
+   that lacks either a :summary or a :description in `texts`, a map of
+   {:summary {locale text} :description {locale text} ...}."
+  [texts org-langs]
+  (filterv (fn [lang]
+             (or (= "fi" lang)
+                 (let [locale (keyword lang)]
+                   (and (not (str/blank? (get-in texts [:summary locale])))
+                        (not (str/blank? (get-in texts [:description locale])))))))
+           org-langs))
+
+(defn effective-languages
+  "The LIPAS language codes a service location is published in: the org's
+   `org-langs`, minus every language other than Finnish that lacks either a
+   summary or a description on the site. A language is never published
+   with the Finnish texts standing in for it — when an org enables English
+   before its sites have English texts, those sites stay Finnish-only in PTV
+   until the texts are written."
+  [site org-langs]
+  (languages-with-texts (:ptv site) org-langs))
+
 (def placeholder "TODO: Value missing!")
 
 (def default-langs ["fi"])
@@ -260,7 +282,10 @@
 (defn ->ptv-service
   [{:keys [org-id city-codes source-id sub-category-id languages _description _summary]
     :or {languages default-langs} :as m}]
-  (let [lipas-languages (set languages)
+  (let [;; Like service locations: a language other than Finnish is published
+        ;; only when the service has its own summary and description, so an
+        ;; org enabling English doesn't publish half-empty English versions.
+        lipas-languages (set (languages-with-texts m languages))
         ;; PTV language codes for the :languages field on the payload
         languages (->> lipas-languages (map lipas-lang->ptv-lang) (remove nil?) set)
         #_#_type (get types/all type-code)
@@ -342,13 +367,17 @@
      ;; provided? Maybe default to just "fi"?
      :languages languages
 
+     ;; Only texts that exist: a missing one used to be sent as the
+     ;; placeholder, which PTV then published as the text.
      :serviceDescriptions (for [[k v] {:summary "Summary"
                                        :description "Description"
                                        :user-instruction "UserInstruction"}
-                                [lang locale] (resolve-lang-pairs lipas-languages)]
+                                [lang locale] (resolve-lang-pairs lipas-languages)
+                                :let [text (get-in m [k locale])]
+                                :when (not (str/blank? text))]
                             {:type v
                              :language lang
-                             :value (get-in m [k locale] placeholder)})
+                             :value text})
 
      ;; TODO can this be inferred from owner / admin info reliably or do we
      :serviceProducers [{;; SelfProducedServices | ProcuredServices | Other
@@ -582,7 +611,7 @@
    coord-transform-fn
    now
    {:keys [status ptv lipas-id location search-meta] :as sports-site}]
-  (let [lipas-languages (get ptv :languages default-langs)
+  (let [lipas-languages (effective-languages sports-site (get ptv :languages default-langs))
         ;; PTV language codes for the :languages field on the payload
         languages (->> lipas-languages (map lipas-lang->ptv-lang) (remove nil?) set)
         type (get types/all (get-in sports-site [:type :type-code]))
@@ -609,9 +638,10 @@
                              x))
              ;; Per-language rule (one-way LIPAS→PTV): every declared language
              ;; gets full coverage in serviceChannelNames / displayNameType /
-             ;; serviceChannelDescriptions. For sv/en, use the LIPAS-entered
-             ;; localized value if non-blank, otherwise fall back to the
-             ;; Finnish value. PTV-side edits to these fields are not
+             ;; serviceChannelDescriptions. sv/en are declared only when the
+             ;; site has their summary and description (`effective-languages`);
+             ;; their names fall back to the Finnish name, which is usually a
+             ;; proper noun. PTV-side edits to these fields are not
              ;; preserved — drift is surfaced separately in the LIPAS UI.
              :serviceChannelNames (keep identity
                                         (let [fi-name (:name sports-site)
@@ -1166,10 +1196,14 @@
    non-nil fields match. Whitespace is normalized for comparison
    (see `normalize-ws`). `fields` defaults to all three lipas text fields;
    callers comparing against a PTV ServiceChannel should pass
-   `service-channel-compare-fields`."
+   `service-channel-compare-fields`. `locales` limits the comparison to the
+   languages that get published (default: all three) — a draft text in a
+   language the org doesn't publish never reaches PTV, so it can't match."
   ([lipas-texts ptv-texts]
    (texts-match? lipas-texts ptv-texts [:summary :description :user-instruction]))
   ([lipas-texts ptv-texts fields]
+   (texts-match? lipas-texts ptv-texts fields [:fi :se :en]))
+  ([lipas-texts ptv-texts fields locales]
    (let [trim normalize-ws]
      (every? (fn [field]
                (let [lipas-vals (get lipas-texts field)
@@ -1179,7 +1213,7 @@
                                  p (trim (get ptv-vals lang))]
                              (or (and (nil? l) (nil? p))
                                  (= l p))))
-                         [:fi :se :en])))
+                         locales)))
              fields))))
 
 (defn- effective-lipas-name
@@ -1287,6 +1321,36 @@
                          :removed (mk-entries (set/difference lipas-service-ids ptv-service-ids))}])]
       (vec (concat drifted link-drift)))))
 
+(defn unpublished-ptv-languages
+  "Languages the linked PTV service location has texts in that the next sync
+   won't publish — and so will remove, since a service location sync replaces
+   the whole channel. Returns nil when there are none (or no channel), else a
+   map of LIPAS language codes. A language LIPAS doesn't support keeps its
+   PTV code, upper-cased so it can't pass for a LIPAS code (PTV's se is
+   Northern Sámi, LIPAS's is Swedish):
+   - :not-enabled   not in the org's PTV languages (only LIPAS admins can
+                    enable one) or not supported by LIPAS at all
+   - :missing-texts enabled for the org, but the site has no summary and
+                    description in it"
+  [site ptv-channel org-langs]
+  (when ptv-channel
+    (let [ptv-langs (->> (concat (:serviceChannelNames ptv-channel)
+                                 (:serviceChannelDescriptions ptv-channel))
+                         (remove (comp str/blank? :value))
+                         (keep :language)
+                         set)
+          published (set (effective-languages site org-langs))
+          enabled (set org-langs)]
+      (not-empty
+        (reduce (fn [acc ptv-lang]
+                  (let [lang (some-> (lang->locale ptv-lang) name)]
+                    (cond
+                      (contains? published lang) acc
+                      (contains? enabled lang) (update acc :missing-texts (fnil conj []) lang)
+                      :else (update acc :not-enabled (fnil conj []) (or lang (str/upper-case ptv-lang))))))
+                {}
+                (sort ptv-langs))))))
+
 (defn sports-site->ptv-input [{:keys [types org-id org-langs]} service-channels services site]
   (let [service-id (-> site :ptv :service-ids first)
         service-channel-id (-> site :ptv :service-channel-ids first)
@@ -1303,10 +1367,25 @@
         ;; and Description (per language), and service-link membership.
         ptv-channel (get service-channels service-channel-id)
         ptv-texts (when ptv-channel (ptv-descriptions->texts (:serviceChannelDescriptions ptv-channel)))
-        drift-langs (or (-> site :ptv :languages) org-langs)
+        ;; The languages the next sync would publish, from the org's live
+        ;; config — not the site's stored :languages, which is a snapshot of
+        ;; the last sync and would hide e.g. English texts written after the
+        ;; org enabled English.
+        langs (effective-languages site (or org-langs fallback-languages))
         drift-fields (when (and last-sync ptv-channel)
-                       (compute-service-channel-drift site ptv-channel services drift-langs))
+                       (compute-service-channel-drift site ptv-channel services langs))
         has-drift? (boolean (seq drift-fields))
+
+        ;; The languages the channel is published in now: PTV's own record when
+        ;; the channel is cached, else what the last sync stored. A difference
+        ;; means the next sync adds or removes a language version, so the site
+        ;; needs a sync even when no text compared in `langs` changed.
+        published-langs (if ptv-channel
+                          (keep (comp #(some-> % name) lang->locale) (:languages ptv-channel))
+                          (-> site :ptv :languages))
+        languages-changed? (boolean (and last-sync
+                                         (seq published-langs)
+                                         (not= (set published-langs) (set langs))))
 
         ;; A site that was synced before (last-sync present) but now has no
         ;; service-channel-id was deliberately unlinked by the user — a
@@ -1346,7 +1425,7 @@
      :summary summary
      :description description
      :user-instruction user-instruction
-     :languages (or (-> site :ptv :languages) org-langs)
+     :languages langs
 
      :sync-enabled (get-in site [:ptv :sync-enabled] false)
      :last-sync last-sync
@@ -1356,10 +1435,13 @@
                     link-removed? :out-of-date
                     archived-resync? :out-of-date
                     has-drift? :content-drift
+                    languages-changed? :out-of-date
                     (= (:event-date site) last-sync) :ok
                     :else :out-of-date)
 
      :drift-fields drift-fields
+     :unpublished-ptv-languages (unpublished-ptv-languages site ptv-channel
+                                                           (or org-langs fallback-languages))
 
      :ptv-texts ptv-texts
 
