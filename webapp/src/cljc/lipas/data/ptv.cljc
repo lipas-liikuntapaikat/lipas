@@ -230,6 +230,21 @@
         :when ptv-lang]
     [ptv-lang (keyword lipas-lang)]))
 
+(defn effective-languages
+  "The LIPAS language codes a service location is published in: the org's
+   `org-langs`, minus every language other than Finnish that lacks either a
+   summary or a description on the site. A language is never published
+   with the Finnish texts standing in for it — when an org enables English
+   before its sites have English texts, those sites stay Finnish-only in PTV
+   until the texts are written."
+  [site org-langs]
+  (filterv (fn [lang]
+             (or (= "fi" lang)
+                 (let [locale (keyword lang)]
+                   (and (not (str/blank? (get-in site [:ptv :summary locale])))
+                        (not (str/blank? (get-in site [:ptv :description locale])))))))
+           org-langs))
+
 (def placeholder "TODO: Value missing!")
 
 (def default-langs ["fi"])
@@ -582,7 +597,7 @@
    coord-transform-fn
    now
    {:keys [status ptv lipas-id location search-meta] :as sports-site}]
-  (let [lipas-languages (get ptv :languages default-langs)
+  (let [lipas-languages (effective-languages sports-site (get ptv :languages default-langs))
         ;; PTV language codes for the :languages field on the payload
         languages (->> lipas-languages (map lipas-lang->ptv-lang) (remove nil?) set)
         type (get types/all (get-in sports-site [:type :type-code]))
@@ -609,9 +624,10 @@
                              x))
              ;; Per-language rule (one-way LIPAS→PTV): every declared language
              ;; gets full coverage in serviceChannelNames / displayNameType /
-             ;; serviceChannelDescriptions. For sv/en, use the LIPAS-entered
-             ;; localized value if non-blank, otherwise fall back to the
-             ;; Finnish value. PTV-side edits to these fields are not
+             ;; serviceChannelDescriptions. sv/en are declared only when the
+             ;; site has their summary and description (`effective-languages`);
+             ;; their names fall back to the Finnish name, which is usually a
+             ;; proper noun. PTV-side edits to these fields are not
              ;; preserved — drift is surfaced separately in the LIPAS UI.
              :serviceChannelNames (keep identity
                                         (let [fi-name (:name sports-site)
@@ -1303,10 +1319,25 @@
         ;; and Description (per language), and service-link membership.
         ptv-channel (get service-channels service-channel-id)
         ptv-texts (when ptv-channel (ptv-descriptions->texts (:serviceChannelDescriptions ptv-channel)))
-        drift-langs (or (-> site :ptv :languages) org-langs)
+        ;; The languages the next sync would publish, from the org's live
+        ;; config — not the site's stored :languages, which is a snapshot of
+        ;; the last sync and would hide e.g. English texts written after the
+        ;; org enabled English.
+        langs (effective-languages site (or org-langs fallback-languages))
         drift-fields (when (and last-sync ptv-channel)
-                       (compute-service-channel-drift site ptv-channel services drift-langs))
+                       (compute-service-channel-drift site ptv-channel services langs))
         has-drift? (boolean (seq drift-fields))
+
+        ;; The languages the channel is published in now: PTV's own record when
+        ;; the channel is cached, else what the last sync stored. A difference
+        ;; means the next sync adds or removes a language version, so the site
+        ;; needs a sync even when no text compared in `langs` changed.
+        published-langs (if ptv-channel
+                          (keep (comp #(some-> % name) lang->locale) (:languages ptv-channel))
+                          (-> site :ptv :languages))
+        languages-changed? (boolean (and last-sync
+                                         (seq published-langs)
+                                         (not= (set published-langs) (set langs))))
 
         ;; A site that was synced before (last-sync present) but now has no
         ;; service-channel-id was deliberately unlinked by the user — a
@@ -1346,7 +1377,7 @@
      :summary summary
      :description description
      :user-instruction user-instruction
-     :languages (or (-> site :ptv :languages) org-langs)
+     :languages langs
 
      :sync-enabled (get-in site [:ptv :sync-enabled] false)
      :last-sync last-sync
@@ -1356,6 +1387,7 @@
                     link-removed? :out-of-date
                     archived-resync? :out-of-date
                     has-drift? :content-drift
+                    languages-changed? :out-of-date
                     (= (:event-date site) last-sync) :ok
                     :else :out-of-date)
 
