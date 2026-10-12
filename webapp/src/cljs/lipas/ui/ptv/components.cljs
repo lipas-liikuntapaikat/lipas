@@ -90,7 +90,8 @@
                         "fi" (tr :ptv/lang-fi)
                         "se" (tr :ptv/lang-se)
                         "en" (tr :ptv/lang-en)
-                        (str/upper-case lang)))
+                        ;; already an upper-cased PTV code
+                        lang))
           row (fn [langs explanation]
                 [:> Typography {:component "li" :variant "body2" :sx #js {:mt 0.5 :fontWeight 400}}
                  [:b (str/capitalize (str/join ", " (map lang-name langs)))]

@@ -1325,7 +1325,9 @@
   "Languages the linked PTV service location has texts in that the next sync
    won't publish — and so will remove, since a service location sync replaces
    the whole channel. Returns nil when there are none (or no channel), else a
-   map of LIPAS language codes (PTV's own code when LIPAS has none):
+   map of LIPAS language codes. A language LIPAS doesn't support keeps its
+   PTV code, upper-cased so it can't pass for a LIPAS code (PTV's se is
+   Northern Sámi, LIPAS's is Swedish):
    - :not-enabled   not in the org's PTV languages (only LIPAS admins can
                     enable one) or not supported by LIPAS at all
    - :missing-texts enabled for the org, but the site has no summary and
@@ -1345,7 +1347,7 @@
                     (cond
                       (contains? published lang) acc
                       (contains? enabled lang) (update acc :missing-texts (fnil conj []) lang)
-                      :else (update acc :not-enabled (fnil conj []) (or lang ptv-lang)))))
+                      :else (update acc :not-enabled (fnil conj []) (or lang (str/upper-case ptv-lang))))))
                 {}
                 (sort ptv-langs))))))
 
