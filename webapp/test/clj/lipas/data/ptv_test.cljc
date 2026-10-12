@@ -854,16 +854,16 @@
       (is (nil? (sut/unpublished-ptv-languages en-site (channel "fi" "en") ["fi" "en"]))))
 
     (testing "a language the org hasn't enabled"
-      (is (= {:not-enabled ["EN" "SE"]}
+      (is (= {:not-enabled ["en" "se"]}
              (sut/unpublished-ptv-languages fi-site (channel "fi" "sv" "en") ["fi"]))
           "PTV's sv is LIPAS se"))
 
     (testing "an enabled language the site has no texts in"
-      (is (= {:missing-texts ["EN"]}
+      (is (= {:missing-texts ["en"]}
              (sut/unpublished-ptv-languages fi-site (channel "fi" "en") ["fi" "en"]))))
 
     (testing "a language LIPAS doesn't support at all"
-      (is (= {:not-enabled ["RU"]}
+      (is (= {:not-enabled ["ru"]}
              (sut/unpublished-ptv-languages fi-site (channel "fi" "ru") ["fi"]))))
 
     (testing "blank PTV values don't count as texts"

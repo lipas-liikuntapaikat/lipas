@@ -90,6 +90,10 @@
  :step-texts-hint "Write them below or generate them with AI."
  :finish-footer "The sports site is exported to PTV when you save."
  :save-needs-texts "Fill in the summary and description on the PTV tab, or switch the PTV integration off."
- :unpublished-languages-title "PTV has texts in languages that won't be published"
- :unpublished-languages-not-enabled "In PTV, this service location has texts in languages Lipas doesn't publish for your organisation: {1}. They will be removed from PTV on the next sync. If you want to publish in these languages too, contact lipasinfo@jyu.fi before syncing."
- :unpublished-languages-missing-texts "In PTV, this service location has texts in languages it has no summary and description for in Lipas: {1}. They will be removed from PTV on the next sync unless they are added to Lipas (e.g. \"Load texts from PTV\")."}
+ :unpublished-languages-title "Some PTV language versions will be removed on sync"
+ :unpublished-languages-intro "In PTV, this service location has texts in languages Lipas doesn't publish. The next sync will remove them from PTV."
+ :unpublished-languages-not-enabled "not enabled for your organisation. To keep this language version, contact lipasinfo@jyu.fi before syncing."
+ :unpublished-languages-missing-texts "summary and description missing in Lipas. Add them before syncing, for example with \"Load texts from PTV\"."
+ :lang-fi "Finnish"
+ :lang-se "Swedish"
+ :lang-en "English"}
