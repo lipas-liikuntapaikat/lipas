@@ -1732,6 +1732,33 @@
   (fn [db [_ lipas-id _resp]]
     (update-in db [:ptv :double-link-check] dissoc lipas-id)))
 
+;;; Linked channel for the single-site PTV tab ;;;
+
+(rf/reg-event-fx ::fetch-site-service-channel
+  ;; The single-site view loads none of the org's channels, but warning about
+  ;; PTV texts the next sync would remove needs the linked one.
+  (fn [{:keys [db]} [_ lipas-id org-id service-channel-id]]
+    (let [token (-> db :user :login :token)]
+      {:fx [[:http-xhrio
+             {:method :post
+              :headers {:Authorization (str "Token " token)}
+              :uri (str (:backend-url db) "/actions/fetch-ptv-service-channel")
+              :params {:org-id org-id
+                       :service-channel-id service-channel-id}
+              :format (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success [::fetch-site-service-channel-success lipas-id]
+              :on-failure [::fetch-site-service-channel-failure lipas-id]}]]})))
+
+(rf/reg-event-db ::fetch-site-service-channel-success
+  (fn [db [_ lipas-id resp]]
+    (assoc-in db [:ptv :site-service-channel lipas-id] resp)))
+
+(rf/reg-event-db ::fetch-site-service-channel-failure
+  ;; e.g. an archived channel (PTV 404s): nothing to warn about.
+  (fn [db [_ lipas-id _resp]]
+    (update-in db [:ptv :site-service-channel] dissoc lipas-id)))
+
 (rf/reg-event-fx ::set-manual-services
   (fn [{:keys [db]} [_ org-id source-ids subcategories]]
     (let [x (into {} (map (juxt :source-id identity) subcategories))]

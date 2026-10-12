@@ -85,4 +85,7 @@
  :step-texts "Sammanfattning och beskrivning på finska"
  :step-texts-hint "Skriv dem nedan eller skapa dem med AI."
  :finish-footer "Idrottsanläggningen exporteras till PTV när du sparar."
- :save-needs-texts "Fyll i sammanfattning och beskrivning på PTV-fliken, eller stäng av PTV-integrationen."}
+ :save-needs-texts "Fyll i sammanfattning och beskrivning på PTV-fliken, eller stäng av PTV-integrationen."
+ :unpublished-languages-title "I PTV finns texter på språk som inte publiceras"
+ :unpublished-languages-not-enabled "Den här servicepunkten har texter i PTV på språk som Lipas inte publicerar för er organisation: {1}. De tas bort från PTV vid nästa synkronisering. Om ni vill publicera även på dessa språk, kontakta lipasinfo@jyu.fi före synkroniseringen."
+ :unpublished-languages-missing-texts "Den här servicepunkten har texter i PTV på språk som saknar sammandrag och beskrivning i Lipas: {1}. De tas bort från PTV vid nästa synkronisering om de inte läggs till i Lipas (t.ex. \"Hämta texter från PTV\")."}

@@ -114,6 +114,12 @@
   (fn [[latest edit-data orgs] _]
     (ptv-data/resolve-org-id (or edit-data latest) orgs)))
 
+(rf/reg-sub ::site-service-channel
+  ;; The linked channel as fetched for the single-site PTV tab.
+  :<- [::ptv]
+  (fn [ptv [_ lipas-id]]
+    (get-in ptv [:site-service-channel lipas-id])))
+
 (rf/reg-sub ::org-languages
   (fn [[_ org-id]]
     (rf/subscribe [::ptv-config-by-ptv-org-id org-id]))
