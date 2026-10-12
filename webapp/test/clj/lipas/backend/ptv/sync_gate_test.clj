@@ -216,6 +216,98 @@
       (is (= "Uusi nimi" (:name stored)))
       (is (= ["ptv/no-org"] (map name (get-in stored [:ptv :error :blockers])))))))
 
+;;; Site editors without PTV rights ;;;
+
+(def ^:private integrated-ptv
+  "`:ptv` of a site already published in PTV."
+  (merge {:sync-enabled true :org-id ptv-org-a
+          :service-ids ["service-1"]
+          :publishing-status "Published"
+          :last-sync "2026-01-13T06:06:39.000Z"
+          :source-id "lipas-src-1"
+          :service-channel-ids ["channel-1"]}
+         texts))
+
+(defn- org-editor
+  "Org plane counterpart of `city-manager`: site editing from the org's
+  catalog, no PTV rights."
+  [org city-code]
+  (backend-org/update-catalog! (test-db) (:id org)
+                               {:editor {:roles [{:role "city-manager" :city-code [city-code]}]}}
+                               nil)
+  (let [user (user-with-roles [])]
+    (backend-org/add-member! (test-db) (:id org) (:id user) {:roles ["editor"]} nil)
+    (backend-org/enrich-org-roles (test-db) user)))
+
+(deftest no-ptv-rights-cant-change-integrated-site-ptv-test
+  (let [org (seed-org! ptv-org-a [own-city])]
+    (doseq [[label user] [["legacy city-manager" (city-manager own-city)]
+                          ["org editor" (org-editor org own-city)]]
+            [edit f] [["sync off" #(assoc % :sync-enabled false)]
+                      ["summary" #(assoc-in % [:summary :fi] "Muokattu kuvaus")]
+                      ["description" #(assoc-in % [:description :fi] "Muokattu pitkä kuvaus")]
+                      ["user instruction" #(assoc % :user-instruction {:fi "Ohje"})]
+                      ["services" #(assoc % :service-ids ["service-2"])]
+                      ["org" #(assoc % :org-id ptv-org-b)]
+                      ["delete-existing" #(assoc % :delete-existing true)]
+                      ["dropped :ptv" (constantly nil)]]]
+      (testing (str label " → " edit)
+        (with-sync-stub
+          (fn []
+            (let [site (seed-site! own-city integrated-ptv)
+                  resp (save! user (-> site
+                                       (assoc :name "Uusi nimi")
+                                       (update :ptv f)))
+                  stored (current (:lipas-id site))]
+              (is (= 403 (:status resp)))
+              (is (= (:name site) (:name stored)) "nothing was saved")
+              (is (= integrated-ptv (:ptv stored)))
+              (is (empty? @sync-calls)))))))))
+
+(deftest no-ptv-rights-edit-keeps-ptv-and-resyncs-test
+  (seed-org! ptv-org-a [own-city])
+  (with-sync-stub
+    (fn []
+      (testing "a name edit by a site editor without PTV rights keeps :ptv as stored
+                and re-syncs under the site's org, even when the browser's copy of
+                the sync's record is stale or forged"
+        (let [site (seed-site! own-city integrated-ptv)
+              resp (save! (city-manager own-city)
+                          (-> site
+                              (assoc :name "Uusi nimi")
+                              (update :ptv assoc
+                                      :publishing-status "Draft"
+                                      :last-sync "2020-01-01T00:00:00.000Z"
+                                      :source-id "forged"
+                                      :service-channel-ids [])))
+              stored (current (:lipas-id site))
+              [call] @sync-calls]
+          (is (= 201 (:status resp)))
+          (is (= "Uusi nimi" (:name stored)))
+          (is (= integrated-ptv (:ptv stored)))
+          (is (= 1 (count @sync-calls)))
+          (is (= ptv-org-a (:org-id call)))
+          (is (= integrated-ptv (:ptv call)) "the sync got the stored settings and PTV ids"))))))
+
+(deftest no-ptv-rights-materialized-defaults-arent-an-edit-test
+  (testing "the site form materializes empty :ptv defaults on a site never in PTV;
+            a site editor without PTV rights can still save it"
+    (seed-org! ptv-org-a [own-city])
+    (with-sync-stub
+      (fn []
+        (let [site (seed-site! own-city)
+              resp (save! (city-manager own-city)
+                          (assoc site
+                                 :name "Uusi nimi"
+                                 :ptv {:sync-enabled false
+                                       :delete-existing false
+                                       :service-ids []
+                                       :summary {:fi ""}
+                                       :description {:fi ""}}))]
+          (is (= 201 (:status resp)))
+          (is (= "Uusi nimi" (:name (current (:lipas-id site)))))
+          (is (empty? @sync-calls)))))))
+
 ;;; Server-owned :ptv keys ;;;
 
 (deftest stale-ptv-lifecycle-keys-are-ignored-test
