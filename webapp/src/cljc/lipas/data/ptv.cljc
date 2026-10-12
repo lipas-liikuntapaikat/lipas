@@ -1196,10 +1196,14 @@
    non-nil fields match. Whitespace is normalized for comparison
    (see `normalize-ws`). `fields` defaults to all three lipas text fields;
    callers comparing against a PTV ServiceChannel should pass
-   `service-channel-compare-fields`."
+   `service-channel-compare-fields`. `locales` limits the comparison to the
+   languages that get published (default: all three) — a draft text in a
+   language the org doesn't publish never reaches PTV, so it can't match."
   ([lipas-texts ptv-texts]
    (texts-match? lipas-texts ptv-texts [:summary :description :user-instruction]))
   ([lipas-texts ptv-texts fields]
+   (texts-match? lipas-texts ptv-texts fields [:fi :se :en]))
+  ([lipas-texts ptv-texts fields locales]
    (let [trim normalize-ws]
      (every? (fn [field]
                (let [lipas-vals (get lipas-texts field)
@@ -1209,7 +1213,7 @@
                                  p (trim (get ptv-vals lang))]
                              (or (and (nil? l) (nil? p))
                                  (= l p))))
-                         [:fi :se :en])))
+                         locales)))
              fields))))
 
 (defn- effective-lipas-name
