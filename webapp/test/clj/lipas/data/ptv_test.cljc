@@ -486,6 +486,36 @@
 (defn- area-codes [payload]
   (mapv :areaCodes (:areas payload)))
 
+(deftest ->ptv-service-languages
+  ;; Regression: a language without texts was sent with the placeholder
+  ;; "TODO: Value missing!", which PTV published as the service's text. With
+  ;; only Finnish texts in LIPAS (Uusikaupunki's 12 LIPAS-created services),
+  ;; enabling English would have published it for every service synced.
+  (let [base {:org-id "org-x" :city-codes [895] :sub-category-id 2200
+              :languages ["fi" "se" "en"]
+              :summary {:fi "s-fi"} :description {:fi "d-fi"} :user-instruction {:fi "u-fi"}}
+        descs (fn [p] (set (map (juxt :type :language) (:serviceDescriptions p))))
+        name-langs (fn [p] (set (map :language (:serviceNames p))))]
+    (testing "Finnish-only texts: only the Finnish version, no placeholder"
+      (let [p (sut/->ptv-service base)]
+        (is (= #{"fi"} (:languages p)))
+        (is (= #{"fi"} (name-langs p)))
+        (is (= #{["Summary" "fi"] ["Description" "fi"] ["UserInstruction" "fi"]} (descs p)))
+        (is (not-any? #(= sut/placeholder (:value %)) (:serviceDescriptions p)))))
+
+    (testing "a language with summary and description is published; a missing instruction is left out"
+      (let [p (sut/->ptv-service (-> base
+                                     (assoc-in [:summary :en] "s-en")
+                                     (assoc-in [:description :en] "d-en")))]
+        (is (= #{"fi" "en"} (:languages p)))
+        (is (= #{"fi" "en"} (name-langs p)))
+        (is (= #{["Summary" "fi"] ["Description" "fi"] ["UserInstruction" "fi"]
+                 ["Summary" "en"] ["Description" "en"]}
+               (descs p)))))
+
+    (testing "a summary alone doesn't publish the language"
+      (is (= #{"fi"} (:languages (sut/->ptv-service (assoc-in base [:summary :se] "s-sv"))))))))
+
 (deftest ->ptv-service-area-codes
   (testing "city-codes < 100 are zero-padded to 3 digits (PTV's expected format)"
     ;; Regression: Eurajoki (51) hit "The code '51' was not found!" because

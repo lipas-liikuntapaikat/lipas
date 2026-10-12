@@ -230,6 +230,18 @@
         :when ptv-lang]
     [ptv-lang (keyword lipas-lang)]))
 
+(defn languages-with-texts
+  "`org-langs` (LIPAS language codes) minus every language other than Finnish
+   that lacks either a :summary or a :description in `texts`, a map of
+   {:summary {locale text} :description {locale text} ...}."
+  [texts org-langs]
+  (filterv (fn [lang]
+             (or (= "fi" lang)
+                 (let [locale (keyword lang)]
+                   (and (not (str/blank? (get-in texts [:summary locale])))
+                        (not (str/blank? (get-in texts [:description locale])))))))
+           org-langs))
+
 (defn effective-languages
   "The LIPAS language codes a service location is published in: the org's
    `org-langs`, minus every language other than Finnish that lacks either a
@@ -238,12 +250,7 @@
    before its sites have English texts, those sites stay Finnish-only in PTV
    until the texts are written."
   [site org-langs]
-  (filterv (fn [lang]
-             (or (= "fi" lang)
-                 (let [locale (keyword lang)]
-                   (and (not (str/blank? (get-in site [:ptv :summary locale])))
-                        (not (str/blank? (get-in site [:ptv :description locale])))))))
-           org-langs))
+  (languages-with-texts (:ptv site) org-langs))
 
 (def placeholder "TODO: Value missing!")
 
@@ -275,7 +282,10 @@
 (defn ->ptv-service
   [{:keys [org-id city-codes source-id sub-category-id languages _description _summary]
     :or {languages default-langs} :as m}]
-  (let [lipas-languages (set languages)
+  (let [;; Like service locations: a language other than Finnish is published
+        ;; only when the service has its own summary and description, so an
+        ;; org enabling English doesn't publish half-empty English versions.
+        lipas-languages (set (languages-with-texts m languages))
         ;; PTV language codes for the :languages field on the payload
         languages (->> lipas-languages (map lipas-lang->ptv-lang) (remove nil?) set)
         #_#_type (get types/all type-code)
@@ -357,13 +367,17 @@
      ;; provided? Maybe default to just "fi"?
      :languages languages
 
+     ;; Only texts that exist: a missing one used to be sent as the
+     ;; placeholder, which PTV then published as the text.
      :serviceDescriptions (for [[k v] {:summary "Summary"
                                        :description "Description"
                                        :user-instruction "UserInstruction"}
-                                [lang locale] (resolve-lang-pairs lipas-languages)]
+                                [lang locale] (resolve-lang-pairs lipas-languages)
+                                :let [text (get-in m [k locale])]
+                                :when (not (str/blank? text))]
                             {:type v
                              :language lang
-                             :value (get-in m [k locale] placeholder)})
+                             :value text})
 
      ;; TODO can this be inferred from owner / admin info reliably or do we
      :serviceProducers [{;; SelfProducedServices | ProcuredServices | Other
