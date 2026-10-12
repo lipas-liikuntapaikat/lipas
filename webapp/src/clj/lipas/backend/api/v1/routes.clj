@@ -106,8 +106,8 @@ Access to the hierarchical type classification system used for categorizing spor
 
               :license
               {:name "Creative Commons Attribution 4.0 International"
-               :identifier "CC-BY-SA-4.0"
-               :url "https://creativecommons.org/licenses/by-sa/4.0/"}}}
+               :identifier "CC-BY-4.0"
+               :url "https://creativecommons.org/licenses/by/4.0/"}}}
            ;; The regular handle is still using swagger-spec, so :openapi :id doesn't hide
            ;; these routes from that.
       :swagger {:id :hide-from-default}
