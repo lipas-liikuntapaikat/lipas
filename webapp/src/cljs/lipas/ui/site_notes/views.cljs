@@ -26,10 +26,10 @@
             ["@mui/material/TableCell$default" :as TableCell]
             ["@mui/material/TableHead$default" :as TableHead]
             ["@mui/material/TableRow$default" :as TableRow]
-            ["@mui/material/TextField$default" :as TextField]
             ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
             [clojure.string :as str]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.site-notes.events :as events]
             [lipas.ui.site-notes.subs :as subs]
             [lipas.ui.utils :as utils]
@@ -83,14 +83,18 @@
   (let [draft   @(rf/subscribe [::subs/draft lipas-id])
         saving? @(rf/subscribe [::subs/saving?])]
     [:> Stack {:spacing 1}
-     [:> TextField {:multiline true
-                    :min-rows 3
-                    :max-rows 10
-                    :full-width true
-                    :value draft
-                    :placeholder (tr :lipas.org/notes-placeholder)
-                    :input-props {:max-length 4000}
-                    :on-change #(rf/dispatch [::events/set-draft lipas-id (.. % -target -value)])}]
+     ;; The patched controlled field keeps keystrokes that a plain
+     ;; [:> TextField] bound to a re-frame sub would drop.
+     [text-fields/text-field-controlled
+      {:multiline true
+       :variant "outlined"
+       :min-rows 3
+       :max-rows 10
+       :full-width true
+       :value draft
+       :placeholder (tr :lipas.org/notes-placeholder)
+       :input-props {:max-length 4000}
+       :on-change #(rf/dispatch [::events/set-draft lipas-id (or % "")])}]
      [:> Button {:variant "contained"
                  :color "secondary"
                  :disabled (or saving? (str/blank? draft))

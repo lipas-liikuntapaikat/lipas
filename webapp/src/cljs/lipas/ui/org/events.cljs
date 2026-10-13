@@ -63,7 +63,7 @@
     (update org :ptv-data init-ptv-data)))
 
 (def ^:private org-tabs
-  #{"instructions" "our-sites" "overview" "members" "roles-templates" "ptv" "history"})
+  #{"instructions" "our-sites" "notes" "overview" "members" "roles-templates" "ptv" "history"})
 
 (rf/reg-event-fx ::init-view
   ;; `tab` (optional, from ?tab=) picks the landing tab; unknown → default.
