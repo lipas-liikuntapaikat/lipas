@@ -12,4 +12,5 @@
  :needs-service-helper "Liikuntapaikan tulee olla kytkettynä PTV-palveluun. Valitse olemassa oleva palvelu tai luo uusi."
  :link-sub-category "Liitä tyyppiluokkaan (valinnainen)"
  :link-sub-category-helper "Jos valitset tyyppiluokan, palvelu tarjotaan oletusvalintana kyseisen tyyppiluokan liikuntapaikoille Liikuntapaikat-välilehdellä. Jos jätät tyhjäksi, palvelu pitää valita kullekin liikuntapaikalle erikseen."
- :link-confirm "Liitä palvelu"}
+ :link-confirm "Liitä palvelu"
+ :native-read-only "Tämä palvelu on tehty suoraan PTV:hen eikä Lipaksen kautta, joten sen tekstejä voi muokata vain PTV:ssä. Liikuntapaikkoja voi silti liittää tähän palveluun Liikuntapaikat-välilehdellä."}

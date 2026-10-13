@@ -9,4 +9,5 @@
  :link-existing "Koppla befintlig PTV-tjänst"
  :select-sub-category "Välj typklass"
  :select-service "Välj tjänst från PTV"
- :needs-service-helper "Idrottsanläggningen måste vara kopplad till en tjänst i PTV. Välj en befintlig tjänst eller skapa en ny."}
+ :needs-service-helper "Idrottsanläggningen måste vara kopplad till en tjänst i PTV. Välj en befintlig tjänst eller skapa en ny."
+ :native-read-only "Den här tjänsten har skapats direkt i PTV och inte via Lipas, så dess texter kan bara redigeras i PTV. Du kan ändå koppla idrottsanläggningar till tjänsten på fliken Idrottsanläggningar."}
