@@ -43,6 +43,19 @@
 (def org-type
   [:enum "city" "municipal-consortium" "state" "private" "association" "other"])
 
+(def access-levels
+  "Who sees the org in the UI. `ptv-only`: the org serves the PTV integration
+  (and its membership-derived roles) but its members get no org-management
+  screens. `org-management`: members get the org-management UI. LIPAS admins
+  always see everything."
+  ["ptv-only" "org-management"])
+
+(def access-level (into [:enum] access-levels))
+
+(def default-access-level
+  "Absent on every org created before the setting existed — they stay hidden."
+  "ptv-only")
+
 (def catalog-role-names
   "Role names a catalog template may reference: the catalog-assignable subset of
   the role vocabulary (`:org-editor`, `:ptv-manager`, `:activities-manager`, …).
@@ -146,6 +159,7 @@
      [:ptv-data {:optional true} [:maybe ptv-data]]
      ;; --- org-management (opt-in; absent for legacy orgs) ---
      [:type {:optional true} org-type]
+     [:access-level {:optional true} access-level]
      [:instructions {:optional true} [:maybe instructions]]
      [:role-templates {:optional true} role-templates]
      [:ownership {:optional true} ownership]

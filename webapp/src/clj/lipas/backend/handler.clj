@@ -149,29 +149,36 @@
 ;; --- CQRS org-action helpers ---------------------------------------------
 ;; Every org-management endpoint is a POST /actions/<business-event> — commands
 ;; and queries alike (see the other /actions/* routes). The identifier/predicate
-;; always travels in the request body, so the org-scoped privilege role-contexts
-;; read it from there. POST-for-reads keeps one consistent shape and lets a query
-;; grow a richer payload (filters, paging, id lists) without URL-encoding quirks.
+;; always travels in the request body, so the org-scoped privilege checks
+;; (`org-gate`) read it from there. POST-for-reads keeps one consistent shape
+;; and lets a query grow a richer payload (filters, paging, id lists) without
+;; URL-encoding quirks.
 
-(defn- org-scope-from-body
-  "Role-context for an org-scoped privilege, keyed off :org-id in the body."
-  [req]
-  {:org-id #{(str (-> req :parameters :body :org-id))}})
+(defn- org-management-enabled?
+  "True if the org named by `org-id` has the org-management UI switched on
+  (`:access-level`). Read from the DB on every request, not from the token, so
+  a LIPAS admin's switch takes effect immediately."
+  [db org-id]
+  (boolean (some->> org-id (org/get-org db) org/org-management-enabled?)))
 
-(defn- org-member-or-admin?
-  "Boolean privilege fn: LIPAS admin, or :org/member on the :org-id body param.
-  Used by the read-only org dashboard queries (members / sites / history)."
-  [req]
-  (let [user (:identity req)]
-    (or (roles/check-role user :admin)
-        (roles/check-privilege user
-                               {:org-id #{(str (-> req :parameters :body :org-id))}}
-                               :org/member))))
+(defn- org-gate
+  "Privilege fn for the org-management endpoints: LIPAS admin, or `privilege`
+  on the org named by `:org-id` in the body (`id-key` overrides the key) AND
+  that org has org management enabled. A PTV-only org's members still hold
+  their membership-derived roles; they just don't get these endpoints."
+  ([db privilege] (org-gate db privilege :org-id))
+  ([db privilege id-key]
+   (fn [req]
+     (let [user   (:identity req)
+           org-id (-> req :parameters :body id-key)]
+       (or (roles/check-role user :admin)
+           (and (roles/check-privilege user {:org-id #{(str org-id)}} privilege)
+                (org-management-enabled? db org-id)))))))
 
 (defn- site-org-member-or-admin?
   "Boolean privilege fn for POST /actions/get-site-editors: LIPAS admin, or
   `:org/member` on an org tied to the site named in the body — its owner org or
-  one it has granted edit to.
+  one it has granted edit to — that has org management enabled.
 
   That set is exactly `search-meta.editor-org-ids`, which is what the Kohteet
   tab queries to build its list, so every row a member can see there can also
@@ -182,7 +189,9 @@
   (let [user (:identity req)]
     (or (roles/check-role user :admin)
         (let [site    (core/get-sports-site db (-> req :parameters :body :lipas-id))
-              org-ids (:org-id (roles/site-roles-context site))]
+              org-ids (->> (:org-id (roles/site-roles-context site))
+                           (filter #(org-management-enabled? db %))
+                           set)]
           (boolean (and (seq org-ids)
                         (roles/check-privilege user {:org-id org-ids} :org/member)))))))
 
@@ -474,7 +483,7 @@
         ["/actions/get-org-members"
          {:post
           {:no-doc true
-           :require-privilege org-member-or-admin?
+           :require-privilege (org-gate db :org/member)
            :parameters {:body [:map [:org-id org-schema/org-id]]}
            :handler (fn [req]
                       {:status 200
@@ -484,7 +493,7 @@
         ["/actions/get-org-sites"
          {:post
           {:no-doc true
-           :require-privilege org-member-or-admin?
+           :require-privilege (org-gate db :org/member)
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
                                [:filter {:optional true} [:enum "owned" "editable"]]
@@ -512,7 +521,7 @@
          ;; the conservative placeholder taken "pending data-protection guidance"
          ;; (docs/organizations.md); this is that guidance. Reverting is a
          ;; one-word change back to the check-privilege call.
-           :require-privilege [org-scope-from-body :org/manage]
+           :require-privilege (org-gate db :org/manage)
            :parameters {:body [:map [:org-id org-schema/org-id]]}
            :handler (fn [req]
                       {:status 200
@@ -527,7 +536,7 @@
         ["/actions/get-org-sites-for-bulk"
          {:post
           {:no-doc true
-           :require-privilege org-member-or-admin?
+           :require-privilege (org-gate db :org/member)
            :parameters {:body [:map [:org-id org-schema/org-id]]}
            :handler (fn [req]
                       {:status 200
@@ -537,7 +546,7 @@
         ["/actions/preview-org-takeover"
          {:post
           {:no-doc true
-           :require-privilege [org-scope-from-body :org/manage]
+           :require-privilege (org-gate db :org/manage)
            :parameters {:body [:map [:org-id org-schema/org-id]]}
            :handler (fn [req]
                       {:status 200
@@ -594,7 +603,7 @@
         ["/actions/update-org"
          {:post
           {:no-doc true
-           :require-privilege [(fn [req] {:org-id #{(str (-> req :parameters :body :id))}}) :org/manage]
+           :require-privilege (org-gate db :org/manage :id)
            :parameters {:body org-schema/org}
            :handler (fn [req]
                     ;; `:type`/`:ownership` (the take-over ceiling) and `:ptv-data`
@@ -647,7 +656,7 @@
         ["/actions/invite-org-member"
          {:post
           {:no-doc true
-           :require-privilege [org-scope-from-body :org/manage]
+           :require-privilege (org-gate db :org/manage)
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
                                [:email :string]
@@ -670,7 +679,7 @@
         ["/actions/check-is-existing-user"
          {:post
           {:no-doc true
-           :require-privilege [org-scope-from-body :org/manage]
+           :require-privilege (org-gate db :org/manage)
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
                                [:email :string]]}
@@ -683,7 +692,7 @@
         ["/actions/remove-org-member"
          {:post
           {:no-doc true
-           :require-privilege [org-scope-from-body :org/manage]
+           :require-privilege (org-gate db :org/manage)
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
                                [:user-id :uuid]]}
@@ -697,7 +706,7 @@
         ["/actions/set-org-member-roles"
          {:post
           {:no-doc true
-           :require-privilege [org-scope-from-body :org/manage]
+           :require-privilege (org-gate db :org/manage)
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
                                [:user-id :uuid]
@@ -714,7 +723,7 @@
         ["/actions/grant-site-edit"
          {:post
           {:no-doc true
-           :require-privilege [org-scope-from-body :org/manage]
+           :require-privilege (org-gate db :org/manage)
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
                                [:lipas-id #'sports-site-schema/lipas-id]
@@ -729,7 +738,7 @@
         ["/actions/revoke-site-edit"
          {:post
           {:no-doc true
-           :require-privilege [org-scope-from-body :org/manage]
+           :require-privilege (org-gate db :org/manage)
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
                                [:lipas-id #'sports-site-schema/lipas-id]
@@ -745,7 +754,7 @@
         ["/actions/mass-update-org-sites"
          {:post
           {:no-doc true
-           :require-privilege [org-scope-from-body :site/create-edit]
+           :require-privilege (org-gate db :site/create-edit)
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
                                [:lipas-ids [:vector #'sports-site-schema/lipas-id]]
@@ -765,7 +774,7 @@
         ["/actions/request-org-takeover"
          {:post
           {:no-doc true
-           :require-privilege [org-scope-from-body :org/manage]
+           :require-privilege (org-gate db :org/manage)
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
                                [:lipas-ids {:optional true} [:vector {:min 1} #'sports-site-schema/lipas-id]]]}
@@ -799,7 +808,7 @@
         ["/actions/preview-org-release"
          {:post
           {:no-doc true
-           :require-privilege [org-scope-from-body :org/manage]
+           :require-privilege (org-gate db :org/manage)
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
                                [:lipas-ids [:vector {:min 1} #'sports-site-schema/lipas-id]]]}
@@ -810,7 +819,7 @@
         ["/actions/release-org-sites"
          {:post
           {:no-doc true
-           :require-privilege [org-scope-from-body :org/manage]
+           :require-privilege (org-gate db :org/manage)
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
                                [:lipas-ids [:vector {:min 1} #'sports-site-schema/lipas-id]]

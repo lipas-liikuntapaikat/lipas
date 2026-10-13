@@ -2,7 +2,6 @@
   (:require [clojure.string :as str]
             [lipas.roles :as roles]
             [lipas.schema.org :as org-schema]
-            [lipas.ui.utils :as utils]
             [malli.core :as m]
             [re-frame.core :as rf]))
 
@@ -15,12 +14,35 @@
   (fn [orgs _]
     (into {} (map (juxt :id identity) orgs))))
 
+;; The user's orgs that have the org-management UI switched on (see
+;; lipas.schema.org/access-levels). A LIPAS admin's ::user-orgs is every org,
+;; and the admin sees them all regardless of the setting. PTV-only orgs stay
+;; out of every org-management surface: nav, profile card, orgs list, owner-org
+;; picker. nil until the orgs have been fetched.
+(rf/reg-sub ::org-management-orgs
+  :<- [::user-orgs]
+  :<- [::is-lipas-admin]
+  (fn [[orgs admin?] _]
+    (when orgs
+      (if admin?
+        orgs
+        (filterv #(= "org-management" (:access-level %)) orgs)))))
+
+;; The user's org-management orgs among `org-ids` (a site's owner + edit
+;; grantees, as strings — roles/site-roles-context :org-id). Non-empty means
+;; the user may see the site's org-management surfaces (editing rights, notes).
+(rf/reg-sub ::site-org-management-orgs
+  :<- [::org-management-orgs]
+  (fn [orgs [_ org-ids]]
+    (let [org-ids (set (map str org-ids))]
+      (filterv #(contains? org-ids (str (:id %))) orgs))))
+
 ;; Orgs the user may set as a site's owner: those where they hold
 ;; :site/create-edit (org-editor of the org, or lipas-admin). Drives the
 ;; owner-org autocomplete in the sports-site form. Mirrors the backend gate
 ;; `owner-org-assignment-authorized?`.
 (rf/reg-sub ::ownable-orgs
-  :<- [::user-orgs]
+  :<- [::org-management-orgs]
   :<- [:lipas.ui.user.subs/user-data]
   (fn [[orgs user] _]
     (filterv (fn [{:keys [id]}]
@@ -80,31 +102,22 @@
   (fn [user _]
     (roles/check-privilege user {} :users/manage)))
 
-;; True iff the user holds :org/member in ANY org, i.e. belongs to at least
-;; one organization. Reads the roles projected from org membership at login
-;; (lipas.backend.org/member->roles), so it answers immediately — no wait for
-;; the ::user-orgs fetch. Note :admin deliberately does NOT carry :org/member
-;; (see lipas.roles/roles), hence the separate ::is-lipas-admin check above.
-(rf/reg-sub ::is-any-org-member?
-  :<- [:lipas.ui.user.subs/user-data]
-  (fn [user _]
-    (roles/check-privilege user {:org-id ::roles/any} :org/member)))
-
-;; Rollout gate for the org-management UI as a whole (nav links, profile
-;; page, routes) — distinct from the in-app capability gating in ::can?
-;; below. Rollout sequence: 1) admin-only silent release, 2) org members on
-;; non-prod (current — lipas-dev dogfooding, memberships assigned by hand),
-;; 3) GA = drop the `prod?` clause.
+;; Gate for the org-management UI as a whole (nav links, profile card,
+;; routes) — distinct from the in-app capability gating in ::can? below. LIPAS
+;; admins always pass; everyone else needs membership in at least one org whose
+;; LIPAS admin has switched org management on (`:access-level`). nil while the
+;; user's orgs are still loading, so route guards can wait instead of bouncing.
 ;;
-;; Visibility only, never a security boundary: every org endpoint enforces
-;; its own :org/member | :org/manage | :site/create-edit gate server-side,
-;; and /actions/get-current-user-orgs already returns only the caller's orgs.
+;; Visibility only, never the security boundary: the org endpoints enforce the
+;; same rule server-side (lipas.backend.handler/org-gate).
 (rf/reg-sub ::can-access-org-management?
   :<- [::is-lipas-admin]
-  :<- [::is-any-org-member?]
-  (fn [[admin? org-member?] _]
-    (or admin?
-        (and org-member? (not (utils/prod?))))))
+  :<- [::org-management-orgs]
+  (fn [[admin? orgs] _]
+    (cond
+      admin?      true
+      (nil? orgs) nil
+      :else       (boolean (seq orgs)))))
 
 (rf/reg-sub ::is-org-admin?
   (fn [[_ org-id] _]

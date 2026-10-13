@@ -32,6 +32,7 @@
   [org]
   {:name            (:name org)
    :type            (or (:type org) "city")
+   :access-level    (or (:access-level org) org-schema/default-access-level)
    :primary-contact (or (:primary-contact org)
                         (get-in org [:data :primary-contact]))
    :instructions    (:instructions org)
@@ -65,6 +66,7 @@
      :data            {:primary-contact (:primary-contact document)}
      :ptv-data        (:ptv-data document)
      :type            (:type document)
+     :access-level    (or (:access-level document) org-schema/default-access-level)
      :primary-contact (:primary-contact document)
      :instructions    (normalize-instructions (:instructions document))
      :role-templates  (:role-templates document)
@@ -98,6 +100,14 @@
     new-doc))
 
 ;;; reads ;;;
+
+(defn org-management-enabled?
+  "True if the org has the org-management UI switched on. Orgs without it run
+  in PTV-only mode: the org exists for PTV and membership-derived roles, but its
+  members get no org-management screens or endpoints. LIPAS admins bypass this
+  (callers check that separately)."
+  [org]
+  (= "org-management" (:access-level org)))
 
 (defn all-orgs [db]
   (->> (jdbc/execute! db ["SELECT org_id, document FROM org_current ORDER BY document->>'name'"]
@@ -400,11 +410,12 @@
     (merge doc (select-keys (marshall org) (filterv present? ks)))))
 
 (def ^:private full-org-details-keys
-  [:name :type :primary-contact :instructions :ptv-data :ownership])
+  [:name :type :access-level :primary-contact :instructions :ptv-data :ownership])
 
 (def ^:private admin-editable-org-details-keys
   "The org-admin self-service ceiling: details an org-admin may edit. Excludes
-  `:type`/`:ownership` (the take-over ceiling) and `:ptv-data` (lipas-admin
+  `:type`/`:ownership` (the take-over ceiling), `:access-level` (which orgs get
+  the org-management UI is the LIPAS admin's call) and `:ptv-data` (lipas-admin
   only — it has its own `:users/manage`-gated endpoint)."
   [:name :primary-contact :instructions])
 
