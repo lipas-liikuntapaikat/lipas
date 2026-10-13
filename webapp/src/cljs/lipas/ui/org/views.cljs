@@ -59,6 +59,7 @@
             [lipas.ui.org.events :as events]
             [lipas.ui.org.subs :as subs]
             [lipas.ui.roles.editor :as role-editor]
+            [lipas.ui.site-notes.views :as site-notes]
             [lipas.ui.subs :as ui-subs]
             [lipas.utils :as utils]
             [malli.core :as m]
@@ -1561,6 +1562,7 @@
                  :sx {:mb 3 :border-bottom 1 :border-color "divider"}}
         [:> Tab {:label (tr :lipas.org/instructions-tab) :value "instructions"}]
         [:> Tab {:label (tr :lipas.org/our-sites-tab) :value "our-sites"}]
+        [:> Tab {:label (tr :lipas.org/notes-tab) :value "notes"}]
         [:> Tab {:label (tr :lipas.org/overview-tab) :value "overview"}]
         [:> Tab {:label (tr :lipas.org/members-tab) :value "members"}]
         [:> Tab {:label (tr :lipas.org/permissions-ownership-tab) :value "roles-templates"}]
@@ -1574,6 +1576,7 @@
        "members" [members-tab tr org-id]
        "roles-templates" [roles-templates-tab tr org-id]
        "our-sites" [our-sites-tab tr org-id]
+       "notes" ^{:key org-id} [site-notes/org-notes-tab tr org-id]
        "ptv" [ptv-tab]
        "history" (when @(rf/subscribe [::subs/can? :org/view-history org-id])
                    [history-tab tr org-id])

@@ -18,6 +18,7 @@
             [lipas.backend.rate-limit :as rate-limit]
             [lipas.backend.search :as search*]
             [lipas.backend.search-guard :as search-guard]
+            [lipas.backend.site-notes :as site-notes]
             [lipas.jobs.handler :as jobs-handler]
             [lipas.roles :as roles]
             [lipas.schema.diversity :as diversity-schema]
@@ -105,6 +106,8 @@
    ;; :invalid-takeover-state
    :owner-locked (exception-handler 409 :owner-locked)
    :site-not-found (exception-handler 404 :site-not-found)
+   ;; e.g. un-archiving a deleted site note — conflict with its current state
+   :invalid-note-status (exception-handler 409 :invalid-note-status)
    :sports-site-not-found (exception-handler 404 :sports-site-not-found)
 
    :qbits.spandex/response-exception (exception-handler 500 :internal-server-error :print-stack)
@@ -194,6 +197,30 @@
                            set)]
           (boolean (and (seq org-ids)
                         (roles/check-privilege user {:org-id org-ids} :org/member)))))))
+
+;; --- Site notes: org-private notes on the org's own sites ------------------
+
+(defn- note-org-ids
+  "Org ids whose site notes `user` may read: every org for a LIPAS admin,
+  otherwise the user's orgs that have org management enabled."
+  [db user]
+  (->> (if (roles/check-role user :admin)
+         (org/all-orgs db)
+         (->> (org/user-orgs db (parse-uuid (str (:id user))))
+              (filter org/org-management-enabled?)))
+       (mapv :id)))
+
+(defn- note-org-member-or-admin?
+  "Privilege fn for changing a note's status: LIPAS admin, or a member of the
+  note's org while that org has org management enabled."
+  [db req]
+  (let [user (:identity req)
+        note (site-notes/get-note db (-> req :parameters :body :note-id))]
+    (boolean
+      (and note
+           (or (roles/check-role user :admin)
+               (and (roles/check-privilege user {:org-id #{(str (:org-id note))}} :org/member)
+                    (org-management-enabled? db (:org-id note))))))))
 
 (defn- utp-image-upload-access?
   "Boolean privilege fn for POST /actions/upload-utp-image.
@@ -585,6 +612,36 @@
                                db (-> req :parameters :body :lipas-id)
                                (:identity req))})}}]
 
+      ;; --- Site notes on one site: the caller's org-management orgs' notes
+      ;; (all orgs' for a LIPAS admin). Deleted notes are left out. ---
+        ["/actions/get-site-notes"
+         {:post
+          {:no-doc true
+           :require-privilege nil
+           :middleware [mw/token-auth mw/auth]
+           :parameters {:body [:map [:lipas-id #'sports-site-schema/lipas-id]]}
+           :handler (fn [req]
+                      {:status 200
+                       :body (site-notes/site-notes db
+                                                    (-> req :parameters :body :lipas-id)
+                                                    (note-org-ids db (:identity req)))})}}]
+
+      ;; --- The org's notes across its sites (the org page's notes tab) ---
+        ["/actions/get-org-site-notes"
+         {:post
+          {:no-doc true
+           :require-privilege (org-gate db :org/member)
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:statuses {:optional true}
+                                [:vector (into [:enum] site-notes/all-statuses)]]]}
+           :handler (fn [req]
+                      (let [{:keys [org-id statuses]} (-> req :parameters :body)]
+                        {:status 200
+                         :body (site-notes/org-notes db search org-id
+                                                     (cond-> {}
+                                                       statuses (assoc :statuses statuses)))}))}}]
+
       ;; --- Commands --------------------------------------------------------
 
       ;; Create org (lipas-admin only)
@@ -718,6 +775,46 @@
                                              (-> req :parameters :body :roles)
                                              (-> req :identity :id))
                       {:status 200 :body {}})}}]
+
+      ;; --- Site notes: any member of an org-management org may write a note
+      ;; on a site the org owns, and archive/delete/restore its notes. Notes
+      ;; are append-only; status changes are logged, never overwritten. ---
+        ["/actions/create-site-note"
+         {:post
+          {:no-doc true
+           :require-privilege (org-gate db :org/member)
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:lipas-id #'sports-site-schema/lipas-id]
+                               [:body [:and
+                                       [:string {:min 1 :max 4000}]
+                                       [:fn {:error/message "should not be blank"}
+                                        (complement str/blank?)]]]]}
+           :handler (fn [req]
+                      (let [{:keys [org-id lipas-id] :as body} (-> req :parameters :body)
+                            site (core/get-sports-site db lipas-id)]
+                        (if (= (str org-id) (some-> site :owner-org-id str))
+                          {:status 200
+                           :body (site-notes/create-note! db
+                                                          (update body :body str/trim)
+                                                          (-> req :identity :id))}
+                          {:status 403
+                           :body {:error "Notes are only for sites the org owns"}})))}}]
+
+        ["/actions/set-site-note-status"
+         {:post
+          {:no-doc true
+           :require-privilege (fn [req] (note-org-member-or-admin? db req))
+           :parameters {:body [:map
+                               [:note-id :uuid]
+                               [:status [:enum "active" "archived" "deleted"]]]}
+           :handler (fn [req]
+                      (let [{:keys [note-id status]} (-> req :parameters :body)]
+                        {:status 200
+                         :body (site-notes/set-status! db
+                                                       (site-notes/get-note db note-id)
+                                                       status
+                                                       (-> req :identity :id))}))}}]
 
       ;; --- Cross-org edit grants on owned sites (org-admin of the owner org) ---
         ["/actions/grant-site-edit"
