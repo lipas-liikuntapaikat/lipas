@@ -1857,7 +1857,8 @@
           (tr :actions/show-less)])])))
 
 (defn service-panel-left
-  [{:keys [tr org-id service data ptv-base has-local-edits? org-languages selected-tab edited-name]}]
+  [{:keys [tr org-id service data ptv-base has-local-edits? org-languages selected-tab edited-name
+           native?]}]
   (let [service-id (:service-id service)
         source-id (:source-id service)
         display-name (or edited-name (:label service))
@@ -1866,9 +1867,17 @@
         generating? (<== [::subs/generating-service-descriptions? source-id])]
     [:> Stack {:spacing 2}
 
-     ;; 1. Editable PTV service name
-     [service-name-field {:tr tr :source-id source-id :service-id service-id
-                          :ptv-base ptv-base :display-name display-name}]
+     ;; 1. PTV service name, editable only on services LIPAS manages
+     (if native?
+       [:> Stack {:spacing 0.5}
+        [:> Typography {:variant "caption" :color "text.secondary"}
+         (tr :ptv/service-name)]
+        [:> Link {:href (str ptv-base "/service/" service-id)
+                  :target "_blank"
+                  :variant "body2"}
+         display-name]]
+       [service-name-field {:tr tr :source-id source-id :service-id service-id
+                            :ptv-base ptv-base :display-name display-name}])
 
      ;; 2. Service classes
      (when (seq (:service-classes service))
@@ -1898,77 +1907,97 @@
      (when (seq (:service-channels service))
        [service-channels-list {:tr tr :service service :ptv-base ptv-base}])
 
+     ;; A service made directly in PTV has no LIPAS source-id: a sync
+     ;; can't address it, so it is shown, not edited (linking sites to it
+     ;; works regardless).
+     (when native?
+       [:> Alert {:severity "info" :variant "outlined"
+                  :action (r/as-element
+                            [:> Button {:size "small"
+                                        :href (str ptv-base "/service/" service-id)
+                                        :target "_blank"
+                                        :sx #js {:textTransform "none" :whiteSpace "nowrap"}}
+                             (tr :ptv/open-in-ptv)])}
+        (tr :ptv.service/native-read-only)])
+
      ;; AI generate + translate buttons
-     (let [from-lang @selected-tab
-           other-langs (disj (set (map keyword org-languages)) from-lang)
-           has-text? (and (seq (get-in data [:summary from-lang]))
-                          (seq (get-in data [:description from-lang])))]
-       [:> Stack {:direction "row" :spacing 1 :flex-wrap "wrap" :align-items "flex-start"}
-        [:> Tooltip {:title (if has-lipas-data?
-                              ""
-                              (tr :ptv.tools.ai/no-lipas-data))}
-         [:span
-          [:> Button
-           {:variant "outlined" :size "small"
-            :disabled (or generating? (not has-lipas-data?))
-            :sx #js {:textTransform "none"}
-            :startIcon (r/as-element
-                         (if generating?
-                           [:> CircularProgress {:size 16 :color "inherit"}]
-                           [:> Icon "auto_fix_high"]))
-            :on-click #(==> [::events/generate-service-descriptions org-id source-id nil [] []])}
-           (tr :ptv.actions/generate-with-ai)]]]
-        (when (> (count org-languages) 1)
-          [:> Tooltip {:title (tr :ptv.wizard/translate-to-other-langs-tooltip)}
+     (when-not native?
+       (let [from-lang @selected-tab
+             other-langs (disj (set (map keyword org-languages)) from-lang)
+             has-text? (and (seq (get-in data [:summary from-lang]))
+                            (seq (get-in data [:description from-lang])))]
+         [:> Stack {:direction "row" :spacing 1 :flex-wrap "wrap" :align-items "flex-start"}
+          [:> Tooltip {:title (if has-lipas-data?
+                                ""
+                                (tr :ptv.tools.ai/no-lipas-data))}
            [:span
             [:> Button
-             {:size "small" :variant "outlined"
-              :disabled (or generating? (not has-text?))
+             {:variant "outlined" :size "small"
+              :disabled (or generating? (not has-lipas-data?))
+              :sx #js {:textTransform "none"}
               :startIcon (r/as-element
                            (if generating?
                              [:> CircularProgress {:size 16 :color "inherit"}]
-                             [:> Icon "translate"]))
-              :sx #js {:textTransform "none"}
-              :on-click #(==> [::events/translate-service-candidate-with-texts
-                               source-id from-lang other-langs
-                               {:summary (get-in data [:summary from-lang])
-                                :description (get-in data [:description from-lang])
-                                :user-instruction (get-in data [:user-instruction from-lang])}])}
-             (str (tr :ptv.wizard/translate-to-other-langs) " ("
-                  (str/join ", " (map (comp str/upper-case name) (sort other-langs)))
-                  ")")]]])])
+                             [:> Icon "auto_fix_high"]))
+              :on-click #(==> [::events/generate-service-descriptions org-id source-id nil [] []])}
+             (tr :ptv.actions/generate-with-ai)]]]
+          (when (> (count org-languages) 1)
+            [:> Tooltip {:title (tr :ptv.wizard/translate-to-other-langs-tooltip)}
+             [:span
+              [:> Button
+               {:size "small" :variant "outlined"
+                :disabled (or generating? (not has-text?))
+                :startIcon (r/as-element
+                             (if generating?
+                               [:> CircularProgress {:size 16 :color "inherit"}]
+                               [:> Icon "translate"]))
+                :sx #js {:textTransform "none"}
+                :on-click #(==> [::events/translate-service-candidate-with-texts
+                                 source-id from-lang other-langs
+                                 {:summary (get-in data [:summary from-lang])
+                                  :description (get-in data [:description from-lang])
+                                  :user-instruction (get-in data [:user-instruction from-lang])}])}
+               (str (tr :ptv.wizard/translate-to-other-langs) " ("
+                    (str/join ", " (map (comp str/upper-case name) (sort other-langs)))
+                    ")")]]])]))
 
      ;; Modified in PTV warning
-     (when (= "Modified" (:publishing-status service))
+     (when (and (not native?) (= "Modified" (:publishing-status service)))
        [:> Alert {:severity "warning" :variant "outlined"
                   :sx #js {:py 0.5 :px 1}}
         [:> Typography {:variant "body2"}
          (tr :ptv/modified-in-ptv)]])
 
      ;; Sync button
-     (let [syncing? (<== [::subs/syncing-service? source-id])
-           modified? (= "Modified" (:publishing-status service))]
-       [:> Button
-        {:variant "contained"
-         :color "secondary"
-         :disabled (or syncing? modified? (not has-local-edits?))
-         :size "small"
-         :sx #js {:textTransform "none"}
-         :startIcon (r/as-element
-                      (if syncing?
-                        [:> CircularProgress {:size 16 :color "inherit"}]
-                        [:> Icon "sync"]))
-         :on-click (fn [_e]
-                     (rf/dispatch [::events/create-ptv-service org-id source-id data [] []]))}
-        (tr :ptv.actions/sync-now)])
+     (when-not native?
+       (let [syncing? (<== [::subs/syncing-service? source-id])
+             modified? (= "Modified" (:publishing-status service))]
+         [:> Button
+          {:variant "contained"
+           :color "secondary"
+           :disabled (or syncing? modified? (not has-local-edits?))
+           :size "small"
+           :sx #js {:textTransform "none"}
+           :startIcon (r/as-element
+                        (if syncing?
+                          [:> CircularProgress {:size 16 :color "inherit"}]
+                          [:> Icon "sync"]))
+           :on-click (fn [_e]
+                       (rf/dispatch [::events/create-ptv-service org-id source-id data [] []]))}
+          (tr :ptv.actions/sync-now)]))
 
      ;; Last modified
      [:> Typography {:variant "caption" :color "text.secondary"}
       (str (tr :general/last-modified) " " (:last-modified-human service))]]))
 
 (defn service-panel-right
-  [{:keys [tr source-id service descriptions org-languages selected-tab]}]
-  (let [summary-data (merge (:summary service) (:summary descriptions))
+  [{:keys [tr source-id service descriptions org-languages selected-tab native?]}]
+  (let [;; Native services are shown read-only (see service-panel-left).
+        ;; text-field also calls on-change on blur, so it gets a no-op.
+        read-only-props (when native?
+                          {:on-change (fn [_])
+                           :InputProps {:readOnly true}})
+        summary-data (merge (:summary service) (:summary descriptions))
         description-data (merge (:description service) (:description descriptions))
         user-instruction-data (merge (:user-instruction service) (:user-instruction descriptions))
         sub-category-id (ptv-data/parse-service-source-id source-id)]
@@ -1982,14 +2011,16 @@
      ;; Summary
      (let [v (or (get summary-data @selected-tab) "")]
        [text-fields/text-field
-        {:on-change #(==> [::events/set-service-candidate-summary source-id @selected-tab %])
-         :multiline true
-         :variant "outlined"
-         :label (tr :ptv/summary)
-         :value v
-         :inputProps #js {:maxLength ptv-data/max-summary-length}
-         :helperText (str (count v) "/" ptv-data/max-summary-length)
-         :error (> (count v) ptv-data/max-summary-length)}])
+        (merge
+          {:on-change #(==> [::events/set-service-candidate-summary source-id @selected-tab %])
+           :multiline true
+           :variant "outlined"
+           :label (tr :ptv/summary)
+           :value v
+           :inputProps #js {:maxLength ptv-data/max-summary-length}
+           :helperText (str (count v) "/" ptv-data/max-summary-length)
+           :error (> (count v) ptv-data/max-summary-length)}
+          read-only-props)])
 
      ;; Auditor feedback for summary
      [service-audit-feedback-component
@@ -2002,15 +2033,17 @@
       {:tr tr :sub-category-id sub-category-id :field :description}]
      (let [v (or (get description-data @selected-tab) "")]
        [text-fields/text-field
-        {:on-change #(==> [::events/set-service-candidate-description source-id @selected-tab %])
-         :variant "outlined"
-         :rows 7
-         :multiline true
-         :label (tr :ptv/description)
-         :value v
-         :inputProps #js {:maxLength ptv-data/max-description-length}
-         :helperText (str (count v) "/" ptv-data/max-description-length)
-         :error (> (count v) ptv-data/max-description-length)}])
+        (merge
+          {:on-change #(==> [::events/set-service-candidate-description source-id @selected-tab %])
+           :variant "outlined"
+           :rows 7
+           :multiline true
+           :label (tr :ptv/description)
+           :value v
+           :inputProps #js {:maxLength ptv-data/max-description-length}
+           :helperText (str (count v) "/" ptv-data/max-description-length)
+           :error (> (count v) ptv-data/max-description-length)}
+          read-only-props)])
 
      ;; Auditor feedback for description
      [service-audit-feedback-component
@@ -2023,15 +2056,17 @@
       {:tr tr :sub-category-id sub-category-id :field :user-instruction}]
      (let [v (or (get user-instruction-data @selected-tab) "")]
        [text-fields/text-field
-        {:on-change #(==> [::events/set-service-candidate-user-instruction source-id @selected-tab %])
-         :variant "outlined"
-         :rows 5
-         :multiline true
-         :label (tr :ptv/user-instruction)
-         :value v
-         :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
-         :helperText (str (count v) "/" ptv-data/max-user-instruction-length)
-         :error (> (count v) ptv-data/max-user-instruction-length)}])
+        (merge
+          {:on-change #(==> [::events/set-service-candidate-user-instruction source-id @selected-tab %])
+           :variant "outlined"
+           :rows 5
+           :multiline true
+           :label (tr :ptv/user-instruction)
+           :value v
+           :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
+           :helperText (str (count v) "/" ptv-data/max-user-instruction-length)
+           :error (> (count v) ptv-data/max-user-instruction-length)}
+          read-only-props)])
 
      ;; Auditor feedback for user instruction
      [service-audit-feedback-component
@@ -2129,12 +2164,14 @@
        [:> Grid {:container true :spacing 3}
         [:> Grid {:item true :xs 12 :md 5}
          [service-panel-left {:tr tr :org-id org-id :service service
+                              :native? (not lipas-managed?)
                               :data data :ptv-base ptv-base
                               :has-local-edits? has-local-edits?
                               :edited-name edited-name
                               :org-languages org-languages :selected-tab selected-tab}]]
         [:> Grid {:item true :xs 12 :md 7}
          [service-panel-right {:tr tr :source-id source-id :service service
+                               :native? (not lipas-managed?)
                                :descriptions descriptions
                                :org-languages org-languages
                                :selected-tab selected-tab}]]]])))
