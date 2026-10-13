@@ -9,4 +9,5 @@
  :link-existing "Link existing PTV service"
  :select-sub-category "Select type class"
  :select-service "Select service from PTV"
- :needs-service-helper "This sports site needs to be connected to a Service in PTV. Choose an existing service or create a new one."}
+ :needs-service-helper "This sports site needs to be connected to a Service in PTV. Choose an existing service or create a new one."
+ :native-read-only "This service was created directly in PTV, not through Lipas, so its texts can only be edited in PTV. You can still link sports sites to it on the Sports sites tab."}
