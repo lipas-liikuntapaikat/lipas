@@ -288,7 +288,7 @@
     (assoc-in db [:ptv :selected-tab] v)))
 
 (rf/reg-event-fx ::reset-wizard
-  "Reset all ephemeral wizard state back to defaults."
+  ;; Reset all ephemeral wizard state back to defaults.
   (fn [{:keys [db]} _]
     (let [org-id (-get-ptv-org-id db)]
       {:db (-> db
