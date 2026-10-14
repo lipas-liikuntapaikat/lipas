@@ -645,7 +645,9 @@
    "loi"
    "ptv_service"
    "ptv_site_audit"
-   "ptv_service_audit"])
+   "ptv_service_audit"
+   "site_note"
+   "site_note_status"])
 
 ;; For all other tests except the legacy WFS compatibility layer
 ;; Enhanced database utilities that accept db parameter
