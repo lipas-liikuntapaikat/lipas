@@ -42,6 +42,7 @@
     (backend-org/create-org (test-db)
                             {:id id
                              :name (str "Auth Test Org " id)
+                             :access-level "org-management"
                              :data {}
                              :ptv-data {:org-id nil
                                         :city-codes [91]

@@ -63,7 +63,7 @@
     (update org :ptv-data init-ptv-data)))
 
 (def ^:private org-tabs
-  #{"instructions" "our-sites" "overview" "members" "roles-templates" "ptv" "history"})
+  #{"instructions" "our-sites" "notes" "overview" "members" "roles-templates" "ptv" "history"})
 
 (rf/reg-event-fx ::init-view
   ;; `tab` (optional, from ?tab=) picks the landing tab; unknown → default.
@@ -834,3 +834,58 @@
             [:dispatch [:lipas.ui.events/set-active-notification
                         {:message (tr (if ok? :notifications/save-success :notifications/save-failed))
                          :success? ok?}]]]})))
+
+;; =====================================================================
+;; Org-management rollout (LIPAS admin): switch an org's access level
+;; =====================================================================
+
+(rf/reg-event-db ::open-access-dialog
+  (fn [db [_ org access-level]]
+    (assoc-in db [:org :access-dialog] {:open? true :org org :access-level access-level})))
+
+;; Closing keeps the content so the dialog doesn't go blank while fading out.
+(rf/reg-event-db ::close-access-dialog
+  (fn [db _]
+    (update-in db [:org :access-dialog] assoc :open? false :saving? false)))
+
+(rf/reg-event-fx ::set-access-level
+  (fn [{:keys [db]} [_ org-id access-level]]
+    {:db (assoc-in db [:org :access-dialog :saving?] true)
+     :http-xhrio
+     {:method :post
+      :uri (str (:backend-url db) "/actions/set-org-access-level")
+      :headers {:Authorization (str "Token " (token db))}
+      :params {:org-id org-id :access-level access-level}
+      :format (ajax/json-request-format)
+      :response-format (ajax/json-response-format {:keywords? true})
+      :on-success [::set-access-level-success org-id access-level]
+      :on-failure [::set-access-level-failure]}}))
+
+(defn- assoc-access-level
+  "The org's access level lives in two places in app-db: the shared org list
+  ([:user :orgs], which drives the admin rollout table, org cards, nav gate,
+  profile card and owner-org picker) and the open org page's copy. Update both
+  so a switch shows everywhere at once."
+  [db org-id access-level]
+  (let [same? #(= (str org-id) (str (:id %)))]
+    (cond-> (update-in db [:user :orgs]
+                       (fn [orgs]
+                         (some->> orgs
+                                  (mapv #(cond-> % (same? %) (assoc :access-level access-level))))))
+      (same? (get-in db [:org :editing-org]))
+      (assoc-in [:org :editing-org :access-level] access-level))))
+
+(rf/reg-event-fx ::set-access-level-success
+  (fn [{:keys [db]} [_ org-id access-level _resp]]
+    (let [tr (:translator db)]
+      {:db (-> db
+               (assoc-access-level org-id access-level)
+               (update-in [:org :access-dialog] assoc :open? false :saving? false))
+       :dispatch [:lipas.ui.events/set-active-notification
+                  {:message (tr :notifications/save-success)
+                   :success? true}]})))
+
+(rf/reg-event-fx ::set-access-level-failure
+  (fn [{:keys [db]} [_ resp]]
+    {:db (update-in db [:org :access-dialog] assoc :open? false :saving? false)
+     :dispatch [::failure resp]}))

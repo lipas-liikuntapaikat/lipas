@@ -49,6 +49,9 @@
                                :reservations-link "old-book.x.fi")
                         (assoc-in [:type :type-code] type-code)
                         (assoc-in [:location :city :city-code] city-code))
+                    ;; An org-owned site's :owner is locked to the owner org's
+                    ;; type; enabled-org! persists a "city" org.
+                    (when (:owner-org-id extra) {:owner "city"})
                     extra)]
     (core/upsert-sports-site!* (test-db) admin site)
     (core/index! (test-search) site true)
@@ -74,14 +77,26 @@
                                                  :updates updates}))
                   (test-utils/token-header token))))
 
-(defn- persisted-catalog-org!
-  "Create a REAL persisted org with an editor role-template catalog (so
-  membership projection has a catalog ceiling to draw from). Returns its id."
+(defn- enabled-org!
+  "Persist a minimal org with org management switched on (the org endpoints
+  refuse PTV-only orgs) and return its id."
   []
   (let [org-id (java.util.UUID/randomUUID)]
     (backend-org/create-org (test-db)
                             {:id org-id
+                             :name (str "Bulk Org " org-id)
+                             :access-level "org-management"})
+    org-id))
+
+(defn- persisted-catalog-org!
+  "Create a REAL persisted org with an editor role-template catalog (so
+  membership projection has a catalog ceiling to draw from). Returns its id."
+  []
+  (let [org-id (enabled-org!)]
+    (backend-org/create-org (test-db)
+                            {:id org-id
                              :name (str "Bulk Test Org " (System/currentTimeMillis))
+                             :access-level "org-management"
                              :data {:primary-contact {:email "bulk@test.fi"}}})
     (backend-org/update-catalog! (test-db) org-id
                                  {:editor {:label "Muokkaaja"
@@ -93,7 +108,7 @@
 
 (deftest list-org-editable-sites-test
   (testing "org-editor lists the org's editable sites (owned ∪ granted), not others"
-    (let [org-id (java.util.UUID/randomUUID)
+    (let [org-id (enabled-org!)
           {:keys [owned1 owned2 granted unrelated]} (seed-org-sites! org-id)
           token (jwt/create-token (org-editor-user org-id))
           resp ((test-app) (-> (mock/request :post "/api/actions/get-org-sites-for-bulk")
@@ -112,7 +127,7 @@
 
 (deftest mass-update-org-editor-success-test
   (testing "org-editor can mass-update owned + granted sites"
-    (let [org-id (java.util.UUID/randomUUID)
+    (let [org-id (enabled-org!)
           {:keys [owned1 granted]} (seed-org-sites! org-id)
           token (jwt/create-token (org-editor-user org-id))
           payload {:org-id org-id :lipas-ids [owned1 granted] :updates {:email "new@org.fi"}}
@@ -127,7 +142,7 @@
 
 (deftest mass-update-rejects-foreign-sites-test
   (testing "an org-editor cannot update a site outside the org's editable set"
-    (let [org-id (java.util.UUID/randomUUID)
+    (let [org-id (enabled-org!)
           {:keys [owned1 unrelated]} (seed-org-sites! org-id)
           token (jwt/create-token (org-editor-user org-id))
           payload {:org-id org-id :lipas-ids [owned1 unrelated] :updates {:email "x@x.fi"}}
@@ -139,7 +154,7 @@
 
 (deftest non-editor-denied-test
   (testing "a user without org-editor for the org is denied (403) on both endpoints"
-    (let [org-id (java.util.UUID/randomUUID)
+    (let [org-id (enabled-org!)
           {:keys [owned1]} (seed-org-sites! org-id)
           token (jwt/create-token (test-utils/gen-regular-user :db-component (test-db)))
           get-resp ((test-app) (-> (mock/request :post "/api/actions/get-org-sites-for-bulk")
@@ -208,7 +223,7 @@
 
 (deftest org-editor-of-other-org-denied-test
   (testing "an org-editor of a DIFFERENT org cannot bulk-edit this org's sites"
-    (let [org-id   (java.util.UUID/randomUUID)
+    (let [org-id   (enabled-org!)
           other-id (java.util.UUID/randomUUID)
           _ (seed-org-sites! org-id)
           token (jwt/create-token (org-editor-user other-id))
@@ -220,7 +235,7 @@
 
 (deftest admin-can-mass-update-test
   (testing "lipas-admin can mass-update any org's sites"
-    (let [org-id (java.util.UUID/randomUUID)
+    (let [org-id (enabled-org!)
           {:keys [owned1]} (seed-org-sites! org-id)
           token (jwt/create-token (test-utils/gen-admin-user :db-component (test-db)))
           payload {:org-id org-id :lipas-ids [owned1] :updates {:email "admin@org.fi"}}
@@ -234,14 +249,14 @@
 
 (deftest auth-required-test
   (testing "endpoints require authentication"
-    (let [org-id (java.util.UUID/randomUUID)]
+    (let [org-id (enabled-org!)]
       (is (= 401 (:status ((test-app) (-> (mock/request :post "/api/actions/get-org-sites-for-bulk")
                                           (mock/content-type "application/json")
                                           (mock/body (test-utils/->json {:org-id org-id}))))))))))
 
 (deftest invalid-payload-test
   (testing "invalid email is rejected"
-    (let [org-id (java.util.UUID/randomUUID)
+    (let [org-id (enabled-org!)
           {:keys [owned1]} (seed-org-sites! org-id)
           token (jwt/create-token (test-utils/gen-admin-user :db-component (test-db)))
           payload {:org-id org-id :lipas-ids [owned1] :updates {:email "not-an-email"}}
@@ -253,7 +268,7 @@
 
 (deftest authorization-uses-db-state-test
   (testing "a grant revoked in the DB (ES not yet reindexed) blocks mass-update"
-    (let [org-id (java.util.UUID/randomUUID)
+    (let [org-id (enabled-org!)
           {:keys [owned1]} (seed-org-sites! org-id)
           admin (test-utils/gen-admin-user :db-component (test-db))
           ;; Revoke the org's edit access in the DB only: append a newer
@@ -278,7 +293,7 @@
 
 (deftest no-clobber-of-newer-db-revision-test
   (testing "mass-update derives from the DB current revision, not the stale ES copy"
-    (let [org-id (java.util.UUID/randomUUID)
+    (let [org-id (enabled-org!)
           {:keys [owned1]} (seed-org-sites! org-id)
           admin (test-utils/gen-admin-user :db-component (test-db))
           grantee (str (java.util.UUID/randomUUID))
@@ -312,7 +327,7 @@
 
 (deftest mass-update-core-fields-test
   (testing "status, admin and construction-year update together across sites"
-    (let [org-id (java.util.UUID/randomUUID)
+    (let [org-id (enabled-org!)
           {:keys [owned1 owned2]} (seed-org-sites! org-id)
           token (jwt/create-token (org-editor-user org-id))
           resp  (mass-update! org-id [owned1 owned2]
@@ -334,7 +349,7 @@
 
 (deftest mass-update-clear-optional-field-test
   (testing "sending nil for an optional field clears it (removes the key)"
-    (let [org-id (java.util.UUID/randomUUID)
+    (let [org-id (enabled-org!)
           lipas-id (:lipas-id (mk-site! 9995010 91 1110
                                         {:owner-org-id (str org-id)
                                          :construction-year 1990}))
@@ -347,7 +362,7 @@
 
 (deftest mass-update-required-field-not-clearable-test
   (testing "nil for a required field (status) is rejected at the schema (400)"
-    (let [org-id (java.util.UUID/randomUUID)
+    (let [org-id (enabled-org!)
           {:keys [owned1]} (seed-org-sites! org-id)
           token (jwt/create-token (org-editor-user org-id))
           resp  (mass-update! org-id [owned1] {:status nil} token)]
@@ -355,7 +370,7 @@
 
 (deftest mass-update-nested-location-fields-test
   (testing "postal-office + neighborhood update; sibling location fields preserved"
-    (let [org-id (java.util.UUID/randomUUID)
+    (let [org-id (enabled-org!)
           {:keys [owned1]} (seed-org-sites! org-id)
           before (core/get-sports-site (test-db) owned1)
           token (jwt/create-token (org-editor-user org-id))
@@ -380,7 +395,7 @@
 
 (deftest mass-update-properties-replace-test
   (testing "an enum-coll property is REPLACED (not appended) and a boolean cleared"
-    (let [org-id (java.util.UUID/randomUUID)
+    (let [org-id (enabled-org!)
           ;; two ice-skating fields (type 1520) — both carry :surface-material
           l1 (:lipas-id (mk-site! 9995020 91 1520
                                   {:owner-org-id (str org-id)
@@ -404,7 +419,7 @@
 
 (deftest mass-update-property-off-intersection-rejected-test
   (testing "a property not shared by all selected sites' types is rejected (400)"
-    (let [org-id (java.util.UUID/randomUUID)
+    (let [org-id (enabled-org!)
           ;; type 1520 has no :height-m (an indoor property)
           lipas-id (:lipas-id (mk-site! 9995030 91 1520 {:owner-org-id (str org-id)}))
           token (jwt/create-token (org-editor-user org-id))
@@ -413,7 +428,7 @@
 
 (deftest mass-update-invalid-property-value-rejected-test
   (testing "a property value failing its prop-type schema is rejected (400)"
-    (let [org-id (java.util.UUID/randomUUID)
+    (let [org-id (enabled-org!)
           lipas-id (:lipas-id (mk-site! 9995031 91 1520 {:owner-org-id (str org-id)}))
           token (jwt/create-token (org-editor-user org-id))
           ;; :surface-material expects a vector of enums, not a bare string
@@ -424,7 +439,7 @@
 
 (deftest mass-update-empty-payload-rejected-test
   (testing "a payload with no updatable fields is rejected (400)"
-    (let [org-id (java.util.UUID/randomUUID)
+    (let [org-id (enabled-org!)
           {:keys [owned1]} (seed-org-sites! org-id)
           token (jwt/create-token (org-editor-user org-id))
           resp  (mass-update! org-id [owned1] {} token)]
@@ -432,7 +447,7 @@
 
 (deftest mass-update-mixed-fields-preserves-authz-test
   (testing "a mixed patch still rejects the whole request if any site is foreign"
-    (let [org-id (java.util.UUID/randomUUID)
+    (let [org-id (enabled-org!)
           {:keys [owned1 unrelated]} (seed-org-sites! org-id)
           before-admin (:admin (core/get-sports-site (test-db) owned1))
           token (jwt/create-token (org-editor-user org-id))

@@ -20,6 +20,7 @@
             ["@mui/material/FormControl$default" :as FormControl]
             ["@mui/material/FormControlLabel$default" :as FormControlLabel]
             ["@mui/material/FormGroup$default" :as FormGroup]
+            ["@mui/material/FormHelperText$default" :as FormHelperText]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/IconButton$default" :as IconButton]
@@ -58,6 +59,7 @@
             [lipas.ui.org.events :as events]
             [lipas.ui.org.subs :as subs]
             [lipas.ui.roles.editor :as role-editor]
+            [lipas.ui.site-notes.views :as site-notes]
             [lipas.ui.subs :as ui-subs]
             [lipas.utils :as utils]
             [malli.core :as m]
@@ -79,6 +81,10 @@
 
 (defn org-type-label [tr type]
   (some (fn [[k tr-key]] (when (= k type) (tr tr-key))) org-type-options))
+
+(def access-level-options
+  [["ptv-only" :lipas.org/access-level-ptv-only]
+   ["org-management" :lipas.org/access-level-org-management]])
 
 (defn role-grant-text
   "Plain-language description of a single catalog role-spec. Data-driven from the
@@ -392,6 +398,20 @@
          :onChange (fn [e] (rf/dispatch [::events/edit-org [:type] (.. e -target -value)]))}
         (for [[k tr-key] org-type-options]
           [:> MenuItem {:key k :value k} (tr tr-key)])]]
+
+      ;; Org-management access level: chosen at creation (create is lipas-admin
+      ;; only). Afterwards it changes only in the admin page's rollout tab.
+      (when is-new?
+        [:> FormControl
+         [:> InputLabel {:id "org-access-level"} (tr :lipas.org/access-level)]
+         [:> Select
+          {:labelId "org-access-level"
+           :value (or (:access-level org) org-schema/default-access-level)
+           :label (tr :lipas.org/access-level)
+           :onChange (fn [e] (rf/dispatch [::events/edit-org [:access-level] (.. e -target -value)]))}
+          (for [[k tr-key] access-level-options]
+            [:> MenuItem {:key k :value k} (tr tr-key)])]
+         [:> FormHelperText (tr :lipas.org/access-level-helper)]])
 
       [text-fields/text-field-controlled
        {:label (tr :lipas.org/phone)
@@ -1542,6 +1562,7 @@
                  :sx {:mb 3 :border-bottom 1 :border-color "divider"}}
         [:> Tab {:label (tr :lipas.org/instructions-tab) :value "instructions"}]
         [:> Tab {:label (tr :lipas.org/our-sites-tab) :value "our-sites"}]
+        [:> Tab {:label (tr :lipas.org/notes-tab) :value "notes"}]
         [:> Tab {:label (tr :lipas.org/overview-tab) :value "overview"}]
         [:> Tab {:label (tr :lipas.org/members-tab) :value "members"}]
         [:> Tab {:label (tr :lipas.org/permissions-ownership-tab) :value "roles-templates"}]
@@ -1555,6 +1576,7 @@
        "members" [members-tab tr org-id]
        "roles-templates" [roles-templates-tab tr org-id]
        "our-sites" [our-sites-tab tr org-id]
+       "notes" ^{:key org-id} [site-notes/org-notes-tab tr org-id]
        "ptv" [ptv-tab]
        "history" (when @(rf/subscribe [::subs/can? :org/view-history org-id])
                    [history-tab tr org-id])
@@ -1599,7 +1621,8 @@
 ;; ---------------------------------------------------------------------------
 
 (defn org-card [tr org]
-  (let [is-org-admin? @(rf/subscribe [::subs/is-org-admin? (str (:id org))])]
+  (let [is-org-admin? @(rf/subscribe [::subs/is-org-admin? (str (:id org))])
+        is-lipas-admin? @(rf/subscribe [::subs/is-lipas-admin])]
     [:> Paper {:sx {:p 2 :cursor "pointer"}
                :on-click #(rfe/navigate :lipas.ui.routes/org
                                         {:path-params {:org-id (str (:id org))}})}
@@ -1611,6 +1634,10 @@
       (when (:type org)
         [:> Chip {:size "small" :variant "outlined"
                   :label (org-type-label tr (:type org))}])
+      ;; Only LIPAS admins see PTV-only orgs here at all.
+      (when (and is-lipas-admin? (not= "org-management" (:access-level org)))
+        [:> Chip {:size "small" :color "warning" :variant "outlined"
+                  :label (tr :lipas.org/access-level-ptv-only)}])
       [:> Chip {:size "small" :variant "outlined"
                 :label (str (count (:members org)) " " (tr :lipas.org/members-assigned))}]
       [:> Chip {:size "small" :variant "outlined"
@@ -1618,7 +1645,7 @@
 
 (defn orgs-list-view []
   (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
-        user-orgs @(rf/subscribe [::subs/user-orgs])
+        user-orgs @(rf/subscribe [::subs/org-management-orgs])
         is-lipas-admin? @(rf/subscribe [::subs/is-lipas-admin])]
     [:> Paper {:sx {:p 3 :m 2}}
      [claim-impact-dialog tr]
@@ -1662,10 +1689,14 @@
 ;; ---------------------------------------------------------------------------
 
 (defn- require-org-management-access [component]
-  (if @(rf/subscribe [::subs/can-access-org-management?])
-    component
-    (do (rf/dispatch [:lipas.ui.events/navigate "/"])
-        nil)))
+  (let [access? @(rf/subscribe [::subs/can-access-org-management?])
+        logged-in? @(rf/subscribe [:lipas.ui.user.subs/logged-in?])]
+    (cond
+      access? component
+      ;; The user's orgs are still loading — wait rather than bounce.
+      (and logged-in? (nil? access?)) nil
+      :else (do (rf/dispatch [:lipas.ui.events/navigate "/"])
+                nil))))
 
 (defn orgs-list-page []
   [require-org-management-access [orgs-list-view]])

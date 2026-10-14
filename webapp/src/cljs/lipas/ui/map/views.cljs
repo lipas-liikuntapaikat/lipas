@@ -74,6 +74,7 @@
             [lipas.ui.reminders.views :as reminders]
             [lipas.ui.reports.views :as reports]
             [lipas.ui.search.views :as search]
+            [lipas.ui.site-notes.views :as site-notes]
             [lipas.ui.sports-sites.activities.views :as activities]
             [lipas.ui.sports-sites.events :as sports-site-events]
             [lipas.ui.sports-sites.floorball.views :as floorball]
@@ -1137,6 +1138,14 @@
 
         hide-actions? (<== [::subs/hide-actions?])
 
+        ;; Org-management surfaces (editing rights) show only to LIPAS admins
+        ;; and members of the site's orgs that have org management enabled.
+        site-mgmt-orgs (<== [:lipas.ui.org.subs/site-org-management-orgs (:org-id role-site-ctx)])
+        view-org-rights? (and (:owner-org-id display-data) (seq site-mgmt-orgs))
+        ;; Notes belong to the owner org: shown when it is one of those orgs.
+        notes-org (some #(when (= (str (:id %)) (str (:owner-org-id display-data))) %)
+                        site-mgmt-orgs)
+
         ;; FIXME: Bad pattern to combine n subs into one
         {:keys [types admins owners editing? edits-valid?
                 problems? editing-allowed? delete-dialog-open?
@@ -1164,7 +1173,7 @@
                        view-activities? (conj 5)
                        view-ptv? (conj 6)
                        view-images? (conj 7)
-                       (:owner-org-id display-data) (conj 8))
+                       view-org-rights? (conj 8))
         selected-tab (if (contains? visible-tabs selected-tab) selected-tab 0)
 
         ;; Same rule as the backend gate; non-empty blocks Save.
@@ -1225,6 +1234,12 @@
                                  (let [geoms (-> edit-data :location :geometries)]
                                    (==> [::events/simplify lipas-id geoms tolerance])))
                     :tr tr}]))
+
+       ;; Org-private notes (toolbar button + drawer)
+       (when notes-org
+         [:> Grid {:item true}
+          ^{:key lipas-id}
+          [site-notes/notes-button {:tr tr :lipas-id lipas-id :org notes-org}]])
 
        [:> Grid {:item true}
         ;; Close button
@@ -1305,7 +1320,7 @@
             :label (tr :lipas.sports-site.images/headline)}])
 
         ;; Org-management: editing rights — only for org-owned sites
-        (when (:owner-org-id display-data)
+        (when view-org-rights?
           [:> Tab
            {:style {:min-width 0}
             :value 8
