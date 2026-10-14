@@ -12,6 +12,16 @@
    {:variant "body1"}
    children])
 
+(def ^:private label-collator
+  ;; Finnish alphabetical order: case-insensitive, Å Ä Ö after Z, and
+  ;; "Kenttä 2" before "Kenttä 10".
+  (js/Intl.Collator. "fi" #js {:sensitivity "base" :numeric true}))
+
+(defn sort-by-label
+  "Selector options in alphabetical order of their :label."
+  [options]
+  (sort-by #(or (:label %) "") #(.compare label-collator %1 %2) options))
+
 (r/defc services-selector
   [{:keys [disabled options value on-change label value-fn multiple sx]
     :or   {value-fn identity
@@ -22,7 +32,7 @@
                                         (map (fn [x]
                                                {:value (value-fn x)
                                                 :label (:label x)}))
-                                        (sort-by :label)))
+                                        (sort-by-label)))
                                  [options value-fn])]
     [autocomplete2
      (cond-> {:disabled  disabled

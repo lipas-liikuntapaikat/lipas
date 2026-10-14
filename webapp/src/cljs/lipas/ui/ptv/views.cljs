@@ -108,10 +108,11 @@
          label ""}}]
   (let [items @(rf/subscribe [::subs/service-channels-list org-id])
         options (hooks/use-memo (fn []
-                                  (map (fn [x]
-                                         {:value (value-fn x)
-                                          :label (:name x)})
-                                       items))
+                                  (->> items
+                                       (map (fn [x]
+                                              {:value (value-fn x)
+                                               :label (:name x)}))
+                                       (controls/sort-by-label)))
                                 [items value-fn])]
     [autocomplete2
      {:options options
