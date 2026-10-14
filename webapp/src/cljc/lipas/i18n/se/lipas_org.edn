@@ -1,4 +1,10 @@
 {:access-level "Organisationshantering"
+ :access-level-all "Alla"
+ :access-level-confirm "Bekräfta"
+ :access-level-disable-confirm "Återställa organisationen {1} till Endast PTV? Organisationens {2} medlemmar ser inte längre organisationshanteringen. PTV-användning och redigeringsrättigheter kvarstår."
+ :access-level-enable-confirm "Ta organisationshanteringen i bruk för {1}? Dess {2} medlemmar börjar se organisationens uppgifter och verktyg."
+ :access-level-search "Sök med namn"
+ :access-level-tab "Ibruktagning av organisationshantering"
  :access-level-helper "Endast PTV: organisationens medlemmar ser inte organisationshanteringen. I bruk: medlemmarna ser organisationens uppgifter och verktyg. Lipas huvudanvändare ser alltid allt."
  :access-level-org-management "I bruk"
  :access-level-ptv-only "Endast PTV"
@@ -133,6 +139,7 @@
  :template-grants "Ger rätt till"
  :members-assigned "Medlemmar"
  :sites-owned "Objekt"
+ :sites-owned-col "Objekt"
  :template-in-use "{1} medlem(mar)"
  :template-in-use-warning
  "Den här mallen är tilldelad {1} medlem(mar). Att ändra dess roller eller ta bort den påverkar deras behörigheter vid nästa inloggning."

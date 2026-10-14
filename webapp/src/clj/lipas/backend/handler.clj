@@ -692,6 +692,24 @@
                       {:status 200
                        :body {:message "PTV configuration updated successfully"}})}}]
 
+      ;; --- Org-management rollout: which orgs' members get the org UI.
+      ;; LIPAS-admin only; the admin page's rollout tab is the one place it
+      ;; changes (it is also set at creation, see /actions/create-org). ---
+        ["/actions/set-org-access-level"
+         {:post
+          {:no-doc true
+           :require-privilege :users/manage
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:access-level org-schema/access-level]]}
+           :handler (fn [req]
+                      (let [{:keys [org-id access-level]} (-> req :parameters :body)]
+                        (if (org/get-org db org-id)
+                          (do (org/set-access-level! db org-id access-level
+                                                     (-> req :identity :id))
+                              {:status 200 :body {:access-level access-level}})
+                          {:status 404 :body {:error "Organization not found"}})))}}]
+
       ;; --- Role-template catalog (the ceiling): lipas-admin only ---
         ["/actions/update-org-role-templates"
          {:post

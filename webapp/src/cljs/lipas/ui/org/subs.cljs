@@ -260,3 +260,8 @@
 (rf/reg-sub ::ptv-member-suggestions
   (fn [db _]
     (get-in db [:org :ptv-member-suggestions])))
+
+;; --- Org-management rollout (LIPAS admin) ---
+(rf/reg-sub ::access-dialog
+  (fn [db _]
+    (get-in db [:org :access-dialog])))

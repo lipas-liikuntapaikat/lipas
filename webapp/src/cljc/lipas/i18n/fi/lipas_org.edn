@@ -1,4 +1,10 @@
 {:access-level "Organisaatiohallinta"
+ :access-level-all "Kaikki"
+ :access-level-confirm "Vahvista"
+ :access-level-disable-confirm "Palautetaanko organisaatio {1} tilaan Vain PTV? Organisaation {2} jäsentä eivät enää näe organisaatiohallintaa. PTV-käyttö ja muokkausoikeudet säilyvät."
+ :access-level-enable-confirm "Otetaanko organisaatiohallinta käyttöön organisaatiolle {1}? Organisaation {2} jäsentä alkavat nähdä organisaation tiedot ja työkalut."
+ :access-level-search "Hae nimellä"
+ :access-level-tab "Organisaatiohallinnan käyttöönotto"
  :access-level-helper "Vain PTV: organisaation jäsenet eivät näe organisaatiohallintaa. Käytössä: jäsenet näkevät organisaation tiedot ja työkalut. Lipaksen pääkäyttäjät näkevät aina kaiken."
  :access-level-org-management "Käytössä"
  :access-level-ptv-only "Vain PTV"
@@ -133,6 +139,7 @@
  :template-grants "Antaa oikeuden"
  :members-assigned "Jäseniä"
  :sites-owned "Kohdetta"
+ :sites-owned-col "Kohteita"
  :template-in-use "{1} jäsenellä"
  :template-in-use-warning
  "Tämä malli on liitetty {1} jäsenelle. Roolien muuttaminen tai mallin poistaminen vaikuttaa heidän oikeuksiinsa seuraavan kirjautumisen yhteydessä."

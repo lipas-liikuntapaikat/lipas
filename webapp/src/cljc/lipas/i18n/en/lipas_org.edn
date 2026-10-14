@@ -1,4 +1,10 @@
 {:access-level "Organization management"
+ :access-level-all "All"
+ :access-level-confirm "Confirm"
+ :access-level-disable-confirm "Set the organization {1} back to PTV only? Its {2} members will no longer see organization management. PTV use and editing rights stay."
+ :access-level-enable-confirm "Enable organization management for {1}? Its {2} members will start to see the organization's data and tools."
+ :access-level-search "Search by name"
+ :access-level-tab "Organization management rollout"
  :access-level-helper "PTV only: the organization's members don't see organization management. Enabled: members see the organization's data and tools. LIPAS admins always see everything."
  :access-level-org-management "Enabled"
  :access-level-ptv-only "PTV only"
@@ -133,6 +139,7 @@
  :template-grants "Grants"
  :members-assigned "Members"
  :sites-owned "Sites"
+ :sites-owned-col "Sites"
  :template-in-use "{1} member(s)"
  :template-in-use-warning
  "This template is assigned to {1} member(s). Changing its roles or removing it affects their permissions at their next login."

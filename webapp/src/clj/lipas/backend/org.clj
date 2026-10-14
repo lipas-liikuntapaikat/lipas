@@ -410,7 +410,9 @@
     (merge doc (select-keys (marshall org) (filterv present? ks)))))
 
 (def ^:private full-org-details-keys
-  [:name :type :access-level :primary-contact :instructions :ptv-data :ownership])
+  "`:access-level` is deliberately absent: it is set at creation and changed
+  only through `set-access-level!` (the admin rollout view)."
+  [:name :type :primary-contact :instructions :ptv-data :ownership])
 
 (def ^:private admin-editable-org-details-keys
   "The org-admin self-service ceiling: details an org-admin may edit. Excludes
@@ -441,6 +443,12 @@
   [db org-id org author-id]
   (update-document! db org-id author-id
                     #(merge-org-details % org admin-editable-org-details-keys)))
+
+(defn set-access-level!
+  "Switch the org's org-management UI on (`\"org-management\"`) or off
+  (`\"ptv-only\"`). LIPAS-admin only; appends a revision like any other change."
+  [db org-id access-level author-id]
+  (update-document! db org-id author-id #(assoc % :access-level access-level)))
 
 (defn update-org-ptv-config!
   "Update only the org's PTV configuration."

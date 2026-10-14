@@ -145,9 +145,20 @@
       (is (= "ptv-only" (:access-level (backend-org/get-org db org-id)))
           "...so they can't switch it on themselves either"))
 
+    (testing "only a LIPAS admin may use the rollout switch"
+      (is (= 403 (:status (post member "set-org-access-level"
+                                {:org-id org-id :access-level "org-management"}))))
+      (is (= 404 (:status (post admin "set-org-access-level"
+                                {:org-id (random-uuid) :access-level "org-management"})))))
+
+    (testing "the general org save never changes it, even for a LIPAS admin"
+      (is (= 200 (:status (post admin "update-org" (org-body "org-management")))))
+      (is (= "ptv-only" (:access-level (backend-org/get-org db org-id)))))
+
     (testing "a LIPAS admin sees PTV-only orgs and switches org management on"
       (is (= 200 (:status (post admin "get-org-members" {:org-id org-id}))))
-      (is (= 200 (:status (post admin "update-org" (org-body "org-management")))))
+      (is (= 200 (:status (post admin "set-org-access-level"
+                                {:org-id org-id :access-level "org-management"}))))
       (is (= "org-management" (:access-level (backend-org/get-org db org-id)))))
 
     (testing "the switch applies at once, with the member's existing token"
@@ -156,6 +167,13 @@
     (testing "an org admin's details save leaves the access level alone"
       (is (= 200 (:status (post member "update-org" (org-body "ptv-only")))))
       (is (= "org-management" (:access-level (backend-org/get-org db org-id)))))
+
+    (testing "the level can be chosen when a LIPAS admin creates an org"
+      (let [resp (post admin "create-org" {:name (str "Created " org-id)
+                                           :access-level "org-management"})]
+        (is (= 200 (:status resp)))
+        (is (= "org-management"
+               (:access-level (backend-org/get-org db (parse-uuid (str (:id (test-utils/safe-parse-json resp))))))))))
 
     (testing "get-current-user-orgs exposes the level for the UI gate"
       (let [orgs (test-utils/safe-parse-json (post member "get-current-user-orgs" {}))]

@@ -399,9 +399,9 @@
         (for [[k tr-key] org-type-options]
           [:> MenuItem {:key k :value k} (tr tr-key)])]]
 
-      ;; Org-management access level (lipas-admin only — org admins never see
-      ;; it; the backend ignores it in their saves too).
-      (when @(rf/subscribe [::subs/is-lipas-admin])
+      ;; Org-management access level: chosen at creation (create is lipas-admin
+      ;; only). Afterwards it changes only in the admin page's rollout tab.
+      (when is-new?
         [:> FormControl
          [:> InputLabel {:id "org-access-level"} (tr :lipas.org/access-level)]
          [:> Select
