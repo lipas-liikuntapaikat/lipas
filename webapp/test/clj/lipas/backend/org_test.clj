@@ -76,6 +76,7 @@
           token (jwt/create-token admin-user)
           timestamp (System/currentTimeMillis)
           org-data {:name (str "Test Organization " timestamp)
+                    :access-level "ptv-only"
                     :data {:primary-contact {:phone "+358401234567"
                                              :email "test@example.com"
                                              :website "https://test.org"
@@ -161,6 +162,10 @@
                                 {:org-id org-id :access-level "org-management"}))))
       (is (= "org-management" (:access-level (backend-org/get-org db org-id)))))
 
+    (testing "the switch shows in the org's history"
+      (is (some #{"Organisaatiohallinta: ptv-only → org-management"}
+                (mapcat :changes (backend-org/get-history db org-id true)))))
+
     (testing "the switch applies at once, with the member's existing token"
       (is (= 200 (:status (post member "get-org-members" {:org-id org-id})))))
 
@@ -179,6 +184,41 @@
       (let [orgs (test-utils/safe-parse-json (post member "get-current-user-orgs" {}))]
         (is (= "org-management"
                (:access-level (first (filter #(= (str org-id) (str (:id %))) orgs)))))))))
+
+(deftest access-level-backfill-migration-test
+  ;; Runs the migration's SQL against revisions written before the setting
+  ;; existed (no key), plus an org an admin already switched on.
+  (let [db       (test-db)
+        legacy   (random-uuid)
+        switched (random-uuid)
+        insert!  (fn [org-id doc]
+                   (jdbc/execute! db ["INSERT INTO org (org_id, status, document) VALUES (?, 'active', ?)"
+                                      org-id doc]))
+        levels   (fn [org-id]
+                   (->> (jdbc/execute! db ["SELECT document->>'access-level' AS level FROM org
+                                            WHERE org_id = ? ORDER BY event_date, created_at"
+                                           org-id]
+                                       {:builder-fn rs/as-unqualified-maps})
+                        (mapv :level)))
+        backfill (slurp "resources/migrations/20261014120000-org-access-level-backfill.up.sql")]
+    (insert! legacy {:name (str "Legacy " legacy) :type "city"})
+    (insert! legacy {:name (str "Legacy renamed " legacy) :type "city"})
+    (insert! switched {:name (str "Switched " switched) :type "city"})
+    (insert! switched {:name (str "Switched " switched) :type "city" :access-level "org-management"})
+
+    (jdbc/execute! db [backfill])
+
+    (testing "every revision without a level gets ptv-only, history included"
+      (is (= ["ptv-only" "ptv-only"] (levels legacy)))
+      (is (= "ptv-only" (:access-level (backend-org/get-org db legacy)))))
+
+    (testing "a level an admin already set is never overwritten"
+      (is (= ["ptv-only" "org-management"] (levels switched)))
+      (is (= "org-management" (:access-level (backend-org/get-org db switched)))))
+
+    (testing "re-running is a no-op"
+      (jdbc/execute! db [backfill])
+      (is (= ["ptv-only" "org-management"] (levels switched))))))
 
 (deftest get-org-users-test
   (testing "Successfully retrieves organization users"
@@ -2458,6 +2498,7 @@
   (let [admin    (test-utils/gen-admin-user :db-component (test-db))
         token    (jwt/create-token admin)
         org-data {:name (str "Author Org " (System/currentTimeMillis))
+                  :access-level "ptv-only"
                   :data {:primary-contact {:email "author@example.com"}}}
         create-resp (test-app (-> (mock/request :post "/api/actions/create-org")
                                   (mock/json-body org-data)

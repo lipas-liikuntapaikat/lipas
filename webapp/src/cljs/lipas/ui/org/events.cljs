@@ -2,6 +2,7 @@
   (:require [ajax.core :as ajax]
             [clojure.string :as str]
             [lipas.roles :as roles]
+            [lipas.schema.org :as org-schema]
             [lipas.ui.utils :as ui-utils]
             [lipas.utils :as utils]
             [re-frame.core :as rf]))
@@ -75,6 +76,7 @@
           current-org (if is-new?
                         {:id (random-uuid)
                          :name ""
+                         :access-level org-schema/default-access-level
                          :data {:primary-contact {}}
                          :ptv-data (init-ptv-data {})}
                         (when user-orgs

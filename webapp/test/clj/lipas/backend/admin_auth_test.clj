@@ -104,7 +104,7 @@
      {:method :post
       :path "/api/actions/create-org"
       :privilege :org/admin
-      :body {:name "Auth Test New Org"}}
+      :body {:name "Auth Test New Org" :access-level "ptv-only"}}
 
      ;; --- Org-scoped management (:org/manage on the body's :org-id) -----
      {:method :post

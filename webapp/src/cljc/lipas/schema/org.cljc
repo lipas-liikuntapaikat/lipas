@@ -53,7 +53,9 @@
 (def access-level (into [:enum] access-levels))
 
 (def default-access-level
-  "Absent on every org created before the setting existed — they stay hidden."
+  "The level a newly created org gets unless the creating LIPAS admin picks
+  another. Every org stores its level explicitly (see the
+  org-access-level-backfill migration for orgs that predate the setting)."
   "ptv-only")
 
 (def catalog-role-names
@@ -159,7 +161,9 @@
      [:ptv-data {:optional true} [:maybe ptv-data]]
      ;; --- org-management (opt-in; absent for legacy orgs) ---
      [:type {:optional true} org-type]
-     [:access-level {:optional true} access-level]
+     ;; Required: every org stores its level explicitly (chosen at creation;
+     ;; orgs predating the setting were backfilled by migration).
+     [:access-level access-level]
      [:instructions {:optional true} [:maybe instructions]]
      [:role-templates {:optional true} role-templates]
      [:ownership {:optional true} ownership]
@@ -172,9 +176,12 @@
 (def org-form-validation
   (m/schema org))
 
-;; Schema for API updates (no ID required since it's in URL)
 (def org-update
-  (m/schema (mu/dissoc org :id)))
+  "Body of /actions/update-org (carries `:id`). `:access-level` is not part of
+  it: the general org save never changes the level — only the admin rollout
+  switch (/actions/set-org-access-level) does. The map is open, so a client
+  echoing the loaded org's level back still passes; it is ignored."
+  (m/schema (mu/dissoc org :access-level)))
 
  ;; Schema for PTV config updates (stricter validation for API endpoint)
 (def ptv-config-update
