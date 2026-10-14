@@ -151,6 +151,18 @@
                           " or its municipality isn't managed (" what ")"))))
     (deny user (str "lipas-id " (pr-str lipas-id) " not found (" what ")"))))
 
+(defn- service-error-response
+  "The response for a refusal of ours on a service write (see
+  ptv-core/upsert-ptv-service!), or nil for any other error. The body's
+  :type tells the UI what to say."
+  [e]
+  (let [{:keys [type] :as data} (ex-data e)]
+    (case type
+      (:source-id-in-use :changed-in-ptv :incomplete-language-versions)
+      {:status 409
+       :body (select-keys data [:type :problems :modified])}
+      nil)))
+
 (defn ptv-org-write-access?
   "Gate for endpoints that WRITE an organisation's PTV data.
 
@@ -535,23 +547,32 @@
                           [:description (ptv-schema/localized-string-schema nil)]
                           [:user-instruction {:optional true} (ptv-schema/localized-string-schema nil)]
                           [:service-name {:optional true} [:maybe :string]]
-                          [:service-id {:optional true} [:maybe :string]]]}
+                          ;; "lipas" (default): a LIPAS-created service, by
+                          ;; source-id. "native": a service made in PTV, its
+                          ;; texts patched by service-id with the keys below.
+                          [:mode {:optional true} [:enum "lipas" "native"]]
+                          [:service-id {:optional true} [:maybe :string]]
+                          [:name {:optional true} (ptv-schema/localized-string-schema nil)]
+                          [:expected-modified {:optional true} [:maybe :string]]
+                          [:remove-languages {:optional true} [:vector [:enum "fi" "se" "en"]]]]}
       :handler
       (fn [req]
         (try
           {:status 200
            :body (ptv-core/upsert-ptv-service! db ptv (:identity req) (-> req :parameters :body))}
           (catch clojure.lang.ExceptionInfo e
-            (if-let [ptv-err (ptv-core/parse-ptv-error e)]
-              (do
-                (log/warnf "save-ptv-service failed (org: %s, source-id: %s, service-id: %s): %s"
-                           (-> req :parameters :body :org-id)
-                           (-> req :parameters :body :source-id)
-                           (-> req :parameters :body :service-id)
-                           (pr-str ptv-err))
-                {:status 409
-                 :body ptv-err})
-              (throw e)))))}}]
+            (if-let [resp (service-error-response e)]
+              resp
+              (if-let [ptv-err (ptv-core/parse-ptv-error e)]
+                (do
+                  (log/warnf "save-ptv-service failed (org: %s, source-id: %s, service-id: %s): %s"
+                             (-> req :parameters :body :org-id)
+                             (-> req :parameters :body :source-id)
+                             (-> req :parameters :body :service-id)
+                             (pr-str ptv-err))
+                  {:status 409
+                   :body ptv-err})
+                (throw e))))))}}]
 
    ["/actions/fetch-ptv-services"
     {:post

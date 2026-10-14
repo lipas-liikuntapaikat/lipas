@@ -81,6 +81,22 @@
        (sort)
        (mapv tr)))
 
+(def ^:private ptv-text-type->tr-key
+  {"Name" :ptv/service-name
+   "Summary" :ptv/summary
+   "Description" :ptv/description})
+
+(defn incomplete-versions-text
+  "\"SE: Tiivistelmä, Kuvaus\" for lipas.data.ptv/language-version-problems,
+  `problems` keyed by PTV language code (\"sv\")."
+  [tr problems]
+  (->> problems
+       (map (fn [[lang missing]]
+              (str (str/upper-case (name (or (ptv-data/lang->locale (name lang)) lang)))
+                   ": "
+                   (str/join ", " (map #(tr (ptv-text-type->tr-key % :ptv/description)) missing)))))
+       (str/join "; ")))
+
 (def ^:private dialog-body-keys
   {:modified            :ptv/sync-failed-body-ptv-modified
    :invalid-postal-code :ptv/sync-failed-body-invalid-postal-code
@@ -97,8 +113,20 @@
   specific detail beyond the title."
   [tr resp body-keys]
   (let [bad-code (ptv-invalid-postal-code resp)
-        dup-name (ptv-duplicate-name resp)]
+        dup-name (ptv-duplicate-name resp)
+        refusal (:response resp)]
     (cond
+      ;; LIPAS's own refusals on a service write
+      (= :changed-in-ptv (some-> refusal :type keyword))
+      (tr :ptv.service/changed-in-ptv)
+
+      (= :incomplete-language-versions (some-> refusal :type keyword))
+      (tr :ptv.service/incomplete-language-versions
+          (incomplete-versions-text tr (:problems refusal)))
+
+      (= :source-id-in-use (some-> refusal :type keyword))
+      (tr :ptv.service/other-system-read-only)
+
       ;; A LIPAS-side guard in sync-ptv! (no org / missing texts)
       (seq (:blockers resp))
       (str/join " " (blocker-messages tr (:blockers resp)))
@@ -288,7 +316,7 @@
     (assoc-in db [:ptv :selected-tab] v)))
 
 (rf/reg-event-fx ::reset-wizard
-  "Reset all ephemeral wizard state back to defaults."
+  ;; Reset all ephemeral wizard state back to defaults.
   (fn [{:keys [db]} _]
     (let [org-id (-get-ptv-org-id db)]
       {:db (-> db
@@ -564,10 +592,10 @@
 ;;; Services views and manipulation ;;;
 
 (rf/reg-event-db ::toggle-services-filter
+  ;; "sports" (the default, see ::subs/services-filter) <-> "all"
   (fn [db _]
-    (let [current-val (get-in db [:ptv :services-filter])
-          new-val (if (= current-val "lipas-managed") "lol" "lipas-managed")]
-      (assoc-in db [:ptv :services-filter] new-val))))
+    (let [current-val (get-in db [:ptv :services-filter] "sports")]
+      (assoc-in db [:ptv :services-filter] (if (= "sports" current-val) "all" "sports")))))
 
 (rf/reg-event-db ::select-service-details-tab
   (fn [db [_ v]]
@@ -738,15 +766,23 @@
     (let [org-id (-get-ptv-org-id db)]
       (assoc-in db [:ptv :org org-id :default-settings :integration-interval] v))))
 
+(defn- set-site-text
+  "Sets a site's PTV text in `locale`; a cleared field (nil or blank, see
+  text-fields/text-field) removes that language's text."
+  [db lipas-id field locale v]
+  (let [org-id (-get-ptv-org-id db)
+        path [:ptv :org org-id :data :sports-sites lipas-id :ptv field]]
+    (if (str/blank? v)
+      (update-in db path dissoc locale)
+      (assoc-in db (conj path locale) v))))
+
 (rf/reg-event-db ::set-summary
   (fn [db [_ {:keys [lipas-id]} locale v]]
-    (let [org-id (-get-ptv-org-id db)]
-      (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :summary locale] v))))
+    (set-site-text db lipas-id :summary locale v)))
 
 (rf/reg-event-db ::set-description
   (fn [db [_ {:keys [lipas-id]} locale v]]
-    (let [org-id (-get-ptv-org-id db)]
-      (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :description locale] v))))
+    (set-site-text db lipas-id :description locale v)))
 
 (defn- merge-translation
   "Merges a translate response into `texts` language by language: the
@@ -1162,22 +1198,39 @@
 (rf/reg-event-db ::set-service-candidate-name
   (fn [db [_ id locale v]]
     (let [org-id (-get-ptv-org-id db)]
-      (assoc-in db [:ptv :org org-id :data :service-candidates id :name locale] v))))
+      ;; A cleared field is "", not nil: the edit sits on top of PTV's
+      ;; live text, so a missing key would bring that text back.
+      (assoc-in db [:ptv :org org-id :data :service-candidates id :name locale] (or v "")))))
+
+(rf/reg-event-db ::discard-service-edits
+  ;; Drops a service's unsaved edits; the panel falls back to PTV's texts.
+  (fn [db [_ id]]
+    (let [org-id (-get-ptv-org-id db)]
+      (update-in db [:ptv :org org-id :data :service-candidates] dissoc id))))
+
+(rf/reg-event-db ::toggle-service-language-removal
+  ;; Marks a native service's language version to be removed from PTV on
+  ;; the next sync (see lipas.data.ptv/patch-service-texts), or unmarks it.
+  (fn [db [_ id locale]]
+    (let [org-id (-get-ptv-org-id db)]
+      (update-in db [:ptv :org org-id :data :service-candidates id :remove-languages]
+                 (fn [xs] (let [xs (set xs)]
+                            (if (contains? xs locale) (disj xs locale) (conj xs locale))))))))
 
 (rf/reg-event-db ::set-service-candidate-summary
   (fn [db [_ id locale v]]
     (let [org-id (-get-ptv-org-id db)]
-      (assoc-in db [:ptv :org org-id :data :service-candidates id :summary locale] v))))
+      (assoc-in db [:ptv :org org-id :data :service-candidates id :summary locale] (or v "")))))
 
 (rf/reg-event-db ::set-service-candidate-description
   (fn [db [_ id locale v]]
     (let [org-id (-get-ptv-org-id db)]
-      (assoc-in db [:ptv :org org-id :data :service-candidates id :description locale] v))))
+      (assoc-in db [:ptv :org org-id :data :service-candidates id :description locale] (or v "")))))
 
 (rf/reg-event-db ::set-service-candidate-user-instruction
   (fn [db [_ id locale v]]
     (let [org-id (-get-ptv-org-id db)]
-      (assoc-in db [:ptv :org org-id :data :service-candidates id :user-instruction locale] v))))
+      (assoc-in db [:ptv :org org-id :data :service-candidates id :user-instruction locale] (or v "")))))
 
 (rf/reg-event-fx ::translate-service-candidate
   (fn [{:keys [db]} [_ source-id from-lang to-langs]]
@@ -1285,7 +1338,7 @@
                (update-in [:ptv :syncing :service] dissoc id)
                (assoc-in [:ptv :org org-id :data :services (:id resp)] resp)
                (update-in [:ptv :org org-id :data :service-candidates id]
-                          assoc :created-in-ptv true)
+                          #(-> % (assoc :created-in-ptv true) (dissoc :remove-languages)))
                (update-in [:ptv :org org-id :data :manual-services]
                           dissoc (:sourceId resp)))
        :fx (cond-> (into (or (seq extra-fx) [])
@@ -1300,12 +1353,19 @@
   (fn [{:keys [db]} [_ org-id id extra-fx resp]]
     (let [tr (:translator db)
           modified? (ptv-modified-error? resp)
+          ;; Refused because the service was edited in PTV after this page
+          ;; loaded it: reload the services so the panel shows PTV's current
+          ;; texts under the user's unsaved edits, which are kept.
+          changed-in-ptv? (= :changed-in-ptv (some-> resp :response :type keyword))
           notification (ptv-sync-error-notification tr resp)
-          ;; Find the service by source-id to update its cached publishingStatus
+          ;; Find the service to update its cached publishingStatus: `id` is
+          ;; the PTV id for a service made in PTV, the source-id otherwise
           services (get-in db [:ptv :org org-id :data :services])
-          service-id (some (fn [[sid svc]]
-                             (when (= id (:sourceId svc)) sid))
-                           services)]
+          service-id (if (contains? services id)
+                       id
+                       (some (fn [[sid svc]]
+                               (when (= id (:sourceId svc)) sid))
+                             services))]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :services] false)
                (update-in [:ptv :syncing :service] dissoc id)
@@ -1313,8 +1373,9 @@
                (cond->
                  (and modified? service-id)
                  (assoc-in [:ptv :org org-id :data :services service-id :publishingStatus] "Modified")))
-       :fx (into (or (seq extra-fx) [])
-                 [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
+       :fx (cond-> (into (or (seq extra-fx) [])
+                         [[:dispatch [:lipas.ui.events/set-active-notification notification]]])
+             changed-in-ptv? (conj [:dispatch [::fetch-ptv-services (get-in db [:ptv :selected-org])]]))})))
 
 (rf/reg-event-fx ::create-all-ptv-services*
   (fn [{:keys [db]} [_ org-id ids]]
@@ -1358,25 +1419,14 @@
         (assoc-in [:ptv :services-creation :halt?] true))))
 
 (rf/reg-event-fx ::link-candidate-to-existing-service
+  ;; Covers a sub-category with a service already in PTV: its sites get the
+  ;; service (::assign-services-to-sports-sites), nothing is written to the
+  ;; service itself.
   (fn [{:keys [db]} [_ source-id service-id]]
-    (let [org-id (-get-ptv-org-id db)
-                         ;; Get the existing service's descriptions to populate the form
-          service (get-in db [:ptv :org org-id :data :services service-id])
-          extract-by-type (fn [type]
-                            (let [items (->> (:serviceDescriptions service)
-                                             (filter #(= (:type %) type)))]
-                              (into {} (keep (fn [m] (when-let [k ({"sv" :se "fi" :fi "en" :en} (:language m))]
-                                                       [k (:value m)]))) items)))
-          summary (extract-by-type "Summary")
-          description (extract-by-type "Description")
-          user-instruction (extract-by-type "UserInstruction")]
+    (let [org-id (-get-ptv-org-id db)]
       {:db (-> db
                (assoc-in [:ptv :org org-id :data :service-mappings source-id]
                          {:service-id service-id})
-                              ;; Populate descriptions from existing service
-               (assoc-in [:ptv :org org-id :data :service-candidates source-id :summary] summary)
-               (assoc-in [:ptv :org org-id :data :service-candidates source-id :description] description)
-               (assoc-in [:ptv :org org-id :data :service-candidates source-id :user-instruction] user-instruction)
                (update-in [:ptv :org org-id :data :manual-services] dissoc source-id))
        :fx [[:dispatch [::assign-services-to-sports-sites]]]})))
 
@@ -1397,8 +1447,6 @@
                          sports-sites)]
       {:db (-> db
                (update-in [:ptv :org org-id :data :service-mappings] dissoc source-id)
-                              ;; Clear populated descriptions
-               (update-in [:ptv :org org-id :data :service-candidates] dissoc source-id)
                (assoc-in [:ptv :org org-id :data :sports-sites] sports-sites))
        :fx [[:dispatch [::assign-services-to-sports-sites]]]})))
 
@@ -1456,7 +1504,12 @@
                                  :service-ids
                                  :summary
                                  :description])
-                   {:languages org-languages})]
+                   {:languages org-languages})
+        ;; A cleared text (nil, also on sites saved before setters removed
+        ;; it) is no text, not an invalid one
+        ptv (-> ptv
+                (update :summary ptv-data/drop-blank-texts)
+                (update :description ptv-data/drop-blank-texts))]
     {:lipas-id lipas-id
      :org-id org-id
      :ptv ptv}))

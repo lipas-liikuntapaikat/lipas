@@ -105,45 +105,128 @@
       (is (not (contains? out :generalDescriptionId)))
       (is (not (contains? out :responsibleSoteOrganization))))))
 
-(deftest upsert-adopts-with-adopted-source-id
-  (testing "When :service-id is present, sourceId is forced to the adopted
-            pattern (lipas-{org}-ptv-{service-id}) instead of the
-            sub-category pattern. Reusing the sub-category sourceId on a
-            service PTV originally created collides with previously
-            soft-archived LIPAS services in PTV's database and crashes the
-            PUT with a 500."
-    (let [captured (atom nil)
-          org-id "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5"
-          service-id "51a9d7c6-b7ef-4b60-be9a-86b21610d8fe"]
-      (with-redefs [ptv/get-service (fn [_ _ _]
-                                      {:publishingStatus "Published"
-                                       :ontologyTerms [{:uri "http://x"}]
-                                       :serviceClasses [{:uri "http://y"}]
-                                       :targetGroups [{:uri "http://z"}]
-                                       :areas [{:type "Municipality" :municipalities [{:code "425"}]}]
-                                       :serviceNames [{:type "Name" :language "fi" :value "Old"}]})
-                    ptv/update-service-by-id (fn [_ _ data]
-                                               (reset! captured data)
-                                               data)
-                    ;; Unit test has no db; the shadow persist is exercised
-                    ;; in lipas.backend.ptv.handler-test.
-                    ptv-core/persist-ptv-service-revision! (fn [& _])]
-        (ptv-core/upsert-ptv-service! :db-stub
-                                      :ptv-stub
-                                      {:id "test-user"}
-                                      {:org-id org-id
-                                       :service-id service-id
-                                       :sub-category-id 4300
-                                       :city-codes [425]
-                                       :languages ["fi"]
-                                       :source-id (ptv-data/->service-source-id org-id 4300)
-                                       :summary {:fi "s"}
-                                       :description {:fi "d"}})
-        (is (= (ptv-data/->adopted-service-source-id org-id service-id)
-               (:sourceId @captured))
-            "sourceId is overridden to the adopted pattern")
-        (is (not (re-find #"-4300$" (:sourceId @captured)))
-            "the sub-category-style sourceId is not used")))))
+(def ^:private test-org-id "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5")
+(def ^:private test-service-id "51a9d7c6-b7ef-4b60-be9a-86b21610d8fe")
+
+(defn- live-service
+  "A PTV GET response for the test service, made in PTV (no sourceId)."
+  [& {:as overrides}]
+  (merge {:id test-service-id
+          :modified "2026-10-14T10:00:00"
+          :publishingStatus "Published"
+          :organizations [{:organization {:id test-org-id} :roleType "Responsible"}]
+          :languages ["fi"]
+          :ontologyTerms [{:uri "http://x"}]
+          :serviceClasses [{:uri "http://y"}]
+          :targetGroups [{:uri "http://z"}]
+          :areas [{:type "Municipality" :municipalities [{:code "425"}]}]
+          :serviceNames [{:type "Name" :language "fi" :value "Uimahalli"}
+                         {:type "Name" :language "sv" :value "Simhall"}]
+          :serviceDescriptions [{:type "Summary" :language "fi" :value "PTV fi"}
+                                {:type "Description" :language "fi" :value "PTV kuvaus"}
+                                {:type "Summary" :language "sv" :value "PTV sv"}
+                                {:type "Description" :language "sv" :value "PTV beskrivning"}
+                                {:type "ChargeTypeAdditionalInfo" :language "sv" :value "Avgift"}]}
+         overrides))
+
+(defn- with-ptv-stub
+  "Runs `f` with PTV's GET returning `service` and every PUT captured into
+  the returned atom; the ptv_service write is stubbed out (exercised in
+  lipas.backend.ptv.handler-test)."
+  [service f]
+  (let [put (atom nil)
+        persisted (atom nil)]
+    (with-redefs [ptv/get-service (fn [_ _ _] service)
+                  ptv/update-service-by-id (fn [_ id data]
+                                             (reset! put [id data])
+                                             (assoc data :id id :modified "2026-10-14T11:00:00"))
+                  ptv/update-service (fn [_ source-id data]
+                                       (reset! put [source-id data])
+                                       data)
+                  ptv-core/persist-ptv-service-revision! (fn [& args] (reset! persisted args))]
+      (f))
+    {:put @put :persisted @persisted}))
+
+(def ^:private patched-source-id
+  (ptv-data/->adopted-service-source-id test-org-id test-service-id))
+
+(deftest upsert-mode-is-explicit
+  (testing "a service-id without mode \"native\" never addresses a service
+            by id: the presence of an id is not a mode switch"
+    (let [{[addressed data] :put}
+          (with-ptv-stub (live-service)
+            #(ptv-core/upsert-ptv-service!
+               :db-stub {:get-config-by-ptv-org-id-fn (fn [_] {:supported-languages ["fi"]})}
+               {:id "test-user"}
+               {:org-id test-org-id
+                :service-id test-service-id
+                :source-id (ptv-data/->service-source-id test-org-id 4300)
+                :sub-category-id 4300
+                :city-codes [425]
+                :summary {:fi "s"} :description {:fi "d"}}))]
+      (is (= (ptv-data/->service-source-id test-org-id 4300) addressed))
+      (is (= addressed (:sourceId data))))))
+
+(deftest patch-native-service-test
+  (let [sync! (fn [service m]
+                (with-ptv-stub service
+                  #(ptv-core/upsert-ptv-service!
+                     :db-stub :ptv-stub {:id "test-user"}
+                     (merge {:org-id test-org-id :service-id test-service-id
+                             :mode "native"
+                             :expected-modified (:modified service)}
+                            m))))
+        native (live-service)
+        patched (live-service :sourceId patched-source-id)]
+    (testing "the first patch gives the service LIPAS's sourceId and changes
+              nothing but the texts LIPAS sent"
+      (let [{[addressed data] :put} (sync! native {:name {:fi "Uimahalli"}
+                                                   :summary {:fi "PTV fi"}
+                                                   :description {:fi "PTV kuvaus"}})]
+        (is (= test-service-id addressed))
+        (is (= patched-source-id (:sourceId data)))
+        (is (= (dissoc (normalize native) :sourceId :serviceNames :serviceDescriptions)
+               (dissoc data :sourceId :mainResponsibleOrganization :serviceNames :serviceDescriptions)))
+        (is (= (set (:serviceDescriptions native)) (set (:serviceDescriptions data))))))
+
+    (testing "LIPAS's Finnish texts replace PTV's; Swedish, which LIPAS left
+              alone, is kept with its PTV-only entry and the classification"
+      (let [{[_ data] :put} (sync! patched {:name {:fi "Uimahalli"}
+                                            :summary {:fi "Uusi"}
+                                            :description {:fi "Uusi kuvaus"}})]
+        (is (= #{"fi" "sv"} (ptv-data/service-language-versions data)))
+        (is (some #{{:type "Summary" :language "fi" :value "Uusi"}} (:serviceDescriptions data)))
+        (is (some #{{:type "ChargeTypeAdditionalInfo" :language "sv" :value "Avgift"}}
+                  (:serviceDescriptions data)))
+        (is (= ["http://x"] (:ontologyTerms data)))
+        (is (= ["fi"] (:languages data)))))
+
+    (testing "an explicitly removed language goes, PTV-only entries included"
+      (let [{[_ data] :put} (sync! patched {:name {:fi "Uimahalli"}
+                                            :summary {:fi "s"} :description {:fi "d"}
+                                            :remove-languages ["se"]})]
+        (is (= #{"fi"} (ptv-data/service-language-versions data)))))
+
+    (testing "a version that would be left incomplete is refused before PTV"
+      (let [result (try (sync! patched {:name {:fi "Uimahalli" :se "Simhall"}
+                                        :summary {:fi "s" :se ""}
+                                        :description {:fi "d" :se "d"}})
+                        (catch clojure.lang.ExceptionInfo e (ex-data e)))]
+        (is (= :incomplete-language-versions (:type result)))
+        (is (= {"sv" ["Summary"]} (:problems result)))))
+
+    (testing "a service another system maintains (its own sourceId) is refused"
+      (is (= :source-id-in-use
+             (try (sync! (live-service :sourceId "kunta-erp-123") {:summary {:fi "s"}})
+                  nil
+                  (catch clojure.lang.ExceptionInfo e (:type (ex-data e)))))))
+
+    (testing "a service edited in PTV since it was loaded is refused"
+      (is (= :changed-in-ptv
+             (try (sync! patched {:summary {:fi "s"}
+                                  :expected-modified "2026-10-01T00:00:00"})
+                  nil
+                  (catch clojure.lang.ExceptionInfo e (:type (ex-data e)))))))))
 
 (deftest upsert-service-uses-live-org-languages
   ;; The request's :languages is the browser's cached copy of the org config;
