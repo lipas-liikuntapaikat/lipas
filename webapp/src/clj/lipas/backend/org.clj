@@ -66,7 +66,9 @@
      :data            {:primary-contact (:primary-contact document)}
      :ptv-data        (:ptv-data document)
      :type            (:type document)
-     :access-level    (or (:access-level document) org-schema/default-access-level)
+     ;; Stored explicitly on every org (set at creation; existing orgs were
+     ;; backfilled by the org-access-level-backfill migration).
+     :access-level    (:access-level document)
      :primary-contact (:primary-contact document)
      :instructions    (normalize-instructions (:instructions document))
      :role-templates  (:role-templates document)
@@ -324,6 +326,8 @@
         (add! "Omistussääntö päivitetty"))
       (when (not= (:ptv-data prev) (:ptv-data doc))
         (add! "PTV-asetukset päivitetty"))
+      (when (not= (:access-level prev) (:access-level doc))
+        (add! (str "Organisaatiohallinta: " (:access-level prev) " → " (:access-level doc))))
       (let [pm (member-by-uid prev)
             dm (member-by-uid doc)
             added (set/difference (set (keys dm)) (set (keys pm)))

@@ -661,7 +661,7 @@
          {:post
           {:no-doc true
            :require-privilege (org-gate db :org/manage :id)
-           :parameters {:body org-schema/org}
+           :parameters {:body org-schema/org-update}
            :handler (fn [req]
                     ;; `:type`/`:ownership` (the take-over ceiling) and `:ptv-data`
                     ;; (lipas-admin-only, has its own :users/manage endpoint) are

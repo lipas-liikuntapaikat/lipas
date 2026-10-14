@@ -33,7 +33,8 @@
    "org-management" :lipas.org/access-level-org-management})
 
 (defn- level-of [org]
-  (or (:access-level org) org-schema/default-access-level))
+  ;; Stored explicitly on every org; "" (no selection) would expose a gap.
+  (or (:access-level org) ""))
 
 (defn- confirm-dialog [tr]
   (let [{:keys [open? org access-level saving?]} @(rf/subscribe [::org-subs/access-dialog])]
