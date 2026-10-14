@@ -5,7 +5,8 @@
             [clojure.test.check.properties :as prop]
             [lipas.data.ptv :as sut]
             [lipas.schema.sports-sites.ptv :as ptv-schema]
-            [malli.core :as m]))
+            [malli.core :as m]
+            [malli.error :as me]))
 
 (deftest parse-phone-number
   (is (= {:prefix "+358"
@@ -1569,3 +1570,27 @@
                                                 (partial remove #(= "sv" (:language %))))
                                         {}
                                         #{})))))))
+
+(deftest cleared-ptv-texts-test
+  ;; A cleared text field stores nil. It used to fail the string schema
+  ;; with the "too long" message (tester finding), and would have made the
+  ;; backend reject the save.
+  (let [errors (fn [summary]
+                 (->> (m/explain ptv-schema/ptv-meta
+                                 {:org-id "org" :sync-enabled true
+                                  :service-channel-ids [] :service-ids []
+                                  :summary summary :description {:fi "kuvaus"}})
+                      :errors
+                      (map me/error-message)
+                      (filter keyword?)))]
+    (testing "drop-blank-texts removes missing and blank texts only"
+      (is (= {:fi "teksti"}
+             (sut/drop-blank-texts {:fi "teksti" :se nil :en "  "}))))
+
+    (testing "a cleared text is never reported as too long"
+      (is (empty? (errors {:fi nil})))
+      (is (empty? (errors (sut/drop-blank-texts {:fi "tiivistelmä" :se nil})))))
+
+    (testing "a text over the limit still is"
+      (is (= [:ptv/error-summary-too-long]
+             (errors {:fi (apply str (repeat (inc sut/max-summary-length) "x"))}))))))

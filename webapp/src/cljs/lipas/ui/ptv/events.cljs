@@ -766,15 +766,23 @@
     (let [org-id (-get-ptv-org-id db)]
       (assoc-in db [:ptv :org org-id :default-settings :integration-interval] v))))
 
+(defn- set-site-text
+  "Sets a site's PTV text in `locale`; a cleared field (nil or blank, see
+  text-fields/text-field) removes that language's text."
+  [db lipas-id field locale v]
+  (let [org-id (-get-ptv-org-id db)
+        path [:ptv :org org-id :data :sports-sites lipas-id :ptv field]]
+    (if (str/blank? v)
+      (update-in db path dissoc locale)
+      (assoc-in db (conj path locale) v))))
+
 (rf/reg-event-db ::set-summary
   (fn [db [_ {:keys [lipas-id]} locale v]]
-    (let [org-id (-get-ptv-org-id db)]
-      (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :summary locale] v))))
+    (set-site-text db lipas-id :summary locale v)))
 
 (rf/reg-event-db ::set-description
   (fn [db [_ {:keys [lipas-id]} locale v]]
-    (let [org-id (-get-ptv-org-id db)]
-      (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :description locale] v))))
+    (set-site-text db lipas-id :description locale v)))
 
 (defn- merge-translation
   "Merges a translate response into `texts` language by language: the
@@ -1190,7 +1198,9 @@
 (rf/reg-event-db ::set-service-candidate-name
   (fn [db [_ id locale v]]
     (let [org-id (-get-ptv-org-id db)]
-      (assoc-in db [:ptv :org org-id :data :service-candidates id :name locale] v))))
+      ;; A cleared field is "", not nil: the edit sits on top of PTV's
+      ;; live text, so a missing key would bring that text back.
+      (assoc-in db [:ptv :org org-id :data :service-candidates id :name locale] (or v "")))))
 
 (rf/reg-event-db ::discard-service-edits
   ;; Drops a service's unsaved edits; the panel falls back to PTV's texts.
@@ -1210,17 +1220,17 @@
 (rf/reg-event-db ::set-service-candidate-summary
   (fn [db [_ id locale v]]
     (let [org-id (-get-ptv-org-id db)]
-      (assoc-in db [:ptv :org org-id :data :service-candidates id :summary locale] v))))
+      (assoc-in db [:ptv :org org-id :data :service-candidates id :summary locale] (or v "")))))
 
 (rf/reg-event-db ::set-service-candidate-description
   (fn [db [_ id locale v]]
     (let [org-id (-get-ptv-org-id db)]
-      (assoc-in db [:ptv :org org-id :data :service-candidates id :description locale] v))))
+      (assoc-in db [:ptv :org org-id :data :service-candidates id :description locale] (or v "")))))
 
 (rf/reg-event-db ::set-service-candidate-user-instruction
   (fn [db [_ id locale v]]
     (let [org-id (-get-ptv-org-id db)]
-      (assoc-in db [:ptv :org org-id :data :service-candidates id :user-instruction locale] v))))
+      (assoc-in db [:ptv :org org-id :data :service-candidates id :user-instruction locale] (or v "")))))
 
 (rf/reg-event-fx ::translate-service-candidate
   (fn [{:keys [db]} [_ source-id from-lang to-langs]]
@@ -1494,7 +1504,12 @@
                                  :service-ids
                                  :summary
                                  :description])
-                   {:languages org-languages})]
+                   {:languages org-languages})
+        ;; A cleared text (nil, also on sites saved before setters removed
+        ;; it) is no text, not an invalid one
+        ptv (-> ptv
+                (update :summary ptv-data/drop-blank-texts)
+                (update :description ptv-data/drop-blank-texts))]
     {:lipas-id lipas-id
      :org-id org-id
      :ptv ptv}))

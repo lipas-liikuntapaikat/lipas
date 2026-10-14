@@ -230,6 +230,15 @@
         :when ptv-lang]
     [ptv-lang (keyword lipas-lang)]))
 
+(defn drop-blank-texts
+  "`texts` ({locale text}) without the languages whose text is missing or
+   blank. A cleared text field is stored as nil, which is no text, not an
+   invalid one."
+  [texts]
+  (into {}
+        (remove (fn [[_ v]] (or (not (string? v)) (str/blank? v))))
+        texts))
+
 (defn languages-with-texts
   "`org-langs` (LIPAS language codes) minus every language other than Finnish
    that lacks either a :summary or a :description in `texts`, a map of

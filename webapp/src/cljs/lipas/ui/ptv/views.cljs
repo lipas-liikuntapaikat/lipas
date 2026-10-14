@@ -2225,7 +2225,7 @@
           native? (= :native management)
           other-system? (= :other-system management)
           edit-key (service-edit-key service)
-          edited-name (when-not native? (get-in descriptions [:name :fi]))
+          edited-name (when-not native? (not-empty (get-in descriptions [:name :fi])))
           name-changed? (and edited-name (not= edited-name (:label service)))
           ;; A native service: names per language, the org's languages plus
           ;; every version it already has, and versions marked for removal
