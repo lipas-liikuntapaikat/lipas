@@ -1,13 +1,34 @@
 {:classes "Serviceklasser",
- :services-explanation "Organisationens PTV-tjänster till vilka idrottsanläggningar kopplas som servicepunkter. Tjänster kopplade till LIPAS har skapats genom integrationen.",
- :no-lipas-services "Inga LIPAS-hanterade tjänster har skapats ännu.",
- :no-services "Organisationen har inga tjänster i PTV.",
  :use-wizard-to-create "Skapa tjänster med hjälp av guiden på fliken Idrifttagning.",
- :show-only-lipas-managed "Visa endast tjänster som är kopplade till LIPAS."
  :add-service "Lägg till tjänst"
  :create-new "Skapa ny tjänst"
  :link-existing "Koppla befintlig PTV-tjänst"
  :select-sub-category "Välj typklass"
  :select-service "Välj tjänst från PTV"
  :needs-service-helper "Idrottsanläggningen måste vara kopplad till en tjänst i PTV. Välj en befintlig tjänst eller skapa en ny."
- :native-read-only "Den här tjänsten har skapats direkt i PTV och inte via Lipas, så dess texter kan bara redigeras i PTV. Du kan ändå koppla idrottsanläggningar till tjänsten på fliken Idrottsanläggningar."}
+ :incomplete-language-versions "PTV kräver namn, sammanfattning och beskrivning i varje språkversion. Komplettera det som saknas eller ta bort språkversionen: {1}"
+ :changed-in-ptv "Tjänsten har redigerats i PTV efter att uppgifterna hämtades. Tjänstens uppgifter har nu hämtats på nytt och dina osparade ändringar finns kvar: kontrollera texterna och synkronisera på nytt."
+ :ptv-only-languages "Språkversionerna {1} förvaltas i PTV eftersom Lipas inte stöder dem. De förblir oförändrade."
+ :remove-language-version "Ta bort språkversionen {1} från PTV"
+ :language-removal-pending "Språkversionen {1} tas bort från PTV vid nästa synkronisering, även dess tilläggsuppgifter som förvaltas i PTV."
+ :lipas-info "Tjänsten har skapats i Lipas och Lipas förvaltar alla dess uppgifter. Ändringar som görs i tjänsten i PTV ersätts vid nästa synkronisering."
+ :native-info "Tjänsten har skapats i PTV. I Lipas kan du uppdatera dess namn, sammanfattning, beskrivning och anvisningar; klassificeringen och övriga uppgifter förvaltas i PTV."
+ :other-system-read-only "Tjänsten förvaltas via ett annat system och kan därför inte redigeras i Lipas. Du kan ändå koppla idrottsanläggningar till den på fliken Idrottsanläggningar."
+ :first-save-title "Uppdatera tjänsten som skapats i PTV från Lipas?"
+ :first-save-reach "Tjänsten visas på Suomi.fi i alla servicekanaler som är kopplade till den ({1} st.). Av Lipas idrottsanläggningar är {2} kopplade till den."
+ :first-save-texts "Sparandet uppdaterar tjänstens namn och texter i PTV så som de är i Lipas."
+ :first-save-kept "Klassificeringen, övriga tilläggsuppgifter och språkversioner som du inte redigerat förblir oförändrade i PTV."
+ :first-save-audit "I fortsättningen granskar DVV tjänstens texter, eftersom de kommer från Lipas."
+ :first-save-confirm "Uppdatera i PTV"
+ :discard-edits "Ångra osparade ändringar"
+ :lipas-section-title "Tjänster som skapats i Lipas ({1})"
+ :lipas-section-info "Lipas förvaltar alla uppgifter om dessa tjänster. Ändringar som görs i dem i PTV ersätts vid nästa synkronisering."
+ :lipas-section-empty "Inga tjänster har ännu skapats i Lipas. Tjänster skapas på fliken Idrifttagning eller med knappen ovan."
+ :ptv-section-title "Tjänster som skapats i PTV ({1})"
+ :ptv-section-info "Idrottsanläggningar kan kopplas till dessa tjänster. I Lipas kan du uppdatera deras namn och texter; övriga uppgifter förvaltas i PTV."
+ :ptv-section-empty "Inga idrottsanläggningar har ännu kopplats till tjänster som skapats i PTV."
+ :show-unlinked "Visa även tjänster som inga idrottsanläggningar är kopplade till ({1})"
+ :chip-unsaved "Osparade ändringar – synkronisera för att föra dem till PTV."
+ :chip-in-sync "Inga osparade ändringar. Senast redigerad i PTV {1}."
+ :other-system-chip "Annat system"
+ :name-missing "Namn saknas – lägg till det med pennan"}

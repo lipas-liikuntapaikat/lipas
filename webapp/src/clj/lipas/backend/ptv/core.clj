@@ -225,161 +225,123 @@
       drop-nil-vals
       strip-blank-localized-entries))
 
-(defn- merge-ptv-lists
-  "Merge two PTV-style lists keyed by [:type :language]. Existing items
-   are kept; new items from LIPAS are added for missing type+language combos.
-   Items with actual content from LIPAS overwrite existing items."
-  [existing-items lipas-items]
-  (let [existing-by-key (into {} (map (fn [item]
-                                        [((juxt :type :language) item) item])
-                                      existing-items))
-        lipas-by-key (into {} (map (fn [item]
-                                     [((juxt :type :language) item) item])
-                                   lipas-items))]
-    (vals (reduce-kv (fn [acc k lipas-item]
-                       (if (contains? acc k)
-                         ;; Existing item: only overwrite if LIPAS has real content
-                         (let [v (:value lipas-item)]
-                           (if (and (string? v) (not (str/blank? v)) (not= v "-"))
-                             (assoc acc k lipas-item)
-                             acc))
-                         ;; Missing language: only add if LIPAS has real content
-                         (let [v (:value lipas-item)]
-                           (if (and (string? v) (not (str/blank? v)) (not= v "-"))
-                             (assoc acc k lipas-item)
-                             acc))))
-                     existing-by-key
-                     lipas-by-key))))
-
-(defn- merge-service-data
-  "Merge LIPAS-generated service data on top of existing PTV service.
-   Only overwrites fields that LIPAS actually provides meaningful content for.
-   This preserves PTV-managed data (ontology, classes, names) for
-   adopted services while allowing LIPAS to update descriptions."
-  [existing lipas-data]
-  (reduce-kv (fn [acc k v]
-               (cond
-                 (nil? v) acc
-                 ;; Empty collections: don't overwrite
-                 (and (coll? v) (empty? v)) acc
-                 ;; PTV-style lists (serviceNames, serviceDescriptions):
-                 ;; merge at item level to preserve existing + add missing languages
-                 (and (sequential? v)
-                      (seq v)
-                      (map? (first v))
-                      (contains? (first v) :value))
-                 (assoc acc k (merge-ptv-lists (get acc k) v))
-                 :else (assoc acc k v)))
-             existing
-             lipas-data))
-
-(def ^:private lipas-managed-service-fields
-  "Fields that LIPAS actively manages on a service. Other fields
-   (ontologyTerms, serviceClasses, targetGroups, etc.) are either
-   derived from sub-category or are defaults and should not overwrite
-   existing PTV data when adopting a service."
-  #{:sourceId :serviceDescriptions :serviceNames :publishingStatus :languages})
-
 (defn persist-ptv-service-revision!
   "Appends a ptv_service revision from a PTV Service API response. Never
    throws — the PTV write has already succeeded and cannot be rolled back;
    a failed shadow write is only logged and the next upsert self-heals.
    (Audits live apart in ptv_service_audit, nothing to carry forward.)"
-  [db user ptv-org-id ptv-resp]
-  (try
-    (let [source-id (:sourceId ptv-resp)]
-      (if (str/blank? source-id)
-        (log/warnf "PTV service %s has no sourceId; skipping ptv_service revision"
-                   (:id ptv-resp))
-        (if-let [org (backend-org/get-org-by-ptv-org-id db ptv-org-id)]
-          (let [now (utils/timestamp)
-                doc (assoc (ptv-data/->service-document ptv-org-id ptv-resp)
-                           :last-sync now)]
-            (ptv-service-db/insert-service-rev!
-              db
-              {:org-id (:id org)
-               :source-id source-id
-               :service-id (:id ptv-resp)
-               :status "active"
-               :author-id (or (:id user) (get-in user [:login :user :id]))
-               :event-date now
-               :document doc}))
-          (log/warnf "No LIPAS org found for PTV org %s; skipping ptv_service revision"
-                     ptv-org-id))))
-    (catch Exception e
-      (log/error e "Failed to persist ptv_service revision (PTV write already succeeded)"))))
+  ([db user ptv-org-id ptv-resp]
+   (persist-ptv-service-revision! db user ptv-org-id ptv-resp nil))
+  ([db user ptv-org-id ptv-resp extra-doc]
+   (try
+     (let [source-id (:sourceId ptv-resp)]
+       (if (str/blank? source-id)
+         (log/warnf "PTV service %s has no sourceId; skipping ptv_service revision"
+                    (:id ptv-resp))
+         (if-let [org (backend-org/get-org-by-ptv-org-id db ptv-org-id)]
+           (let [now (utils/timestamp)
+                 doc (merge (ptv-data/->service-document ptv-org-id ptv-resp)
+                            extra-doc
+                            {:last-sync now})]
+             (ptv-service-db/insert-service-rev!
+               db
+               {:org-id (:id org)
+                :source-id source-id
+                :service-id (:id ptv-resp)
+                :status "active"
+                :author-id (or (:id user) (get-in user [:login :user :id]))
+                :event-date now
+                :document doc}))
+           (log/warnf "No LIPAS org found for PTV org %s; skipping ptv_service revision"
+                      ptv-org-id))))
+     (catch Exception e
+       (log/error e "Failed to persist ptv_service revision (PTV write already succeeded)")))))
+
+(defn- org-languages
+  "The org's languages from its live PTV config, never from the request,
+  which carries the browser's possibly stale copy of it."
+  [ptv org-id]
+  (or (:supported-languages (ptv/get-org-ptv-config-with-fallback ptv org-id))
+      ptv-data/fallback-languages))
+
+(defn- upsert-lipas-service!
+  "Writes a service LIPAS created and manages whole: the full body built from
+  the sub-category, by source-id, created when PTV doesn't know it yet."
+  [ptv {:keys [org-id source-id] :as m}]
+  (let [lipas-data (ptv-data/->ptv-service (assoc m :languages (org-languages ptv org-id)))]
+    (try
+      (ptv/update-service ptv source-id lipas-data)
+      (catch clojure.lang.ExceptionInfo e
+        (if (= 404 (:status (:resp (ex-data e))))
+          (ptv/create-service ptv lipas-data)
+          (throw e))))))
+
+(defn- native-service-writable?
+  "True when LIPAS may patch the texts of `service`, a service made in PTV:
+  it has no sourceId yet, or the one LIPAS gave it on its first patch. A
+  sourceId of another system means that system maintains it."
+  [org-id service-id service]
+  (let [source-id (:sourceId service)]
+    (or (str/blank? source-id)
+        (= source-id (ptv-data/->adopted-service-source-id org-id service-id)))))
+
+(defn- native-service-put-body
+  "The PUT body for patching `texts` into the live `service`, or throws when
+  the result would leave a language version PTV rejects."
+  [org-id service-id service texts remove-langs]
+  (let [body (-> (normalize-ptv-service-for-update service)
+                 (ptv-data/patch-service-texts texts remove-langs)
+                 (assoc :sourceId (ptv-data/->adopted-service-source-id org-id service-id)
+                        :mainResponsibleOrganization org-id))
+        problems (ptv-data/language-version-problems body)]
+    (when (seq problems)
+      (throw (ex-info "Incomplete PTV language versions"
+                      {:type :incomplete-language-versions
+                       :problems problems})))
+    body))
+
+(defn- patch-native-service!
+  "Patches LIPAS's texts into a service made in PTV (see
+  ptv-data/patch-service-texts): by PTV id, on top of the live service, so
+  its classification, other texts and language versions LIPAS doesn't touch
+  are kept. The first patch also gives it LIPAS's sourceId, which marks it
+  as one LIPAS writes texts to (and so one DVV audits) and gives it a
+  ptv_service lineage.
+
+  `expected-modified` is the PTV modified time the user's edits were made
+  on; a service changed in PTV since then is refused rather than overwritten."
+  [ptv {:keys [org-id service-id expected-modified remove-languages] :as m}]
+  (let [service (ptv/get-service ptv org-id service-id)]
+    (when-not (native-service-writable? org-id service-id service)
+      (throw (ex-info "PTV service is maintained by another system"
+                      {:type :source-id-in-use :service-id service-id})))
+    (when (and expected-modified (not= expected-modified (:modified service)))
+      (throw (ex-info "PTV service changed since it was loaded"
+                      {:type :changed-in-ptv
+                       :service-id service-id
+                       :modified (:modified service)})))
+    (ptv/update-service-by-id
+      ptv service-id
+      (native-service-put-body org-id service-id service
+                               (select-keys m [:name :summary :description :user-instruction])
+                               (keep ptv-data/lipas-lang->ptv-lang remove-languages)))))
 
 (defn upsert-ptv-service!
-  [db ptv user {:keys [org-id source-id service-id] :as m}]
-  (let [;; Adoption path: always use the adopted-source-id pattern
-        ;; (lipas-{org}-ptv-{service-id}). The standard sub-category
-        ;; pattern (lipas-{org}-{sub-cat}) collides with prior LIPAS-managed
-        ;; services that were soft-archived in PTV — archived services keep
-        ;; their sourceId, and PTV's PUT crashes with a 500 ('An unexpected
-        ;; error occurred. Trace id: ...') on the collision rather than
-        ;; returning a clean 409. The adopted pattern uses the unique PTV
-        ;; service UUID, sidestepping the collision entirely.
-        m (cond-> m
-            service-id (assoc :source-id
-                              (ptv-data/->adopted-service-source-id org-id service-id)))
-        ;; Languages come from the org's live PTV config, like the
-        ;; service-location sync — not from the request, which carries the
-        ;; browser's possibly stale copy of it.
-        m (assoc m :languages (or (:supported-languages
-                                    (ptv/get-org-ptv-config-with-fallback ptv org-id))
-                                  ptv-data/fallback-languages))
-        ;; Languages come from the org's live PTV config, like the
-        ;; service-location sync — not from the request, which carries the
-        ;; browser's possibly stale copy of it.
-        m (assoc m :languages (or (:supported-languages
-                                    (ptv/get-org-ptv-config-with-fallback ptv org-id))
-                                  ptv-data/fallback-languages))
-        lipas-data (ptv-data/->ptv-service m)
-        resp
-        (if service-id
-      ;; Adoption: fetch existing PTV service and overwrite ONLY LIPAS-managed
-      ;; fields (names, descriptions, languages, publishingStatus, sourceId).
-      ;; Everything else — targetGroups, ontologyTerms, serviceClasses,
-      ;; industrialClasses, areas, generalDescriptionId, etc. — must be left
-      ;; intact, otherwise PTV's cross-validation breaks. Concrete failure
-      ;; mode: when the existing service has a generalDescriptionId whose GD
-      ;; lists KR2 without sub-targets, replacing the service's full target
-      ;; groups (which include KR2.x children) with LIPAS's hardcoded [KR1]
-      ;; trips the SubTargetGroupRequired check (ServiceValidator.cs:225).
-      ;; sub-category-id is still useful upstream (source-id, app-db
-      ;; mapping), but it must not drive payload overrides on adoption.
-          (let [existing (-> (ptv/get-service ptv org-id service-id)
-                             (normalize-ptv-service-for-update))
-                lipas-data (select-keys lipas-data lipas-managed-service-fields)
-                merged (merge-service-data existing lipas-data)
-            ;; PTV requires names for all supported languages — use Finnish as fallback
-                fi-name (or (some #(when (and (= "fi" (:language %)) (not (str/blank? (:value %))))
-                                     (:value %))
-                                  (:serviceNames merged))
-                            "")
-                required-langs (set (map name (:languages merged)))
-                existing-name-langs (set (map :language (:serviceNames merged)))
-                missing-name-langs (clojure.set/difference required-langs existing-name-langs)
-                data (-> merged
-                         (update :serviceDescriptions (fn [items] (filterv #(not (str/blank? (:value %))) items)))
-                     ;; Fill empty name values with Finnish fallback
-                         (update :serviceNames (fn [items]
-                                                 (let [filled (mapv #(if (str/blank? (:value %))
-                                                                       (assoc % :value fi-name)
-                                                                       %)
-                                                                    items)]
-                                               ;; Add entries for completely missing languages
-                                                   (into filled (for [lang missing-name-langs]
-                                                                  {:type "Name" :language lang :value fi-name}))))))]
-            (ptv/update-service-by-id ptv service-id data))
-      ;; New service: try update by source-id, create if not found
-          (try
-            (ptv/update-service ptv source-id lipas-data)
-            (catch clojure.lang.ExceptionInfo e
-              (if (= 404 (:status (:resp (ex-data e))))
-                (ptv/create-service ptv lipas-data)
-                (throw e)))))]
-    ;; Shadow every successful Service write into the ptv_service table.
+  "Writes a service's texts to PTV and appends the result to the ptv_service
+  mirror. `mode` says which kind of service it is, and so how it's written:
+
+  - \"lipas\" (default): created by LIPAS, which is its master. The whole
+    service is built from LIPAS's data and written by `source-id` (created
+    when PTV doesn't know it yet).
+  - \"native\": made in PTV. Only its name and texts are patched in, by
+    `service-id` (see patch-native-service!).
+
+  The mode is explicit: whether a service-id happens to be present must not
+  decide how a service is written."
+  [db ptv user {:keys [org-id mode] :as m}]
+  (let [resp (case (or mode "lipas")
+               "lipas" (upsert-lipas-service! ptv m)
+               "native" (patch-native-service! ptv m))]
     (persist-ptv-service-revision! db user org-id resp)
     resp))
 
@@ -654,12 +616,12 @@
   auto-created missing services (pre-62fb687a), but once creation moved to
   the FE and adoption was added the check was never reconciled, wrongly
   rejecting sites that reference an existing PTV service. The input shape
-  here mirrors what the FE feeds `resolve-missing-services` (full sites
-  with `:ptv`), so FE and BE agree on what 'missing' means."
+  here is the flat one the FE wizard feeds `resolve-missing-services`
+  (sports-site->ptv-input), so FE and BE agree on what 'missing' means."
   [types source-id->service org-id sports-site]
   (ptv-data/resolve-missing-services
     org-id source-id->service
-    [{:ptv {:service-ids (-> sports-site :ptv :service-ids)}
+    [{:service-ids (-> sports-site :ptv :service-ids)
       :sub-category-id (-> sports-site :type :type-code types :sub-category)
       :sub-category (-> sports-site :search-meta :type :sub-category :name :fi)}]))
 

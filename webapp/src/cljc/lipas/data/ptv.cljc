@@ -822,14 +822,16 @@
 
 (defn resolve-missing-services
   "Infer services (sub-categories) that need to be created in PTV and
-  attached to sports-sites."
+  attached to sports-sites. `sports-sites` are flat maps with :service-ids,
+  :sub-category-id and :sub-category (the shape of sports-site->ptv-input);
+  a site that already has a service-id of any kind is covered."
   [org-id services sports-sites]
   (let [source-ids (->> services
                         vals
                         (keep :sourceId)
                         set)]
     (->> sports-sites
-         (filter (fn [{:keys [ptv]}] (empty? (:service-ids ptv))))
+         (filter (fn [site] (empty? (:service-ids site))))
          (map (fn [site] {:source-id (->service-source-id org-id (:sub-category-id site))
                           :sub-category (-> site :sub-category)
                           :sub-category-id (-> site :sub-category-id)}))
@@ -1110,13 +1112,16 @@
    Works for both serviceDescriptions and serviceChannelDescriptions."
   [descriptions]
   (reduce (fn [acc {:keys [language value type]}]
-            (if-let [k (case type
-                         "Summary" :summary
-                         "Description" :description
-                         "UserInstruction" :user-instruction
-                         nil)]
-              (update acc k assoc (lang->locale language) value)
-              acc))
+            (let [k (case type
+                      "Summary" :summary
+                      "Description" :description
+                      "UserInstruction" :user-instruction
+                      nil)
+                  locale (lang->locale language)]
+              ;; A language LIPAS doesn't model (e.g. Sámi) has no locale.
+              (if (and k locale)
+                (update acc k assoc locale value)
+                acc)))
           {}
           descriptions))
 
@@ -1146,6 +1151,123 @@
        :sub-category-id (when-not (adopted-service-source-id? source-id)
                           (parse-service-source-id source-id))}
       (ptv-descriptions->texts (:serviceDescriptions service)))))
+
+;;; Services made in PTV ;;;
+;;
+;; LIPAS is the master of the services it creates and writes them whole. A
+;; service made directly in PTV ("native") is only patched: LIPAS writes its
+;; name and the Summary/Description/UserInstruction texts in the languages it
+;; models (fi, sv, en), and everything else passes through untouched. Its
+;; first patch gives it the sourceId lipas-{org}-ptv-{uuid}.
+;;
+;; PTV facts these rest on (verified in the PTV test env 2026-10-14):
+;; - A service has a language version in every language that has any name or
+;;   description entry, and each version then requires a Name, a Summary and
+;;   a Description. A leftover ChargeTypeAdditionalInfo in a language alone
+;;   makes PTV demand the rest.
+;; - The service's :languages is the languages the service is provided in,
+;;   not its language versions: PTV accepts a language there with no texts.
+;; - A language version requires the organisation to be described in it.
+
+(defn service-management
+  "Who maintains the service with `source-id`:
+   :lipas (created by LIPAS, its master), :native (made in PTV; LIPAS may
+   patch its texts) or :other-system (another system's sourceId; read-only)."
+  [source-id]
+  (cond
+    (str/blank? source-id) :native
+    (adopted-service-source-id? source-id) :native
+    (str/starts-with? source-id "lipas-") :lipas
+    :else :other-system))
+
+(def patched-description-types #{"Summary" "Description" "UserInstruction"})
+
+(def ^:private version-required-description-types ["Summary" "Description"])
+
+(defn service-language-versions
+  "PTV language codes `service` has a language version in: every language
+   with a name or description entry."
+  [service]
+  (into (sorted-set)
+        (comp cat (keep :language))
+        [(:serviceNames service) (:serviceDescriptions service)]))
+
+(defn service-names
+  "{locale name} of the service's main (\"Name\") names in the languages
+   LIPAS models."
+  [service]
+  (into {}
+        (keep (fn [{:keys [type language value]}]
+                (when-let [locale (and (= "Name" type) (lang->locale language))]
+                  [locale value])))
+        (:serviceNames service)))
+
+(defn- blank-text? [v]
+  (or (not (string? v)) (str/blank? v)))
+
+(defn patch-service-texts
+  "`service` (PTV shape) with LIPAS's `texts` written in, `texts` being
+   {:name {locale s} :summary {..} :description {..} :user-instruction {..}}.
+
+   Only the languages LIPAS has some text in are written, and in those only
+   the Name entry and the patched description types are replaced (a blank
+   UserInstruction removes it). A language LIPAS has nothing in, one it
+   doesn't model, every other entry type and every other field stay as they
+   are, so a sync never drops a language version implicitly.
+
+   `remove-langs` (PTV codes) are the explicit exception: every name and
+   description entry in them is dropped, PTV-only types included, since any
+   entry left behind would keep the version alive in PTV."
+  [service texts remove-langs]
+  (let [remove-langs (set remove-langs)
+        by-type {"Name" (:name texts)
+                 "Summary" (:summary texts)
+                 "Description" (:description texts)
+                 "UserInstruction" (:user-instruction texts)}
+        written-langs (into #{}
+                            (comp (filter (fn [lang]
+                                            (let [locale (lang->locale lang)]
+                                              (some #(not (blank-text? (get % locale)))
+                                                    (vals by-type)))))
+                                  (remove remove-langs))
+                            (vals locale->lang))
+        keep-entry? (fn [owned-types {:keys [type language]}]
+                      (not (or (contains? remove-langs language)
+                               (and (contains? written-langs language)
+                                    (contains? owned-types type)))))
+        entries (fn [types]
+                  (for [lang (sort written-langs)
+                        type types
+                        :let [v (get-in by-type [type (lang->locale lang)])]
+                        :when (not (blank-text? v))]
+                    {:type type :language lang :value v}))]
+    (-> service
+        (update :serviceNames
+                (fn [xs] (into (filterv #(keep-entry? #{"Name"} %) xs)
+                               (entries ["Name"]))))
+        (update :serviceDescriptions
+                (fn [xs] (into (filterv #(keep-entry? patched-description-types %) xs)
+                               (entries (sort patched-description-types))))))))
+
+(defn language-version-problems
+  "{ptv-lang [missing-type ...]} for every language version of `service` that
+   PTV would reject for lacking a Name, a Summary or a Description; empty
+   when there are none."
+  [service]
+  (into (sorted-map)
+        (keep (fn [lang]
+                (let [has? (fn [entries type]
+                             (some #(and (= type (:type %))
+                                         (= lang (:language %))
+                                         (not (blank-text? (:value %))))
+                                   entries))
+                      missing (cond-> []
+                                (not (has? (:serviceNames service) "Name")) (conj "Name")
+                                :always (into (remove #(has? (:serviceDescriptions service) %))
+                                              version-required-description-types))]
+                  (when (seq missing)
+                    [lang missing]))))
+        (service-language-versions service)))
 
 (def persisted-ptv-keys
   "The editable :ptv meta keys persisted on a sync. Both the sync path

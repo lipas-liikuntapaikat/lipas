@@ -216,6 +216,19 @@
         {:label service-name
          :service-id id
          :source-id (:sourceId service)
+         ;; :lipas (created by LIPAS, its master), :native (made in PTV,
+         ;; texts patched by LIPAS) or :other-system (read-only)
+         :management (ptv-data/service-management (:sourceId service))
+         :name (ptv-data/service-names service)
+         ;; LIPAS locales of the language versions LIPAS can edit, and the
+         ;; PTV codes of those it doesn't model (left as they are)
+         :language-versions (into [] (keep ptv-data/lang->locale)
+                                  (ptv-data/service-language-versions service))
+         :ptv-only-languages (into [] (remove ptv-data/lang->locale)
+                                   (ptv-data/service-language-versions service))
+         ;; What a native service's patch is computed on, here so the panel
+         ;; can check the result before sending it
+         :ptv-entries (select-keys service [:serviceNames :serviceDescriptions])
          :publishing-status (:publishingStatus service)
          :last-modified (:modified service)
          :last-modified-human (utils/->human-date-time-at-user-tz (:modified service))
@@ -245,17 +258,37 @@
 (rf/reg-sub ::services-filter
   :<- [::ptv]
   (fn [ptv _]
-    (get ptv :services-filter "lipas-managed")))
+    (get ptv :services-filter "sports")))
 
-(rf/reg-sub ::services-filtered
+(rf/reg-sub ::linked-service-ids
+  ;; Ids of the services the org's LIPAS sites are linked to
+  :<- [::ptv]
+  (fn [ptv [_ org-id]]
+    (into #{} (mapcat #(get-in % [:ptv :service-ids]))
+          (vals (get-in ptv [:org org-id :data :sports-sites])))))
+
+(rf/reg-sub ::service-sections
+  ;; The Palvelut tab's two sections: services created in LIPAS, and those
+  ;; made in PTV (or by another system). The PTV section shows by default
+  ;; only the services that concern LIPAS: linked to a LIPAS site, or
+  ;; written by LIPAS. The org's other PTV services (libraries, health care,
+  ;; ...) show with the "all" filter; :ptv-hidden-count says how many.
   (fn [[_ org-id]]
     [(rf/subscribe [::services org-id])
-     (rf/subscribe [::services-filter])])
-  (fn [[services filter'] _]
-    (sort-by :label
-             (case filter'
-               "lipas-managed" (filter (fn [m] (some-> m :source-id (str/starts-with? "lipas-"))) services)
-               services))))
+     (rf/subscribe [::services-filter])
+     (rf/subscribe [::linked-service-ids org-id])])
+  (fn [[services filter' linked-ids] _]
+    (let [{lipas :lipas others nil} (group-by #(when (= :lipas (:management %)) :lipas) services)
+          concerns-lipas? (fn [m] (or (some? (:source-id m))
+                                      (contains? linked-ids (:service-id m))))
+          relevant (filter #(and (= :native (:management %)) (concerns-lipas? %)) others)
+          relevant (concat relevant
+                           (filter #(and (= :other-system (:management %))
+                                         (contains? linked-ids (:service-id %)))
+                                   others))]
+      {:lipas (sort-by :label lipas)
+       :ptv (sort-by :label (if (= "all" filter') others relevant))
+       :ptv-hidden-count (- (count others) (count relevant))})))
 
 (rf/reg-sub ::service-mappings
   :<- [::ptv]
@@ -1085,3 +1118,14 @@
   :<- [::audit]
   (fn [audit _]
     (:service-notification-sent? audit)))
+
+;;; Services made in PTV ;;;
+
+(rf/reg-sub ::service-linked-site-count
+  ;; How many of the org's LIPAS sites link to the service.
+  :<- [::ptv]
+  (fn [ptv [_ org-id service-id]]
+    (->> (get-in ptv [:org org-id :data :sports-sites])
+         vals
+         (filter #(some #{service-id} (get-in % [:ptv :service-ids])))
+         count)))
