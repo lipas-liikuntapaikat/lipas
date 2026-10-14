@@ -59,7 +59,7 @@
             [lipas.ui.org.events :as events]
             [lipas.ui.org.subs :as subs]
             [lipas.ui.roles.editor :as role-editor]
-            [lipas.ui.site-notes.views :as site-notes]
+            [lipas.ui.site-notes.org-tab :as site-notes]
             [lipas.ui.subs :as ui-subs]
             [lipas.utils :as utils]
             [malli.core :as m]
