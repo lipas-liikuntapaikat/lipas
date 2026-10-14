@@ -34,4 +34,9 @@
  :chip-unsaved "Tallentamattomia muutoksia – synkronoi viedäksesi ne PTV:hen."
  :chip-in-sync "Ei tallentamattomia muutoksia. Muokattu PTV:ssä viimeksi {1}."
  :other-system-chip "Muu järjestelmä"
- :name-missing "Nimi puuttuu – lisää se kynästä"}
+ :name-missing "Nimi puuttuu – lisää se kynästä"
+ :sync-blocked-title "Korjaa ennen synkronointia"
+ :text-missing "{1} ({2}) puuttuu."
+ :text-too-long "{1} ({2}) on liian pitkä (enintään {3} merkkiä)."
+ :fix-or-remove-version "Täydennä puuttuvat tekstit tai poista kieliversio."
+ :versions-will-be-removed "Seuraava synkronointi poistaa PTV:stä kieliversiot: {1}. Lipas julkaisee vain kielet, jotka ovat organisaatiolla käytössä ja joille on sekä tiivistelmä että kuvaus."}

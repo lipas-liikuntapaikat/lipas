@@ -1875,6 +1875,30 @@
                      :on-click #(reset! show-all? false)}
           (tr :actions/show-less)])])))
 
+(def ^:private text-field->tr-key
+  {:name :ptv/service-name
+   :summary :ptv/summary
+   :description :ptv/description
+   :user-instruction :ptv/user-instruction})
+
+(defn service-text-errors-alert
+  "The service texts PTV would reject (lipas.data.ptv/service-text-errors)."
+  [{:keys [tr errors native?]}]
+  [:> Alert {:severity "warning" :variant "outlined"}
+   [:> AlertTitle (tr :ptv.service/sync-blocked-title)]
+   [:ul {:style {:margin 0 :padding-left "1.2em"}}
+    (for [{:keys [field locale error max] :as e} errors
+          :let [field-label (tr (text-field->tr-key field))
+                lang (str/upper-case (name locale))]]
+      ^{:key (str e)}
+      [:li [:> Typography {:variant "body2"}
+            (case error
+              :missing (tr :ptv.service/text-missing field-label lang)
+              :too-long (tr :ptv.service/text-too-long field-label lang max))]])]
+   (when (and native? (some #(= :missing (:error %)) errors))
+     [:> Typography {:variant "body2" :sx #js {:mt 1}}
+      (tr :ptv.service/fix-or-remove-version)])])
+
 (defn first-save-dialog
   "Confirmation before LIPAS first writes the texts of a service made in PTV."
   [{:keys [tr org-id service open? on-close on-confirm]}]
@@ -1898,7 +1922,7 @@
 
 (defn service-panel-left
   [{:keys [tr org-id service data ptv-base has-local-edits? org-languages selected-tab edited-name
-           edit-key native? other-system? problems edit-languages name-data]}]
+           edit-key native? other-system? text-errors versions-to-drop edit-languages name-data]}]
   (r/with-let [confirm-first-save? (r/atom false)]
     (let [service-id (:service-id service)
           source-id (:source-id service)
@@ -2026,11 +2050,16 @@
           [:> Typography {:variant "body2"}
            (tr :ptv/modified-in-ptv)]])
 
-     ;; A native service's language version PTV would reject
-       (when (seq problems)
-         [:> Alert {:severity "warning" :variant "outlined"}
-          (tr :ptv.service/incomplete-language-versions
-              (events/incomplete-versions-text tr problems))])
+     ;; Texts PTV would reject: sync stays disabled until they're fixed
+       (when (seq text-errors)
+         [service-text-errors-alert {:tr tr :errors text-errors :native? native?}])
+
+     ;; LIPAS is the master of a service it created: say before the sync
+     ;; which language versions it will remove from PTV
+       (when (seq versions-to-drop)
+         [:> Alert {:severity "info" :variant "outlined"}
+          (tr :ptv.service/versions-will-be-removed
+              (str/join ", " (map (comp str/upper-case name) versions-to-drop)))])
 
      ;; Sync button
        (when-not other-system?
@@ -2039,7 +2068,7 @@
            [:> Button
             {:variant "contained"
              :color "secondary"
-             :disabled (or syncing? modified? (not has-local-edits?) (seq problems))
+             :disabled (or syncing? modified? (not has-local-edits?) (seq text-errors))
              :size "small"
              :sx #js {:textTransform "none"}
              :startIcon (r/as-element
@@ -2239,6 +2268,16 @@
                        (ptv-data/patch-service-texts (:ptv-entries service)
                                                      native-texts
                                                      (keep ptv-data/locale->lang removals))))
+          ;; What blocks the sync, and (for a service LIPAS created) the
+          ;; language versions the sync will remove from PTV
+          text-errors (when-not other-system?
+                        (ptv-data/service-text-errors {:management management
+                                                       :texts (if native? native-texts current-texts)
+                                                       :version-problems problems}))
+          versions-to-drop (when (= :lipas management)
+                             (ptv-data/service-versions-to-drop (:language-versions service)
+                                                                current-texts
+                                                                org-languages))
           ;; Compare only the languages the org publishes: a generated text
           ;; in any other language (the generator writes fi/se/en) never
           ;; reaches PTV, and would read as a difference forever.
@@ -2341,7 +2380,8 @@
                               :edit-key edit-key
                               :edit-languages edit-languages
                               :name-data name-data
-                              :problems problems
+                              :text-errors text-errors
+                              :versions-to-drop versions-to-drop
                               :data data :ptv-base ptv-base
                               :has-local-edits? has-local-edits?
                               :edited-name edited-name

@@ -1278,6 +1278,51 @@
                     [lang missing]))))
         (service-language-versions service)))
 
+(def ^:private text-max-length
+  {:summary max-summary-length
+   :description max-description-length
+   :user-instruction max-user-instruction-length})
+
+(def ^:private ptv-type->text-field
+  {"Name" :name "Summary" :summary "Description" :description})
+
+(defn service-text-errors
+  "What stops a service's texts from syncing to PTV, as a vector of
+   {:field :locale :error} (:max too for :too-long), empty when nothing does.
+   `texts` is {field {locale text}} as the panel would send it.
+
+   - :missing   a service created in LIPAS lacks its Finnish summary or
+                description (the other languages need no texts: one
+                without them is simply not published); a service made in
+                PTV has a language version without a name, summary or
+                description (`version-problems`, see
+                language-version-problems)
+   - :too-long  a text over PTV's limit"
+  [{:keys [management texts version-problems]}]
+  (let [missing (case management
+                  :lipas (for [field [:summary :description]
+                               :when (blank-text? (get-in texts [field :fi]))]
+                           {:field field :locale :fi :error :missing})
+                  :native (for [[lang types] version-problems
+                                :let [locale (lang->locale lang)]
+                                :when locale
+                                type types]
+                            {:field (ptv-type->text-field type) :locale locale :error :missing})
+                  [])
+        too-long (for [[field max-length] text-max-length
+                       [locale v] (sort-by key (get texts field))
+                       :when (and (string? v) (> (count v) max-length))]
+                   {:field field :locale locale :error :too-long :max max-length})]
+    (vec (concat missing too-long))))
+
+(defn service-versions-to-drop
+  "LIPAS locales of the language versions a service created in LIPAS has in
+   PTV that its next sync won't publish, and so removes: LIPAS is its master
+   and publishes only the org's languages that have both a summary and a
+   description (languages-with-texts). `versions` are LIPAS locale keywords."
+  [versions texts org-langs]
+  (let [published (into #{} (map keyword) (languages-with-texts texts org-langs))]
+    (vec (remove published versions))))
 (def persisted-ptv-keys
   "The editable :ptv meta keys persisted on a sync. Both the sync path
    (upsert-ptv-service-location!*) and the no-sync meta path

@@ -1594,3 +1594,41 @@
     (testing "a text over the limit still is"
       (is (= [:ptv/error-summary-too-long]
              (errors {:fi (apply str (repeat (inc sut/max-summary-length) "x"))}))))))
+
+(deftest service-text-errors-test
+  (let [texts {:summary {:fi "Tiivistelmä"} :description {:fi "Kuvaus"}}]
+    (testing "a service created in LIPAS needs only its Finnish summary and description"
+      (is (empty? (sut/service-text-errors {:management :lipas :texts texts})))
+      (is (empty? (sut/service-text-errors
+                    {:management :lipas
+                     :texts (assoc-in texts [:summary :se] "Sammanfattning")}))
+          "a language without a description is not an error, just not published")
+      (is (= [{:field :summary :locale :fi :error :missing}]
+             (sut/service-text-errors {:management :lipas
+                                       :texts (assoc-in texts [:summary :fi] "")}))))
+
+    (testing "a service made in PTV reports each incomplete language version"
+      (is (= [{:field :name :locale :se :error :missing}
+              {:field :summary :locale :se :error :missing}]
+             (sut/service-text-errors {:management :native
+                                       :texts texts
+                                       :version-problems {"sv" ["Name" "Summary"]}}))))
+
+    (testing "a text over PTV's limit, in any language"
+      (is (= [{:field :description :locale :se :error :too-long
+               :max sut/max-description-length}]
+             (sut/service-text-errors
+               {:management :lipas
+                :texts (assoc-in texts [:description :se]
+                                 (apply str (repeat (inc sut/max-description-length) "x")))}))))
+
+    (testing "a service another system maintains is not checked"
+      (is (empty? (sut/service-text-errors {:management :other-system :texts {}}))))))
+
+(deftest service-versions-to-drop-test
+  (let [texts {:summary {:fi "s" :se "s"} :description {:fi "d" :se "d"}}]
+    (is (empty? (sut/service-versions-to-drop [:fi :se] texts ["fi" "se"])))
+    (is (= [:se] (sut/service-versions-to-drop [:fi :se] (update texts :description dissoc :se) ["fi" "se"]))
+        "a language that lost its description")
+    (is (= [:se] (sut/service-versions-to-drop [:fi :se] texts ["fi"]))
+        "a language the org hasn't enabled")))

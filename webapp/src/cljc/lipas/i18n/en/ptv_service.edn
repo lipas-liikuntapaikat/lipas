@@ -31,4 +31,9 @@
  :chip-unsaved "Unsaved changes – sync to send them to PTV."
  :chip-in-sync "No unsaved changes. Last edited in PTV {1}."
  :other-system-chip "Other system"
- :name-missing "Name missing – add it with the pencil"}
+ :name-missing "Name missing – add it with the pencil"
+ :sync-blocked-title "Fix before syncing"
+ :text-missing "{1} ({2}) is missing."
+ :text-too-long "{1} ({2}) is too long (at most {3} characters)."
+ :fix-or-remove-version "Fill in the missing texts or remove the language version."
+ :versions-will-be-removed "The next sync removes these language versions from PTV: {1}. Lipas publishes only languages the organisation has enabled and that have both a summary and a description."}
