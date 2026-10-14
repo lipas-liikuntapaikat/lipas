@@ -11,9 +11,6 @@
             ["@mui/material/Box$default" :as Box]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Chip$default" :as Chip]
-            ["@mui/material/Dialog$default" :as Dialog]
-            ["@mui/material/DialogActions$default" :as DialogActions]
-            ["@mui/material/DialogContent$default" :as DialogContent]
             ["@mui/material/Divider$default" :as Divider]
             ["@mui/material/Drawer$default" :as Drawer]
             ["@mui/material/Icon$default" :as Icon]
@@ -40,34 +37,16 @@
 (defn- when-str [note]
   (utils/->human-date-time-at-user-tz (:created-at note)))
 
-(defn delete-confirm-dialog [tr]
-  (let [note @(rf/subscribe [::subs/confirm-delete])]
-    [:> Dialog {:open (some? note)
-                :on-close #(rf/dispatch [::events/confirm-delete nil])}
-     [:> DialogContent
-      [:> Typography (tr :lipas.org/notes-delete-confirm)]]
-     [:> DialogActions
-      [:> Button {:on-click #(rf/dispatch [::events/confirm-delete nil])}
-       (tr :actions/cancel)]
-      [:> Button {:color "error"
-                  :on-click #(rf/dispatch [::events/set-status note "deleted"])}
-       (tr :lipas.org/notes-delete)]]]))
-
 (defn- status-actions [tr note]
-  [:> Stack {:direction "row" :spacing 0.5}
-   (if (= "archived" (:status note))
-     [:> Tooltip {:title (tr :lipas.org/notes-restore)}
-      [:> IconButton {:size "small"
-                      :on-click #(rf/dispatch [::events/set-status note "active"])}
-       [:> Icon {:fontSize "small"} "unarchive"]]]
-     [:> Tooltip {:title (tr :lipas.org/notes-archive)}
-      [:> IconButton {:size "small"
-                      :on-click #(rf/dispatch [::events/set-status note "archived"])}
-       [:> Icon {:fontSize "small"} "archive"]]])
-   [:> Tooltip {:title (tr :lipas.org/notes-delete)}
-    [:> IconButton {:size "small"
-                    :on-click #(rf/dispatch [::events/confirm-delete note])}
-     [:> Icon {:fontSize "small"} "delete"]]]])
+  (if (= "archived" (:status note))
+    [:> Tooltip {:title (tr :lipas.org/notes-restore)}
+     [:> IconButton {:size "small"
+                     :on-click #(rf/dispatch [::events/set-status note "active"])}
+      [:> Icon {:fontSize "small"} "unarchive"]]]
+    [:> Tooltip {:title (tr :lipas.org/notes-archive)}
+     [:> IconButton {:size "small"
+                     :on-click #(rf/dispatch [::events/set-status note "archived"])}
+      [:> Icon {:fontSize "small"} "archive"]]]))
 
 (defn- note-card [tr note]
   [:> Paper {:variant "outlined"
@@ -141,8 +120,7 @@
            (when show-archived?
              [:> Stack {:spacing 1 :sx {:mt 1}}
               (for [note archived]
-                ^{:key (:id note)} [note-card tr note])])])])
-     [delete-confirm-dialog tr]]))
+                ^{:key (:id note)} [note-card tr note])])])])]))
 
 (defn notes-button
   "Toolbar button for the sports-site panel. The badge counts active notes
@@ -198,5 +176,4 @@
                [:> TableCell (:author-name note)]
                [:> TableCell {:sx {:white-space "nowrap"}} (when-str note)]
                [:> TableCell [status-actions tr note]]])]]]
-         [:> Typography {:color "text.secondary"} (tr :lipas.org/notes-empty)])
-       [delete-confirm-dialog tr]])))
+         [:> Typography {:color "text.secondary"} (tr :lipas.org/notes-empty)])])))

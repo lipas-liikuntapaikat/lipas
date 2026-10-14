@@ -3,9 +3,8 @@
 -- of the sports_site document, which is public (search, API, exports).
 --
 -- Append-only: a note's text never changes once written, and its lifecycle
--- (active -> archived / deleted, archived -> active) is a log of status rows.
+-- (active -> archived, archived -> active) is a log of status rows.
 -- The current status is the latest site_note_status row; no row = active.
--- "Deleted" is a soft delete: hidden from the UI, kept here for the history.
 CREATE TABLE IF NOT EXISTS public.site_note (
   id          uuid NOT NULL DEFAULT uuid_generate_v4(),
   lipas_id    integer NOT NULL,
@@ -46,7 +45,7 @@ CREATE TABLE IF NOT EXISTS public.site_note_status (
 
   CONSTRAINT site_note_status_pkey PRIMARY KEY (id),
   CONSTRAINT site_note_status_status_check
-    CHECK (status IN ('active', 'archived', 'deleted')),
+    CHECK (status IN ('active', 'archived')),
   CONSTRAINT site_note_status_note_fk FOREIGN KEY (note_id)
     REFERENCES public.site_note (id) MATCH SIMPLE
     ON UPDATE NO ACTION

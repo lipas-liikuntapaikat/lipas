@@ -24,8 +24,6 @@
  :notes-archived "Archived"
  :notes-author "Author"
  :notes-date "Date"
- :notes-delete "Delete"
- :notes-delete-confirm "Delete this note? It can't be brought back."
  :notes-empty "No notes."
  :notes-hide-archived "Hide archived"
  :notes-note "Note"

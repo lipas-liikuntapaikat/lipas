@@ -8,20 +8,20 @@
   Append-only (enforced by triggers, see the site-note migration): a note's text
   is written once, and its lifecycle is a log of `site_note_status` rows. The
   `site_note_current` view gives each note with its latest status (no status row
-  = active). `deleted` is a soft delete — the note disappears from the UI but
-  stays in the database as history."
+  = active). Archiving is the only way to retire a note; archived notes stay
+  visible under their own filter and can be restored."
   (:require [clojure.string :as str]
             [lipas.backend.core :as core]
             [lipas.utils :as utils]
             [next.jdbc :as jdbc]
             [next.jdbc.result-set :as rs]))
 
-(def all-statuses #{"active" "archived" "deleted"})
+(def all-statuses #{"active" "archived"})
 
 (def ^:private transitions
-  "Allowed status changes. Archived notes can come back; deleted is final."
-  {"active"   #{"archived" "deleted"}
-   "archived" #{"active" "deleted"}})
+  "Allowed status changes: archive an active note, restore an archived one."
+  {"active"   #{"archived"}
+   "archived" #{"active"}})
 
 (def ^:private select-notes
   "SELECT n.id, n.lipas_id, n.org_id, n.body, n.created_at, n.status,
@@ -58,13 +58,12 @@
   (first (query db [(str select-notes " WHERE n.id = ?") (utils/->uuid-safe note-id)])))
 
 (defn site-notes
-  "Notes on `lipas-id` belonging to any of `org-ids`, newest first. Deleted
-  notes are left out."
+  "Notes on `lipas-id` belonging to any of `org-ids` (active and archived),
+  newest first."
   [db lipas-id org-ids]
   (if-let [org-ids (seq (keep utils/->uuid-safe org-ids))]
     (query db (into [(str select-notes
                           " WHERE n.lipas_id = ? AND " (in-clause "n.org_id" (count org-ids))
-                          " AND n.status <> 'deleted'"
                           " ORDER BY n.created_at DESC")
                      lipas-id]
                     org-ids))

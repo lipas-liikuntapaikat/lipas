@@ -29,10 +29,6 @@
   (fn [db _]
     (boolean (get-in db [:site-notes :saving?]))))
 
-(rf/reg-sub ::confirm-delete
-  (fn [db _]
-    (get-in db [:site-notes :confirm-delete])))
-
 (rf/reg-sub ::org-notes
   (fn [db _]
     (get-in db [:site-notes :org])))

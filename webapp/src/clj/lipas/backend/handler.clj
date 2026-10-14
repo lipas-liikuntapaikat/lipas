@@ -106,7 +106,7 @@
    ;; :invalid-takeover-state
    :owner-locked (exception-handler 409 :owner-locked)
    :site-not-found (exception-handler 404 :site-not-found)
-   ;; e.g. un-archiving a deleted site note — conflict with its current state
+   ;; e.g. archiving an already archived site note — conflict with its state
    :invalid-note-status (exception-handler 409 :invalid-note-status)
    :sports-site-not-found (exception-handler 404 :sports-site-not-found)
 
@@ -777,7 +777,7 @@
                       {:status 200 :body {}})}}]
 
       ;; --- Site notes: any member of an org-management org may write a note
-      ;; on a site the org owns, and archive/delete/restore its notes. Notes
+      ;; on a site the org owns, and archive/restore its notes. Notes
       ;; are append-only; status changes are logged, never overwritten. ---
         ["/actions/create-site-note"
          {:post
@@ -807,7 +807,7 @@
            :require-privilege (fn [req] (note-org-member-or-admin? db req))
            :parameters {:body [:map
                                [:note-id :uuid]
-                               [:status [:enum "active" "archived" "deleted"]]]}
+                               [:status (into [:enum] site-notes/all-statuses)]]}
            :handler (fn [req]
                       (let [{:keys [note-id status]} (-> req :parameters :body)]
                         {:status 200

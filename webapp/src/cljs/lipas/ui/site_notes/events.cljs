@@ -1,7 +1,7 @@
 (ns lipas.ui.site-notes.events
   "Org-private site notes: fetched per site (sports-site panel) and per org (the
   org page's notes tab). Notes are append-only on the backend — the only
-  changes are new notes and status changes (archive / delete / restore)."
+  changes are new notes and status changes (archive / restore)."
   (:require [ajax.core :as ajax]
             [re-frame.core :as rf]))
 
@@ -76,14 +76,9 @@
 
 ;; --- Status changes ---------------------------------------------------------
 
-(rf/reg-event-db ::confirm-delete
-  (fn [db [_ note]]
-    (assoc-in db [:site-notes :confirm-delete] note)))
-
 (rf/reg-event-fx ::set-status
   (fn [{:keys [db]} [_ note status]]
-    {:db (update db :site-notes dissoc :confirm-delete)
-     :http-xhrio (post db "set-site-note-status"
+    {:http-xhrio (post db "set-site-note-status"
                        {:note-id (:id note) :status status}
                        [::set-status-success note])}))
 

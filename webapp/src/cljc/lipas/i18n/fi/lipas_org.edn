@@ -24,8 +24,6 @@
  :notes-archived "Arkistoidut"
  :notes-author "Kirjoittaja"
  :notes-date "Päivämäärä"
- :notes-delete "Poista"
- :notes-delete-confirm "Poistetaanko muistiinpano? Sitä ei voi palauttaa näkyviin."
  :notes-empty "Ei muistiinpanoja."
  :notes-hide-archived "Piilota arkistoidut"
  :notes-note "Muistiinpano"
