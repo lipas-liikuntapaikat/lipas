@@ -1,5 +1,6 @@
 (ns lipas.data.ptv-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
             [clojure.test.check.clojure-test :refer [defspec]]
             [clojure.test.check.generators :as gen]
             [clojure.test.check.properties :as prop]
@@ -316,6 +317,16 @@
     (is (nil? (sut/parse-www "https:// pirkaa.fi/hiihto"))
         "space immediately after scheme — pathological"))
 
+  (testing "email addresses are not web pages"
+    ;; Regression: ~480 :reservations-link values are emails, which became
+    ;; `https://tilavaraukset@vihti.fi`.
+    (is (nil? (sut/parse-www "tilavaraukset@vihti.fi")))
+    (is (nil? (sut/parse-www "Liikuntasihteeri: sari.kautto@vierema.fi")))
+    (is (nil? (sut/parse-www "https://info@example.fi")))
+    (is (= "https://x.fi/varaa?email=a@b.fi"
+           (sut/parse-www "https://x.fi/varaa?email=a@b.fi"))
+        "an @ after the host is part of the URL"))
+
   (testing "values longer than 500 chars are rejected"
     (let [too-long (str "https://example.com/" (apply str (repeat 500 "x")))]
       (is (nil? (sut/parse-www too-long))))))
@@ -472,6 +483,73 @@
         (is (= #{"fi" "sv"} (desc-langs p "Description")) label)
         (is (= #{"fi" "sv"} (set (map :language (:displayNameType p)))) label)
         (is (not-any? #(= "en" (:language %)) (:serviceChannelNames p)) label)))))
+
+(defn- web-pages [payload]
+  (mapv (juxt :language :orderNumber :url :value) (:webPages payload)))
+
+(deftest ->ptv-service-location-web-pages
+  (let [site (assoc base-site
+                    :name "Halli"
+                    :www "www.halli.fi"
+                    :reservations-link "https://varaa.halli.fi")]
+    (testing "both pages in every declared language, named in that language"
+      (is (= [["fi" 1 "https://www.halli.fi" "Liikuntapaikan verkko-osoite"]
+              ["fi" 2 "https://varaa.halli.fi" "Tilavarausten verkkosivu"]
+              ["sv" 1 "https://www.halli.fi" "Idrottsplatsens webbadress"]
+              ["sv" 2 "https://varaa.halli.fi" "Webbplats för lokalbokning"]
+              ["en" 1 "https://www.halli.fi" "Sports facility website"]
+              ["en" 2 "https://varaa.halli.fi" "Facility booking website"]]
+             (web-pages (build-location site))))
+      (is (not (contains? (build-location site) :deleteAllWebPages))))
+
+    (testing "web page languages are exactly the payload's languages"
+      ;; PTV rejects a page in an undeclared language as an incomplete new
+      ;; language version — and in PTV "se" is Northern Sami, not Swedish.
+      (doseq [[label langs ptv] [["fi only" ["fi"] {}]
+                                 ["sv lacks texts" ["fi" "se" "en"]
+                                  {:summary {:fi "s" :en "s"} :description {:fi "d" :en "d"}}]
+                                 ["Swedish-only org" ["se"] {}]
+                                 ["fi + se" ["fi" "se"] {}]]]
+        (let [p (build-location (-> site
+                                    (assoc-in [:ptv :languages] langs)
+                                    (update :ptv merge ptv)))
+              page-langs (set (map :language (:webPages p)))]
+          (is (seq page-langs) label)
+          (is (= (set (:languages p)) page-langs) label)
+          (is (not (contains? page-langs "se")) label)
+          (is (every? #(not (str/blank? (:value %))) (:webPages p)) label))))
+
+    (testing "a reservations link equal to :www is sent once"
+      (is (= [["fi" 1 "https://www.halli.fi" "Liikuntapaikan verkko-osoite"]]
+             (web-pages (build-location (assoc-in (assoc site :reservations-link "https://www.halli.fi")
+                                                  [:ptv :languages] ["fi"]))))))
+
+    (testing "an unusable reservations link leaves just the :www page"
+      (doseq [v [nil "" "Vapaasti käytettävissä" "040 123 4567" "tilavaraukset@halli.fi"]]
+        (is (= ["https://www.halli.fi"]
+               (->> (build-location (-> site
+                                        (assoc :reservations-link v)
+                                        (assoc-in [:ptv :languages] ["fi"])))
+                    :webPages
+                    (map :url)))
+            (pr-str v))))
+
+    (testing "reservations link alone is page 1"
+      (is (= [["fi" 1 "https://varaa.halli.fi" "Tilavarausten verkkosivu"]]
+             (web-pages (build-location (-> site
+                                            (dissoc :www)
+                                            (assoc-in [:ptv :languages] ["fi"])))))))
+
+    (testing "no usable link deletes all web pages, without a :webPages key"
+      ;; deleteAllWebPages only works when :webPages is absent.
+      (let [p (build-location (-> site (dissoc :www) (assoc :reservations-link "ei ole")))]
+        (is (true? (:deleteAllWebPages p)))
+        (is (not (contains? p :webPages)))))
+
+    (testing "every name fits PTV's 100-char limit"
+      (doseq [[_ by-lang] sut/web-page-names
+              [_ n] by-lang]
+        (is (<= 1 (count n) 100) n)))))
 
 (deftest effective-languages-test
   (let [site (fn [summary description] {:ptv {:summary summary :description description}})]
