@@ -226,9 +226,10 @@
                                   (ptv-data/service-language-versions service))
          :ptv-only-languages (into [] (remove ptv-data/lang->locale)
                                    (ptv-data/service-language-versions service))
-         ;; What a native service's patch is computed on, here so the panel
-         ;; can check the result before sending it
-         :ptv-entries (select-keys service [:serviceNames :serviceDescriptions])
+         ;; What a sync builds its body on (a native's patch, a LIPAS-created
+         ;; service's carried-over entries), here so the panel can check
+         ;; the body before sending it
+         :ptv-entries (select-keys service [:serviceNames :serviceDescriptions :requirements])
          :publishing-status (:publishingStatus service)
          :last-modified (:modified service)
          :last-modified-human (utils/->human-date-time-at-user-tz (:modified service))
@@ -272,7 +273,8 @@
   ;; made in PTV (or by another system). The PTV section shows by default
   ;; only the services that concern LIPAS: linked to a LIPAS site, or
   ;; written by LIPAS. The org's other PTV services (libraries, health care,
-  ;; ...) show with the "all" filter; :ptv-hidden-count says how many.
+  ;; ...) show with the "all" filter; :ptv-hidden-count says how many, and
+  ;; :ptv-total how many PTV services the org has in all (the heading).
   (fn [[_ org-id]]
     [(rf/subscribe [::services org-id])
      (rf/subscribe [::services-filter])
@@ -288,7 +290,8 @@
                                    others))]
       {:lipas (sort-by :label lipas)
        :ptv (sort-by :label (if (= "all" filter') others relevant))
-       :ptv-hidden-count (- (count others) (count relevant))})))
+       :ptv-hidden-count (- (count others) (count relevant))
+       :ptv-total (count others)})))
 
 (rf/reg-sub ::service-mappings
   :<- [::ptv]
@@ -370,14 +373,22 @@
   coerces against. Returns a distinct vector of localization keys (from the
   schema's :error/message props) — empty when the payload is valid. Only
   keyword messages are surfaced; structural errors (missing required keys)
-  are left to the business-level sync hints."
+  are left to the business-level sync hints. A text under PTV's minimum
+  length in a language the sync publishes, which the schema doesn't check
+  (a short draft may be saved), gives :ptv/blocker-texts-too-short; only
+  once the Finnish texts are there, which the missing-texts hint asks for
+  first."
   [db lipas-id]
-  (->> (some-> (explain-service-location (events/service-location-payload db lipas-id))
-               :errors)
-       (map me/error-message)
-       (filter keyword?)
-       distinct
-       vec))
+  (let [payload (events/service-location-payload db lipas-id)]
+    (cond-> (->> (some-> (explain-service-location payload) :errors)
+                 (map me/error-message)
+                 (filter keyword?)
+                 distinct
+                 vec)
+      (and (ptv-data/ptv-ready? payload)
+           (seq (ptv-data/service-location-short-texts payload
+                                                       (get-in payload [:ptv :languages]))))
+      (conj :ptv/blocker-texts-too-short))))
 
 (rf/reg-sub ::service-location-schema-errors
   ;; Used to disable the sync button and explain why in its tooltip.
@@ -421,10 +432,21 @@
                       (assoc :description description)
                       (assoc :summary summary)
                       (assoc :user-instruction user-instruction)
+                      ;; ...and no text PTV would reject in the body the
+                      ;; export sends (a short English summary, say), which
+                      ;; would otherwise halt the whole batch
                       (assoc :valid (boolean (and
                                                (some-> description :fi count (> 5))
                                                (some-> summary :fi count (> 5))
-                                               (some-> user-instruction :fi count (> 5)))))
+                                               (some-> user-instruction :fi count (> 5))
+                                               (empty? (ptv-data/lipas-service-text-errors
+                                                         {:source-id source-id
+                                                          :sub-category-id (:sub-category-id m)
+                                                          :languages languages
+                                                          :summary summary
+                                                          :description description
+                                                          :user-instruction user-instruction}
+                                                         nil)))))
                       (cond->
                         mapping (assoc :service-id (:service-id mapping)
                                        :linked? true)))))))))

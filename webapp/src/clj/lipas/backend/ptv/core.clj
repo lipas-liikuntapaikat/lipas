@@ -264,16 +264,52 @@
   (or (:supported-languages (ptv/get-org-ptv-config-with-fallback ptv org-id))
       ptv-data/fallback-languages))
 
+(defn- check-text-lengths!
+  "Throws, before anything is sent, when PTV would reject a text of the
+  Service PUT `body` as too short (see ptv-data/min-text-length)."
+  [body]
+  (when-let [problems (seq (ptv-data/short-service-texts body))]
+    (throw (ex-info "PTV texts under the minimum length"
+                    {:type :texts-too-short
+                     :problems (vec problems)}))))
+
+(defn- live-lipas-service
+  "The live PTV version of the LIPAS-created service `service-id`, or nil when
+  there is none to build on: no id was given, or PTV no longer has it. Throws
+  when the id belongs to another service than `source-id`'s."
+  [ptv org-id source-id service-id]
+  (when service-id
+    (when-let [live (try
+                      (ptv/get-service ptv org-id service-id)
+                      (catch clojure.lang.ExceptionInfo e
+                        (when-not (= 404 (:status (:resp (ex-data e))))
+                          (throw e))))]
+      (when (not= source-id (:sourceId live))
+        (throw (ex-info "service-id and source-id name different PTV services"
+                        {:service-id service-id :source-id source-id
+                         :live-source-id (:sourceId live)})))
+      live)))
+
 (defn- upsert-lipas-service!
   "Writes a service LIPAS created and manages whole: the full body built from
-  the sub-category, by source-id, created when PTV doesn't know it yet."
-  [ptv {:keys [org-id source-id] :as m}]
-  (let [lipas-data (ptv-data/->ptv-service (assoc m :languages (org-languages ptv org-id)))]
+  the sub-category, by source-id, created when PTV doesn't know it yet.
+
+  `service-id`, the service's PTV id when it already exists, is only read
+  from: what PTV has that LIPAS never writes (alternative names, the
+  service's other descriptions, requirements) is carried over into the body,
+  since the PUT would otherwise wipe it (see
+  ptv-data/carry-over-service-entries)."
+  [ptv {:keys [org-id source-id service-id] :as m}]
+  (let [lipas-data (ptv-data/->ptv-service (assoc m :languages (org-languages ptv org-id)))
+        body (if-let [live (live-lipas-service ptv org-id source-id service-id)]
+               (ptv-data/carry-over-service-entries lipas-data live)
+               lipas-data)]
+    (check-text-lengths! body)
     (try
-      (ptv/update-service ptv source-id lipas-data)
+      (ptv/update-service ptv source-id body)
       (catch clojure.lang.ExceptionInfo e
         (if (= 404 (:status (:resp (ex-data e))))
-          (ptv/create-service ptv lipas-data)
+          (ptv/create-service ptv body)
           (throw e))))))
 
 (defn- native-service-writable?
@@ -287,7 +323,7 @@
 
 (defn- native-service-put-body
   "The PUT body for patching `texts` into the live `service`, or throws when
-  the result would leave a language version PTV rejects."
+  the result would leave a language version, or a text, PTV rejects."
   [org-id service-id service texts remove-langs]
   (let [body (-> (normalize-ptv-service-for-update service)
                  (ptv-data/patch-service-texts texts remove-langs)
@@ -298,6 +334,7 @@
       (throw (ex-info "Incomplete PTV language versions"
                       {:type :incomplete-language-versions
                        :problems problems})))
+    (check-text-lengths! body)
     body))
 
 (defn- patch-native-service!
@@ -326,13 +363,23 @@
                                (select-keys m [:name :summary :description :user-instruction])
                                (keep ptv-data/lipas-lang->ptv-lang remove-languages)))))
 
+(defn- mirrored-service-id
+  "The PTV id of the service `source-id` as LIPAS's ptv_service mirror
+  recorded it on LIPAS's last write to it, or nil when LIPAS has none."
+  [db ptv-org-id source-id]
+  (when source-id
+    (when-let [org (backend-org/get-org-by-ptv-org-id db ptv-org-id)]
+      (some-> (ptv-service-db/get-current db (:id org) source-id) :service-id str))))
+
 (defn upsert-ptv-service!
   "Writes a service's texts to PTV and appends the result to the ptv_service
   mirror. `mode` says which kind of service it is, and so how it's written:
 
   - \"lipas\" (default): created by LIPAS, which is its master. The whole
     service is built from LIPAS's data and written by `source-id` (created
-    when PTV doesn't know it yet).
+    when PTV doesn't know it yet), keeping what PTV has that LIPAS never
+    writes on the service `service-id` names, or the ptv_service mirror
+    does when the request doesn't (see upsert-lipas-service!).
   - \"native\": made in PTV. Only its name and texts are patched in, by
     `service-id` (see patch-native-service!).
 
@@ -340,7 +387,12 @@
   decide how a service is written."
   [db ptv user {:keys [org-id mode] :as m}]
   (let [resp (case (or mode "lipas")
-               "lipas" (upsert-lipas-service! ptv m)
+               ;; Without the service's id from the client (the wizard, an
+               ;; older browser), LIPAS's own record of it, so the write
+               ;; still keeps what PTV has that LIPAS doesn't write
+               "lipas" (upsert-lipas-service!
+                         ptv (update m :service-id
+                                     #(or % (mirrored-service-id db org-id (:source-id m)))))
                "native" (patch-native-service! ptv m))]
     (persist-ptv-service-revision! db user org-id resp)
     resp))
@@ -408,6 +460,14 @@
         ;; :languages records what PTV actually got.
         ptv (assoc ptv :languages (ptv-data/effective-languages (update site :ptv merge ptv)
                                                                 org-langs))
+        ;; PTV would reject the whole body for one text under its minimum
+        ;; length in a language it publishes: refuse before calling PTV at
+        ;; all. A status-only archive sends no texts.
+        _ (when (and (not (and archive? id))
+                     (seq (ptv-data/service-location-short-texts (update site :ptv merge ptv)
+                                                                 org-langs)))
+            (throw (ex-info "PTV texts under the minimum length"
+                            {:blockers [:ptv/texts-too-short]})))
 
         ;; Fetch the stored channel for service-connection diffing below.
         ;; Drift detection in `sports-site->ptv-input` uses a separately

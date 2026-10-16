@@ -321,3 +321,60 @@ their master. Patching is for natives only.
   on top of PTV's live texts, so there is nothing stale to pull.
 - PTV test env: services "Lipas capture -testi A, C, D, E" and "Lipas native
   -testi F" in Utajärvi's test org are test data from this work.
+
+## Tester round 2026-10-16 (Raahe, lipas-dev)
+
+Two syncs failed with only "Synkronointi PTV:hen epäonnistui". Cause,
+reproduced in the PTV test env on a Utajärvi clone of Raahe's
+Testihiihtopalvelu (`738e9f70…`): PTV's API rejects texts under five
+characters, and PTV's own UI doesn't (that service's English summary is
+"Test"). A native patch sends the whole service back, so every sync failed;
+the panel had no message for the error.
+
+PTV facts (verified, not in PTV's API spec, which documents only maximums):
+
+- **At least 5 characters, counted after trimming**: every Service
+  `serviceDescriptions` entry (Summary, Description, UserInstruction,
+  ChargeTypeAdditionalInfo, DeadLine, ProcessingTime, ValidityTime,
+  ServiceType), Service `requirements`, ServiceLocation Summary and
+  Description. No minimum: names (also AlternativeName), keywords, street
+  addresses, emails.
+- **A Service PUT replaces** `serviceNames`, `serviceDescriptions` and
+  `requirements` whole, requirements even when left out of the body. It
+  **keeps** what it isn't sent: keywords, legislation, charge type, life
+  events, service vouchers. At most one AlternativeName per language.
+
+Built:
+
+- `ptv-data/min-text-length`, `text-too-short?` (trims .NET's whitespace
+  set, the same on the JVM and in JS); `short-service-texts` (a PUT body),
+  `service-location-short-texts` (a site, in the languages the sync
+  publishes: org languages with both texts). Backend refuses before calling
+  PTV (`:texts-too-short` 409 for services, `:ptv/texts-too-short` blocker
+  for service locations). Not a site-save blocker (`sync-blockers`): the
+  published languages depend on the org's live config. The Palvelut panel,
+  the wizard's service candidates and "Luo uusi palvelu" check the exact
+  body the sync sends (`lipas-service-text-errors`): a text LIPAS writes is
+  the user's to fix, one it passes on as PTV has it is "korjaa PTV:ssä".
+  Every PTV text field shows "vähintään 5 merkkiä" while under it.
+- A 400 from PTV LIPAS has no message for shows PTV's own validation
+  messages (never for other statuses or unparsed bodies).
+- LIPAS-created services: the sync reads the live service (by the
+  `service-id` the panel sends, or else the one LIPAS's ptv_service mirror
+  recorded for the source-id; the write stays by source-id) and carries over
+  what LIPAS never writes — AlternativeName, the other description types,
+  requirements — in the languages LIPAS publishes only
+  (`ptv-data/carry-over-service-entries`). Unlike the 2026-03 adoption merge
+  and the reverted 2026-04 channel merge, nothing LIPAS owns is merged: its
+  names, texts, classes and languages are still replaced whole. Without a
+  service-id from either (the wizard creating one) or when PTV no longer has
+  it, the body is LIPAS's alone, as before.
+- Palvelut tab: "PTV:ssä luodut palvelut (total)", the default filter said
+  in the section info, toggle "Näytä myös organisaation muut PTV:ssä luodut
+  palvelut (n)"; LIPAS-created info text lists what LIPAS maintains.
+
+Left as is: `ptv-ready?` still asks the Finnish site texts for more than 5
+characters (one stricter than PTV). Test data: Utajärvi PTV test org has the
+clone `738e9f70…` ("Lipas native -testi G (hiihtoklooni)"), the LIPAS-created
+"Hevosurheilu" `1f9e0e59…` (sub-category 6100) and the service location
+"Lipas minimipituustesti" `7a31ed41…`.

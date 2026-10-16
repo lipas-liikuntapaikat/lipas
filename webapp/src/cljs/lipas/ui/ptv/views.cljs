@@ -433,10 +433,12 @@
                     (and synced? (not needs-sync?)) (tr :ptv/hint-up-to-date))
              ;; Every reason the button is disabled, for the tooltip.
              reasons (->> (concat (when hint [hint]) schema-errors)
-                          (remove nil?))]
+                          (remove nil?))
+             ;; One per line: the hints are phrases, the errors sentences
+             reason-lines (into [:<>] (map (fn [reason] [:div reason])) reasons)]
          [:<>
           [:> Tooltip {:title (if (and disabled? (seq reasons))
-                                (str/join " " reasons)
+                                (r/as-element reason-lines)
                                 "")}
            [:span
             [:> Button
@@ -455,8 +457,8 @@
                (tr :ptv.actions/sync-now)
                (tr :ptv.wizard/export-service-locations-to-ptv))]]]
           (when (or hint (seq schema-errors))
-            [:> Typography {:variant "caption" :color "text.secondary"}
-             (str/join " " reasons)])
+            [:> Typography {:variant "caption" :color "text.secondary" :component "div"}
+             reason-lines])
 
           ;; Explicit archive — only when sync is OFF and the site is currently
           ;; published in PTV (mirrors the sports-site PTV tab). Two-step confirm;
@@ -518,8 +520,8 @@
          :label (tr :ptv/summary)
          :value v
          :inputProps #js {:maxLength ptv-data/max-summary-length}
-         :helperText (str (count v) "/" ptv-data/max-summary-length)
-         :error (> (count v) ptv-data/max-summary-length)}])
+         :helperText (controls/text-length-hint tr v ptv-data/max-summary-length)
+         :error (controls/text-length-error? v ptv-data/max-summary-length)}])
 
      [audit-feedback-component
       {:lipas-id (:lipas-id site)
@@ -536,8 +538,8 @@
          :label (tr :ptv/description)
          :value v
          :inputProps #js {:maxLength ptv-data/max-description-length}
-         :helperText (str (count v) "/" ptv-data/max-description-length)
-         :error (> (count v) ptv-data/max-description-length)}])
+         :helperText (controls/text-length-hint tr v ptv-data/max-description-length)
+         :error (controls/text-length-error? v ptv-data/max-description-length)}])
 
      [audit-feedback-component
       {:lipas-id (:lipas-id site)
@@ -1342,8 +1344,7 @@
                          [:> Tab {:value "en" :label "EN"}])])
 
                     ;; Summary
-                    (let [summary-val (or (get-in m [:summary @selected-tab]) "")
-                          summary-len (count summary-val)]
+                    (let [summary-val (or (get-in m [:summary @selected-tab]) "")]
                       [text-fields/text-field
                        {:multiline true
                         :variant "outlined"
@@ -1351,14 +1352,13 @@
                         :label (tr :ptv/summary)
                         :value summary-val
                         :inputProps #js {:maxLength ptv-data/max-summary-length}
-                        :helperText (str summary-len "/" ptv-data/max-summary-length)
-                        :error (> summary-len ptv-data/max-summary-length)}])
+                        :helperText (controls/text-length-hint tr summary-val ptv-data/max-summary-length)
+                        :error (controls/text-length-error? summary-val ptv-data/max-summary-length)}])
 
                     ;; Description
                     [service-writing-guidance
                      {:tr tr :sub-category-id sub-category-id :field :description}]
-                    (let [desc-val (or (get-in m [:description @selected-tab]) "")
-                          desc-len (count desc-val)]
+                    (let [desc-val (or (get-in m [:description @selected-tab]) "")]
                       [text-fields/text-field
                        {:variant "outlined"
                         :rows 7
@@ -1367,14 +1367,13 @@
                         :label (tr :ptv/description)
                         :value desc-val
                         :inputProps #js {:maxLength ptv-data/max-description-length}
-                        :helperText (str desc-len "/" ptv-data/max-description-length)
-                        :error (> desc-len ptv-data/max-description-length)}])
+                        :helperText (controls/text-length-hint tr desc-val ptv-data/max-description-length)
+                        :error (controls/text-length-error? desc-val ptv-data/max-description-length)}])
 
                     ;; User instruction / Toimintaohje
                     [service-writing-guidance
                      {:tr tr :sub-category-id sub-category-id :field :user-instruction}]
-                    (let [ui-val (or (get-in m [:user-instruction @selected-tab]) "")
-                          ui-len (count ui-val)]
+                    (let [ui-val (or (get-in m [:user-instruction @selected-tab]) "")]
                       [text-fields/text-field
                        {:variant "outlined"
                         :rows 5
@@ -1383,8 +1382,8 @@
                         :label (tr :ptv/user-instruction)
                         :value ui-val
                         :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
-                        :helperText (str ui-len "/" ptv-data/max-user-instruction-length)
-                        :error (> ui-len ptv-data/max-user-instruction-length)}])])
+                        :helperText (controls/text-length-hint tr ui-val ptv-data/max-user-instruction-length)
+                        :error (controls/text-length-error? ui-val ptv-data/max-user-instruction-length)}])])
 
                  (when (= "preview" service-details-tab)
                    [service-preview
@@ -1553,8 +1552,7 @@
                 (tr :ptv.actions/load-texts-from-ptv)]])]
 
           ;; Summary
-           (let [summary-val (or (get-in site [:summary selected-tab]) "")
-                 summary-len (count summary-val)]
+           (let [summary-val (or (get-in site [:summary selected-tab]) "")]
              [text-fields/text-field
               {:multiline true
                :variant "outlined"
@@ -1562,12 +1560,11 @@
                :label (tr :ptv/summary)
                :value summary-val
                :inputProps #js {:maxLength ptv-data/max-summary-length}
-               :helperText (str summary-len "/" ptv-data/max-summary-length)
-               :error (> summary-len ptv-data/max-summary-length)}])
+               :helperText (controls/text-length-hint tr summary-val ptv-data/max-summary-length)
+               :error (controls/text-length-error? summary-val ptv-data/max-summary-length)}])
 
           ;; Description
-           (let [desc-val (or (get-in site [:description selected-tab]) "")
-                 desc-len (count desc-val)]
+           (let [desc-val (or (get-in site [:description selected-tab]) "")]
              [text-fields/text-field
               {:variant "outlined"
                :rows 7
@@ -1576,8 +1573,8 @@
                :label (tr :ptv/description)
                :value desc-val
                :inputProps #js {:maxLength ptv-data/max-description-length}
-               :helperText (str desc-len "/" ptv-data/max-description-length)
-               :error (> desc-len ptv-data/max-description-length)}])
+               :helperText (controls/text-length-hint tr desc-val ptv-data/max-description-length)
+               :error (controls/text-length-error? desc-val ptv-data/max-description-length)}])
 
           ;; Disclaimer and enable switch. Sync can't be switched on for an
           ;; invalid site, but can always be switched off (e.g. to drop a site
@@ -1887,13 +1884,20 @@
   [:> Alert {:severity "warning" :variant "outlined"}
    [:> AlertTitle (tr :ptv.service/sync-blocked-title)]
    [:ul {:style {:margin 0 :padding-left "1.2em"}}
-    (for [{:keys [field locale error max] :as e} errors
-          :let [field-label (tr (text-field->tr-key field))
-                lang (str/upper-case (name locale))]]
-      ^{:key (str e)}
+    ;; By position: two of PTV's own entries can give equal errors (e.g. two
+    ;; short requirements in one language)
+    (for [[i {:keys [field locale error max min ptv-type language]}] (map-indexed vector errors)
+          :let [field-label (some-> field text-field->tr-key tr)
+                lang (some-> locale name str/upper-case)]]
+      ^{:key i}
       [:li [:> Typography {:variant "body2"}
             (case error
               :missing (tr :ptv.service/text-missing field-label lang)
+              :too-short (tr :ptv.service/text-too-short field-label lang min)
+              :too-short-in-ptv (tr :ptv.service/ptv-text-too-short
+                                    (events/ptv-text-type-label tr ptv-type)
+                                    (events/ptv-language-label language)
+                                    min)
               :too-long (tr :ptv.service/text-too-long field-label lang max))]])]
    (when (and native? (some #(= :missing (:error %)) errors))
      [:> Typography {:variant "body2" :sx #js {:mt 1}}
@@ -2170,8 +2174,8 @@
            :label (tr :ptv/summary)
            :value v
            :inputProps #js {:maxLength ptv-data/max-summary-length}
-           :helperText (str (count v) "/" ptv-data/max-summary-length)
-           :error (> (count v) ptv-data/max-summary-length)}
+           :helperText (controls/text-length-hint tr v ptv-data/max-summary-length)
+           :error (controls/text-length-error? v ptv-data/max-summary-length)}
           read-only-props)])
 
      ;; Auditor feedback for summary
@@ -2193,8 +2197,8 @@
            :label (tr :ptv/description)
            :value v
            :inputProps #js {:maxLength ptv-data/max-description-length}
-           :helperText (str (count v) "/" ptv-data/max-description-length)
-           :error (> (count v) ptv-data/max-description-length)}
+           :helperText (controls/text-length-hint tr v ptv-data/max-description-length)
+           :error (controls/text-length-error? v ptv-data/max-description-length)}
           read-only-props)])
 
      ;; Auditor feedback for description
@@ -2216,8 +2220,8 @@
            :label (tr :ptv/user-instruction)
            :value v
            :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
-           :helperText (str (count v) "/" ptv-data/max-user-instruction-length)
-           :error (> (count v) ptv-data/max-user-instruction-length)}
+           :helperText (controls/text-length-hint tr v ptv-data/max-user-instruction-length)
+           :error (controls/text-length-error? v ptv-data/max-user-instruction-length)}
           read-only-props)])
 
      ;; Auditor feedback for user instruction
@@ -2263,17 +2267,40 @@
                            (into (set org-languages) (map name) (:language-versions service)))
           removals (set (:remove-languages descriptions))
           native-texts (assoc current-texts :name name-data)
+          data (if native?
+                 (merge {:org-id org-id
+                         :mode "native"
+                         :service-id (:service-id service)
+                         :expected-modified (:service-modified service)
+                         :city-codes (:city-codes service)
+                         :languages org-languages
+                         :remove-languages (mapv name removals)}
+                        native-texts)
+                 (cond-> (merge {:org-id org-id
+                                 :source-id source-id
+                                 :service-id (:service-id service)
+                                 :city-codes (:city-codes service)
+                                 :sub-category-id (ptv-data/parse-service-source-id source-id)
+                                 :languages org-languages}
+                                current-texts)
+                   edited-name (assoc :service-name edited-name)))
+          ;; A native's patch, as the backend builds it
+          native-body (when native?
+                        (ptv-data/patch-service-texts (:ptv-entries service)
+                                                      native-texts
+                                                      (keep ptv-data/locale->lang removals)))
           problems (when native?
-                     (ptv-data/language-version-problems
-                       (ptv-data/patch-service-texts (:ptv-entries service)
-                                                     native-texts
-                                                     (keep ptv-data/locale->lang removals))))
-          ;; What blocks the sync, and (for a service LIPAS created) the
-          ;; language versions the sync will remove from PTV
-          text-errors (when-not other-system?
-                        (ptv-data/service-text-errors {:management management
-                                                       :texts (if native? native-texts current-texts)
-                                                       :version-problems problems}))
+                     (ptv-data/language-version-problems native-body))
+          ;; What blocks the sync (checked on the body the sync will send),
+          ;; and (for a service LIPAS created) the language versions the
+          ;; sync will remove from PTV
+          text-errors (case management
+                        :native (ptv-data/service-text-errors {:management :native
+                                                               :texts native-texts
+                                                               :version-problems problems
+                                                               :body native-body})
+                        :lipas (ptv-data/lipas-service-text-errors data (:ptv-entries service))
+                        nil)
           versions-to-drop (when (= :lipas management)
                              (ptv-data/service-versions-to-drop (:language-versions service)
                                                                 current-texts
@@ -2291,22 +2318,6 @@
                                                              [:summary :description :user-instruction]
                                                              (map keyword org-languages)))
                                  name-changed?))
-          data (if native?
-                 (merge {:org-id org-id
-                         :mode "native"
-                         :service-id (:service-id service)
-                         :expected-modified (:service-modified service)
-                         :city-codes (:city-codes service)
-                         :languages org-languages
-                         :remove-languages (mapv name removals)}
-                        native-texts)
-                 (cond-> (merge {:org-id org-id
-                                 :source-id source-id
-                                 :city-codes (:city-codes service)
-                                 :sub-category-id (ptv-data/parse-service-source-id source-id)
-                                 :languages org-languages}
-                                current-texts)
-                   edited-name (assoc :service-name edited-name)))
           lipas-managed? (some-> source-id (str/starts-with? "lipas-"))
           modified? (= "Modified" (:publishing-status service))
 
@@ -2419,7 +2430,7 @@
   (let [tr (<== [:lipas.ui.subs/translator])
         services-filter (<== [::subs/services-filter])
         org-id (<== [::subs/selected-ptv-org-id])
-        {:keys [lipas ptv ptv-hidden-count]} (<== [::subs/service-sections org-id])
+        {:keys [lipas ptv ptv-hidden-count ptv-total]} (<== [::subs/service-sections org-id])
         descriptions (<== [::subs/service-candidate-descriptions org-id])]
     [:> Paper {:sx #js {:pb 2}}
 
@@ -2435,7 +2446,7 @@
 
      ;; Services made in PTV (or by another system)
      [services-section-header
-      {:title (tr :ptv.service/ptv-section-title (count ptv))
+      {:title (tr :ptv.service/ptv-section-title ptv-total)
        :info (tr :ptv.service/ptv-section-info)}]
      [:> Box {:sx #js {:pt 1}}
       (if (seq ptv)

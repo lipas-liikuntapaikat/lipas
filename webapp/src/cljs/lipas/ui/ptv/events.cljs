@@ -69,7 +69,8 @@
 (def blocker->tr-key
   "lipas.data.ptv/sync-blockers keys -> translation keys."
   {:ptv/no-org :ptv/blocker-no-org
-   :ptv/missing-texts :ptv/blocker-missing-texts})
+   :ptv/missing-texts :ptv/blocker-missing-texts
+   :ptv/texts-too-short :ptv/blocker-texts-too-short})
 
 (defn blocker-messages
   "Localized messages for sync blockers. Accepts keywords or the strings they
@@ -84,7 +85,53 @@
 (def ^:private ptv-text-type->tr-key
   {"Name" :ptv/service-name
    "Summary" :ptv/summary
-   "Description" :ptv/description})
+   "Description" :ptv/description
+   "UserInstruction" :ptv/user-instruction
+   "Requirement" :ptv.service/text-requirement
+   "ChargeTypeAdditionalInfo" :ptv.service/text-charge-type-info
+   "DeadLine" :ptv.service/text-deadline
+   "ProcessingTime" :ptv.service/text-processing-time
+   "ValidityTime" :ptv.service/text-validity-time
+   "ServiceType" :ptv.service/text-service-type})
+
+(defn ptv-text-type-label
+  "The name of a PTV service text type (\"ChargeTypeAdditionalInfo\", or
+  \"Requirement\" for a requirement), as PTV's form calls it."
+  [tr ptv-type]
+  (if-let [k (ptv-text-type->tr-key ptv-type)]
+    (tr k)
+    ptv-type))
+
+(defn ptv-language-label
+  "\"SE\" for PTV's \"sv\": a language LIPAS models by its LIPAS code, any
+  other by PTV's."
+  [ptv-lang]
+  (str/upper-case (name (or (ptv-data/lang->locale ptv-lang) ptv-lang))))
+
+(defn short-texts-text
+  "\"Tiivistelmä (EN), Ehdot ja kriteerit (FI)\" for
+  lipas.data.ptv/short-service-texts."
+  [tr problems]
+  (->> problems
+       (map (fn [{:keys [type language]}]
+              (str (ptv-text-type-label tr type) " (" (ptv-language-label language) ")")))
+       (str/join ", ")))
+
+(defn ptv-rejection-text
+  "PTV's own validation messages from a sync it rejected as invalid (400),
+  \"Field: message\" per message, or nil for anything else: an outage or an
+  auth error is no verdict on the data, and an unparsed body (e.g. a
+  gateway's HTML page) is no message. Used when LIPAS has no message of its
+  own for the error, so the user sees what PTV said."
+  [resp]
+  (let [status (or (:ptv-status (:response resp)) (:ptv-status resp))
+        payload (ptv-error-payload resp)]
+    (when (and (= 400 status) (map? payload) (not (contains? payload :raw)))
+      (not-empty
+        (str/join "; " (for [[k v] payload
+                             msg (if (sequential? v) v [v])
+                             :when (and (string? msg) (not (str/blank? msg)))]
+                         (str (name k) ": " msg)))))))
 
 (defn incomplete-versions-text
   "\"SE: Tiivistelmä, Kuvaus\" for lipas.data.ptv/language-version-problems,
@@ -92,7 +139,7 @@
   [tr problems]
   (->> problems
        (map (fn [[lang missing]]
-              (str (str/upper-case (name (or (ptv-data/lang->locale (name lang)) lang)))
+              (str (ptv-language-label (name lang))
                    ": "
                    (str/join ", " (map #(tr (ptv-text-type->tr-key % :ptv/description)) missing)))))
        (str/join "; ")))
@@ -109,12 +156,16 @@
 
 (defn- ptv-sync-error-body
   "Localized actionable body text for a PTV sync failure. `body-keys`
-  selects the translation family. Returns nil for generic failures with no
-  specific detail beyond the title."
+  selects the translation family. For a PTV rejection LIPAS has no message
+  of its own for, PTV's message; nil when there's no detail at all beyond
+  the title."
   [tr resp body-keys]
   (let [bad-code (ptv-invalid-postal-code resp)
         dup-name (ptv-duplicate-name resp)
-        refusal (:response resp)]
+        refusal (:response resp)
+        ;; sync-ptv! stores them on the site's :ptv :error, the
+        ;; service-location endpoint answers with them
+        blockers (or (seq (:blockers resp)) (seq (:blockers refusal)))]
     (cond
       ;; LIPAS's own refusals on a service write
       (= :changed-in-ptv (some-> refusal :type keyword))
@@ -124,12 +175,17 @@
       (tr :ptv.service/incomplete-language-versions
           (incomplete-versions-text tr (:problems refusal)))
 
+      (= :texts-too-short (some-> refusal :type keyword))
+      (tr :ptv.service/texts-too-short
+          ptv-data/min-text-length
+          (short-texts-text tr (:problems refusal)))
+
       (= :source-id-in-use (some-> refusal :type keyword))
       (tr :ptv.service/other-system-read-only)
 
-      ;; A LIPAS-side guard in sync-ptv! (no org / missing texts)
-      (seq (:blockers resp))
-      (str/join " " (blocker-messages tr (:blockers resp)))
+      ;; A LIPAS-side guard before PTV (no org / missing or short texts)
+      blockers
+      (str/join " " (blocker-messages tr blockers))
 
       (ptv-modified-error? resp)
       (tr (:modified body-keys))
@@ -141,7 +197,8 @@
       (tr (:duplicate-name body-keys) dup-name)
 
       :else
-      nil)))
+      (some->> (ptv-rejection-text resp)
+               (tr :ptv/sync-failed-body-ptv-message)))))
 
 (defn ptv-error-body
   "Public helper for the persistent inline Alert on the sports-site PTV tab.
