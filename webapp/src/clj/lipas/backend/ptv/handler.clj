@@ -158,7 +158,7 @@
   [e]
   (let [{:keys [type] :as data} (ex-data e)]
     (case type
-      (:source-id-in-use :changed-in-ptv :incomplete-language-versions)
+      (:source-id-in-use :changed-in-ptv :incomplete-language-versions :texts-too-short)
       {:status 409
        :body (select-keys data [:type :problems :modified])}
       nil)))
@@ -548,8 +548,10 @@
                           [:user-instruction {:optional true} (ptv-schema/localized-string-schema nil)]
                           [:service-name {:optional true} [:maybe :string]]
                           ;; "lipas" (default): a LIPAS-created service, by
-                          ;; source-id. "native": a service made in PTV, its
-                          ;; texts patched by service-id with the keys below.
+                          ;; source-id; its service-id, when it exists, is read
+                          ;; to keep what PTV has that LIPAS doesn't write.
+                          ;; "native": a service made in PTV, its texts
+                          ;; patched by service-id with the keys below.
                           [:mode {:optional true} [:enum "lipas" "native"]]
                           [:service-id {:optional true} [:maybe :string]]
                           [:name {:optional true} (ptv-schema/localized-string-schema nil)]
@@ -639,6 +641,11 @@
                            (pr-str (ex-data e)))
                 {:status 409
                  :body (ex-data e)})
+
+              ;; Refused before PTV: a text PTV would reject (sync-blockers)
+              (:blockers (ex-data e))
+              {:status 409
+               :body (select-keys (ex-data e) [:blockers])}
 
               (ptv-core/parse-ptv-error e)
               (let [ptv-err (ptv-core/parse-ptv-error e)]

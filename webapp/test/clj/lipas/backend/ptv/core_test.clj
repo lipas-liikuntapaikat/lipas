@@ -130,13 +130,14 @@
          overrides))
 
 (defn- with-ptv-stub
-  "Runs `f` with PTV's GET returning `service` and every PUT captured into
-  the returned atom; the ptv_service write is stubbed out (exercised in
+  "Runs `f` with PTV's GET returning `service` (or calling `get-service`,
+  when given, as PTV's GET) and every PUT captured into the returned atom;
+  the ptv_service write is stubbed out (exercised in
   lipas.backend.ptv.handler-test)."
-  [service f]
+  [service f & {:keys [get-service]}]
   (let [put (atom nil)
         persisted (atom nil)]
-    (with-redefs [ptv/get-service (fn [_ _ _] service)
+    (with-redefs [ptv/get-service (or get-service (fn [_ _ _] service))
                   ptv/update-service-by-id (fn [_ id data]
                                              (reset! put [id data])
                                              (assoc data :id id :modified "2026-10-14T11:00:00"))
@@ -154,7 +155,7 @@
   (testing "a service-id without mode \"native\" never addresses a service
             by id: the presence of an id is not a mode switch"
     (let [{[addressed data] :put}
-          (with-ptv-stub (live-service)
+          (with-ptv-stub (live-service :sourceId (ptv-data/->service-source-id test-org-id 4300))
             #(ptv-core/upsert-ptv-service!
                :db-stub {:get-config-by-ptv-org-id-fn (fn [_] {:supported-languages ["fi"]})}
                {:id "test-user"}
@@ -163,7 +164,7 @@
                 :source-id (ptv-data/->service-source-id test-org-id 4300)
                 :sub-category-id 4300
                 :city-codes [425]
-                :summary {:fi "s"} :description {:fi "d"}}))]
+                :summary {:fi "Tiivistelmä"} :description {:fi "Kuvaus"}}))]
       (is (= (ptv-data/->service-source-id test-org-id 4300) addressed))
       (is (= addressed (:sourceId data))))))
 
@@ -192,10 +193,10 @@
     (testing "LIPAS's Finnish texts replace PTV's; Swedish, which LIPAS left
               alone, is kept with its PTV-only entry and the classification"
       (let [{[_ data] :put} (sync! patched {:name {:fi "Uimahalli"}
-                                            :summary {:fi "Uusi"}
+                                            :summary {:fi "Uusi tiivistelmä"}
                                             :description {:fi "Uusi kuvaus"}})]
         (is (= #{"fi" "sv"} (ptv-data/service-language-versions data)))
-        (is (some #{{:type "Summary" :language "fi" :value "Uusi"}} (:serviceDescriptions data)))
+        (is (some #{{:type "Summary" :language "fi" :value "Uusi tiivistelmä"}} (:serviceDescriptions data)))
         (is (some #{{:type "ChargeTypeAdditionalInfo" :language "sv" :value "Avgift"}}
                   (:serviceDescriptions data)))
         (is (= ["http://x"] (:ontologyTerms data)))
@@ -203,7 +204,7 @@
 
     (testing "an explicitly removed language goes, PTV-only entries included"
       (let [{[_ data] :put} (sync! patched {:name {:fi "Uimahalli"}
-                                            :summary {:fi "s"} :description {:fi "d"}
+                                            :summary {:fi "Tiivistelmä"} :description {:fi "Kuvaus"}
                                             :remove-languages ["se"]})]
         (is (= #{"fi"} (ptv-data/service-language-versions data)))))
 
@@ -220,6 +221,26 @@
              (try (sync! (live-service :sourceId "kunta-erp-123") {:summary {:fi "s"}})
                   nil
                   (catch clojure.lang.ExceptionInfo e (:type (ex-data e)))))))
+
+    (testing "a text under PTV's minimum length is refused before PTV, also
+              one LIPAS only passes on as PTV has it"
+      (is (= {:type :texts-too-short :problems [{:type "Summary" :language "fi"}]}
+             (try (sync! patched {:name {:fi "Uimahalli"}
+                                  :summary {:fi "Uusi"} :description {:fi "Uusi kuvaus"}})
+                  nil
+                  (catch clojure.lang.ExceptionInfo e (ex-data e)))))
+      (is (= [{:type "ChargeTypeAdditionalInfo" :language "sv"}]
+             (try (sync! (live-service :sourceId patched-source-id
+                                       ;; its Swedish charge info shortened in PTV
+                                       :serviceDescriptions
+                                       (mapv #(cond-> %
+                                                (= "ChargeTypeAdditionalInfo" (:type %))
+                                                (assoc :value "Avg"))
+                                             (:serviceDescriptions (live-service))))
+                         {:name {:fi "Uimahalli"}
+                          :summary {:fi "Uusi tiivistelmä"} :description {:fi "Uusi kuvaus"}})
+                  nil
+                  (catch clojure.lang.ExceptionInfo e (:problems (ex-data e)))))))
 
     (testing "a service edited in PTV since it was loaded is refused"
       (is (= :changed-in-ptv
@@ -246,13 +267,76 @@
                      :sub-category-id 4300
                      :city-codes [425]
                      :languages request-langs
-                     :summary {:fi "s" :en "s-en"}
-                     :description {:fi "d" :en "d-en"}}))
+                     :summary {:fi "Tiivistelmä" :en "Summary"}
+                     :description {:fi "Kuvaus" :en "Description"}}))
                 (set (:languages @captured)))]
     (testing "a language the request claims but the org doesn't have is not published"
       (is (= #{"fi"} (save! ["fi"] ["fi" "en"]))))
     (testing "a language the org has enabled is published even if a stale client omits it"
       (is (= #{"fi" "en"} (save! ["fi" "en"] ["fi"]))))))
+
+(deftest lipas-service-keeps-what-only-ptv-has
+  ;; A PUT replaces names, descriptions and requirements whole, so a sync of a
+  ;; service LIPAS created used to wipe what the org added to them in PTV.
+  (let [source-id (ptv-data/->service-source-id test-org-id 4300)
+        live (live-service :sourceId source-id
+                           :serviceNames [{:type "Name" :language "fi" :value "Vanha nimi"}
+                                          {:type "AlternativeName" :language "fi" :value "Hallit"}]
+                           :serviceDescriptions [{:type "Summary" :language "fi" :value "Vanha tiivistelmä"}
+                                                 {:type "ChargeTypeAdditionalInfo" :language "fi" :value "Maksu 5 euroa"}
+                                                 {:type "ChargeTypeAdditionalInfo" :language "sv" :value "Avgift 5 euro"}]
+                           :requirements [{:language "fi" :value "Ikäraja 15 vuotta"}])
+        sync! (fn [service m]
+                (with-ptv-stub service
+                  #(ptv-core/upsert-ptv-service!
+                     :db-stub {:get-config-by-ptv-org-id-fn (fn [_] {:supported-languages ["fi"]})}
+                     {:id "test-user"}
+                     (merge {:org-id test-org-id :source-id source-id :sub-category-id 4300
+                             :city-codes [425]
+                             :summary {:fi "Uusi tiivistelmä"} :description {:fi "Uusi kuvaus"}}
+                            m))))
+        refusal (fn [service m]
+                  (try (sync! service m)
+                       nil
+                       (catch clojure.lang.ExceptionInfo e (ex-data e))))]
+    (testing "with the service's id, PTV's own entries in the languages LIPAS
+              publishes are carried over; the write is still by source-id"
+      (let [{[addressed data] :put} (sync! live {:service-id test-service-id})]
+        (is (= source-id addressed))
+        (is (some #{{:type "AlternativeName" :language "fi" :value "Hallit"}} (:serviceNames data)))
+        (is (some #{{:type "ChargeTypeAdditionalInfo" :language "fi" :value "Maksu 5 euroa"}}
+                  (:serviceDescriptions data)))
+        (is (= [{:language "fi" :value "Ikäraja 15 vuotta"}] (:requirements data)))
+        (is (= #{"fi"} (ptv-data/service-language-versions data))
+            "the Swedish charge info would keep a version LIPAS doesn't publish alive")
+        (is (some #{{:type "Summary" :language "fi" :value "Uusi tiivistelmä"}} (:serviceDescriptions data)))
+        (is (not-any? #(= "Vanha tiivistelmä" (:value %)) (:serviceDescriptions data))
+            "LIPAS's own texts replace PTV's, as before")))
+
+    (testing "a service PTV no longer has is written as before, nothing carried over"
+      (let [{[addressed data] :put}
+            (with-ptv-stub nil
+              #(ptv-core/upsert-ptv-service!
+                 :db-stub {:get-config-by-ptv-org-id-fn (fn [_] {:supported-languages ["fi"]})}
+                 {:id "test-user"}
+                 {:org-id test-org-id :source-id source-id :service-id test-service-id
+                  :sub-category-id 4300 :city-codes [425]
+                  :summary {:fi "Uusi tiivistelmä"} :description {:fi "Uusi kuvaus"}})
+              :get-service (fn [_ _ _] (throw (ex-info "HTTP Error: 404" {:resp {:status 404}}))))]
+        (is (= source-id addressed))
+        (is (not (contains? data :requirements)))))
+
+    (testing "an id of another service is refused before anything is written"
+      (is (= "lipas-other-1"
+             (:live-source-id (refusal (live-service :sourceId "lipas-other-1")
+                                       {:service-id test-service-id})))))
+
+    (testing "a text under PTV's minimum length is refused before PTV, carried-over ones included"
+      (is (= {:type :texts-too-short :problems [{:type "Summary" :language "fi"}]}
+             (refusal live {:service-id test-service-id :summary {:fi "Uusi"}})))
+      (is (= [{:type "Requirement" :language "fi"}]
+             (:problems (refusal (assoc live :requirements [{:language "fi" :value "Ei"}])
+                                 {:service-id test-service-id})))))))
 
 (deftest select-translation-test
   ;; The model's response schema makes it return every language and a

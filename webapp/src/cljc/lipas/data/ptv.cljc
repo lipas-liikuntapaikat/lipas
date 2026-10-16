@@ -274,6 +274,42 @@
 (def max-summary-length 150)
 (def max-user-instruction-length 5000)
 
+;; ...and a minimum one, missing from PTV's API spec ("Value - At least five
+;; characters are required for this field."), counted after trimming. It
+;; covers every serviceDescriptions entry of a Service (Summary, Description,
+;; UserInstruction, ChargeTypeAdditionalInfo, DeadLine, ProcessingTime,
+;; ValidityTime, ServiceType), its requirements, and a ServiceLocation's
+;; Summary and Description. Names, keywords, addresses and emails have none.
+;; PTV's own UI saves shorter texts, so services made there can carry them.
+;; Verified in the PTV test env 2026-10-16.
+(def min-text-length 5)
+
+(def ^:private edge-whitespace
+  ;; The whitespace .NET's String.Trim (PTV's) strips, by char code:
+  ;; str/trim keeps a no-break space on the JVM and strips it in JS, so
+  ;; neither alone matches PTV, nor do they match each other. (Not a regex:
+  ;; the ClojureScript build turns its \u escapes into raw characters, and a
+  ;; raw U+2028 breaks the JS regex literal.)
+  (into #{}
+        (map char)
+        (concat [9 10 11 12 13 32 0x85 0xA0 0x1680]
+                (range 0x2000 0x200B)
+                [0x2028 0x2029 0x202F 0x205F 0x3000])))
+
+(defn- trimmed-length
+  "The length of `s` without the leading and trailing edge-whitespace."
+  [s]
+  (let [ws? (partial contains? edge-whitespace)]
+    (->> (seq s) (drop-while ws?) reverse (drop-while ws?) count)))
+
+(defn text-too-short?
+  "True when PTV rejects text `v` as too short, counting it as PTV does after
+  trimming. A blank text is no text, which is a different problem (or none)."
+  [v]
+  (and (string? v)
+       (let [n (trimmed-length v)]
+         (and (pos? n) (< n min-text-length)))))
+
 (defn ->service-source-id
   [org-id sub-category-id]
   (str "lipas-" org-id "-" sub-category-id))
@@ -1219,6 +1255,11 @@
 ;; - The service's :languages is the languages the service is provided in,
 ;;   not its language versions: PTV accepts a language there with no texts.
 ;; - A language version requires the organisation to be described in it.
+;; - A PUT replaces :serviceNames, :serviceDescriptions and :requirements
+;;   whole (requirements even when the body leaves them out), but keeps
+;;   keywords, legislation, the charge type, life events and service vouchers
+;;   it isn't sent (verified 2026-10-16). See carry-over-service-entries.
+;; - At most one AlternativeName per language.
 
 (defn service-management
   "Who maintains the service with `source-id`:
@@ -1320,18 +1361,62 @@
                     [lang missing]))))
         (service-language-versions service)))
 
+(defn short-service-texts
+  "The texts of the PTV Service `body` that PTV rejects as too short (see
+   min-text-length), as [{:type t :language l}] in body order. A requirement
+   has the :type \"Requirement\"."
+  [body]
+  (into []
+        (comp cat
+              (filter (comp text-too-short? :value))
+              (map #(select-keys % [:type :language])))
+        [(:serviceDescriptions body)
+         (map #(assoc % :type "Requirement") (:requirements body))]))
+
+(defn carry-over-service-entries
+  "`body`, the full PUT body of a service LIPAS created, plus what its live
+   version `live` (PTV shape) has that LIPAS never writes: names other than
+   the main one (AlternativeName), description types other than Summary,
+   Description and UserInstruction, and requirements. A PUT replaces those
+   lists whole, so without this every sync would wipe what the org added to
+   them in PTV. PTV keeps the fields LIPAS doesn't send at all by itself.
+
+   LIPAS's own entries are never carried over: it is the service's master.
+   Neither is anything in a language `body` has no version in, since that
+   would keep the version alive in PTV after LIPAS stopped publishing it."
+  [body live]
+  (let [langs (service-language-versions body)
+        carried (fn [owned-types entries ks]
+                  (into []
+                        (comp (filter (fn [{:keys [type language value]}]
+                                        (and (contains? langs language)
+                                             (not (contains? owned-types type))
+                                             (not (blank-text? value)))))
+                              (map #(select-keys % ks)))
+                        entries))
+        requirements (carried #{} (:requirements live) [:language :value])]
+    (cond-> (-> body
+                (update :serviceNames
+                        #(into (vec %) (carried #{"Name"} (:serviceNames live)
+                                                [:type :language :value])))
+                (update :serviceDescriptions
+                        #(into (vec %) (carried patched-description-types (:serviceDescriptions live)
+                                                [:type :language :value]))))
+      (seq requirements) (assoc :requirements requirements))))
+
 (def ^:private text-max-length
   {:summary max-summary-length
    :description max-description-length
    :user-instruction max-user-instruction-length})
 
 (def ^:private ptv-type->text-field
-  {"Name" :name "Summary" :summary "Description" :description})
+  "The PTV name and description types LIPAS writes, as the panel's text fields."
+  {"Name" :name "Summary" :summary "Description" :description "UserInstruction" :user-instruction})
 
 (defn service-text-errors
-  "What stops a service's texts from syncing to PTV, as a vector of
-   {:field :locale :error} (:max too for :too-long), empty when nothing does.
-   `texts` is {field {locale text}} as the panel would send it.
+  "What stops a service's texts from syncing to PTV, as a vector of error
+   maps, empty when nothing does. `texts` is {field {locale text}} as the
+   panel would send it, `body` the PUT body the sync would send.
 
    - :missing   a service created in LIPAS lacks its Finnish summary or
                 description (the other languages need no texts: one
@@ -1339,8 +1424,16 @@
                 PTV has a language version without a name, summary or
                 description (`version-problems`, see
                 language-version-problems)
-   - :too-long  a text over PTV's limit"
-  [{:keys [management texts version-problems]}]
+   - :too-short a text LIPAS writes is under PTV's minimum (:min); found in
+                `body`, so a text only the panel holds but the sync won't
+                publish isn't one
+   - :too-short-in-ptv  likewise for a text the sync sends on as PTV has
+                it, which only PTV can fix: {:ptv-type :language :error :min}
+                with PTV's type and language code
+   - :too-long  a text over PTV's limit (:max)
+
+   The others are {:field :locale :error}."
+  [{:keys [management texts version-problems body]}]
   (let [missing (case management
                   :lipas (for [field [:summary :description]
                                :when (blank-text? (get-in texts [field :fi]))]
@@ -1351,11 +1444,29 @@
                                 type types]
                             {:field (ptv-type->text-field type) :locale locale :error :missing})
                   [])
+        too-short (for [{:keys [type language]} (short-service-texts body)
+                        :let [field (ptv-type->text-field type)
+                              locale (lang->locale language)]]
+                    (if (and field locale)
+                      {:field field :locale locale :error :too-short :min min-text-length}
+                      {:ptv-type type :language language :error :too-short-in-ptv
+                       :min min-text-length}))
         too-long (for [[field max-length] text-max-length
                        [locale v] (sort-by key (get texts field))
                        :when (and (string? v) (> (count v) max-length))]
                    {:field field :locale locale :error :too-long :max max-length})]
-    (vec (concat missing too-long))))
+    (vec (concat missing too-short too-long))))
+
+(defn lipas-service-text-errors
+  "service-text-errors of a service LIPAS creates or writes whole, `m` being
+   the save-ptv-service request for it (texts, :languages, :source-id, ...).
+   Checks the body as the backend builds it: ->ptv-service, plus what is
+   carried over from `live`, the service's PTV version, when it exists."
+  [m live]
+  (service-text-errors {:management :lipas
+                        :texts (select-keys m [:summary :description :user-instruction])
+                        :body (cond-> (->ptv-service m)
+                                live (carry-over-service-entries live))}))
 
 (defn service-versions-to-drop
   "LIPAS locales of the language versions a service created in LIPAS has in
@@ -1767,6 +1878,19 @@
                :when (hits reason)]
            {:reason reason :severity severity}))))
 
+(defn service-location-short-texts
+  "[{:field :locale}] for the site's PTV summaries and descriptions that PTV
+  rejects as too short (see min-text-length), in the languages a sync
+  publishes: the org's `org-langs` the site has both texts in
+  (effective-languages). A text in any other language never reaches PTV,
+  and its tab isn't even shown."
+  [site org-langs]
+  (vec (for [lang (effective-languages site org-langs)
+             field [:summary :description]
+             :let [locale (keyword lang)]
+             :when (text-too-short? (get-in site [:ptv field locale]))]
+         {:field field :locale locale})))
+
 (defn sync-blockers
   "What stops `site` from syncing to PTV, as a set of keywords (empty when
   nothing does). Only meaningful while `[:ptv :sync-enabled]` is on and the
@@ -1777,7 +1901,12 @@
                          summary/description (see `ptv-ready?`)
 
   Shared by the site form (save gate + messages) and `save-sports-site!`
-  (hard gate), so both reject exactly the same states."
+  (hard gate), so both reject exactly the same states.
+
+  A text under PTV's minimum length isn't a blocker here: which languages a
+  sync publishes depends on the org's live config, which the site doesn't
+  carry. The sync refuses it instead (`:ptv/texts-too-short`, see
+  service-location-short-texts), and the text fields warn about it."
   [site]
   (let [{:keys [sync-enabled delete-existing org-id]} (:ptv site)]
     (if (or (not sync-enabled) delete-existing)

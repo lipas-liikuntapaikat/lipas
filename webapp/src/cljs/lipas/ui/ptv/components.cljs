@@ -525,10 +525,17 @@
           desc (when @source-id (get descriptions @source-id))
           generating? @(rf/subscribe [::subs/generating-service-descriptions? @source-id])
           syncing? (when @source-id @(rf/subscribe [::subs/syncing-service? @source-id]))
+          data (merge {:org-id org-id
+                       :source-id @source-id
+                       :sub-category-id (some-> @source-id ptv-data/parse-service-source-id)
+                       :languages org-languages}
+                      desc)
           valid? (and @source-id
                       (some-> desc :summary :fi count (> 5))
                       (some-> desc :description :fi count (> 5))
-                      (some-> desc :user-instruction :fi count (> 5)))]
+                      (some-> desc :user-instruction :fi count (> 5))
+                      ;; nor any text PTV would reject in what the export sends
+                      (empty? (ptv-data/lipas-service-text-errors data nil)))]
       [:> Stack {:spacing 2}
        [:> Typography {:variant "subtitle1" :fontWeight "medium"}
         (tr :ptv.service/create-new)]
@@ -614,14 +621,9 @@
                             (if syncing?
                               [:> CircularProgress {:size 16 :color "inherit"}]
                               [:> Icon "ios_share"]))
-               :on-click #(let [data (merge {:org-id org-id
-                                             :source-id @source-id
-                                             :sub-category-id (ptv-data/parse-service-source-id @source-id)
-                                             :languages org-languages}
-                                            desc)]
-                            (rf/dispatch [::events/create-ptv-service
-                                          org-id @source-id data [] [] lipas-id])
-                            (on-cancel))}
+               :on-click #(do (rf/dispatch [::events/create-ptv-service
+                                            org-id @source-id data [] [] lipas-id])
+                              (on-cancel))}
               (tr :ptv.wizard/export-services-to-ptv)]])
 
           [:> Button
@@ -645,8 +647,8 @@
                 :fullWidth true
                 :multiline true :variant "outlined" :label (tr :ptv/summary) :value v
                 :inputProps #js {:maxLength ptv-data/max-summary-length}
-                :helperText (str (count v) "/" ptv-data/max-summary-length)
-                :error (> (count v) ptv-data/max-summary-length)}])
+                :helperText (controls/text-length-hint tr v ptv-data/max-summary-length)
+                :error (controls/text-length-error? v ptv-data/max-summary-length)}])
 
             [service-writing-guidance
              {:tr tr
@@ -658,8 +660,8 @@
                 :fullWidth true
                 :variant "outlined" :rows 7 :multiline true :label (tr :ptv/description) :value v
                 :inputProps #js {:maxLength ptv-data/max-description-length}
-                :helperText (str (count v) "/" ptv-data/max-description-length)
-                :error (> (count v) ptv-data/max-description-length)}])
+                :helperText (controls/text-length-hint tr v ptv-data/max-description-length)
+                :error (controls/text-length-error? v ptv-data/max-description-length)}])
 
             [service-writing-guidance
              {:tr tr
@@ -671,8 +673,8 @@
                 :fullWidth true
                 :variant "outlined" :rows 5 :multiline true :label (tr :ptv/user-instruction) :value v
                 :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
-                :helperText (str (count v) "/" ptv-data/max-user-instruction-length)
-                :error (> (count v) ptv-data/max-user-instruction-length)}])]])]])))
+                :helperText (controls/text-length-hint tr v ptv-data/max-user-instruction-length)
+                :error (controls/text-length-error? v ptv-data/max-user-instruction-length)}])]])]])))
 
 (defn add-service-panel
   "Entry point for adding a PTV service: \"Create new\" switches to the

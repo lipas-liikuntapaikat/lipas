@@ -92,4 +92,7 @@
  :unpublished-languages-missing-texts "tiivistelmä ja kuvaus puuttuvat Lipaksesta. Lisää ne kielen välilehdelle ennen synkronointia: kirjoita ne itse, käännä suomenkielisistä teksteistä (\"Käännä muille kielille\") tai laadi tekoälyllä (\"Laadi luonnokset tekoälyllä\")."
  :lang-fi "suomi"
  :lang-se "ruotsi"
- :lang-en "englanti"}
+ :lang-en "englanti"
+ :blocker-texts-too-short "Tiivistelmässä ja kuvauksessa pitää olla vähintään 5 merkkiä jokaisella kielellä."
+ :text-min-length "vähintään {1} merkkiä"
+ :sync-failed-body-ptv-message "PTV hylkäsi tiedot: {1}"}
