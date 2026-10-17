@@ -1,8 +1,13 @@
 (ns lipas.data.ptv-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
+            [clojure.test.check.clojure-test :refer [defspec]]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as prop]
             [lipas.data.ptv :as sut]
             [lipas.schema.sports-sites.ptv :as ptv-schema]
-            [malli.core :as m]))
+            [malli.core :as m]
+            [malli.error :as me]))
 
 (deftest parse-phone-number
   (is (= {:prefix "+358"
@@ -908,7 +913,7 @@
         ;; A service the org created in PTV directly has :sourceId nil.
         services {managed-source-id {:id "managed" :sourceId managed-source-id}
                   "native" {:id "native" :sourceId nil}}
-        site (fn [service-ids] {:ptv {:service-ids service-ids}
+        site (fn [service-ids] {:service-ids service-ids
                                 :sub-category-id 2100
                                 :sub-category "Kuntoilukeskukset ja liikuntasalit"})]
 
@@ -1436,3 +1441,407 @@
     (is (= [] (sut/attention (attention-site {:sync-enabled false})))
         "PTV data saved but never switched on")
     (is (every? #(= :error (:severity %)) (sut/attention (attention-site {:sync-enabled true}))))))
+
+;;; Patching services made in PTV ;;;
+
+;; "se" is Northern Sámi in PTV and "ru" Russian: languages LIPAS doesn't model.
+(def ^:private gen-ptv-lang (gen/elements ["fi" "sv" "en" "se" "ru"]))
+
+(def ^:private gen-text (gen/one-of [(gen/return "")
+                                     (gen/not-empty gen/string-alphanumeric)]))
+
+(defn- gen-entries [types]
+  (gen/vector-distinct-by (juxt :type :language)
+                          (gen/hash-map :type (gen/elements types)
+                                        :language gen-ptv-lang
+                                        :value gen-text)
+                          {:max-elements 12}))
+
+(def ^:private gen-requirements
+  (gen/vector-distinct-by :language
+                          (gen/hash-map :language gen-ptv-lang :value gen-text)
+                          {:max-elements 5}))
+
+(def ^:private gen-service
+  (gen/hash-map :serviceNames (gen-entries ["Name" "AlternativeName"])
+                :serviceDescriptions (gen-entries ["Summary" "Description" "UserInstruction"
+                                                   "ChargeTypeAdditionalInfo" "DeadLine"])
+                :requirements gen-requirements
+                :languages (gen/vector-distinct gen-ptv-lang)
+                :ontologyTerms (gen/return ["http://www.yso.fi/onto/koko/p1"])))
+
+(def ^:private gen-locale-texts
+  (gen/map (gen/elements [:fi :se :en]) gen-text {:max-elements 3}))
+
+(def ^:private gen-texts
+  (gen/hash-map :name gen-locale-texts
+                :summary gen-locale-texts
+                :description gen-locale-texts
+                :user-instruction gen-locale-texts))
+
+(defn- all-entries [service]
+  (concat (:serviceNames service) (:serviceDescriptions service)))
+
+(defn- language-entries
+  "Every entry that makes a language version: names, descriptions, requirements."
+  [service]
+  (concat (all-entries service) (:requirements service)))
+
+(defspec native-patch-never-drops-a-language-version 300
+  (prop/for-all [service gen-service
+                 texts gen-texts]
+                (let [out (sut/patch-service-texts service texts #{})]
+                  (every? (sut/service-language-versions out)
+                          (sut/service-language-versions service)))))
+
+(defspec native-patch-keeps-what-lipas-does-not-own 300
+  (prop/for-all [service gen-service
+                 texts gen-texts]
+                (let [out (sut/patch-service-texts service texts #{})
+                      out-entries (set (all-entries out))
+                      written? (fn [{:keys [language]}]
+                                 (let [locale (sut/lang->locale language)]
+                                   (some #(seq (get % locale)) (vals texts))))
+                      lipas-owned? (fn [{:keys [type] :as e}]
+                                     (and (written? e)
+                                          (or (= "Name" type)
+                                              (contains? sut/patched-description-types type))))]
+                  (and
+        ;; other fields untouched, :languages (provision languages) included
+                    (= (dissoc service :serviceNames :serviceDescriptions)
+                       (dissoc out :serviceNames :serviceDescriptions))
+        ;; every entry LIPAS doesn't own survives as it was
+                    (every? out-entries (remove lipas-owned? (all-entries service)))))))
+
+(defspec native-patch-writes-lipas-texts 300
+  (prop/for-all [service gen-service
+                 texts gen-texts]
+                (let [out (sut/patch-service-texts service texts #{})
+                      entry (fn [type lang]
+                              (some #(when (and (= type (:type %)) (= lang (:language %))) (:value %))
+                                    (all-entries out)))]
+                  (every? (fn [[k type]]
+                            (every? (fn [[locale v]]
+                                      (or (empty? v)
+                                          (= v (entry type (sut/locale->lang locale)))))
+                                    (get texts k)))
+                          {:name "Name" :summary "Summary" :description "Description"
+                           :user-instruction "UserInstruction"}))))
+
+(defspec native-patch-removes-a-language-only-explicitly-and-fully 300
+  (prop/for-all [service gen-service
+                 texts gen-texts
+                 remove-lang (gen/elements ["sv" "en"])]
+                (let [out (sut/patch-service-texts service texts #{remove-lang})]
+                  (and (not-any? #(= remove-lang (:language %)) (language-entries out))
+                       (every? (sut/service-language-versions out)
+                               (disj (sut/service-language-versions service) remove-lang))))))
+
+(deftest patch-service-texts-test
+  (let [service {:languages ["fi"]
+                 :serviceNames [{:type "Name" :language "fi" :value "Uimahalli"}
+                                {:type "Name" :language "sv" :value "Simhall"}
+                                {:type "AlternativeName" :language "fi" :value "Halli"}]
+                 :serviceDescriptions [{:type "Summary" :language "fi" :value "PTV fi"}
+                                       {:type "Description" :language "fi" :value "PTV kuvaus"}
+                                       {:type "UserInstruction" :language "fi" :value "Ohje"}
+                                       {:type "Summary" :language "sv" :value "PTV sv"}
+                                       {:type "Description" :language "sv" :value "PTV beskrivning"}
+                                       {:type "ChargeTypeAdditionalInfo" :language "sv" :value "Avgift"}]}]
+    (testing "a language LIPAS has no texts for is left as PTV has it"
+      (let [out (sut/patch-service-texts service
+                                         {:name {:fi "Uimahalli"}
+                                          :summary {:fi "Uusi fi"}
+                                          :description {:fi "Uusi kuvaus"}}
+                                         #{})]
+        (is (= #{"fi" "sv"} (sut/service-language-versions out)))
+        (is (some #{{:type "Summary" :language "sv" :value "PTV sv"}} (:serviceDescriptions out)))
+        (is (some #{{:type "Summary" :language "fi" :value "Uusi fi"}} (:serviceDescriptions out)))
+        (is (some #{{:type "AlternativeName" :language "fi" :value "Halli"}} (:serviceNames out)))
+        (is (= ["fi"] (:languages out)) "provision languages are not touched")))
+
+    (testing "a blank user instruction removes it"
+      (let [out (sut/patch-service-texts service
+                                         {:name {:fi "Uimahalli"}
+                                          :summary {:fi "s"} :description {:fi "d"}
+                                          :user-instruction {:fi ""}}
+                                         #{})]
+        (is (not-any? #(and (= "UserInstruction" (:type %)) (= "fi" (:language %)))
+                      (:serviceDescriptions out)))))
+
+    (testing "removing a language drops its PTV-only entries too"
+      (let [out (sut/patch-service-texts service {} #{"sv"})]
+        (is (= #{"fi"} (sut/service-language-versions out)))
+        (is (empty? (sut/language-version-problems out)))))
+
+    (testing "a version left without a required text is reported"
+      ;; sv keeps only its name
+      (is (= {"sv" ["Summary" "Description"]}
+             (sut/language-version-problems
+               (sut/patch-service-texts (update service :serviceDescriptions
+                                                (partial remove #(= "sv" (:language %))))
+                                        {}
+                                        #{})))))))
+
+(deftest cleared-ptv-texts-test
+  ;; A cleared text field stores nil. It used to fail the string schema
+  ;; with the "too long" message (tester finding), and would have made the
+  ;; backend reject the save.
+  (let [errors (fn [summary]
+                 (->> (m/explain ptv-schema/ptv-meta
+                                 {:org-id "org" :sync-enabled true
+                                  :service-channel-ids [] :service-ids []
+                                  :summary summary :description {:fi "kuvaus"}})
+                      :errors
+                      (map me/error-message)
+                      (filter keyword?)))]
+    (testing "drop-blank-texts removes missing and blank texts only"
+      (is (= {:fi "teksti"}
+             (sut/drop-blank-texts {:fi "teksti" :se nil :en "  "}))))
+
+    (testing "a cleared text is never reported as too long"
+      (is (empty? (errors {:fi nil})))
+      (is (empty? (errors (sut/drop-blank-texts {:fi "tiivistelmä" :se nil})))))
+
+    (testing "a text over the limit still is"
+      (is (= [:ptv/error-summary-too-long]
+             (errors {:fi (apply str (repeat (inc sut/max-summary-length) "x"))}))))))
+
+(deftest service-text-errors-test
+  (let [texts {:summary {:fi "Tiivistelmä"} :description {:fi "Kuvaus"}}]
+    (testing "a service created in LIPAS needs only its Finnish summary and description"
+      (is (empty? (sut/service-text-errors {:management :lipas :texts texts})))
+      (is (empty? (sut/service-text-errors
+                    {:management :lipas
+                     :texts (assoc-in texts [:summary :se] "Sammanfattning")}))
+          "a language without a description is not an error, just not published")
+      (is (= [{:field :summary :locale :fi :error :missing}]
+             (sut/service-text-errors {:management :lipas
+                                       :texts (assoc-in texts [:summary :fi] "")}))))
+
+    (testing "a service made in PTV reports each incomplete language version"
+      (is (= [{:field :name :locale :se :error :missing}
+              {:field :summary :locale :se :error :missing}]
+             (sut/service-text-errors {:management :native
+                                       :texts texts
+                                       :version-problems {"sv" ["Name" "Summary"]}}))))
+
+    (testing "a text over PTV's limit, in any language"
+      (is (= [{:field :description :locale :se :error :too-long
+               :max sut/max-description-length}]
+             (sut/service-text-errors
+               {:management :lipas
+                :texts (assoc-in texts [:description :se]
+                                 (apply str (repeat (inc sut/max-description-length) "x")))}))))
+
+    (testing "a service another system maintains is not checked"
+      (is (empty? (sut/service-text-errors {:management :other-system :texts {}}))))))
+
+(deftest service-versions-to-drop-test
+  (let [texts {:summary {:fi "s" :se "s"} :description {:fi "d" :se "d"}}]
+    (is (empty? (sut/service-versions-to-drop [:fi :se] texts ["fi" "se"])))
+    (is (= [:se] (sut/service-versions-to-drop [:fi :se] (update texts :description dissoc :se) ["fi" "se"]))
+        "a language that lost its description")
+    (is (= [:se] (sut/service-versions-to-drop [:fi :se] texts ["fi"]))
+        "a language the org hasn't enabled")))
+
+;;; PTV's minimum text length ;;;
+
+(deftest text-too-short?-test
+  (testing "under five characters after trimming is too short"
+    (is (sut/text-too-short? "Test"))
+    (is (sut/text-too-short? " abcd "))
+    (is (sut/text-too-short? "x")))
+  (testing "five characters is enough, inner spaces count"
+    (is (not (sut/text-too-short? "Test.")))
+    (is (not (sut/text-too-short? "a b c"))))
+  (testing "a missing or blank text is no text, not a short one"
+    (is (not (sut/text-too-short? nil)))
+    (is (not (sut/text-too-short? "")))
+    (is (not (sut/text-too-short? "   ")))))
+
+(deftest short-service-texts-test
+  (is (= [{:type "Summary" :language "en"}
+          {:type "ChargeTypeAdditionalInfo" :language "fi"}
+          {:type "Requirement" :language "fi"}]
+         (sut/short-service-texts
+           {:serviceNames [{:type "Name" :language "fi" :value "X"}]
+            :serviceDescriptions [{:type "Summary" :language "fi" :value "Testi"}
+                                  {:type "Summary" :language "en" :value "Test"}
+                                  {:type "ChargeTypeAdditionalInfo" :language "fi" :value "5 €"}
+                                  {:type "ChargeTypeAdditionalInfo" :language "en" :value nil}]
+            :requirements [{:language "fi" :value "Ei"}
+                           {:language "en" :value "None at all"}]}))
+      "names have no minimum; a nil text is not a short one"))
+
+(deftest service-text-errors-too-short-test
+  (let [texts {:summary {:fi "Tiivistelmä" :en "Test"} :description {:fi "Kuvaus"}}
+        body {:serviceDescriptions [{:type "Summary" :language "fi" :value "Tiivistelmä"}
+                                    {:type "Summary" :language "en" :value "Test"}
+                                    {:type "Summary" :language "se" :value "Čoah"}
+                                    {:type "DeadLine" :language "fi" :value "Heti"}]
+              :requirements [{:language "fi" :value "Ei"}]}]
+    (is (= [{:field :summary :locale :en :error :too-short :min sut/min-text-length}
+            {:ptv-type "Summary" :language "se" :error :too-short-in-ptv :min sut/min-text-length}
+            {:ptv-type "DeadLine" :language "fi" :error :too-short-in-ptv :min sut/min-text-length}
+            {:ptv-type "Requirement" :language "fi" :error :too-short-in-ptv :min sut/min-text-length}]
+           (sut/service-text-errors {:management :native :texts texts :body body}))
+        "a text LIPAS writes is the user's to fix; the rest (incl. Sámi \"se\") PTV's")
+    (is (empty? (sut/service-text-errors
+                  {:management :lipas :texts texts
+                   :body {:serviceDescriptions [{:type "Summary" :language "fi" :value "Tiivistelmä"}]}}))
+        "a short text the sync won't publish (en lacks a description) doesn't block it")))
+
+(deftest service-location-short-texts-test
+  (let [texts {:summary {:fi "Uimahalli keskustassa" :se "Sim"}
+               :description {:fi "Uimahalli keskustassa." :se "Simhall"}}]
+    (is (= [{:field :summary :locale :se}]
+           (sut/service-location-short-texts {:ptv texts} ["fi" "se"])))
+    (is (empty? (sut/service-location-short-texts {:ptv texts} ["fi"]))
+        "a language the org hasn't enabled isn't published, nor shown to fix")
+    (is (empty? (sut/service-location-short-texts {:ptv (update texts :description dissoc :se)}
+                                                  ["fi" "se"]))
+        "nor is one without both texts")
+    (is (= #{} (sut/sync-blockers (apply site 91 "city" :sync-enabled true :org-id "ptv-a"
+                                         (mapcat identity texts))))
+        "not a save blocker: which languages are published is the org's live config")))
+
+(deftest text-too-short?-unicode-whitespace-test
+  ;; Trimmed as PTV (.NET) trims, the same on the JVM and in the browser
+  (is (sut/text-too-short? "\u00a0abcd"))
+  (is (sut/text-too-short? "abcd\u2003"))
+  (is (not (sut/text-too-short? "\u00a0")) "no-break space alone is no text")
+  (is (not (sut/text-too-short? "ab\u00a0cd")) "inner spaces count"))
+
+(deftest lipas-service-text-errors-test
+  (let [m {:source-id "lipas-org-x-1300" :sub-category-id 1300 :languages ["fi" "en"]
+           :summary {:fi "Pallokentät kunnassa" :en "Pool"}
+           :description {:fi "Kunnan pallokentät." :en "The fields of the town."}}]
+    (is (= [{:field :summary :locale :en :error :too-short :min sut/min-text-length}]
+           (sut/lipas-service-text-errors m nil)))
+    (is (empty? (sut/lipas-service-text-errors (assoc m :languages ["fi"]) nil))
+        "English the org doesn't publish isn't sent")
+    (is (= [{:ptv-type "Requirement" :language "fi" :error :too-short-in-ptv
+             :min sut/min-text-length}]
+           (sut/lipas-service-text-errors (assoc m :languages ["fi"])
+                                          {:requirements [{:language "fi" :value "Ei"}]}))
+        "what the sync carries over from PTV is checked too")))
+
+;;; Carrying PTV's own entries over into a LIPAS-created service's sync ;;;
+
+(def ^:private gen-lipas-body
+  ;; What ->ptv-service builds: a Name and LIPAS's description types per language
+  (gen/hash-map :serviceNames (gen-entries ["Name"])
+                :serviceDescriptions (gen-entries ["Summary" "Description" "UserInstruction"])
+                :languages (gen/vector-distinct gen-ptv-lang)))
+
+(def ^:private gen-live-service
+  (gen/let [service gen-service
+            requirements (gen/vector-distinct-by :language
+                                                 (gen/hash-map :language gen-ptv-lang
+                                                               :value gen-text)
+                                                 {:max-elements 5})]
+    (assoc service :requirements requirements)))
+
+(defn- lipas-written? [{:keys [type]}]
+  (or (= "Name" type) (contains? sut/patched-description-types type)))
+
+(defspec carry-over-never-adds-a-language-version 300
+  (prop/for-all [body gen-lipas-body
+                 live gen-live-service]
+                (let [out (sut/carry-over-service-entries body live)
+                      langs (sut/service-language-versions body)]
+                  (and (= langs (sut/service-language-versions out))
+                       (every? (comp langs :language) (:requirements out))))))
+
+(defspec carry-over-keeps-lipas-entries-as-lipas-wrote-them 300
+  (prop/for-all [body gen-lipas-body
+                 live gen-live-service]
+                (let [out (sut/carry-over-service-entries body live)]
+                  (and (= (all-entries body) (filter lipas-written? (all-entries out)))
+                       (= (dissoc body :serviceNames :serviceDescriptions :requirements)
+                          (dissoc out :serviceNames :serviceDescriptions :requirements))))))
+
+(defspec carry-over-keeps-what-only-ptv-has 300
+  (prop/for-all [body gen-lipas-body
+                 live gen-live-service]
+                (let [out (sut/carry-over-service-entries body live)
+                      langs (sut/service-language-versions body)
+                      kept? (fn [e] (and (langs (:language e))
+                                         (not (str/blank? (:value e)))))]
+                  (and (= (set (filter kept? (remove lipas-written? (all-entries live))))
+                          (set (remove lipas-written? (all-entries out))))
+                       (= (set (filter kept? (:requirements live)))
+                          (set (:requirements out)))))))
+
+(deftest carry-over-service-entries-test
+  (let [body {:serviceNames [{:type "Name" :language "fi" :value "Uimahallit"}]
+              :serviceDescriptions [{:type "Summary" :language "fi" :value "Uusi tiivistelmä"}]
+              :languages ["fi"]}
+        live {:serviceNames [{:type "Name" :language "fi" :value "Vanha nimi"}
+                             {:type "AlternativeName" :language "fi" :value "Hallit"}
+                             {:type "Name" :language "sv" :value "Simhallar"}]
+              :serviceDescriptions [{:type "Summary" :language "fi" :value "Vanha tiivistelmä"}
+                                    {:type "ChargeTypeAdditionalInfo" :language "fi" :value "Maksu 5 euroa"}
+                                    {:type "ChargeTypeAdditionalInfo" :language "sv" :value "Avgift 5 euro"}
+                                    {:type "DeadLine" :language "fi" :value nil}]
+              :requirements [{:language "fi" :value "Ikäraja 15 vuotta"}
+                             {:language "sv" :value "Åldersgräns 15 år"}]
+              :keywords [{:language "fi" :value "uinti"}]}]
+    (is (= {:serviceNames [{:type "Name" :language "fi" :value "Uimahallit"}
+                           {:type "AlternativeName" :language "fi" :value "Hallit"}]
+            :serviceDescriptions [{:type "Summary" :language "fi" :value "Uusi tiivistelmä"}
+                                  {:type "ChargeTypeAdditionalInfo" :language "fi" :value "Maksu 5 euroa"}]
+            :requirements [{:language "fi" :value "Ikäraja 15 vuotta"}]
+            :languages ["fi"]}
+           (sut/carry-over-service-entries body live))
+        "PTV's Finnish extras are kept; Swedish, which LIPAS no longer publishes, isn't; nor are blank entries or fields PTV keeps by itself")
+    (is (= body (sut/carry-over-service-entries body {}))
+        "nothing to carry over leaves the body as it is (no empty :requirements)")))
+
+(deftest requirements-make-a-language-version-test
+  ;; Verified in the PTV test env 2026-10-17: a requirement left alone in a
+  ;; language made PTV demand that language's summary and description
+  (let [service {:serviceNames [{:type "Name" :language "fi" :value "Uimahalli"}]
+                 :serviceDescriptions [{:type "Summary" :language "fi" :value "Tiivistelmä"}
+                                       {:type "Description" :language "fi" :value "Kuvaus"}]
+                 :requirements [{:language "fi" :value "Ikäraja 15 vuotta"}
+                                {:language "en" :value "Age limit 15"}]}]
+    (is (= #{"fi" "en"} (sut/service-language-versions service)))
+    (is (= {"en" ["Name" "Summary" "Description"]} (sut/language-version-problems service))
+        "reported before the sync, like any other incomplete version")
+    (let [out (sut/patch-service-texts service {} #{"en"})]
+      (is (= [{:language "fi" :value "Ikäraja 15 vuotta"}] (:requirements out)))
+      (is (= #{"fi"} (sut/service-language-versions out))))))
+
+(deftest lipas-service-update-body-test
+  ;; LIPAS sets producers, area and funding only when it creates a service,
+  ;; and the target groups only as their first value: an update leaves them
+  ;; to PTV (verified in the PTV test env 2026-10-17)
+  (let [body (sut/->ptv-service {:org-id "org-x" :source-id "lipas-org-x-1300" :sub-category-id 1300
+                                 :city-codes [889] :languages ["fi"]
+                                 :summary {:fi "Pallokentät kunnassa"} :description {:fi "Kunnan pallokentät."}})
+        live {:targetGroups [{:uri "http://urn.fi/URN:NBN:fi:au:ptvl:v2001" :code "KR1"}
+                             {:uri "http://urn.fi/URN:NBN:fi:au:ptvl:v2009" :code "KR2.1"}]
+              :requirements [{:language "fi" :value "Ikäraja 15 vuotta"}]}]
+    (testing "the create body has LIPAS's defaults"
+      (is (every? #(contains? body %) sut/create-only-service-fields))
+      (is (= ["http://uri.suomi.fi/codelist/ptv/ptvkohderyhmat/code/KR1"] (:targetGroups body))))
+    (testing "an update leaves them out and resends PTV's own target groups"
+      (let [out (sut/lipas-service-update-body body live)]
+        (is (not-any? #(contains? out %) sut/create-only-service-fields))
+        (is (= ["http://urn.fi/URN:NBN:fi:au:ptvl:v2001" "http://urn.fi/URN:NBN:fi:au:ptvl:v2009"]
+               (:targetGroups out))
+            "as the URIs a PUT takes, never mixed with LIPAS's newer form")
+        (is (= (:requirements live) (:requirements out)) "and carries over what LIPAS never writes")
+        (is (= (select-keys body [:serviceNames :serviceClasses :ontologyTerms :languages :type])
+               (select-keys out [:serviceNames :serviceClasses :ontologyTerms :languages :type]))
+            "what LIPAS maintains is written as before")))
+    (testing "without the live service: create-only fields out, LIPAS's target group in
+              (PTV requires target groups in a PUT without a general description)"
+      (let [out (sut/lipas-service-update-body body nil)]
+        (is (not-any? #(contains? out %) sut/create-only-service-fields))
+        (is (= (:targetGroups body) (:targetGroups out)))))
+    (testing "a live service without target groups keeps LIPAS's"
+      (is (= (:targetGroups body)
+             (:targetGroups (sut/lipas-service-update-body body {:targetGroups []})))))))
