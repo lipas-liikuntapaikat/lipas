@@ -433,6 +433,10 @@
      [:> Grid {:item true :xs 12}
       [tables/table-v2
        {:key (:sort-fn sort-opts)
+        ;; Sorting happens in ES (see search.events/resolve-sort) -- the table
+        ;; renders the hits in the order they arrive.
+        :server-sorted? true
+        :sort-fn (:sort-fn sort-opts)
         :in-progress? in-progress?
         :items results
         :action-icon "location_on"

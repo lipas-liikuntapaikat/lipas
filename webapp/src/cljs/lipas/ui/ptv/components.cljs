@@ -1,6 +1,9 @@
 (ns lipas.ui.ptv.components
   "Shared PTV UI components to avoid circular dependencies"
   (:require ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
+            ["@mui/material/Accordion$default" :as Accordion]
+            ["@mui/material/AccordionDetails$default" :as AccordionDetails]
+            ["@mui/material/AccordionSummary$default" :as AccordionSummary]
             ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/AlertTitle$default" :as AlertTitle]
             ["@mui/material/Button$default" :as Button]
@@ -21,6 +24,8 @@
             ["@mui/material/Typography$default" :as Typography]
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-service-guidance :as service-guidance]
+            [lipas.data.ptv-site-guidance :as site-guidance]
             [lipas.data.types :as types]
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.mui :as mui]
@@ -31,6 +36,66 @@
             [re-frame.core :as rf]
             [reagent.core :as r]
             [reagent.hooks :as hooks]))
+
+(defn writing-guidance
+  "Collapsed accordion showing authoring guidance for one PTV text field.
+   Shared by the Service panels (per sub-category, from
+   lipas.data.ptv-service-guidance) and the Service Location site view
+   (per type-code group, from lipas.data.ptv-site-guidance).
+
+   Props:
+     :title       - accordion header, e.g. \"Mitä kuvaukseen kannattaa kirjoittaa?\"
+     :text        - guidance body; newlines are preserved
+     :avoid       - optional short \"what not to write\" line under the body
+     :avoid-label - label for that line, e.g. \"Vältä:\"
+
+   Renders nothing when :text is blank, so callers can pass a lookup that
+   may miss (a type or sub-category with no guidance)."
+  [{:keys [title text avoid avoid-label]}]
+  (when-not (str/blank? text)
+    [:> Accordion {:disableGutters true :elevation 0 :variant "outlined"}
+     [:> AccordionSummary {:expandIcon (r/as-element [:> Icon "expand_more"])}
+      [:> Stack {:direction "row" :spacing 1 :align-items "center"}
+       [:> Icon {:fontSize "small" :color "action"} "help_outline"]
+       [:> Typography {:variant "body2"} title]]]
+     [:> AccordionDetails
+      [:> Stack {:spacing 1}
+       [:> Typography {:variant "body2" :sx #js {:whiteSpace "pre-line"}}
+        text]
+       (when-not (str/blank? avoid)
+         [:> Typography {:variant "body2" :color "text.secondary"}
+          [:strong (str avoid-label " ")]
+          avoid])]]]))
+
+(defn service-writing-guidance
+  "Guidance accordion for a PTV Service field, keyed by sub-category.
+   `field` is :description or :user-instruction. Body is Finnish-only by
+   source. Used by the wizard's service step, the Palvelut panel and the
+   \"Luo uusi palvelu\" form."
+  [{:keys [tr sub-category-id field]}]
+  [writing-guidance
+   {:title (case field
+             :description      (tr :ptv/writing-guidance-description)
+             :user-instruction (tr :ptv/writing-guidance-user-instruction))
+    :text (get-in service-guidance/guidance [sub-category-id field])}])
+
+(defn site-writing-guidance
+  "Guidance accordion for a PTV Service Location field, keyed by type-code.
+   `field` is :summary or :description; the description accordion also
+   carries the group's \"Vältä:\" line. Localized to the UI language rather
+   than the language tab being edited — this is instruction to the author,
+   not content. Used by the wizard's site step, the Liikuntapaikat panel
+   and the map-view PTV tab."
+  [{:keys [tr type-code field]}]
+  (let [locale (tr)]
+    [writing-guidance
+     {:title (case field
+               :summary     (tr :ptv/writing-guidance-summary)
+               :description (tr :ptv/writing-guidance-description))
+      :text (site-guidance/text type-code field locale)
+      :avoid (when (= :description field)
+               (site-guidance/text type-code :avoid locale))
+      :avoid-label (tr :ptv/writing-guidance-avoid)}]))
 
 (defn audit-feedback-alert
   "Auditor feedback for one field in the municipality-facing views.
@@ -460,10 +525,17 @@
           desc (when @source-id (get descriptions @source-id))
           generating? @(rf/subscribe [::subs/generating-service-descriptions? @source-id])
           syncing? (when @source-id @(rf/subscribe [::subs/syncing-service? @source-id]))
+          data (merge {:org-id org-id
+                       :source-id @source-id
+                       :sub-category-id (some-> @source-id ptv-data/parse-service-source-id)
+                       :languages org-languages}
+                      desc)
           valid? (and @source-id
                       (some-> desc :summary :fi count (> 5))
                       (some-> desc :description :fi count (> 5))
-                      (some-> desc :user-instruction :fi count (> 5)))]
+                      (some-> desc :user-instruction :fi count (> 5))
+                      ;; nor any text PTV would reject in what the export sends
+                      (empty? (ptv-data/lipas-service-text-errors data nil)))]
       [:> Stack {:spacing 2}
        [:> Typography {:variant "subtitle1" :fontWeight "medium"}
         (tr :ptv.service/create-new)]
@@ -549,14 +621,9 @@
                             (if syncing?
                               [:> CircularProgress {:size 16 :color "inherit"}]
                               [:> Icon "ios_share"]))
-               :on-click #(let [data (merge {:org-id org-id
-                                             :source-id @source-id
-                                             :sub-category-id (ptv-data/parse-service-source-id @source-id)
-                                             :languages org-languages}
-                                            desc)]
-                            (rf/dispatch [::events/create-ptv-service
-                                          org-id @source-id data [] [] lipas-id])
-                            (on-cancel))}
+               :on-click #(do (rf/dispatch [::events/create-ptv-service
+                                            org-id @source-id data [] [] lipas-id])
+                              (on-cancel))}
               (tr :ptv.wizard/export-services-to-ptv)]])
 
           [:> Button
@@ -580,69 +647,43 @@
                 :fullWidth true
                 :multiline true :variant "outlined" :label (tr :ptv/summary) :value v
                 :inputProps #js {:maxLength ptv-data/max-summary-length}
-                :helperText (str (count v) "/" ptv-data/max-summary-length)
-                :error (> (count v) ptv-data/max-summary-length)}])
+                :helperText (controls/text-length-hint tr v ptv-data/max-summary-length)
+                :error (controls/text-length-error? v ptv-data/max-summary-length)}])
 
+            [service-writing-guidance
+             {:tr tr
+              :sub-category-id (ptv-data/parse-service-source-id @source-id)
+              :field :description}]
             (let [v (or (get-in desc [:description @selected-tab]) "")]
               [text-fields/text-field
                {:on-change #(rf/dispatch [::events/set-service-candidate-description @source-id @selected-tab %])
                 :fullWidth true
                 :variant "outlined" :rows 7 :multiline true :label (tr :ptv/description) :value v
                 :inputProps #js {:maxLength ptv-data/max-description-length}
-                :helperText (str (count v) "/" ptv-data/max-description-length)
-                :error (> (count v) ptv-data/max-description-length)}])
+                :helperText (controls/text-length-hint tr v ptv-data/max-description-length)
+                :error (controls/text-length-error? v ptv-data/max-description-length)}])
 
+            [service-writing-guidance
+             {:tr tr
+              :sub-category-id (ptv-data/parse-service-source-id @source-id)
+              :field :user-instruction}]
             (let [v (or (get-in desc [:user-instruction @selected-tab]) "")]
               [text-fields/text-field
                {:on-change #(rf/dispatch [::events/set-service-candidate-user-instruction @source-id @selected-tab %])
                 :fullWidth true
                 :variant "outlined" :rows 5 :multiline true :label (tr :ptv/user-instruction) :value v
                 :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
-                :helperText (str (count v) "/" ptv-data/max-user-instruction-length)
-                :error (> (count v) ptv-data/max-user-instruction-length)}])]])]])))
-
-(defn add-service-link-form
-  "Form for linking (adopting) an existing PTV service into LIPAS management.
-   Props:
-   - :org-id (required)
-   - :on-cancel (required)
-   - :lipas-id (optional) — when set, the linked service-id is auto-added to
-     that site's :ptv :service-ids on success."
-  [{:keys [org-id on-cancel lipas-id]}]
-  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
-        all-services @(rf/subscribe [::subs/services org-id])
-        non-lipas-services (remove #(some-> (:source-id %) (str/starts-with? "lipas-")) all-services)
-        org-languages @(rf/subscribe [::subs/org-languages org-id])]
-    [:> Stack {:spacing 2}
-     [:> Typography {:variant "subtitle1" :fontWeight "medium"}
-      (tr :ptv.service/link-existing)]
-     [controls/services-selector
-      {:options non-lipas-services
-       :multiple false
-       :value nil
-       :value-fn :service-id
-       :on-change (fn [service-id]
-                    (when service-id
-                      (let [service (some #(when (= (:service-id %) service-id) %) all-services)
-                            data (merge {:org-id org-id
-                                         :service-id service-id
-                                         :languages org-languages}
-                                        (select-keys service [:summary :description :user-instruction]))]
-                        (rf/dispatch [::events/create-ptv-service org-id nil data [] [] lipas-id])
-                        (on-cancel))))
-       :label (tr :ptv.service/select-service)}]
-     [:> Button
-      {:size "small" :variant "text" :sx #js {:textTransform "none"}
-       :on-click on-cancel}
-      (tr :actions/cancel)]]))
+                :helperText (controls/text-length-hint tr v ptv-data/max-user-instruction-length)
+                :error (controls/text-length-error? v ptv-data/max-user-instruction-length)}])]])]])))
 
 (defn add-service-panel
-  "Two-button entry point for adding a PTV service. Default state shows
-   \"Create new\" / \"Link existing\"; click switches to the corresponding form.
+  "Entry point for adding a PTV service: \"Create new\" switches to the
+   creation form. (A service already in PTV isn't added here: sites link to
+   it as is, and its panel offers to capture it.)
    Props:
    - :org-id (required)
    - :locked-sub-category-id (optional) — passed to add-service-create-form
-   - :lipas-id (optional) — passed to both forms for auto-attach"
+   - :lipas-id (optional) — passed to the form for auto-attach"
   [{:keys [org-id locked-sub-category-id lipas-id]}]
   (r/with-let [mode (r/atom nil)]
     (let [tr @(rf/subscribe [:lipas.ui.subs/translator])]
@@ -652,23 +693,9 @@
                                            :locked-sub-category-id locked-sub-category-id
                                            :lipas-id lipas-id
                                            :on-cancel #(reset! mode nil)}]
-         :link   [add-service-link-form {:org-id org-id
-                                         :lipas-id lipas-id
-                                         :on-cancel #(reset! mode nil)}]
          [:> Stack {:direction "row" :spacing 1}
           [:> Button
            {:variant "outlined" :size "small" :sx #js {:textTransform "none"}
             :startIcon (r/as-element [:> Icon "add"])
             :on-click #(reset! mode :create)}
-           (tr :ptv.service/create-new)]
-          ;; HIDDEN: "Liitä olemassa oleva PTV-palvelu" entry point is
-          ;; reader-discarded (`#_`) until the adoption flow is verified
-          ;; on fix/ptv-adopt-preserve-target-groups. Restore by removing
-          ;; the `#_` below. The :link case in the case-form above is
-          ;; unreachable while this is hidden but is intentionally kept
-          ;; so add-service-link-form remains wired up for restoration.
-          #_[:> Button
-             {:variant "outlined" :size "small" :sx #js {:textTransform "none"}
-              :startIcon (r/as-element [:> Icon "link"])
-              :on-click #(reset! mode :link)}
-             (tr :ptv.service/link-existing)]])])))
+           (tr :ptv.service/create-new)]])])))

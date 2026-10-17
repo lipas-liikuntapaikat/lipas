@@ -24,6 +24,7 @@
             [lipas.backend.search :as search]
             [lipas.data.cities :as cities]
             [lipas.data.prop-types :as prop-types]
+            [lipas.data.ptv-site-guidance :as site-guidance]
             [lipas.data.types :as types]
             [lipas.jobs.core :as jobs]
             [lipas.roles :as roles]
@@ -532,6 +533,50 @@
 
 ;;; ——— Prompt ————————————————————————————————————————————————————————
 
+(defn- ptv-guidance-section
+  "DVV guidance on writing PTV texts for a sports facility, for the system
+   prompt. Returns \"\" unless the user is somewhere the guidance could
+   apply — a site is selected, or the PTV dialog is open — so the ~500
+   tokens are not spent on every unrelated question. The type-group block
+   is added on top of the general principles when the selected site's type
+   maps to a group.
+
+   Localized to the user's locale where translations exist; :definition
+   and :usable-info are Finnish-only by source, which the model handles."
+  [context]
+  (let [locale (or (:locale context) "fi")
+        loc (fn [m] (or (get m (keyword locale)) (:fi m)))
+        group (some-> (get-in context [:site :type-code])
+                      site-guidance/for-type-code)
+        relevant? (or (some? (:site context))
+                      (get-in context [:ptv :open?]))]
+    (if-not relevant?
+      ""
+      (str
+        "PTV TEXT GUIDANCE:\n"
+        "This block comes from DVV, the authority that owns the PTV service, and\n"
+        "is an AUTHORITATIVE source for questions about what to write in a sports\n"
+        "facility's PTV summary (tiivistelmä) or description (kuvaus) — you may\n"
+        "answer such questions from it without a search_kb lookup, and should say\n"
+        "the guidance comes from DVV. It lists what topics a text should COVER; it\n"
+        "contains no facts about any individual site, so never present its examples\n"
+        "as properties of the user's facility. Do not add topics beyond it. Every\n"
+        "other kind of question still follows the knowledge-base rules above.\n\n"
+        "General principles, all facility types (Finnish, from the source):\n"
+        (str/join "\n"
+                  (for [{:keys [topic guidance avoid]} site-guidance/general-principles]
+                    (str "- " topic ": " guidance " VÄLTÄ: " avoid)))
+        (when group
+          (str "\n\nThe selected site's type belongs to the group \""
+               (get-in group [:name :fi]) "\" — " (:definition group) "\n\n"
+               "Summary (tiivistelmä) — what it should answer:\n"
+               (loc (:summary group)) "\n\n"
+               "Description (kuvaus) — what it should answer:\n"
+               (loc (:description group)) "\n\n"
+               "A description may draw on: " (:usable-info group) "\n"
+               "A description does not usually include: " (loc (:avoid group))))
+        "\n\n"))))
+
 (defn- system-prompt
   [{:keys [user scope context]}]
   (str
@@ -556,7 +601,9 @@ RULES:
 - WORK-SAVING FEATURES: when your answer requires the user to do repetitive manual work (e.g. creating several similar sites, entering the same data twice), run ONE extra search_kb asking whether a LIPAS feature eases that work, BEFORE writing your answer. Mention such a feature ONLY if a retrieved entry documents it, cite that entry, and base every detail of the tip on it. Found nothing → no tip.
 - UI ACTIONS: apply_search, show_site_on_map, pan_map_to_location and navigate_to_view do NOT run anything — each successful call becomes a BUTTON the user may click. Offer one whenever the user asks to find/see sites, to locate a place on the map, or where something is in the app. Write label in the user's language, short and imperative. In your answer refer to the button briefly (\"paina alla olevaa painiketta\") — never claim the search/navigation already happened. The UI renders the button below your message: do not write the button label, any [bracketed pseudo-button], a link imitating a tool call, or a table of actions into the answer text — navigation/search happens ONLY by calling the action tools. At most 2 actions per answer. After your action tool calls return, ALWAYS still write a short normal answer — a button must never arrive with empty answer text.
 
-USER CONTEXT:
+"
+    (ptv-guidance-section context)
+    "USER CONTEXT:
 "
     (json/encode
       {:name (-> user :user-data :firstname)

@@ -28,7 +28,9 @@
  :not-yet-synced "Vald för export, ännu inte synkroniserad till PTV",
  :summary "Sammanfattning",
  :user-instruction "Handlingsanvisning",
+ :writing-guidance-avoid "Undvik:",
  :writing-guidance-description "Vad bör beskrivningen innehålla?",
+ :writing-guidance-summary "Vad bör sammanfattningen innehålla?",
  :writing-guidance-user-instruction "Vad bör handlingsanvisningen innehålla?",
  :tooltip "Skicka till PTV",
  :wizard "Idrifttagning"
@@ -90,4 +92,7 @@
  :unpublished-languages-missing-texts "sammandrag och beskrivning saknas i Lipas. Lägg till dem på språkets flik före synkroniseringen: skriv dem själv, översätt från de finska texterna (\"Översätt till andra språk\") eller låt AI skapa dem (\"Generera beskrivningar med artificiell intelligens\")."
  :lang-fi "finska"
  :lang-se "svenska"
- :lang-en "engelska"}
+ :lang-en "engelska"
+ :blocker-texts-too-short "Sammanfattningen och beskrivningen ska ha minst 5 tecken på varje språk."
+ :text-min-length "minst {1} tecken"
+ :sync-failed-body-ptv-message "PTV avvisade uppgifterna: {1}"}

@@ -277,12 +277,13 @@
         :body)))
 
 (defn update-service-by-id
-  "Update PTV service by its PTV UUID (not source-id).
-   Used when adopting an existing service into LIPAS integration."
-  [ptv service-id data]
+  "Update PTV service by its PTV UUID (not source-id), as `org-id`. The org is
+   explicit, not the body's :mainResponsibleOrganization: a patch of a
+   service made in PTV doesn't send that, as the org writing may be only one
+   of its other responsible organisations."
+  [ptv org-id service-id data]
   (log/infof "Update PTV service by ID %s" service-id)
-  (let [org-id (:mainResponsibleOrganization data)
-        params {:url (make-url ptv "/v11/Service/" service-id)
+  (let [params {:url (make-url ptv "/v11/Service/" service-id)
                 :method :put
                 :form-params data}]
     (-> (http ptv org-id params)
@@ -467,10 +468,10 @@
             (let [base (minimal-service-put-body ptv org-id ptv-id)]
               (when original-id
                 ;; Step 1: rename sourceId to tombstone (keep current status).
-                (update-service-by-id ptv ptv-id
+                (update-service-by-id ptv org-id ptv-id
                                       (assoc base :sourceId (tombstone-source-id original-id))))
               ;; Step 2: archive.
-              (update-service-by-id ptv ptv-id
+              (update-service-by-id ptv org-id ptv-id
                                     (assoc base :publishingStatus "Deleted")))
             (catch Exception e
               (if (modified-status-error? e)
