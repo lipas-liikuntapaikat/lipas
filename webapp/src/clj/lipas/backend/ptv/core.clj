@@ -190,41 +190,6 @@
              m
              m))
 
-(def ^:private get-only-service-fields
-  "Fields present in the GET response but not accepted by the PUT endpoint,
-   either because they're response-only metadata or because the GET shape
-   differs from the PUT shape entirely. :organizations is the worst offender:
-   GET returns `[{:organization {:id ...} :roleType ...}]` but PUT expects
-   `:mainResponsibleOrganization` (UUID string) which LIPAS sets explicitly."
-  #{:id :modified :organizations :serviceChannels})
-
-(defn- drop-nil-vals [m]
-  (into {} (remove (fn [[_ v]] (nil? v))) m))
-
-(defn- normalize-ptv-service-for-update
-  "Convert PTV GET response enriched objects back to the input format
-   expected by the PUT endpoint. The GET returns rich objects (with names,
-   descriptions, parents) plus response-only metadata, but PUT expects
-   simplified input (URIs, codes) and rejects unknown/wrong-shape fields."
-  [service]
-  (-> service
-      ;; ontologyTerms: GET returns [{:uri ... :name [...] ...}], PUT expects just URIs
-      (update :ontologyTerms (fn [terms] (mapv :uri terms)))
-      ;; serviceClasses: GET returns [{:uri ... :name [...] ...}], PUT expects just URIs
-      (update :serviceClasses (fn [classes] (mapv :uri classes)))
-      ;; targetGroups: GET returns [{:uri ... :name [...] ...}], PUT expects just URIs
-      (update :targetGroups (fn [groups] (mapv :uri groups)))
-      ;; areas: GET returns [{:type :municipalities [{:code "425" :name [...]}]}]
-      ;; PUT expects [{:type "Municipality" :areaCodes ["425"]}]
-      (update :areas (fn [areas]
-                       (mapv (fn [area]
-                               {:type (:type area)
-                                :areaCodes (mapv :code (:municipalities area))})
-                             areas)))
-      (as-> $ (apply dissoc $ get-only-service-fields))
-      drop-nil-vals
-      strip-blank-localized-entries))
-
 (defn persist-ptv-service-revision!
   "Appends a ptv_service revision from a PTV Service API response. Never
    throws — the PTV write has already succeeded and cannot be rolled back;
@@ -291,25 +256,24 @@
       live)))
 
 (defn- upsert-lipas-service!
-  "Writes a service LIPAS created and manages whole: the full body built from
-  the sub-category, by source-id, created when PTV doesn't know it yet.
+  "Writes a service LIPAS created: by source-id, created with the full body
+  built from the sub-category when PTV doesn't know it yet.
 
-  `service-id`, the service's PTV id when it already exists, is only read
-  from: what PTV has that LIPAS never writes (alternative names, the
-  service's other descriptions, requirements) is carried over into the body,
-  since the PUT would otherwise wipe it (see
-  ptv-data/carry-over-service-entries)."
+  An update leaves out the defaults LIPAS sets only on creation and resends
+  PTV's own target groups and the entries LIPAS never writes (see
+  ptv-data/lipas-service-update-body). `service-id`, the service's PTV id
+  when it already exists, is only read from, to know what PTV has."
   [ptv {:keys [org-id source-id service-id] :as m}]
-  (let [lipas-data (ptv-data/->ptv-service (assoc m :languages (org-languages ptv org-id)))
-        body (if-let [live (live-lipas-service ptv org-id source-id service-id)]
-               (ptv-data/carry-over-service-entries lipas-data live)
-               lipas-data)]
-    (check-text-lengths! body)
+  (let [create-body (ptv-data/->ptv-service (assoc m :languages (org-languages ptv org-id)))
+        update-body (ptv-data/lipas-service-update-body
+                      create-body
+                      (live-lipas-service ptv org-id source-id service-id))]
+    (check-text-lengths! update-body)
     (try
-      (ptv/update-service ptv source-id body)
+      (ptv/update-service ptv source-id update-body)
       (catch clojure.lang.ExceptionInfo e
         (if (= 404 (:status (:resp (ex-data e))))
-          (ptv/create-service ptv body)
+          (ptv/create-service ptv create-body)
           (throw e))))))
 
 (defn- native-service-writable?
@@ -322,13 +286,36 @@
         (= source-id (ptv-data/->adopted-service-source-id org-id service-id)))))
 
 (defn- native-service-put-body
-  "The PUT body for patching `texts` into the live `service`, or throws when
-  the result would leave a language version, or a text, PTV rejects."
+  "The PUT body for patching `texts` into the live `service` (a GET
+  response), or throws when the result would leave a language version, or a
+  text, PTV rejects.
+
+  The body carries only what LIPAS writes and what PTV needs alongside it,
+  never a GET-shaped field written back: a PUT leaves every field it isn't
+  sent as it is (classifications, areas, organisations and producers,
+  channel connections, legislation, vouchers, ...), while GET and PUT shapes
+  differ in ways that break a write-back (code-list objects vs URIs, areas,
+  a general description's items listed as the service's own but counted
+  against its limits). Verified in the PTV test env 2026-10-17. Sent:
+  - names and descriptions, patched: PTV replaces these lists whole
+  - requirements, as PTV has them: a PUT without them clears them
+  - publishingStatus, as PTV has it: required
+  - generalDescriptionId when there is one; without one PTV requires the
+    target groups, ontology terms and service classes, sent as the URIs
+    a PUT takes (the GET's own :uri form, never mixed with :newUri)
+  - LIPAS's sourceId"
   [org-id service-id service texts remove-langs]
-  (let [body (-> (normalize-ptv-service-for-update service)
-                 (ptv-data/patch-service-texts texts remove-langs)
-                 (assoc :sourceId (ptv-data/->adopted-service-source-id org-id service-id)
-                        :mainResponsibleOrganization org-id))
+  (let [gd-id (:generalDescriptionId service)
+        body (-> (merge {:sourceId (ptv-data/->adopted-service-source-id org-id service-id)
+                         :publishingStatus (:publishingStatus service)}
+                        (select-keys service [:serviceNames :serviceDescriptions :requirements])
+                        (if gd-id
+                          {:generalDescriptionId gd-id}
+                          (into {}
+                                (for [k [:targetGroups :ontologyTerms :serviceClasses]]
+                                  [k (mapv :uri (get service k))]))))
+                 strip-blank-localized-entries
+                 (ptv-data/patch-service-texts texts remove-langs))
         problems (ptv-data/language-version-problems body)]
     (when (seq problems)
       (throw (ex-info "Incomplete PTV language versions"
@@ -358,7 +345,7 @@
                        :service-id service-id
                        :modified (:modified service)})))
     (ptv/update-service-by-id
-      ptv service-id
+      ptv org-id service-id
       (native-service-put-body org-id service-id service
                                (select-keys m [:name :summary :description :user-instruction])
                                (keep ptv-data/lipas-lang->ptv-lang remove-languages)))))

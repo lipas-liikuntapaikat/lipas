@@ -1534,10 +1534,16 @@
                                         :value gen-text)
                           {:max-elements 12}))
 
+(def ^:private gen-requirements
+  (gen/vector-distinct-by :language
+                          (gen/hash-map :language gen-ptv-lang :value gen-text)
+                          {:max-elements 5}))
+
 (def ^:private gen-service
   (gen/hash-map :serviceNames (gen-entries ["Name" "AlternativeName"])
                 :serviceDescriptions (gen-entries ["Summary" "Description" "UserInstruction"
                                                    "ChargeTypeAdditionalInfo" "DeadLine"])
+                :requirements gen-requirements
                 :languages (gen/vector-distinct gen-ptv-lang)
                 :ontologyTerms (gen/return ["http://www.yso.fi/onto/koko/p1"])))
 
@@ -1552,6 +1558,11 @@
 
 (defn- all-entries [service]
   (concat (:serviceNames service) (:serviceDescriptions service)))
+
+(defn- language-entries
+  "Every entry that makes a language version: names, descriptions, requirements."
+  [service]
+  (concat (all-entries service) (:requirements service)))
 
 (defspec native-patch-never-drops-a-language-version 300
   (prop/for-all [service gen-service
@@ -1599,7 +1610,7 @@
                  texts gen-texts
                  remove-lang (gen/elements ["sv" "en"])]
                 (let [out (sut/patch-service-texts service texts #{remove-lang})]
-                  (and (not-any? #(= remove-lang (:language %)) (all-entries out))
+                  (and (not-any? #(= remove-lang (:language %)) (language-entries out))
                        (every? (sut/service-language-versions out)
                                (disj (sut/service-language-versions service) remove-lang))))))
 
@@ -1864,3 +1875,50 @@
         "PTV's Finnish extras are kept; Swedish, which LIPAS no longer publishes, isn't; nor are blank entries or fields PTV keeps by itself")
     (is (= body (sut/carry-over-service-entries body {}))
         "nothing to carry over leaves the body as it is (no empty :requirements)")))
+
+(deftest requirements-make-a-language-version-test
+  ;; Verified in the PTV test env 2026-10-17: a requirement left alone in a
+  ;; language made PTV demand that language's summary and description
+  (let [service {:serviceNames [{:type "Name" :language "fi" :value "Uimahalli"}]
+                 :serviceDescriptions [{:type "Summary" :language "fi" :value "Tiivistelmä"}
+                                       {:type "Description" :language "fi" :value "Kuvaus"}]
+                 :requirements [{:language "fi" :value "Ikäraja 15 vuotta"}
+                                {:language "en" :value "Age limit 15"}]}]
+    (is (= #{"fi" "en"} (sut/service-language-versions service)))
+    (is (= {"en" ["Name" "Summary" "Description"]} (sut/language-version-problems service))
+        "reported before the sync, like any other incomplete version")
+    (let [out (sut/patch-service-texts service {} #{"en"})]
+      (is (= [{:language "fi" :value "Ikäraja 15 vuotta"}] (:requirements out)))
+      (is (= #{"fi"} (sut/service-language-versions out))))))
+
+(deftest lipas-service-update-body-test
+  ;; LIPAS sets producers, area and funding only when it creates a service,
+  ;; and the target groups only as their first value: an update leaves them
+  ;; to PTV (verified in the PTV test env 2026-10-17)
+  (let [body (sut/->ptv-service {:org-id "org-x" :source-id "lipas-org-x-1300" :sub-category-id 1300
+                                 :city-codes [889] :languages ["fi"]
+                                 :summary {:fi "Pallokentät kunnassa"} :description {:fi "Kunnan pallokentät."}})
+        live {:targetGroups [{:uri "http://urn.fi/URN:NBN:fi:au:ptvl:v2001" :code "KR1"}
+                             {:uri "http://urn.fi/URN:NBN:fi:au:ptvl:v2009" :code "KR2.1"}]
+              :requirements [{:language "fi" :value "Ikäraja 15 vuotta"}]}]
+    (testing "the create body has LIPAS's defaults"
+      (is (every? #(contains? body %) sut/create-only-service-fields))
+      (is (= ["http://uri.suomi.fi/codelist/ptv/ptvkohderyhmat/code/KR1"] (:targetGroups body))))
+    (testing "an update leaves them out and resends PTV's own target groups"
+      (let [out (sut/lipas-service-update-body body live)]
+        (is (not-any? #(contains? out %) sut/create-only-service-fields))
+        (is (= ["http://urn.fi/URN:NBN:fi:au:ptvl:v2001" "http://urn.fi/URN:NBN:fi:au:ptvl:v2009"]
+               (:targetGroups out))
+            "as the URIs a PUT takes, never mixed with LIPAS's newer form")
+        (is (= (:requirements live) (:requirements out)) "and carries over what LIPAS never writes")
+        (is (= (select-keys body [:serviceNames :serviceClasses :ontologyTerms :languages :type])
+               (select-keys out [:serviceNames :serviceClasses :ontologyTerms :languages :type]))
+            "what LIPAS maintains is written as before")))
+    (testing "without the live service: create-only fields out, LIPAS's target group in
+              (PTV requires target groups in a PUT without a general description)"
+      (let [out (sut/lipas-service-update-body body nil)]
+        (is (not-any? #(contains? out %) sut/create-only-service-fields))
+        (is (= (:targetGroups body) (:targetGroups out)))))
+    (testing "a live service without target groups keeps LIPAS's"
+      (is (= (:targetGroups body)
+             (:targetGroups (sut/lipas-service-update-body body {:targetGroups []})))))))

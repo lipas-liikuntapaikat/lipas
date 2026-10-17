@@ -1256,10 +1256,24 @@
 ;;   not its language versions: PTV accepts a language there with no texts.
 ;; - A language version requires the organisation to be described in it.
 ;; - A PUT replaces :serviceNames, :serviceDescriptions and :requirements
-;;   whole (requirements even when the body leaves them out), but keeps
-;;   keywords, legislation, the charge type, life events and service vouchers
-;;   it isn't sent (verified 2026-10-16). See carry-over-service-entries.
-;; - At most one AlternativeName per language.
+;;   whole (requirements even when the body leaves them out), but keeps every
+;;   other field it isn't sent: classifications, areas, producers and other
+;;   responsible organisations, channel connections, legislation, keywords,
+;;   vouchers, the charge type (verified 2026-10-16/17). See
+;;   carry-over-service-entries, and core/native-service-put-body for what a
+;;   patch sends.
+;; - A PUT requires :publishingStatus, and without a :generalDescriptionId
+;;   (left out = null) also :targetGroups, :ontologyTerms, :serviceClasses.
+;; - GET and PUT shapes differ: code-list items ({:uri :code ...}) vs URIs,
+;;   never mixing :uri and :newUri forms; areas {:type :code :municipalities}
+;;   vs {:type :areaCodes}; producers and other responsible organisations
+;;   only in GET's :organizations; a general description's classes, ontology
+;;   terms and target groups listed as the service's own, yet counted
+;;   against its limits on a PUT ("Only 4 items allowed!").
+;; - A requirement alone in a language makes it a language version too.
+;; - At most one AlternativeName per language; industrial classes need
+;;   target group KR2 (or a sub group), life events KR1; KR2 from a general
+;;   description needs a KR2 sub group of the service's own.
 
 (defn service-management
   "Who maintains the service with `source-id`:
@@ -1278,11 +1292,12 @@
 
 (defn service-language-versions
   "PTV language codes `service` has a language version in: every language
-   with a name or description entry."
+   with a name, description or requirement entry (a requirement alone makes
+   PTV demand the language's summary and description)."
   [service]
   (into (sorted-set)
         (comp cat (keep :language))
-        [(:serviceNames service) (:serviceDescriptions service)]))
+        [(:serviceNames service) (:serviceDescriptions service) (:requirements service)]))
 
 (defn service-names
   "{locale name} of the service's main (\"Name\") names in the languages
@@ -1307,9 +1322,10 @@
    doesn't model, every other entry type and every other field stay as they
    are, so a sync never drops a language version implicitly.
 
-   `remove-langs` (PTV codes) are the explicit exception: every name and
-   description entry in them is dropped, PTV-only types included, since any
-   entry left behind would keep the version alive in PTV."
+   `remove-langs` (PTV codes) are the explicit exception: every name,
+   description and requirement entry in them is dropped, PTV-only types
+   included, since any entry left behind would keep the version alive in
+   PTV."
   [service texts remove-langs]
   (let [remove-langs (set remove-langs)
         by-type {"Name" (:name texts)
@@ -1333,13 +1349,15 @@
                         :let [v (get-in by-type [type (lang->locale lang)])]
                         :when (not (blank-text? v))]
                     {:type type :language lang :value v}))]
-    (-> service
-        (update :serviceNames
-                (fn [xs] (into (filterv #(keep-entry? #{"Name"} %) xs)
-                               (entries ["Name"]))))
-        (update :serviceDescriptions
-                (fn [xs] (into (filterv #(keep-entry? patched-description-types %) xs)
-                               (entries (sort patched-description-types))))))))
+    (cond-> (-> service
+                (update :serviceNames
+                        (fn [xs] (into (filterv #(keep-entry? #{"Name"} %) xs)
+                                       (entries ["Name"]))))
+                (update :serviceDescriptions
+                        (fn [xs] (into (filterv #(keep-entry? patched-description-types %) xs)
+                                       (entries (sort patched-description-types))))))
+      (seq (:requirements service))
+      (update :requirements (fn [xs] (filterv #(not (contains? remove-langs (:language %))) xs))))))
 
 (defn language-version-problems
   "{ptv-lang [missing-type ...]} for every language version of `service` that
@@ -1404,6 +1422,30 @@
                                                 [:type :language :value]))))
       (seq requirements) (assoc :requirements requirements))))
 
+(def create-only-service-fields
+  "Fields LIPAS sets only when it creates a service: defaults it hardcodes
+   and has no UI for (self-produced by the org, the org's municipalities,
+   publicly funded). Afterwards they're PTV's to maintain: an update leaves
+   them out, and PTV keeps what a PUT isn't sent."
+  [:serviceProducers :areaType :areas :fundingType])
+
+(defn lipas-service-update-body
+  "The PUT body updating a service LIPAS created, from `body`, the full body
+   it would be created with (->ptv-service), and `live`, its PTV version, or
+   nil when LIPAS can't read it:
+   - create-only-service-fields left out
+   - the target groups PTV has: like the create-only fields LIPAS only
+     defaults them, but PTV requires them in a PUT without a general
+     description. LIPAS's default only when `live` is unknown.
+   - what PTV has that LIPAS never writes carried over
+     (carry-over-service-entries)"
+  [body live]
+  (let [body (apply dissoc body create-only-service-fields)]
+    (if live
+      (cond-> (carry-over-service-entries body live)
+        (seq (:targetGroups live)) (assoc :targetGroups (mapv :uri (:targetGroups live))))
+      body)))
+
 (def ^:private text-max-length
   {:summary max-summary-length
    :description max-description-length
@@ -1460,13 +1502,14 @@
 (defn lipas-service-text-errors
   "service-text-errors of a service LIPAS creates or writes whole, `m` being
    the save-ptv-service request for it (texts, :languages, :source-id, ...).
-   Checks the body as the backend builds it: ->ptv-service, plus what is
-   carried over from `live`, the service's PTV version, when it exists."
+   Checks the body as the backend builds it: ->ptv-service when the service
+   is new, the update body (lipas-service-update-body) when `live`, its PTV
+   version, exists."
   [m live]
   (service-text-errors {:management :lipas
                         :texts (select-keys m [:summary :description :user-instruction])
                         :body (cond-> (->ptv-service m)
-                                live (carry-over-service-entries live))}))
+                                live (lipas-service-update-body live))}))
 
 (defn service-versions-to-drop
   "LIPAS locales of the language versions a service created in LIPAS has in

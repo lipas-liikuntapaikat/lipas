@@ -378,3 +378,60 @@ characters (one stricter than PTV). Test data: Utajärvi PTV test org has the
 clone `738e9f70…` ("Lipas native -testi G (hiihtoklooni)"), the LIPAS-created
 "Hevosurheilu" `1f9e0e59…` (sub-category 6100) and the service location
 "Lipas minimipituustesti" `7a31ed41…`.
+
+## GET/PUT asymmetries (2026-10-17)
+
+A native patch wrote the GET response back with a few fields converted.
+That broke on a service with a life event: GET returns code-list objects,
+PUT takes URIs, and only three lists were converted. A field-by-field diff
+of PTV's spec (V11VmOpenApiService vs V9VmOpenApiServiceInBase) and a
+round trip on a Utajärvi clone with every optional field set (life event,
+industrial class, KR2 groups, Region area, procured producer, other
+responsible org, channel connection, legislation, voucher, requirements,
+general description) found more:
+
+| Field | Write-back problem |
+|---|---|
+| lifeEvents, industrialClasses | objects vs URIs (industrial classes as bare codes: PTV 500) |
+| areas (Region, HospitalDistrict, ...) | own `:code`, not their municipalities' |
+| classes/ontology/target groups with a general description | GET lists the description's items as the service's own; a PUT counts them ("ServiceClasses: Only 4 items allowed!"), but leaving them out breaks cross-checks ("KR1 is required if life events are attached") |
+| target groups | `:uri` and `:newUri` forms can't be mixed |
+| serviceCollections etc. | GET-only, were sent back |
+| mainResponsibleOrganization | set to the org writing, which may be only another responsible org |
+
+Built instead (core/native-service-put-body): the patch sends only what
+LIPAS writes and what PTV needs: names and descriptions (patched),
+requirements as PTV has them (a PUT without them clears them),
+publishingStatus (required), the general description id when there is one,
+otherwise target groups, ontology terms and service classes as URIs (PTV
+requires them), and LIPAS's sourceId. Everything else is left out, and
+PTV keeps it: the full-structure diff after a patch, with and without a
+general description, shows only the patched text. The org writing is
+passed to `update-service-by-id` explicitly.
+
+Also: a requirement alone in a language makes a language version
+(service-language-versions counts them), so "Poista kieliversio" drops
+the language's requirements too (it used to fail with "Required value
+with type 'Summary' was not found with language code 'en'!").
+
+LIPAS-created services (full body + carry-over), same test: everything
+PTV-side survived a sync except what LIPAS writes, which included its
+hardcoded defaults: a procured producer added in PTV was lost, and with a
+KR2 general description attached in PTV every sync failed ("Target group
+Businesses and non-government organizations one of the sub target groups
+is required.", LIPAS sends only KR1).
+
+Decided 2026-10-17 (user): the defaults LIPAS has no UI for are set only
+when it creates a service (ptv-data/create-only-service-fields: producers,
+area type and areas, funding type). An update leaves them out, so PTV
+keeps them, and resends PTV's own target groups (PTV requires target groups
+in a PUT without a general description); LIPAS's KR1 only on creation or
+when the live service can't be read. LIPAS still maintains the name,
+texts, service classes, ontology terms, languages and type. The info texts
+and the preview tooltips say so.
+
+Verified in the PTV test env: PTV-side producers (procured), Region area,
+market funding and KR1/KR2/KR2.1 kept through a LIPAS sync, also without
+a service-id (mirror lookup); the KR2 general description case syncs; a new
+service is created with LIPAS's defaults, which PTV-side changes then
+survive.

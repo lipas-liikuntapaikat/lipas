@@ -6,7 +6,6 @@
             [lipas.data.types]))
 
 (def ^:private strip-blanks #'ptv-core/strip-blank-localized-entries)
-(def ^:private normalize #'ptv-core/normalize-ptv-service-for-update)
 (def ^:private site->missing-services #'ptv-core/site->missing-services)
 
 (deftest site->missing-services-test
@@ -74,37 +73,6 @@
     (is (= {:requirements []} (strip-blanks {:requirements []})))
     (is (= {:requirements nil} (strip-blanks {:requirements nil})))))
 
-(deftest normalize-drops-get-only-fields
-  (testing "GET-response-only fields are removed before PUT"
-    (let [out (normalize {:id "abc"
-                          :modified "2026-04-26T00:00:00Z"
-                          :organizations [{:organization {:id "x"} :roleType "Responsible"}]
-                          :serviceChannels [{:id "ch1"}]
-                          :sourceId "lipas-x"
-                          :ontologyTerms []
-                          :serviceClasses []
-                          :targetGroups []
-                          :areas []})]
-      (is (not (contains? out :id)))
-      (is (not (contains? out :modified)))
-      (is (not (contains? out :organizations))
-          "PUT uses :mainResponsibleOrganization; the GET-shape :organizations crashes the PUT validator")
-      (is (not (contains? out :serviceChannels)))
-      (is (= "lipas-x" (:sourceId out)))))
-
-  (testing "nil-valued top-level fields are dropped"
-    (let [out (normalize {:sourceId "x"
-                          :subType nil
-                          :generalDescriptionId nil
-                          :responsibleSoteOrganization nil
-                          :ontologyTerms []
-                          :serviceClasses []
-                          :targetGroups []
-                          :areas []})]
-      (is (not (contains? out :subType)))
-      (is (not (contains? out :generalDescriptionId)))
-      (is (not (contains? out :responsibleSoteOrganization))))))
-
 (def ^:private test-org-id "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5")
 (def ^:private test-service-id "51a9d7c6-b7ef-4b60-be9a-86b21610d8fe")
 
@@ -119,7 +87,11 @@
           :ontologyTerms [{:uri "http://x"}]
           :serviceClasses [{:uri "http://y"}]
           :targetGroups [{:uri "http://z"}]
-          :areas [{:type "Municipality" :municipalities [{:code "425"}]}]
+          :lifeEvents [{:uri "http://urn.fi/URN:NBN:fi:au:ptvl:v3017" :code "KE7"}]
+          :areas [{:type "Region" :code "17" :municipalities [{:code "425"}]}]
+          :requirements [{:language "fi" :value "Ikäraja 15 vuotta"}
+                         {:language "sv" :value "Åldersgräns 15 år"}]
+          :serviceCollections [{:id "c1" :name [{:value "Kokoelma" :language "fi"}]}]
           :serviceNames [{:type "Name" :language "fi" :value "Uimahalli"}
                          {:type "Name" :language "sv" :value "Simhall"}]
           :serviceDescriptions [{:type "Summary" :language "fi" :value "PTV fi"}
@@ -138,8 +110,8 @@
   (let [put (atom nil)
         persisted (atom nil)]
     (with-redefs [ptv/get-service (or get-service (fn [_ _ _] service))
-                  ptv/update-service-by-id (fn [_ id data]
-                                             (reset! put [id data])
+                  ptv/update-service-by-id (fn [_ org-id id data]
+                                             (reset! put [id data org-id])
                                              (assoc data :id id :modified "2026-10-14T11:00:00"))
                   ptv/update-service (fn [_ source-id data]
                                        (reset! put [source-id data])
@@ -181,14 +153,37 @@
         patched (live-service :sourceId patched-source-id)]
     (testing "the first patch gives the service LIPAS's sourceId and changes
               nothing but the texts LIPAS sent"
-      (let [{[addressed data] :put} (sync! native {:name {:fi "Uimahalli"}
-                                                   :summary {:fi "PTV fi"}
-                                                   :description {:fi "PTV kuvaus"}})]
+      (let [{[addressed data org-id] :put} (sync! native {:name {:fi "Uimahalli"}
+                                                          :summary {:fi "PTV fi"}
+                                                          :description {:fi "PTV kuvaus"}})]
         (is (= test-service-id addressed))
+        (is (= test-org-id org-id) "written as the org, which isn't put in the body")
         (is (= patched-source-id (:sourceId data)))
-        (is (= (dissoc (normalize native) :sourceId :serviceNames :serviceDescriptions)
-               (dissoc data :sourceId :mainResponsibleOrganization :serviceNames :serviceDescriptions)))
-        (is (= (set (:serviceDescriptions native)) (set (:serviceDescriptions data))))))
+        (is (= (set (:serviceDescriptions native)) (set (:serviceDescriptions data))))
+        (is (= (:requirements native) (:requirements data))
+            "resent as PTV has them: a PUT without them clears them")))
+
+    (testing "only what LIPAS writes and what PTV needs is sent; a PUT keeps
+              every field it isn't sent, and GET shapes don't survive a
+              write-back (classifications, areas, GET-only fields)"
+      (let [{[_ data] :put} (sync! patched {:name {:fi "Uimahalli"}
+                                            :summary {:fi "PTV fi"} :description {:fi "PTV kuvaus"}})]
+        (is (= #{:sourceId :publishingStatus :serviceNames :serviceDescriptions :requirements
+                 :targetGroups :ontologyTerms :serviceClasses}
+               (set (keys data))))
+        (is (= {:targetGroups ["http://z"] :ontologyTerms ["http://x"] :serviceClasses ["http://y"]}
+               (select-keys data [:targetGroups :ontologyTerms :serviceClasses]))
+            "without a general description PTV requires these, as URIs")
+        (is (= "Published" (:publishingStatus data)))))
+
+    (testing "with a general description, its id stands in for the
+              classifications, which the GET lists merged with the
+              description's (PTV counts all sent against the service's limits)"
+      (let [{[_ data] :put} (sync! (live-service :sourceId patched-source-id :generalDescriptionId "gd-1")
+                                   {:name {:fi "Uimahalli"}
+                                    :summary {:fi "PTV fi"} :description {:fi "PTV kuvaus"}})]
+        (is (= "gd-1" (:generalDescriptionId data)))
+        (is (not-any? #(contains? data %) [:targetGroups :ontologyTerms :serviceClasses :lifeEvents :areas]))))
 
     (testing "LIPAS's Finnish texts replace PTV's; Swedish, which LIPAS left
               alone, is kept with its PTV-only entry and the classification"
@@ -200,13 +195,16 @@
         (is (some #{{:type "ChargeTypeAdditionalInfo" :language "sv" :value "Avgift"}}
                   (:serviceDescriptions data)))
         (is (= ["http://x"] (:ontologyTerms data)))
-        (is (= ["fi"] (:languages data)))))
+        (is (not (contains? data :languages))
+            "the provision languages are PTV's: not sent, so kept")))
 
     (testing "an explicitly removed language goes, PTV-only entries included"
       (let [{[_ data] :put} (sync! patched {:name {:fi "Uimahalli"}
                                             :summary {:fi "Tiivistelmä"} :description {:fi "Kuvaus"}
                                             :remove-languages ["se"]})]
-        (is (= #{"fi"} (ptv-data/service-language-versions data)))))
+        (is (= #{"fi"} (ptv-data/service-language-versions data)))
+        (is (= [{:language "fi" :value "Ikäraja 15 vuotta"}] (:requirements data))
+            "a requirement left in the language would keep its version alive")))
 
     (testing "a version that would be left incomplete is refused before PTV"
       (let [result (try (sync! patched {:name {:fi "Uimahalli" :se "Simhall"}
@@ -303,6 +301,9 @@
               publishes are carried over; the write is still by source-id"
       (let [{[addressed data] :put} (sync! live {:service-id test-service-id})]
         (is (= source-id addressed))
+        (is (not-any? #(contains? data %) ptv-data/create-only-service-fields)
+            "producers, area and funding are set only on creation")
+        (is (= ["http://z"] (:targetGroups data)) "PTV's own target groups")
         (is (some #{{:type "AlternativeName" :language "fi" :value "Hallit"}} (:serviceNames data)))
         (is (some #{{:type "ChargeTypeAdditionalInfo" :language "fi" :value "Maksu 5 euroa"}}
                   (:serviceDescriptions data)))
@@ -325,6 +326,23 @@
               :get-service (fn [_ _ _] (throw (ex-info "HTTP Error: 404" {:resp {:status 404}}))))]
         (is (= source-id addressed))
         (is (not (contains? data :requirements)))))
+
+    (testing "a service PTV doesn't know yet is created with LIPAS's full defaults"
+      (let [created (atom nil)]
+        (with-redefs [ptv/get-service (fn [_ _ _] (throw (ex-info "HTTP Error: 404" {:resp {:status 404}})))
+                      ptv/update-service (fn [_ _ _] (throw (ex-info "HTTP Error: 404" {:resp {:status 404}})))
+                      ptv/create-service (fn [_ data] (reset! created data) data)
+                      ptv-core/persist-ptv-service-revision! (fn [& _])]
+          (ptv-core/upsert-ptv-service!
+            :db-stub {:get-config-by-ptv-org-id-fn (fn [_] {:supported-languages ["fi"]})}
+            {:id "test-user"}
+            {:org-id test-org-id :source-id source-id :service-id test-service-id
+             :sub-category-id 4300 :city-codes [425]
+             :summary {:fi "Uusi tiivistelmä"} :description {:fi "Uusi kuvaus"}}))
+        (is (every? #(contains? @created %) ptv-data/create-only-service-fields))
+        (is (= [{:provisionType "SelfProducedServices" :organizations [test-org-id]}]
+               (:serviceProducers @created)))
+        (is (= ["http://uri.suomi.fi/codelist/ptv/ptvkohderyhmat/code/KR1"] (:targetGroups @created)))))
 
     (testing "an id of another service is refused before anything is written"
       (is (= "lipas-other-1"
