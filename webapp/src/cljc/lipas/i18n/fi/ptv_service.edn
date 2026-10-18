@@ -13,7 +13,7 @@
  :changed-in-ptv "Palvelua on muokattu PTV:ssä sen jälkeen, kun tiedot haettiin. Palvelun tiedot haettiin nyt uudelleen ja tallentamattomat muutoksesi säilyivät: tarkista tekstit ja synkronoi uudelleen."
  :ptv-only-languages "Kieliversiot {1} ylläpidetään PTV:ssä, koska Lipas ei tue niitä. Ne säilyvät ennallaan."
  :remove-language-version "Poista kieliversio {1} PTV:stä"
- :language-removal-pending "Kieliversio {1} poistetaan PTV:stä seuraavassa synkronoinnissa, myös sen PTV:ssä ylläpidetyt lisätiedot."
+ :language-removal-pending "Kieliversio {1} poistetaan PTV:stä seuraavassa synkronoinnissa: sen nimet, tekstit ja ehdot, myös PTV:ssä lisätyt. Vapaat hakusanat, palvelusetelit ja lainsäädäntö tällä kielellä jäävät PTV:hen."
  :lipas-info "Palvelu on luotu Lipaksessa. Lipas ylläpitää sen nimeä, tekstejä, palveluluokkia ja asiasanoja: jos muutat niitä PTV:ssä, muutokset korvautuvat seuraavassa synkronoinnissa. Muita tietoja, kuten kohderyhmiä, aluetta ja tuottajia, voi muuttaa ja täydentää PTV:ssä."
  :native-info "Palvelu on luotu PTV:ssä. Lipaksessa voi päivittää sen nimen, tiivistelmän, kuvauksen ja toimintaohjeen; luokittelu ja muut tiedot ylläpidetään PTV:ssä."
  :other-system-read-only "Palvelua ylläpidetään toisen järjestelmän kautta, joten sitä ei voi muokata Lipaksessa. Liikuntapaikkoja voi silti liittää siihen Liikuntapaikat-välilehdellä."

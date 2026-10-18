@@ -1221,14 +1221,23 @@
 ;;   carry-over-service-entries, and core/native-service-put-body for what a
 ;;   patch sends.
 ;; - A PUT requires :publishingStatus, and without a :generalDescriptionId
-;;   (left out = null) also :targetGroups, :ontologyTerms, :serviceClasses.
+;;   also :targetGroups, :ontologyTerms, :serviceClasses. (A PUT that leaves
+;;   the id out is validated as if there were none, but the attached
+;;   description stays; only :deleteGeneralDescriptionId, with :type,
+;;   detaches it.) PTV checks its target group rules against the target
+;;   groups sent, so they always go along (put-classifications).
+;; - A service in Draft is invisible to the API: GET 404, left out of the
+;;   org listing, yet a PUT by id updates it. Published can't be set back to
+;;   Draft by a PUT, nor Draft to Deleted (publish first).
 ;; - GET and PUT shapes differ: code-list items ({:uri :code ...}) vs URIs,
 ;;   never mixing :uri and :newUri forms; areas {:type :code :municipalities}
 ;;   vs {:type :areaCodes}; producers and other responsible organisations
 ;;   only in GET's :organizations; a general description's classes, ontology
 ;;   terms and target groups listed as the service's own, yet counted
 ;;   against its limits on a PUT ("Only 4 items allowed!").
-;; - A requirement alone in a language makes it a language version too.
+;; - A requirement alone in a language makes it a language version too;
+;;   keywords, service vouchers and law names don't (a version can be
+;;   removed with them left in its language).
 ;; - At most one AlternativeName per language; industrial classes need
 ;;   target group KR2 (or a sub group), life events KR1; KR2 from a general
 ;;   description needs a KR2 sub group of the service's own.
@@ -1248,13 +1257,17 @@
 
 (def ^:private version-required-description-types ["Summary" "Description"])
 
+(defn- blank-text? [v]
+  (or (not (string? v)) (str/blank? v)))
+
 (defn service-language-versions
   "PTV language codes `service` has a language version in: every language
-   with a name, description or requirement entry (a requirement alone makes
-   PTV demand the language's summary and description)."
+   with a name, description or requirement entry with text (a requirement
+   alone makes PTV demand the language's summary and description). PTV's
+   GET can carry blank per-language slots, which no PUT sends."
   [service]
   (into (sorted-set)
-        (comp cat (keep :language))
+        (comp cat (remove (comp blank-text? :value)) (keep :language))
         [(:serviceNames service) (:serviceDescriptions service) (:requirements service)]))
 
 (defn service-names
@@ -1266,9 +1279,6 @@
                 (when-let [locale (and (= "Name" type) (lang->locale language))]
                   [locale value])))
         (:serviceNames service)))
-
-(defn- blank-text? [v]
-  (or (not (string? v)) (str/blank? v)))
 
 (defn patch-service-texts
   "`service` (PTV shape) with LIPAS's `texts` written in, `texts` being
@@ -1337,6 +1347,71 @@
                     [lang missing]))))
         (service-language-versions service)))
 
+(defn- localized-list?
+  "Localized lists are `[{:value <str> :language <str> ...} ...]`. Used by
+   PTV for descriptions, names, requirements, etc."
+  [v]
+  (and (sequential? v)
+       (seq v)
+       (every? map? v)
+       (every? #(contains? % :value) v)))
+
+(defn strip-blank-localized-entries
+  "PTV's PUT endpoint rejects localized list entries with blank :value
+   (400 'The Value field is required.'). The GET response can include
+   such entries (e.g. :requirements with empty per-language slots), so
+   strip them before writing a list back."
+  [m]
+  (reduce-kv (fn [acc k v]
+               (cond-> acc
+                 (localized-list? v)
+                 (assoc k (filterv #(not (str/blank? (:value %))) v))))
+             m
+             m))
+
+(defn put-classifications
+  "The classifications of `service` (a Service GET) as a PUT that writes
+   them back takes them: URIs, the GET's own :uri form, never mixed with
+   :newUri (\"The urls do not have the same base url.\").
+
+   The target groups always: PTV requires them without a general
+   description, and checks its rules against the ones sent (KR1 for life
+   events, KR2 for industrial classes, a KR2 sub group for a KR2 general
+   description). With a general description, its id instead of the ontology
+   terms and service classes, which the GET lists merged with the
+   description's but a PUT counts against the service's own limits
+   (\"ServiceClasses: Only 4 items allowed!\")."
+  [service]
+  (let [uris (fn [k] (mapv :uri (get service k)))]
+    (merge {:targetGroups (uris :targetGroups)}
+           (if-let [gd (:generalDescriptionId service)]
+             {:generalDescriptionId gd}
+             {:ontologyTerms (uris :ontologyTerms)
+              :serviceClasses (uris :serviceClasses)}))))
+
+(defn native-patch-body
+  "The PUT body for patching `texts` into `service`, made in PTV (a GET
+   response), removing the language versions `remove-langs` (PTV codes).
+
+   It carries only what LIPAS writes and what PTV needs alongside it, never
+   a GET-shaped field written back: a PUT leaves every field it isn't sent
+   as it is (areas, organisations and producers, channel connections,
+   legislation, vouchers, life events, ...), while GET and PUT shapes differ
+   in ways that break a write-back. Verified in the PTV test env
+   2026-10-17/18. Sent:
+   - names and descriptions, patched: PTV replaces these lists whole
+   - requirements, as PTV has them: a PUT without them clears them
+   - publishingStatus, as PTV has it: required
+   - the classifications PTV needs (put-classifications)
+   - LIPAS's sourceId"
+  [org-id service-id service texts remove-langs]
+  (-> (merge {:sourceId (->adopted-service-source-id org-id service-id)
+              :publishingStatus (:publishingStatus service)}
+             (select-keys service [:serviceNames :serviceDescriptions :requirements])
+             (put-classifications service))
+      strip-blank-localized-entries
+      (patch-service-texts texts remove-langs)))
+
 (defn short-service-texts
   "The texts of the PTV Service `body` that PTV rejects as too short (see
    min-text-length), as [{:type t :language l}] in body order. A requirement
@@ -1396,7 +1471,12 @@
      defaults them, but PTV requires them in a PUT without a general
      description. LIPAS's default only when `live` is unknown.
    - what PTV has that LIPAS never writes carried over
-     (carry-over-service-entries)"
+     (carry-over-service-entries)
+
+   A service in Draft is invisible to LIPAS: PTV's GET answers 404 and its
+   org listing leaves it out (verified 2026-10-18), so `live` is nil and an
+   update publishes it again. Only the wizard can do that, exporting a
+   sub-category whose service LIPAS doesn't see."
   [body live]
   (let [body (apply dissoc body create-only-service-fields)]
     (if live

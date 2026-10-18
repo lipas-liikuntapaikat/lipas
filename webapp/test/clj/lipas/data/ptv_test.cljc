@@ -1845,3 +1845,60 @@
     (testing "a live service without target groups keeps LIPAS's"
       (is (= (:targetGroups body)
              (:targetGroups (sut/lipas-service-update-body body {:targetGroups []})))))))
+
+(deftest blank-entries-make-no-language-version-test
+  ;; PTV's GET can carry blank per-language slots (e.g. requirements), which
+  ;; no PUT sends: they are no language version, in the panel or the backend
+  (let [service {:serviceNames [{:type "Name" :language "fi" :value "Uimahalli"}]
+                 :serviceDescriptions [{:type "Summary" :language "fi" :value "Tiivistelmä"}
+                                       {:type "Description" :language "fi" :value "Kuvaus"}
+                                       {:type "ChargeTypeAdditionalInfo" :language "en" :value nil}]
+                 :requirements [{:language "fi" :value "Ikäraja 15 vuotta"}
+                                {:language "sv" :value ""}
+                                {:language "en" :value "  "}]}]
+    (is (= #{"fi"} (sut/service-language-versions service)))
+    (is (empty? (sut/language-version-problems service)))))
+
+(deftest native-patch-body-test
+  (let [service {:publishingStatus "Published"
+                 :serviceNames [{:type "Name" :language "fi" :value "Uimahalli"}]
+                 :serviceDescriptions [{:type "Summary" :language "fi" :value "Tiivistelmä"}
+                                       {:type "Description" :language "fi" :value "Kuvaus"}]
+                 :requirements [{:language "fi" :value "Ikäraja 15 vuotta"} {:language "sv" :value ""}]
+                 :targetGroups [{:uri "http://urn.fi/URN:NBN:fi:au:ptvl:v2001" :code "KR1"}]
+                 :ontologyTerms [{:uri "http://www.yso.fi/onto/koko/p1"}]
+                 :serviceClasses [{:uri "http://urn.fi/URN:NBN:fi:au:ptvl:v1211"}]
+                 :lifeEvents [{:uri "http://urn.fi/URN:NBN:fi:au:ptvl:v3017"}]
+                 :areas [{:type "Region" :code "17" :municipalities [{:code "889"}]}]
+                 :serviceCollections [{:id "c1"}]}
+        texts {:name {:fi "Uimahalli"} :summary {:fi "Uusi tiivistelmä"} :description {:fi "Kuvaus"}}]
+    (testing "only what LIPAS writes and what PTV needs, the classifications as URIs"
+      (let [out (sut/native-patch-body "org-x" "svc-1" service texts [])]
+        (is (= #{:sourceId :publishingStatus :serviceNames :serviceDescriptions :requirements
+                 :targetGroups :ontologyTerms :serviceClasses}
+               (set (keys out))))
+        (is (= "lipas-org-x-ptv-svc-1" (:sourceId out)))
+        (is (= ["http://urn.fi/URN:NBN:fi:au:ptvl:v2001"] (:targetGroups out)))
+        (is (= [{:language "fi" :value "Ikäraja 15 vuotta"}] (:requirements out))
+            "blank slots left out: PTV rejects them in a PUT")))
+    (testing "with a general description: its id and the target groups, not the counted lists"
+      (let [out (sut/native-patch-body "org-x" "svc-1" (assoc service :generalDescriptionId "gd-1") texts [])]
+        (is (= "gd-1" (:generalDescriptionId out)))
+        (is (= ["http://urn.fi/URN:NBN:fi:au:ptvl:v2001"] (:targetGroups out)))
+        (is (not-any? #(contains? out %) [:ontologyTerms :serviceClasses]))))))
+
+(defspec lipas-service-update-body-leaves-defaults-to-ptv 200
+  (prop/for-all [langs (gen/not-empty (gen/vector-distinct (gen/elements ["fi" "se" "en"])))
+                 live gen-live-service
+                 live-target-groups (gen/vector (gen/fmap #(str "http://urn.fi/URN:NBN:fi:au:ptvl:v" %)
+                                                          (gen/choose 2001 2020))
+                                                0 3)]
+                (let [body (sut/->ptv-service {:org-id "org-x" :source-id "lipas-org-x-1300" :sub-category-id 1300
+                                               :city-codes [889] :languages langs
+                                               :summary {:fi "Pallokentät kunnassa"} :description {:fi "Kunnan pallokentät."}})
+                      live (assoc live :targetGroups (mapv (fn [u] {:uri u}) live-target-groups))
+                      out (sut/lipas-service-update-body body live)]
+                  (and (not-any? #(contains? out %) sut/create-only-service-fields)
+                       (= (:targetGroups out) (if (seq live-target-groups) live-target-groups (:targetGroups body)))
+                       (= (select-keys body [:serviceClasses :ontologyTerms :languages :type :publishingStatus])
+                          (select-keys out [:serviceClasses :ontologyTerms :languages :type :publishingStatus]))))))

@@ -5,7 +5,7 @@
             [lipas.data.ptv :as ptv-data]
             [lipas.data.types]))
 
-(def ^:private strip-blanks #'ptv-core/strip-blank-localized-entries)
+(def ^:private strip-blanks ptv-data/strip-blank-localized-entries)
 (def ^:private site->missing-services #'ptv-core/site->missing-services)
 
 (deftest site->missing-services-test
@@ -176,14 +176,16 @@
             "without a general description PTV requires these, as URIs")
         (is (= "Published" (:publishingStatus data)))))
 
-    (testing "with a general description, its id stands in for the
-              classifications, which the GET lists merged with the
-              description's (PTV counts all sent against the service's limits)"
+    (testing "with a general description, its id stands in for the ontology
+              terms and service classes, which the GET lists merged with the
+              description's (PTV counts all sent against the service's limits);
+              the target groups still go along, PTV checks its rules on them"
       (let [{[_ data] :put} (sync! (live-service :sourceId patched-source-id :generalDescriptionId "gd-1")
                                    {:name {:fi "Uimahalli"}
                                     :summary {:fi "PTV fi"} :description {:fi "PTV kuvaus"}})]
         (is (= "gd-1" (:generalDescriptionId data)))
-        (is (not-any? #(contains? data %) [:targetGroups :ontologyTerms :serviceClasses :lifeEvents :areas]))))
+        (is (= ["http://z"] (:targetGroups data)))
+        (is (not-any? #(contains? data %) [:ontologyTerms :serviceClasses :lifeEvents :areas]))))
 
     (testing "LIPAS's Finnish texts replace PTV's; Swedish, which LIPAS left
               alone, is kept with its PTV-only entry and the classification"

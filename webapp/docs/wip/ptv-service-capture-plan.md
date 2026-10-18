@@ -402,9 +402,9 @@ general description) found more:
 Built instead (core/native-service-put-body): the patch sends only what
 LIPAS writes and what PTV needs: names and descriptions (patched),
 requirements as PTV has them (a PUT without them clears them),
-publishingStatus (required), the general description id when there is one,
-otherwise target groups, ontology terms and service classes as URIs (PTV
-requires them), and LIPAS's sourceId. Everything else is left out, and
+publishingStatus (required), target groups, the general description id
+when there is one, otherwise ontology terms and service classes, as URIs
+(PTV requires them), and LIPAS's sourceId. Everything else is left out, and
 PTV keeps it: the full-structure diff after a patch, with and without a
 general description, shows only the patched text. The org writing is
 passed to `update-service-by-id` explicitly.
@@ -435,3 +435,33 @@ market funding and KR1/KR2/KR2.1 kept through a LIPAS sync, also without
 a service-id (mirror lookup); the KR2 general description case syncs; a new
 service is created with LIPAS's defaults, which PTV-side changes then
 survive.
+
+## Review round 2026-10-18
+
+A code review of f093dbeed..6fd2f3761; verified in the PTV test env
+(Utajärvi) with fresh services, then archived.
+
+- A native service with a KR2 general description failed to sync ("one of
+  the sub target groups is required"): PTV checks its target group rules
+  against the target groups sent, and with a general description the
+  patch sent none. Now always sent (ptv-data/put-classifications); the
+  panel and the backend build the same body (ptv-data/native-patch-body),
+  so the pre-sync check sees exactly what is sent.
+- A blank requirement slot in the GET made a language version that
+  isn't one (the panel offered to remove it, the check asked for its
+  texts). service-language-versions now counts only entries with text.
+- Removing a language version leaves its keywords, vouchers and
+  legislation names in PTV (they are no version of their own and LIPAS
+  doesn't send them). The removal notice now says so.
+- The wizard's "export all" re-sent candidates already linked to an
+  existing service; linked ones are skipped.
+- Not done: a LIPAS-created service set to Draft in PTV can't be read
+  (GET 404, left out of the org listing), so LIPAS doesn't see it; the
+  wizard, exporting its sub-category, publishes it again with LIPAS's own
+  target groups. Documented in lipas-service-update-body. When the live
+  service can't be read for another reason (a brief outage between read
+  and write), the same fallback applies; reading the org's service list
+  instead would cost a listing per wizard creation for a rare race.
+- Draft services can be PUT by id, but Draft to Deleted is refused:
+  archiving one means publishing it first.
+

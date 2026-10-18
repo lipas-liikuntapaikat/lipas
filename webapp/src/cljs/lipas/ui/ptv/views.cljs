@@ -2284,11 +2284,12 @@
                                  :languages org-languages}
                                 current-texts)
                    edited-name (assoc :service-name edited-name)))
-          ;; A native's patch, as the backend builds it
+          ;; A native's patch, built as the backend builds it
           native-body (when native?
-                        (ptv-data/patch-service-texts (:ptv-entries service)
-                                                      native-texts
-                                                      (keep ptv-data/locale->lang removals)))
+                        (ptv-data/native-patch-body org-id (:service-id service)
+                                                    (:ptv-entries service)
+                                                    native-texts
+                                                    (keep ptv-data/locale->lang removals)))
           problems (when native?
                      (ptv-data/language-version-problems native-body))
           ;; What blocks the sync (checked on the body the sync will send),
