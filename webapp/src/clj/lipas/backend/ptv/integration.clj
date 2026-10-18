@@ -415,16 +415,13 @@
       (str original "-tombstone-" (System/currentTimeMillis)))
 
     (defn- minimal-service-put-body
-      "PTV's PUT-by-id rejects partial bodies — TargetGroups, OntologyTerms,
-       ServiceClasses, PublishingStatus, and mainResponsibleOrganization
-       are all required. Reconstruct them from the GET response."
+      "What a PUT-by-id needs besides the change: the publishing status and
+       the classifications PTV requires and checks (see
+       ptv-data/put-classifications), from the GET response."
       [ptv org-id ptv-id]
       (let [s (get-service ptv org-id ptv-id)]
-        {:mainResponsibleOrganization org-id
-         :publishingStatus (:publishingStatus s)
-         :ontologyTerms (mapv :uri (:ontologyTerms s))
-         :serviceClasses (mapv :uri (:serviceClasses s))
-         :targetGroups (mapv :uri (:targetGroups s))}))
+        (merge {:publishingStatus (:publishingStatus s)}
+               (ptv-data/put-classifications s))))
 
     (defn wipe-ptv-service-locations! [ptv org-id]
       ;; ServiceLocation sourceIds already include a millisecond timestamp

@@ -168,28 +168,6 @@
         :content
         enforce-summary-limit)))
 
-(defn- localized-list?
-  "Localized lists are `[{:value <str> :language <str> ...} ...]`. Used by
-   PTV for descriptions, names, requirements, etc."
-  [v]
-  (and (sequential? v)
-       (seq v)
-       (every? map? v)
-       (every? #(contains? % :value) v)))
-
-(defn- strip-blank-localized-entries
-  "PTV's PUT endpoint rejects localized list entries with blank :value
-   (400 'The Value field is required.'). The GET response can include
-   such entries — e.g. :requirements with empty per-language slots — so
-   strip them before round-tripping."
-  [m]
-  (reduce-kv (fn [acc k v]
-               (cond-> acc
-                 (localized-list? v)
-                 (assoc k (filterv #(not (str/blank? (:value %))) v))))
-             m
-             m))
-
 (defn persist-ptv-service-revision!
   "Appends a ptv_service revision from a PTV Service API response. Never
    throws — the PTV write has already succeeded and cannot be rolled back;
@@ -286,36 +264,11 @@
         (= source-id (ptv-data/->adopted-service-source-id org-id service-id)))))
 
 (defn- native-service-put-body
-  "The PUT body for patching `texts` into the live `service` (a GET
-  response), or throws when the result would leave a language version, or a
-  text, PTV rejects.
-
-  The body carries only what LIPAS writes and what PTV needs alongside it,
-  never a GET-shaped field written back: a PUT leaves every field it isn't
-  sent as it is (classifications, areas, organisations and producers,
-  channel connections, legislation, vouchers, ...), while GET and PUT shapes
-  differ in ways that break a write-back (code-list objects vs URIs, areas,
-  a general description's items listed as the service's own but counted
-  against its limits). Verified in the PTV test env 2026-10-17. Sent:
-  - names and descriptions, patched: PTV replaces these lists whole
-  - requirements, as PTV has them: a PUT without them clears them
-  - publishingStatus, as PTV has it: required
-  - generalDescriptionId when there is one; without one PTV requires the
-    target groups, ontology terms and service classes, sent as the URIs
-    a PUT takes (the GET's own :uri form, never mixed with :newUri)
-  - LIPAS's sourceId"
+  "The PUT body for patching `texts` into the live `service`
+  (ptv-data/native-patch-body), or throws when the result would leave a
+  language version, or a text, PTV rejects."
   [org-id service-id service texts remove-langs]
-  (let [gd-id (:generalDescriptionId service)
-        body (-> (merge {:sourceId (ptv-data/->adopted-service-source-id org-id service-id)
-                         :publishingStatus (:publishingStatus service)}
-                        (select-keys service [:serviceNames :serviceDescriptions :requirements])
-                        (if gd-id
-                          {:generalDescriptionId gd-id}
-                          (into {}
-                                (for [k [:targetGroups :ontologyTerms :serviceClasses]]
-                                  [k (mapv :uri (get service k))]))))
-                 strip-blank-localized-entries
-                 (ptv-data/patch-service-texts texts remove-langs))
+  (let [body (ptv-data/native-patch-body org-id service-id service texts remove-langs)
         problems (ptv-data/language-version-problems body)]
     (when (seq problems)
       (throw (ex-info "Incomplete PTV language versions"
@@ -362,11 +315,12 @@
   "Writes a service's texts to PTV and appends the result to the ptv_service
   mirror. `mode` says which kind of service it is, and so how it's written:
 
-  - \"lipas\" (default): created by LIPAS, which is its master. The whole
-    service is built from LIPAS's data and written by `source-id` (created
-    when PTV doesn't know it yet), keeping what PTV has that LIPAS never
-    writes on the service `service-id` names, or the ptv_service mirror
-    does when the request doesn't (see upsert-lipas-service!).
+  - \"lipas\" (default): created by LIPAS, which maintains its name, texts,
+    service classes, ontology terms and languages. Written by `source-id`:
+    created with LIPAS's full body when PTV doesn't know it yet, otherwise
+    updated on top of the live service (the one `service-id` names, or the
+    ptv_service mirror does when the request doesn't), leaving to PTV what
+    LIPAS only defaults (see upsert-lipas-service!).
   - \"native\": made in PTV. Only its name and texts are patched in, by
     `service-id` (see patch-native-service!).
 

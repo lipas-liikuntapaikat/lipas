@@ -1459,6 +1459,9 @@
 (rf/reg-event-fx ::create-all-ptv-services
   (fn [{:keys [db]} [_ ms]]
     (let [org-id (-get-ptv-org-id db)
+          ;; A candidate linked to an existing PTV service is covered by
+          ;; that service, which the wizard never writes to
+          ms (remove :linked? ms)
           ids (map :source-id ms)]
       {:db (update-in db [:ptv :services-creation]
                       merge

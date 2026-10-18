@@ -229,7 +229,9 @@
          ;; What a sync builds its body on (a native's patch, a LIPAS-created
          ;; service's carried-over entries), here so the panel can check
          ;; the body before sending it
-         :ptv-entries (select-keys service [:serviceNames :serviceDescriptions :requirements])
+         :ptv-entries (select-keys service [:serviceNames :serviceDescriptions :requirements
+                                            :publishingStatus :generalDescriptionId
+                                            :targetGroups :ontologyTerms :serviceClasses])
          :publishing-status (:publishingStatus service)
          :last-modified (:modified service)
          :last-modified-human (utils/->human-date-time-at-user-tz (:modified service))

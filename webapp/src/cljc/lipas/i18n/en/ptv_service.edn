@@ -10,7 +10,7 @@
  :changed-in-ptv "The service has been edited in PTV since its data was loaded. Its data has now been reloaded and your unsaved changes were kept: check the texts and sync again."
  :ptv-only-languages "The language versions {1} are maintained in PTV because Lipas doesn't support them. They stay as they are."
  :remove-language-version "Remove the {1} language version from PTV"
- :language-removal-pending "The {1} language version will be removed from PTV on the next sync, including its additional information maintained in PTV."
+ :language-removal-pending "The {1} language version will be removed from PTV on the next sync: its names, texts and conditions, including those added in PTV. Free-text search words, service vouchers and legislation in this language stay in PTV."
  :lipas-info "The service was created in Lipas. Lipas maintains its name, texts, service classes and keywords: changes you make to them in PTV are replaced on the next sync. Other information, such as target groups, area and producers, can be changed and added in PTV."
  :native-info "The service was created in PTV. In Lipas you can update its name, summary, description and user instructions; the classification and everything else are maintained in PTV."
  :other-system-read-only "The service is maintained through another system, so it can't be edited in Lipas. You can still link sports facilities to it on the Sports facilities tab."
