@@ -1699,6 +1699,35 @@
               select-service-name)
       service-id))
 
+(defn channel-service-ids
+  "Ids of the services the PTV service location `channel` (GET shape) is
+   connected to."
+  [channel]
+  (into [] (comp (keep (comp :id :service)) (distinct)) (:services channel)))
+
+(defn first-link?
+  "Whether syncing a site with `site-ptv` (its :ptv) to the service location
+   `channel` would be LIPAS's first sync of it for the site. LIPAS gives a
+   location the site's sourceId when it syncs it, so one without it was made
+   in PTV, by another system or for another site."
+  [site-ptv channel]
+  (let [source-id (:sourceId channel)]
+    (or (str/blank? source-id)
+        (not= source-id (:source-id site-ptv)))))
+
+(defn link-service-ids
+  "The services a sync of a site with `site-ptv` (its :ptv) connects the
+   service location `channel` to. LIPAS's list is the master of a location
+   it has synced: a sync connects what the list has and disconnects the
+   rest. On the first sync of a location (first-link?) the services the
+   location is already connected to in PTV are added to the list instead,
+   so linking a site to a location made in PTV never disconnects them."
+  [site-ptv channel]
+  (let [ids (vec (:service-ids site-ptv))]
+    (if (and channel (first-link? site-ptv channel))
+      (into ids (remove (set ids)) (channel-service-ids channel))
+      ids)))
+
 (defn compute-service-channel-drift
   "Build a structured per-field drift report comparing what LIPAS would
    push on next sync against what's currently stored in PTV. Returns a
@@ -1759,10 +1788,7 @@
                                  (when (not= l p)
                                    (assoc c :lipas l :ptv p))))))
           lipas-service-ids (set (-> site :ptv :service-ids))
-          ptv-service-ids (->> (:services ptv-channel)
-                               (map (comp :id :service))
-                               (remove nil?)
-                               set)
+          ptv-service-ids (set (channel-service-ids ptv-channel))
           mk-entry (fn [id] {:id id :name (resolve-service-name services id)})
           mk-entries (fn [id-set] (->> id-set (map mk-entry) (sort-by :name) vec))
           link-drift (when (not= lipas-service-ids ptv-service-ids)

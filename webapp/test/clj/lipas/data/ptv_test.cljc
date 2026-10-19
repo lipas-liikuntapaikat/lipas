@@ -1979,3 +1979,17 @@
                        (= (:targetGroups out) (if (seq live-target-groups) live-target-groups (:targetGroups body)))
                        (= (select-keys body [:serviceClasses :ontologyTerms :languages :type :publishingStatus])
                           (select-keys out [:serviceClasses :ontologyTerms :languages :type :publishingStatus]))))))
+
+(deftest link-service-ids-test
+  (let [channel (fn [source-id & ids]
+                  {:sourceId source-id :services (mapv (fn [id] {:service {:id id}}) ids)})]
+    (testing "the first sync of a location keeps the services PTV connected it to"
+      (is (= ["ice" "golf"] (sut/link-service-ids {:service-ids ["ice"]} (channel nil "golf"))))
+      (is (= ["ice" "golf"] (sut/link-service-ids {:service-ids ["ice"] :source-id "lipas-old"}
+                                                  (channel "other-system" "golf" "ice"))))
+      (is (= ["golf"] (sut/link-service-ids {} (channel "" "golf")))))
+    (testing "a location LIPAS has synced: the site's list as it is"
+      (is (= ["ice"] (sut/link-service-ids {:service-ids ["ice"] :source-id "lipas-1"}
+                                           (channel "lipas-1" "golf")))))
+    (testing "no location, nothing to keep"
+      (is (= ["ice"] (sut/link-service-ids {:service-ids ["ice"]} nil))))))

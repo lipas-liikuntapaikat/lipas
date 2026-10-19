@@ -260,11 +260,15 @@
   "Drift fields where word-level diff highlighting helps readability."
   #{:name :marketing-name :summary :description})
 
+(defn- service-names
+  [entries]
+  (str/join ", " (map (fn [{:keys [id name]}] (or name id)) entries)))
+
 (defn- drift-services-cell
   [tr entries]
   (if (seq entries)
     [:> Typography {:variant "body2"}
-     (str/join ", " (map (fn [{:keys [id name]}] (or name id)) entries))]
+     (service-names entries)]
     [:> Typography {:variant "body2" :sx #js {:color "text.disabled" :fontStyle "italic"}}
      (tr :ptv.drift/empty)]))
 
@@ -305,14 +309,14 @@
               [drift-services-cell tr lipas]
               (when (seq removed)
                 [:> Typography {:variant "caption" :sx #js {:color "warning.dark" :display "block" :mt 1}}
-                 (tr :ptv.drift/services-will-remain)])]
+                 (tr :ptv.drift/services-will-be-linked (service-names removed))])]
              [:> TableCell {:sx #js {:verticalAlign "top"}}
               [:> Typography {:variant "caption" :sx #js {:color "text.secondary" :display "block"}}
                (tr :ptv.drift/services-ptv-has)]
               [drift-services-cell tr ptv]
               (when (seq added)
                 [:> Typography {:variant "caption" :sx #js {:color "warning.dark" :display "block" :mt 1}}
-                 (tr :ptv.drift/services-will-be-removed)])]]
+                 (tr :ptv.drift/services-will-be-removed (service-names added))])]]
 
             (contains? text-fields field)
             (let [ops (ptv-diff/coalesce (ptv-diff/diff lipas ptv))]
