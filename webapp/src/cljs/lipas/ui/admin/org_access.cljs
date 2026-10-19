@@ -3,9 +3,11 @@
   (PTV only / org management), switchable per row after a confirmation that
   states how many members are affected. Reads and writes the shared org list in
   app-db ([:user :orgs]), so a switch shows in every other org view at once."
-  (:require ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
+            ["@mui/material/Button$default" :as Button]
             ["@mui/material/Card$default" :as Card]
             ["@mui/material/CardContent$default" :as CardContent]
+            ["@mui/material/Collapse$default" :as Collapse]
             ["@mui/material/Dialog$default" :as Dialog]
             ["@mui/material/DialogActions$default" :as DialogActions]
             ["@mui/material/DialogContent$default" :as DialogContent]
@@ -31,6 +33,24 @@
 (def ^:private level-labels
   {"ptv-only"       :lipas.org/access-level-ptv-only
    "org-management" :lipas.org/access-level-org-management})
+
+(defn- level-legend [tr]
+  (r/with-let [open? (r/atom false)]
+    [:<>
+     [:> Button {:size "small"
+                 :sx {:mb 1}
+                 :on-click #(swap! open? not)
+                 :end-icon (r/as-element
+                             [:> ExpandMoreIcon
+                              {:sx {:transform (when @open? "rotate(180deg)")
+                                    :transition "transform 150ms"}}])}
+      (tr :lipas.org/access-level-legend-toggle)]
+     [:> Collapse {:in @open?}
+      [:> Stack {:spacing 0.5 :sx {:mb 2}}
+       (for [level org-schema/access-levels
+             :let [label-k (level-labels level)]]
+         [:> Typography {:key level :variant "body2"}
+          [:strong (tr label-k)] " – " (tr (keyword "lipas.org" (str (name label-k) "-desc")))])]]]))
 
 (defn- level-of [org]
   ;; Stored explicitly on every org; "" (no selection) would expose a gap.
@@ -92,6 +112,7 @@
       [:> Card {:square true}
        [:> CardContent
         [:> Typography {:variant "h5" :sx {:mb 2}} (tr :lipas.org/access-level-tab)]
+        [level-legend tr]
         [:> Stack {:direction {:xs "column" :sm "row"} :spacing 2 :sx {:mb 2}}
          [text-fields/text-field-controlled
           {:label (tr :lipas.org/access-level-search)
