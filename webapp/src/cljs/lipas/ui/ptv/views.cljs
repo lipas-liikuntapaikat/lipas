@@ -546,12 +546,13 @@
                      "https://palvelutietovaranto.trn.suomi.fi")]
       [:> Stack {:spacing 2 :sx #js {:pt 2 :pb 2}}
 
-       ;; Drift panel: temporarily disabled. Re-enable by uncommenting
-       ;; the line below once we're ready to surface the diff to users.
-       ;; The drift detection and the panel component itself stay live —
-       ;; only the render site is commented out.
-       #_[ptv-components/drift-panel {:drift-fields (:drift-fields site)
-                                      :tr tr}]
+       ;; Drift panel, for now only its service connections: the next sync
+       ;; disconnects the services the location was connected to in PTV
+       ;; since LIPAS last synced it, which only this tells the user. The
+       ;; text fields stay hidden until we're ready to surface their diff.
+       [ptv-components/drift-panel {:drift-fields (filterv #(= :services (:field %))
+                                                           (:drift-fields site))
+                                    :tr tr}]
 
        [checkboxes/switch
         {:label (tr :ptv.actions/export-disclaimer)
