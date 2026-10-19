@@ -699,9 +699,18 @@
                            sites))]
       (if conflict
         (assoc-in db [:ptv :double-link-block lipas-id] conflict)
-        (-> db
-            (update-in [:ptv :double-link-block] dissoc lipas-id)
-            (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv :service-channel-ids] v))))))
+        (let [site-path [:ptv :org org-id :data :sports-sites lipas-id :ptv]
+              channel (when new-id
+                        (get-in db [:ptv :org org-id :data :service-channels new-id]))]
+          (-> db
+              (update-in [:ptv :double-link-block] dissoc lipas-id)
+              (assoc-in (conj site-path :service-channel-ids) v)
+              ;; A location made in PTV keeps the services it's connected
+              ;; to: shown in the site's list before the sync, which keeps
+              ;; them (ptv-data/link-service-ids)
+              (cond->
+                channel (update-in site-path
+                                   #(assoc % :service-ids (ptv-data/link-service-ids % channel))))))))))
 
 (rf/reg-event-db ::select-service-integration
   (fn [db [_ {:keys [lipas-id]} v]]

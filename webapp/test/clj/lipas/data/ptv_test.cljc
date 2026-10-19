@@ -1436,3 +1436,17 @@
     (is (= [] (sut/attention (attention-site {:sync-enabled false})))
         "PTV data saved but never switched on")
     (is (every? #(= :error (:severity %)) (sut/attention (attention-site {:sync-enabled true}))))))
+
+(deftest link-service-ids-test
+  (let [channel (fn [source-id & ids]
+                  {:sourceId source-id :services (mapv (fn [id] {:service {:id id}}) ids)})]
+    (testing "the first sync of a location keeps the services PTV connected it to"
+      (is (= ["ice" "golf"] (sut/link-service-ids {:service-ids ["ice"]} (channel nil "golf"))))
+      (is (= ["ice" "golf"] (sut/link-service-ids {:service-ids ["ice"] :source-id "lipas-old"}
+                                                  (channel "other-system" "golf" "ice"))))
+      (is (= ["golf"] (sut/link-service-ids {} (channel "" "golf")))))
+    (testing "a location LIPAS has synced: the site's list as it is"
+      (is (= ["ice"] (sut/link-service-ids {:service-ids ["ice"] :source-id "lipas-1"}
+                                           (channel "lipas-1" "golf")))))
+    (testing "no location, nothing to keep"
+      (is (= ["ice"] (sut/link-service-ids {:service-ids ["ice"]} nil))))))
