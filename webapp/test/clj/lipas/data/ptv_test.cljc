@@ -490,7 +490,7 @@
                     :reservations-link "https://varaa.halli.fi")]
     (testing "both pages in every declared language, named in that language"
       (is (= [["fi" 1 "https://www.halli.fi" "Liikuntapaikan verkko-osoite"]
-              ["fi" 2 "https://varaa.halli.fi" "Tilavarausten verkkosivu"]
+              ["fi" 2 "https://varaa.halli.fi" "Tilavarausten verkko-osoite"]
               ["sv" 1 "https://www.halli.fi" "Idrottsplatsens webbadress"]
               ["sv" 2 "https://varaa.halli.fi" "Webbplats för lokalbokning"]
               ["en" 1 "https://www.halli.fi" "Sports facility website"]
@@ -531,7 +531,7 @@
             (pr-str v))))
 
     (testing "reservations link alone is page 1"
-      (is (= [["fi" 1 "https://varaa.halli.fi" "Tilavarausten verkkosivu"]]
+      (is (= [["fi" 1 "https://varaa.halli.fi" "Tilavarausten verkko-osoite"]]
              (web-pages (build-location (-> site
                                             (dissoc :www)
                                             (assoc-in [:ptv :languages] ["fi"])))))))

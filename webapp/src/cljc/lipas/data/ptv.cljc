@@ -560,7 +560,7 @@
   {:www {"fi" "Liikuntapaikan verkko-osoite"
          "sv" "Idrottsplatsens webbadress"
          "en" "Sports facility website"}
-   :reservations-link {"fi" "Tilavarausten verkkosivu"
+   :reservations-link {"fi" "Tilavarausten verkko-osoite"
                        "sv" "Webbplats för lokalbokning"
                        "en" "Facility booking website"}})
 
