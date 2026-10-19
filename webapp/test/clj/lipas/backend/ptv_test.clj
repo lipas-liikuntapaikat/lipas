@@ -473,6 +473,7 @@
                     (swap! get-channel-call-count inc)
                     (if (= 1 @get-channel-call-count)
                       {:id id
+                       :sourceId (:sourceId stale-put-resp)
                        :services [{:service {:id old-service-id}}]}
                       fresh-get-resp))
                   ptv-integ/update-service-location
@@ -537,7 +538,8 @@
                   (fn [_ _ _id]
                     (swap! get-channel-call-count inc)
                     (if (= 1 @get-channel-call-count)
-                      {:services [{:service {:id "service-old"}}]}
+                      {:sourceId (:sourceId stale-put-resp)
+                       :services [{:service {:id "service-old"}}]}
                       (throw (ex-info "PTV down" {:status 503}))))
                   ptv-integ/update-service-location
                   (fn [_ _ _] stale-put-resp)
@@ -547,6 +549,74 @@
                            {} {:org-id "org-x" :site site :ptv (:ptv site)})]
         (is (= stale-put-resp ptv-resp)
             "Refetch failure must fall back to PUT response, not throw")))))
+
+(deftest upsert-ptv-service-location-first-link-keeps-ptv-connections
+  ;; Tester finding 2026-10-19: a site linked to a service location made in
+  ;; PTV was synced and the location's PTV-made connection (Golfkentät) was
+  ;; removed, as it wasn't in the site's list. The first sync of a location
+  ;; keeps its connections and takes them into the list; once LIPAS has
+  ;; synced the location, its list is the master again.
+  (let [site (fn [ptv]
+               {:lipas-id 12345
+                :name "Test kaukalo"
+                :status "active"
+                :type {:type-code 1530}
+                :location {:city {:city-code 889}
+                           :address "Katu 1"
+                           :postal-code "91600"
+                           :geometries {:type "FeatureCollection"
+                                        :features [{:type "Feature"
+                                                    :geometry {:type "Point"
+                                                               :coordinates [26.4 64.7]}}]}}
+                :search-meta {:location {:wgs84-point [26.4 64.7]}}
+                :ptv (merge {:org-id "org-x"
+                             :service-channel-ids ["chan-1"]
+                             :service-ids ["service-ice"]
+                             :sync-enabled true
+                             :languages ["fi"]
+                             :summary {:fi "Kaukalon tiivistelmä"}
+                             :description {:fi "Kaukalon kuvaus"}}
+                            ptv)})
+        sync! (fn [site channel]
+                (let [connections (atom [])]
+                  (with-redefs [core/enrich identity
+                                ptv-integ/get-org-ptv-config-with-fallback
+                                (fn [_ _] {:supported-languages ["fi"]})
+                                ptv-integ/get-org-service-channel (fn [_ _ _] channel)
+                                ptv-integ/update-service-location
+                                (fn [_ id data] (assoc data :id id))
+                                ptv-integ/update-service-connections
+                                (fn [_ _ service-id f]
+                                  (swap! connections conj
+                                         [(if (contains? (f #{}) "chan-1") :connect :disconnect) service-id]))]
+                    (let [[_ new-ptv-data] (ptv-core/upsert-ptv-service-location!*
+                                             {} {:org-id "org-x" :site site :ptv (:ptv site)})]
+                      {:connections (set @connections)
+                       :service-ids (:service-ids new-ptv-data)}))))]
+
+    (testing "a location made in PTV keeps its connections; LIPAS adds its own"
+      (let [{:keys [connections service-ids]}
+            (sync! (site {})
+                   {:id "chan-1" :sourceId nil
+                    :services [{:service {:id "service-golf"}}]})]
+        (is (= #{[:connect "service-ice"]} connections))
+        (is (= ["service-ice" "service-golf"] service-ids))))
+
+    (testing "so does one with another site's or system's sourceId"
+      (let [{:keys [connections service-ids]}
+            (sync! (site {:source-id "lipas-org-x-12345-old"})
+                   {:id "chan-1" :sourceId "other-system-1"
+                    :services [{:service {:id "service-golf"}}]})]
+        (is (= #{[:connect "service-ice"]} connections))
+        (is (= ["service-ice" "service-golf"] service-ids))))
+
+    (testing "a location LIPAS has synced: its list is the master"
+      (let [{:keys [connections service-ids]}
+            (sync! (site {:source-id "lipas-org-x-12345-1"})
+                   {:id "chan-1" :sourceId "lipas-org-x-12345-1"
+                    :services [{:service {:id "service-golf"}}]})]
+        (is (= #{[:connect "service-ice"] [:disconnect "service-golf"]} connections))
+        (is (= ["service-ice"] service-ids))))))
 
 ;;; Archiving behaviour ;;;
 

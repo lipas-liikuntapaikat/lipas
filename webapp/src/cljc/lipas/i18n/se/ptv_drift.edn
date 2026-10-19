@@ -14,5 +14,5 @@
 
  :services-lipas-has "Anslutet i LIPAS:"
  :services-ptv-has "Anslutet i PTV:"
- :services-will-remain "Bevaras efter synkronisering."
- :services-will-be-removed "Tas bort vid nästa synkronisering."}
+ :services-will-be-linked "Kopplas vid nästa synkronisering: {1}"
+ :services-will-be-removed "Tas bort vid nästa synkronisering: {1}"}
