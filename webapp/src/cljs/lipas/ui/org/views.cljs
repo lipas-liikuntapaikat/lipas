@@ -411,7 +411,11 @@
            :onChange (fn [e] (rf/dispatch [::events/edit-org [:access-level] (.. e -target -value)]))}
           (for [[k tr-key] access-level-options]
             [:> MenuItem {:key k :value k} (tr tr-key)])]
-         [:> FormHelperText (tr :lipas.org/access-level-helper)]])
+         [:> FormHelperText
+          (str (tr :lipas.org/access-level-ptv-only) ": "
+               (tr :lipas.org/access-level-ptv-only-desc) " "
+               (tr :lipas.org/access-level-org-management) ": "
+               (tr :lipas.org/access-level-org-management-desc))]])
 
       [text-fields/text-field-controlled
        {:label (tr :lipas.org/phone)
