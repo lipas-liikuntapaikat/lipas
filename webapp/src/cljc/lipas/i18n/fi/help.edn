@@ -2,6 +2,8 @@
  :available-pages "Sivut tässä osiossa",
  :headline "Ohjeet",
  :manage-content "Hallitse ohjesisältöä",
+ :load-failed "Ohjeiden lataaminen epäonnistui.",
+ :retry "Yritä uudelleen",
  :privacy-policy "Tietosuojailmoitus"
  :data-model "Tietomalli"
  :data-model-excel "Lataa kuvaus Lipaksen tietomallista Excel-muodossa alla olevasta painikkeesta."}
