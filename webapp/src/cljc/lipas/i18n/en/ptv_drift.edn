@@ -14,5 +14,5 @@
 
  :services-lipas-has "Linked in LIPAS:"
  :services-ptv-has "Linked in PTV:"
- :services-will-remain "Will remain after sync."
- :services-will-be-removed "Will be unlinked on next sync."}
+ :services-will-be-linked "Linked on next sync: {1}"
+ :services-will-be-removed "Unlinked on next sync: {1}"}

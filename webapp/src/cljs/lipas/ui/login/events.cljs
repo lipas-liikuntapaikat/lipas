@@ -119,9 +119,19 @@
       :on-failure      [::logout]}
      :tracker/event! ["user" "magic-link-opened"]}))
 
+(defn- fresh-db
+  "app-db for a session change (logout, entering or leaving impersonation):
+  nothing from the previous user carries over. Kept: the backend url, and
+  the help content — it's public and fetched only once at app start, so
+  dropping it left the help dialog empty until a page reload."
+  [db]
+  (-> db/default-db
+      (assoc :backend-url (:backend-url db))
+      (assoc-in [:help :data] (get-in db [:help :data]))))
+
 (rf/reg-event-fx ::logout
   (fn [{:keys [db]}  _]
-    {:db (assoc db/default-db :backend-url (:backend-url db))
+    {:db (fresh-db db)
 
      ::local-storage/remove-many! [:login-data :admin-login-data]
 
@@ -217,7 +227,7 @@
   (fn [{:keys [db]} [_ body]]
     {;; Reset app state so nothing from the admin session leaks into the
      ;; impersonated session.
-     :db (assoc db/default-db :backend-url (:backend-url db))
+     :db (fresh-db db)
      ::local-storage/set! [:admin-login-data (get-in db [:user :login])]
      :dispatch-n [[::login-success :impersonate body]
                   [:lipas.ui.events/navigate "/profiili"]]}))
@@ -239,7 +249,7 @@
               (utils/jwt-expired? (:token admin-login)))
         ;; Stash is gone or the admin token expired while impersonating.
         {:dispatch [::logout]}
-        {:db (assoc db/default-db :backend-url (:backend-url db))
+        {:db (fresh-db db)
          ::local-storage/remove! :admin-login-data
          :dispatch-n [[::login-success :exit-impersonation admin-login]
                       ;; Trade the stashed token for a fresh one right away.

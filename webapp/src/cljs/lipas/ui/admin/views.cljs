@@ -43,6 +43,7 @@
             [lipas.ui.admin.ai-workbench.views :as ai-workbench-views]
             [lipas.ui.admin.events :as events]
             [lipas.ui.admin.jobs.views :as jobs-views]
+            [lipas.ui.admin.org-access :as org-access]
             [lipas.ui.admin.ptv-adoption.views :as ptv-adoption-views]
             [lipas.ui.admin.subs :as subs]
             [lipas.ui.components.autocompletes :as ac]
@@ -1024,7 +1025,9 @@
          [:> Tab {:label "PTV AI Workbench"
                   :value "ai-workbench"}]
          [:> Tab {:label "PTV-käyttöönotto"
-                  :value "ptv-adoption"}]]]
+                  :value "ptv-adoption"}]
+         [:> Tab {:label (tr :lipas.org/access-level-tab)
+                  :value "org-access"}]]]
 
        (case selected-tab
          :symbol
@@ -1047,6 +1050,9 @@
 
          :ptv-adoption
          [ptv-adoption-views/ptv-adoption-tab]
+
+         :org-access
+         [org-access/org-access-tab]
 
          [:div "Missing view"])]]]))
 

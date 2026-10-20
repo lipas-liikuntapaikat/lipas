@@ -42,6 +42,7 @@
     (backend-org/create-org (test-db)
                             {:id id
                              :name (str "Auth Test Org " id)
+                             :access-level "org-management"
                              :data {}
                              :ptv-data {:org-id nil
                                         :city-codes [91]
@@ -103,7 +104,7 @@
      {:method :post
       :path "/api/actions/create-org"
       :privilege :org/admin
-      :body {:name "Auth Test New Org"}}
+      :body {:name "Auth Test New Org" :access-level "ptv-only"}}
 
      ;; --- Org-scoped management (:org/manage on the body's :org-id) -----
      {:method :post

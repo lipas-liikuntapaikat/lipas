@@ -13,4 +13,6 @@
    :editor
    {:locale :fi}
    ;; {:fi [sections] :se [...] :en [...]} loaded from the server
-   :data nil})
+   :data nil
+   ;; true while a get-help-data request is in flight
+   :loading? false})

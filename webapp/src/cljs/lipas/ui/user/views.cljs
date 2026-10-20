@@ -160,7 +160,7 @@
                   :tr tr}])])]])])))
 
 (r/defc explain-orgs []
-  (let [orgs @(rf/subscribe [::org-subs/user-orgs])]
+  (let [orgs @(rf/subscribe [::org-subs/org-management-orgs])]
     [:<>
      (for [{:keys [id name]} orgs]
        [:<>

@@ -2,6 +2,8 @@
  :available-pages "Sidor i detta avsnitt",
  :headline "Hjälp",
  :manage-content "Redigera hjälpinnehåll",
+ :load-failed "Det gick inte att ladda hjälpinnehållet.",
+ :retry "Försök igen",
  :privacy-policy "Privacy policy"
  :data-model "Datamodell"
  :data-model-excel "Ladda ner beskrivningen av Lipas datamodell i Excel-format via knappen nedan."}

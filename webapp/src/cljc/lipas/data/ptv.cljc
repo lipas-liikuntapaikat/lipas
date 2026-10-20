@@ -528,6 +528,12 @@
   ;; path. Rejects phone numbers, gibberish, and `https://` with no host.
   #"(?i)^(?:https?|ftp)://[^./\s]+\.[^/\s]")
 
+(def ^:private RE-WWW-USERINFO
+  ;; An `@` before the path means an email address got the scheme
+  ;; prepended (`tilavaraukset@vihti.fi` → `https://tilavaraukset@vihti.fi`).
+  ;; That's not a web page, so it's rejected rather than sent to PTV.
+  #"(?i)^(?:https?|ftp)://[^/?#\s]*@")
+
 (defn- fix-www-scheme-typo
   "Repair common scheme typos and adjacent host damage observed in real
   LIPAS data so they pass PTV's URL validator. Applied before scheme
@@ -570,6 +576,7 @@
   - extracts the first URL when several appear separated by whitespace,
   - prepends `https://` to schemeless hosts,
   - validates the resulting URL has a real host and is within length,
+  - rejects email addresses (an `@` before the path),
   - returns nil for blank or unparseable input.
 
   Returning nil triggers `:deleteAllWebPages true` upstream, so a
@@ -587,8 +594,44 @@
                                  first
                                  (str "https://")))]
       (when (and (re-find RE-WWW-HOST-SHAPE extracted)
+                 (not (re-find RE-WWW-USERINFO extracted))
                  (<= (count extracted) 500))
         extracted))))
+
+(def web-page-names
+  "Name of each web page LIPAS sends to PTV, by LIPAS field and PTV language
+  code (\"sv\", not LIPAS' \"se\" — in PTV \"se\" is Northern Sami). DVV
+  makes web page names mandatory, and PTV keeps them per language."
+  {:www {"fi" "Liikuntapaikan verkko-osoite"
+         "sv" "Idrottsplatsens webbadress"
+         "en" "Sports facility website"}
+   :reservations-link {"fi" "Tilavarausten verkko-osoite"
+                       "sv" "Webbplats för lokalbokning"
+                       "en" "Facility booking website"}})
+
+(def ^:private ptv-lang-order ["fi" "sv" "en"])
+
+(defn ->ptv-web-pages
+  "PTV webPages for the site's `:www` and `:reservations-link`: each page
+  once per PTV language in `languages`, named in that language. A page in
+  a language the channel doesn't declare makes PTV reject the whole update
+  as an incomplete new language version, so `languages` must be exactly
+  the payload's `:languages`. A reservations link equal to `:www` is left
+  out."
+  [languages sports-site]
+  (let [www (parse-www (:www sports-site))
+        reservations (parse-www (:reservations-link sports-site))
+        pages (cond-> []
+                www (conj [:www www])
+                (and reservations (not= reservations www))
+                (conj [:reservations-link reservations]))]
+    (vec (for [lang ptv-lang-order
+               :when (contains? languages lang)
+               [i [k url]] (map-indexed vector pages)]
+           {:url url
+            :value (get-in web-page-names [k lang])
+            :language lang
+            :orderNumber (inc i)}))))
 
 ;; Mirrors PTV's PTVEmailAddressAttribute (see ptv-releases/.../PTVEmailAddressAttribute.cs).
 ;; Local part: ASCII letters case-insensitive, digits, the symbol set PTV
@@ -664,7 +707,7 @@
         _main-cat (get types/main-categories (:main-category type))
 
         email (parse-email (:email sports-site))
-        www (parse-www (:www sports-site))
+        web-pages (->ptv-web-pages languages sports-site)
         phone-number (parse-phone-number (:phone-number sports-site))]
 
     #?(:clj (println "PTV data"))
@@ -755,9 +798,8 @@
                              :language "fi"}])
       (not email) (assoc :deleteAllEmails true)
 
-      www (assoc :webPages [{:url www
-                             :language "fi"}])
-      (not www) (assoc :deleteAllWebPages true)
+      (seq web-pages) (assoc :webPages web-pages)
+      (empty? web-pages) (assoc :deleteAllWebPages true)
 
       phone-number (assoc :phoneNumbers (let [{:keys [number prefix is-finnish-service-number]} phone-number]
                                           [{:number number
@@ -1657,6 +1699,35 @@
               select-service-name)
       service-id))
 
+(defn channel-service-ids
+  "Ids of the services the PTV service location `channel` (GET shape) is
+   connected to."
+  [channel]
+  (into [] (comp (keep (comp :id :service)) (distinct)) (:services channel)))
+
+(defn first-link?
+  "Whether syncing a site with `site-ptv` (its :ptv) to the service location
+   `channel` would be LIPAS's first sync of it for the site. LIPAS gives a
+   location the site's sourceId when it syncs it, so one without it was made
+   in PTV, by another system or for another site."
+  [site-ptv channel]
+  (let [source-id (:sourceId channel)]
+    (or (str/blank? source-id)
+        (not= source-id (:source-id site-ptv)))))
+
+(defn link-service-ids
+  "The services a sync of a site with `site-ptv` (its :ptv) connects the
+   service location `channel` to. LIPAS's list is the master of a location
+   it has synced: a sync connects what the list has and disconnects the
+   rest. On the first sync of a location (first-link?) the services the
+   location is already connected to in PTV are added to the list instead,
+   so linking a site to a location made in PTV never disconnects them."
+  [site-ptv channel]
+  (let [ids (vec (:service-ids site-ptv))]
+    (if (and channel (first-link? site-ptv channel))
+      (into ids (remove (set ids)) (channel-service-ids channel))
+      ids)))
+
 (defn compute-service-channel-drift
   "Build a structured per-field drift report comparing what LIPAS would
    push on next sync against what's currently stored in PTV. Returns a
@@ -1717,10 +1788,7 @@
                                  (when (not= l p)
                                    (assoc c :lipas l :ptv p))))))
           lipas-service-ids (set (-> site :ptv :service-ids))
-          ptv-service-ids (->> (:services ptv-channel)
-                               (map (comp :id :service))
-                               (remove nil?)
-                               set)
+          ptv-service-ids (set (channel-service-ids ptv-channel))
           mk-entry (fn [id] {:id id :name (resolve-service-name services id)})
           mk-entries (fn [id-set] (->> id-set (map mk-entry) (sort-by :name) vec))
           link-drift (when (not= lipas-service-ids ptv-service-ids)

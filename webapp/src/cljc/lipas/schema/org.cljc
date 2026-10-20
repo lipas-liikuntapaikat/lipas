@@ -43,6 +43,21 @@
 (def org-type
   [:enum "city" "municipal-consortium" "state" "private" "association" "other"])
 
+(def access-levels
+  "Who sees the org in the UI. `ptv-only`: the org serves the PTV integration
+  (and its membership-derived roles) but its members get no org-management
+  screens. `org-management`: members get the org-management UI. LIPAS admins
+  always see everything."
+  ["ptv-only" "org-management"])
+
+(def access-level (into [:enum] access-levels))
+
+(def default-access-level
+  "The level a newly created org gets unless the creating LIPAS admin picks
+  another. Every org stores its level explicitly (see the
+  org-access-level-backfill migration for orgs that predate the setting)."
+  "ptv-only")
+
 (def catalog-role-names
   "Role names a catalog template may reference: the catalog-assignable subset of
   the role vocabulary (`:org-editor`, `:ptv-manager`, `:activities-manager`, …).
@@ -146,6 +161,9 @@
      [:ptv-data {:optional true} [:maybe ptv-data]]
      ;; --- org-management (opt-in; absent for legacy orgs) ---
      [:type {:optional true} org-type]
+     ;; Required: every org stores its level explicitly (chosen at creation;
+     ;; orgs predating the setting were backfilled by migration).
+     [:access-level access-level]
      [:instructions {:optional true} [:maybe instructions]]
      [:role-templates {:optional true} role-templates]
      [:ownership {:optional true} ownership]
@@ -158,9 +176,12 @@
 (def org-form-validation
   (m/schema org))
 
-;; Schema for API updates (no ID required since it's in URL)
 (def org-update
-  (m/schema (mu/dissoc org :id)))
+  "Body of /actions/update-org (carries `:id`). `:access-level` is not part of
+  it: the general org save never changes the level — only the admin rollout
+  switch (/actions/set-org-access-level) does. The map is open, so a client
+  echoing the loaded org's level back still passes; it is ignored."
+  (m/schema (mu/dissoc org :access-level)))
 
  ;; Schema for PTV config updates (stricter validation for API endpoint)
 (def ptv-config-update

@@ -423,6 +423,13 @@
                                    (if (= 404 (-> e ex-data :resp :status))
                                      nil
                                      (throw e)))))
+        ;; The first sync of a location made in PTV keeps the services it is
+        ;; already connected to (ptv-data/link-service-ids); afterwards
+        ;; LIPAS's list is the master.
+        ptv (cond-> ptv
+              old-service-location
+              (assoc :service-ids (ptv-data/link-service-ids (merge (:ptv site) ptv)
+                                                             old-service-location)))
 
         ;; merge or just replace?
         site (-> (update site :ptv merge ptv)

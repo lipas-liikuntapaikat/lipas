@@ -12,6 +12,16 @@
   (fn [help _]
     (:data help)))
 
+(rf/reg-sub ::load-status
+  ;; :ready once the content is in, :error after a failed fetch, otherwise
+  ;; :loading (in flight, or about to start at app startup).
+  :<- [::help]
+  (fn [help _]
+    (cond
+      (some? (:data help)) :ready
+      (and (not (:loading? help)) (get-in help [:errors :get])) :error
+      :else :loading)))
+
 (rf/reg-sub ::dialog-open?
   :<- [::help]
   (fn [help _]

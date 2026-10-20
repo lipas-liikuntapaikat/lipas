@@ -2,6 +2,8 @@
  :available-pages "Pages in this section",
  :headline "Help",
  :manage-content "Manage help content",
+ :load-failed "Loading the help content failed.",
+ :retry "Try again",
  :privacy-policy "Privacy policy"
  :data-model "Data model"
  :data-model-excel "Download the description of the Lipas data model in Excel format using the button below."}
