@@ -32,6 +32,14 @@
   (fn  [_]
     (js/window.scrollTo 0 0)))
 
+(rf/reg-fx ::scroll-into-view!
+  ;; The element with this DOM id to the top of its scroll container, once
+  ;; the render that may have just shown it has run.
+  (fn [id]
+    (js/setTimeout #(some-> (js/document.getElementById id)
+                            (.scrollIntoView #js {:block "start"}))
+                   100)))
+
 (rf/reg-fx ::copy-to-clipboard!
   (fn [text]
     (-> (js/navigator.clipboard.writeText text)

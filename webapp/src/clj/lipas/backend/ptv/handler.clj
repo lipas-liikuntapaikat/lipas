@@ -137,6 +137,21 @@
                 (deny user (str "no :ptv/manage for the municipality of site " lipas-id)))
             (deny user (str "lipas-id " (pr-str lipas-id) " not found")))))))
 
+(defn site-ptv-review-access?
+  "Gate for the site form's sync review (`:lipas-id` in the body): whoever
+  may edit the site, since saving a site with PTV sync on syncs it over PTV,
+  plus the municipality's PTV managers and auditors."
+  [db]
+  (fn [req]
+    (let [user (:identity req)
+          lipas-id (-> req :parameters :body :lipas-id)]
+      (or (ptv-auditor? user)
+          (if-let [site (db/get-sports-site db lipas-id)]
+            (or (manages-city? user [(-> site :location :city :city-code)])
+                (roles/check-privilege user (roles/site-roles-context site) :site/create-edit)
+                (deny user (str "may not edit site " lipas-id)))
+            (deny user (str "lipas-id " (pr-str lipas-id) " not found")))))))
+
 (defn- site-in-org?
   "True when the site exists, lies in one of `org`'s PTV municipalities and the
   user manages that municipality. Closes the gap where a manager of one city of
@@ -340,6 +355,24 @@
       (fn [req]
         {:status 200
          :body (ptv-core/get-ptv-site-audits db (-> req :parameters :body :lipas-ids))})}}]
+
+   ["/actions/fetch-ptv-sync-bases"
+    {:post
+     {:require-privilege ptv-feature-read-access?
+      :parameters {:body #'lipas-ptv-schema/fetch-sync-bases-body}
+      :handler
+      (fn [req]
+        {:status 200
+         :body (ptv-core/get-ptv-sync-bases db (-> req :parameters :body :lipas-ids))})}}]
+
+   ["/actions/fetch-ptv-site-review"
+    {:post
+     {:require-privilege (site-ptv-review-access? db)
+      :parameters {:body #'lipas-ptv-schema/fetch-site-review-body}
+      :handler
+      (fn [req]
+        {:status 200
+         :body (ptv-core/get-ptv-site-review db ptv (-> req :parameters :body :lipas-id))})}}]
 
    ["/actions/generate-ptv-descriptions"
     {:post
@@ -633,6 +666,11 @@
            :body (ptv-core/upsert-ptv-service-location! db ptv search (:identity req) (-> req :parameters :body))}
           (catch clojure.lang.ExceptionInfo e
             (cond
+              ;; Taking PTV's name for the site without the right to edit it
+              (= :no-permission (:type (ex-data e)))
+              {:status 403
+               :body (ex-data e)}
+
               ;; A different sports-site already owns this service-location.
               (= :double-link (:type (ex-data e)))
               (do

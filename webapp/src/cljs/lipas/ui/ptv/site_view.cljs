@@ -19,6 +19,8 @@
             [lipas.ui.ptv.components :as ptv-components]
             [lipas.ui.ptv.controls :as controls]
             [lipas.ui.ptv.events :as events]
+            [lipas.ui.ptv.review :as review]
+            [lipas.ui.ptv.review-data :as review-data]
             [lipas.ui.ptv.subs :as subs]
             [lipas.ui.utils :refer [prod?]]
             [re-frame.core :as rf]
@@ -357,6 +359,29 @@
          (alert "warning" (tr :ptv/not-suitable-for-export))
 
          :else nil))
+
+     ;; What differs from PTV and who changed it. A save syncs the site, so
+     ;; the choices go into the save (:lipas.ui.map.events/save-edits),
+     ;; which asks before overwriting a change made in PTV without one.
+     (when editing?
+       (when-let [site-review @(rf/subscribe [:lipas.ui.map.subs/ptv-site-review lipas-id])]
+         (let [open? @(rf/subscribe [::subs/review-open? lipas-id])]
+           [review/review-panel
+            {:id (review-data/panel-dom-id lipas-id)
+             :tr tr
+             :review site-review
+             :choices @(rf/subscribe [::subs/review-choices lipas-id])
+             :open? open?
+             :on-toggle #(rf/dispatch [::events/set-review-open lipas-id (not open?)])
+             :on-take (fn [rows side]
+                        (rf/dispatch [::events/review-take :site-form lipas-id rows side]))
+             :on-reset (fn [rows]
+                         (rf/dispatch [::events/review-reset :site-form lipas-id rows]))
+             ;; the names are the site's own, edited right here
+             :names-takeable? true
+             :last-sync last-sync
+             :stacked? true
+             :footer (tr :ptv.review/site-form-footer)}])))
 
      ;; 3. Organization selector — only relevant once the user opts in to sync.
      ;; Pre-filled from ::resolved-org-id. Shown as a caption + edit affordance

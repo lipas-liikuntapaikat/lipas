@@ -12,7 +12,7 @@
  :sports-site-count-singular "idrottsanläggning",
  :synced-to-ptv "Exporterad till PTV",
  :out-of-date "LIPAS har nyare ändringar än PTV",
- :content-drift "PTV-innehållet skiljer sig från LIPAS",
+ :content-drift "Ändrat i PTV – gå igenom skillnaderna före synkroniseringen",
  :modified-in-ptv "Opublicerade ändringar i PTV – publicera eller ångra ändringarna i PTV innan synkronisering",
  ;; Titles (rendered bold). Used standalone when there's no actionable detail,
  ;; or paired with one of the body strings below for the full message.

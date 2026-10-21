@@ -74,6 +74,13 @@
         page-slug (assoc :page page-slug)
         (:title page) (assoc :title (:title page))))))
 
+(defn- fetch-if-missing
+  "Fetch effect for when the help content is neither loaded nor on its way,
+   e.g. after a failed startup fetch. nil otherwise (:fx skips nils)."
+  [db]
+  (when-not (or (get-in db [:help :data]) (get-in db [:help :loading?]))
+    [:dispatch [::get-help-data]]))
+
 (rf/reg-fx ::sync-url!
   (fn [param]
     (let [url (js/URL. js/window.location.href)]
@@ -85,7 +92,9 @@
 (rf/reg-event-fx ::open-dialog
   (fn [{:keys [db]} _]
     (let [db (assoc-in db [:help :dialog :open?] true)]
-      {:db db ::sync-url! (ohje-param db)})))
+      {:db db
+       ::sync-url! (ohje-param db)
+       :fx [(fetch-if-missing db)]})))
 
 (rf/reg-event-fx ::close-dialog
   (fn [{:keys [db]} _]
@@ -134,7 +143,9 @@
                (if-let [selection (resolve-selection db section-slug page-slug)]
                  (apply-selection db selection)
                  db))]
-      {:db db ::sync-url! (ohje-param db)})))
+      {:db db
+       ::sync-url! (ohje-param db)
+       :fx [(fetch-if-missing db)]})))
 
 (rf/reg-event-fx ::open-edit-mode
   (fn [{:keys [db]} _]
@@ -158,7 +169,10 @@
 
 (rf/reg-event-fx ::get-help-data
   (fn [{:keys [db]} _]
-    {:fx [[:http-xhrio
+    {:db (-> db
+             (assoc-in [:help :loading?] true)
+             (update-in [:help :errors] dissoc :get))
+     :fx [[:http-xhrio
            {:method          :post
             :uri             (str (:backend-url db) "/actions/get-help-data")
             :format          (ajax/transit-request-format)
@@ -171,6 +185,7 @@
     (let [pending (get-in db [:help :dialog :pending-slugs])
           db      (-> db
                       (assoc-in [:help :data] help-data)
+                      (assoc-in [:help :loading?] false)
                       (update-in [:help :dialog] dissoc :pending-slugs))
           db      (if-let [selection (and pending
                                           (resolve-selection db
@@ -181,10 +196,10 @@
       (cond-> {:db db}
         pending (assoc ::sync-url! (ohje-param db))))))
 
-(rf/reg-event-fx ::get-failure
-  (fn [{:keys [db]} [_ resp]]
-    (let [tr           (:translator db)
-          notification {:message  (tr :notifications/save-failed)
-                        :success? false}]
-      {:db (assoc-in db [:help :errors :get] resp)
-       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+(rf/reg-event-db ::get-failure
+  ;; No notification: the dialog shows the error and a retry button, and a
+  ;; failed startup fetch shouldn't bother users who never open help.
+  (fn [db [_ resp]]
+    (-> db
+        (assoc-in [:help :errors :get] resp)
+        (assoc-in [:help :loading?] false))))

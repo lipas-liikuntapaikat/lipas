@@ -125,4 +125,15 @@
      [:org-id :string]
      [:lipas-id #'sports-sites-schema/lipas-id]
      [:archive? {:optional true} :boolean]
-     [:ptv ptv-meta]]))
+     [:ptv ptv-meta]
+     ;; The site's own names, as the sync review chose them
+     ;; (lipas.data.ptv/review-site-names). nil removes a localized or
+     ;; marketing name. Needs the right to edit the site.
+     [:site-names {:optional true}
+      [:map {:closed true}
+       [:name {:optional true} #'sports-sites-schema/name]
+       [:name-localized {:optional true}
+        [:map {:closed true}
+         [:se {:optional true} [:maybe [:string {:max 100}]]]
+         [:en {:optional true} [:maybe [:string {:max 100}]]]]]
+       [:marketing-name {:optional true} [:maybe [:string {:max 100}]]]]]]))

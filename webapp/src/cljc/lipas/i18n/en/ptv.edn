@@ -12,7 +12,7 @@
  :sports-site-count-singular "sports site"
  :synced-to-ptv "Exported to PTV"
  :out-of-date "LIPAS has newer changes than PTV"
- :content-drift "PTV content differs from LIPAS"
+ :content-drift "Changed in PTV – review the differences before syncing"
  :modified-in-ptv "Unpublished changes in PTV – publish or discard the changes in PTV before syncing"
  ;; Titles (rendered bold). Used standalone when there's no actionable detail,
  ;; or paired with one of the body strings below for the full message.

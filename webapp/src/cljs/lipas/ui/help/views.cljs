@@ -25,6 +25,7 @@
             ["@mui/material/CardActionArea$default" :as CardActionArea]
             ["@mui/material/CardContent$default" :as CardContent]
             ["@mui/material/Chip$default" :as Chip]
+            ["@mui/material/CircularProgress$default" :as CircularProgress]
             ["@mui/material/Collapse$default" :as Collapse]
             ["@mui/material/Dialog$default" :as Dialog]
             ["@mui/material/DialogContent$default" :as DialogContent]
@@ -675,8 +676,11 @@
 
 (r/defc HelpManageButton []
   (let [has-permission? @(rf/subscribe [::user-subs/check-privilege nil :help/manage])
+        ;; The editor starts from the loaded content — opened without it, a
+        ;; save would publish an empty tree.
+        ready? (= :ready @(rf/subscribe [::subs/load-status]))
         tr @(rf/subscribe [:lipas.ui.subs/translator])]
-    (when has-permission?
+    (when (and has-permission? ready?)
       [:> Button
        {:variant "contained"
         :color "secondary"
@@ -738,11 +742,26 @@
          selected-section [SectionLanding {:section selected-section}]
          :else [FrontPage {:tree tree}])]]]))
 
+(r/defc LoadStatus
+  ;; Shown in place of the reader until the help content is in.
+  [{:keys [status]}]
+  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])]
+    [:> Stack {:spacing 2 :alignItems "center" :justifyContent "center" :sx #js{:flex 1}}
+     (if (= :error status)
+       [:<>
+        [:> Typography {:variant "body1" :color "text.secondary"}
+         (tr :help/load-failed)]
+        [:> Button {:variant "outlined"
+                    :onClick #(==> [::events/get-help-data])}
+         (tr :help/retry)]]
+       [:> CircularProgress])]))
+
 (r/defc dialog
   ;; Mounted once at app root (lipas.ui.views/main-panel) so ?ohje= deep
   ;; links open the help center on any route.
   []
   (let [mode @(rf/subscribe [::subs/mode])
+        load-status @(rf/subscribe [::subs/load-status])
         dialog-open? @(rf/subscribe [::subs/dialog-open?])
         tr @(rf/subscribe [:lipas.ui.subs/translator])
         mobile? (useMediaQuery "(max-width:899.95px)")]
@@ -778,7 +797,9 @@
        [:> DialogContent {:sx #js{:display "flex" :flexDirection "column"}}
         [lazy/lazy-view {:loadable lazy/help-manage-view}]]
        [:> DialogContent {:sx #js{:p 0 :display "flex" :overflow "hidden"}}
-        [ReadView {:mobile? mobile?}]])]))
+        (if (= :ready load-status)
+          [ReadView {:mobile? mobile?}]
+          [LoadStatus {:status load-status}])])]))
 
 (r/defc view
   ;; Help icon button for the (mini-)navbar; the dialog itself is mounted

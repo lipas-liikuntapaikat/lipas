@@ -5,6 +5,7 @@
             [lipas.data.ptv :as ptv-data]
             [lipas.roles :as roles]
             [lipas.schema.sports-sites.ptv :as ptv-schema]
+            [lipas.ui.ptv.review-data :as review-data]
             [lipas.ui.utils :as utils]
             [malli.core :as m]
             [malli.transform :as mt]
@@ -435,7 +436,9 @@
                              (assoc m lipas-id
                                     (-> new-site
                                         (assoc :ptv-persisted persisted
-                                               :ptv-persisted-sync? (persisted-sync? (:ptv new-site)))
+                                               :ptv-persisted-sync? (persisted-sync? (:ptv new-site))
+                                               ;; what the sync review compares PTV with
+                                               :review-saved (ptv-data/->review-base new-site))
                                         (cond-> (:ptv existing) (update :ptv #(merge (:ptv existing) %)))
                                         ;; a search index not yet reindexed after the
                                         ;; audit move still serves the legacy in-document
@@ -447,7 +450,41 @@
                (assoc-in [:ptv :loading-from-lipas :candidates] false)
                (assoc-in [:ptv :org ptv-org-id :data :sports-sites] merged-sites))
        ;; audits are stored and served apart from the sites
-       :fx [[:dispatch [::fetch-ptv-site-audits ptv-org-id (vec (keys merged-sites))]]]})))
+       :fx [[:dispatch [::fetch-ptv-site-audits ptv-org-id (vec (keys merged-sites))]]
+            ;; ...and so is what each synced site's last sync sent, the base
+            ;; its sync review tells PTV's changes from Lipas's by
+            [:dispatch [::fetch-ptv-sync-bases ptv-org-id
+                        (vec (keep (fn [[lipas-id site]]
+                                     (when (-> site :ptv :last-sync) lipas-id))
+                                   merged-sites))]]]})))
+
+;; What each synced site's last sync sent (lipas.data.ptv/->review-base),
+;; cached at [:ptv :org <ptv-org-id> :data :sync-bases] keyed by lipas-id and
+;; joined into the sites by the ::sports-sites sub for their sync review.
+
+(rf/reg-event-fx ::fetch-ptv-sync-bases
+  (fn [{:keys [db]} [_ ptv-org-id lipas-ids]]
+    (when (seq lipas-ids)
+      (let [token (-> db :user :login :token)]
+        {:fx [[:http-xhrio
+               {:method :post
+                :headers {:Authorization (str "Token " token)}
+                :uri (str (:backend-url db) "/actions/fetch-ptv-sync-bases")
+                :params {:lipas-ids lipas-ids}
+                :format (ajax/transit-request-format)
+                :response-format (ajax/transit-response-format)
+                :on-success [::fetch-ptv-sync-bases-success ptv-org-id]
+                :on-failure [::fetch-ptv-sync-bases-failure]}]]}))))
+
+(rf/reg-event-db ::fetch-ptv-sync-bases-success
+  (fn [db [_ ptv-org-id resp]]
+    (update-in db [:ptv :org ptv-org-id :data :sync-bases] merge resp)))
+
+(rf/reg-event-db ::fetch-ptv-sync-bases-failure
+  ;; Without bases the review can't tell who changed what and asks about
+  ;; every difference, which is safe.
+  (fn [db [_ resp]]
+    (assoc-in db [:ptv :errors :sync-bases] resp)))
 
 ;; Site audits live in ptv_site_audit and are served apart from the sites
 ;; (/actions/fetch-ptv-site-audits). They are cached apart too, at
@@ -1579,9 +1616,13 @@
         ptv (-> ptv
                 (update :summary ptv-data/drop-blank-texts)
                 (update :description ptv-data/drop-blank-texts))]
-    {:lipas-id lipas-id
-     :org-id org-id
-     :ptv ptv}))
+    (cond-> {:lipas-id lipas-id
+             :org-id org-id
+             :ptv ptv}
+      ;; PTV's names the review took: the backend writes them into the
+      ;; site, which the sync then sends
+      (get-in db [:ptv :review :site-names lipas-id])
+      (assoc :site-names (get-in db [:ptv :review :site-names lipas-id])))))
 
 (rf/reg-event-fx ::create-ptv-service-location
   (fn [{:keys [db]} [_ lipas-id success-fx failure-fx]]
@@ -1623,7 +1664,18 @@
                               ;; whose-move states are derived from, so the audit status
                               ;; (row bucket, feedback alert) moves only now, not on keystrokes.
                (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv-persisted]
-                         (select-keys ptv ptv-data/site-audited-field-keys)))
+                         (select-keys ptv ptv-data/site-audited-field-keys))
+               ;; What this sync sent is the next review's base, and the
+               ;; choices made for it are spent.
+               (as-> db (let [synced (ptv-data/->review-base
+                                       (get-in db [:ptv :org org-id :data :sports-sites lipas-id]))]
+                          (-> db
+                              (assoc-in [:ptv :org org-id :data :sync-bases lipas-id] synced)
+                              (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :review-saved]
+                                        synced))))
+               (update-in [:ptv :review :choices] dissoc lipas-id)
+               (update-in [:ptv :review :open] dissoc lipas-id)
+               (update-in [:ptv :review :site-names] dissoc lipas-id))
        :fx (into (or (seq extra-fx) [])
                  [[:dispatch [:lipas.ui.events/set-active-notification
                               {:message (tr :notifications/save-success) :success? true}]]])})))
@@ -1638,12 +1690,111 @@
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :service-locations] false)
                (update-in [:ptv :syncing :service-location] dissoc lipas-id)
+               (update-in [:ptv :review :site-names] dissoc lipas-id)
                (assoc-in [:ptv :errors :service-locations-creation] resp)
                (cond->
                  (and modified? channel-id)
                  (assoc-in [:ptv :org org-id :data :service-channels channel-id :publishingStatus] "Modified")))
        :fx (into (or (seq extra-fx) [])
                  [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
+
+;;; Sync review ;;;
+;; The review compares PTV with the saved site; a decision is made by
+;; making the edit hold one side's version (or a text of one's own), so
+;; the form below shows it at once. Only "keep Lipas's version" leaves a
+;; record (review-data/choices-path): the edit alone can't tell it from
+;; not having looked.
+
+(defn- draft-path
+  "Where the edit a review writes into lives: the PTV tool's copy of the
+   site, or the site form's edit buffer."
+  [db target lipas-id]
+  (case target
+    :ptv-tool [:ptv :org (-get-ptv-org-id db) :data :sports-sites lipas-id]
+    :site-form [:sports-sites lipas-id :editing]))
+
+(rf/reg-event-fx ::review-take
+  ;; Make the edit hold `side`'s version (:ptv, or :lipas for the saved
+  ;; one) of each of `rows`.
+  (fn [{:keys [db]} [_ target lipas-id rows side]]
+    (let [path (draft-path db target lipas-id)
+          draft (get-in db path)
+          edited (reduce #(ptv-data/apply-review-writes %1 (ptv-data/review-writes %1 %2 side))
+                         draft
+                         rows)
+          db (update-in db (review-data/choices-path lipas-id)
+                        (fn [choices]
+                          (reduce (fn [choices row]
+                                    (if (= :lipas side)
+                                      (assoc choices (:key row)
+                                             {:choice :lipas :seen (ptv-data/review-choice-seen row)})
+                                      (dissoc choices (:key row))))
+                                  choices
+                                  rows)))]
+      (case target
+        :ptv-tool {:db (assoc-in db path edited)}
+        ;; through edit-fields, which also recalculates derived fields
+        :site-form {:db db
+                    :fx [[:dispatch [:lipas.ui.sports-sites.events/edit-fields lipas-id
+                                     (into {}
+                                           (comp (mapcat #(keys (ptv-data/review-writes draft % side)))
+                                                 (distinct)
+                                                 (map (fn [p] [p (get-in edited p)])))
+                                           rows)]]]}))))
+
+(rf/reg-event-fx ::review-take-sites
+  ;; Bulk over the PTV tool's sites: `side` for the rows of each
+  ;; {:lipas-id :rows}.
+  (fn [_ [_ sites side]]
+    {:fx (for [{:keys [lipas-id rows]} sites]
+           [:dispatch [::review-take :ptv-tool lipas-id rows side]])}))
+
+(rf/reg-event-fx ::review-reset
+  ;; Back to the saved version of every row, nothing decided.
+  (fn [_ [_ target lipas-id rows]]
+    {:fx [[:dispatch [::review-take target lipas-id rows :lipas]]
+          [:dispatch [::forget-review-choices lipas-id]]]}))
+
+(rf/reg-event-db ::forget-review-choices
+  (fn [db [_ lipas-id]]
+    (assoc-in db (review-data/choices-path lipas-id) {})))
+
+(rf/reg-event-db ::set-review-open
+  (fn [db [_ lipas-id open?]]
+    (assoc-in db (review-data/open-path lipas-id) open?)))
+
+(rf/reg-event-fx ::show-review
+  ;; Opened from a confirmation: the panel may be out of sight.
+  (fn [{:keys [db]} [_ lipas-id]]
+    {:db (assoc-in db (review-data/open-path lipas-id) true)
+     :fx [[:lipas.ui.effects/scroll-into-view! (review-data/panel-dom-id lipas-id)]]}))
+
+(rf/reg-event-fx ::sync-with-review
+  ;; "Synkronoi nyt" with the site's review `rows` (annotated, see
+  ;; ptv-data/annotate-review): while a change made in PTV is undecided,
+  ;; ask before overwriting it; otherwise sync the edit, which holds the
+  ;; decisions. `overwrite?` is the user's answer: undecided rows keep the
+  ;; saved Lipas version.
+  (fn [{:keys [db]} [_ lipas-id rows overwrite?]]
+    (let [tr (:translator db)
+          org-id (-get-ptv-org-id db)
+          site (get-in db [:ptv :org org-id :data :sports-sites lipas-id])
+          open (ptv-data/open-review-rows rows (get-in db (review-data/choices-path lipas-id)))]
+      (if (and (seq open) (not overwrite?))
+        {:fx [[:dispatch [:lipas.ui.events/confirm-with
+                          (review-data/overwrite-confirmation
+                            tr
+                            {:title (tr :ptv.review/confirm-sync-title)
+                             :intro (tr :ptv.review/confirm-sync-intro)
+                             :open open
+                             :confirm-label (tr :ptv.review/sync-and-overwrite)
+                             :on-confirm #(rf/dispatch [::sync-with-review lipas-id rows true])
+                             :on-review #(rf/dispatch [::show-review lipas-id])})]]]}
+        ;; The sync sends the saved site's names: PTV's names taken in the
+        ;; review travel with it for the backend to write.
+        {:db (assoc-in db [:ptv :review :site-names lipas-id]
+                       (ptv-data/review-site-names (:review-saved site) site))
+         :fx [[:dispatch [::create-ptv-service-location lipas-id [] []]]]}))))
 
 ;;; Explicit archive (publishingStatus "Deleted") ;;;
 
@@ -1719,6 +1870,8 @@
     (comp valid? decode)))
 
 (rf/reg-event-fx ::create-all-ptv-service-locations
+  ;; The view blocks the export while a site to sync has an undecided
+  ;; change made in PTV; the edits hold the decisions.
   (fn [{:keys [db]} [_ sports-sites]]
     (let [org-id (-get-ptv-org-id db)
 
@@ -1727,6 +1880,12 @@
                                                   :to-sync
                                                   :to-save))
                                               sports-sites)
+          db (reduce (fn [db {:keys [lipas-id]}]
+                       (let [site (get-in db [:ptv :org org-id :data :sports-sites lipas-id])]
+                         (assoc-in db [:ptv :review :site-names lipas-id]
+                                   (ptv-data/review-site-names (:review-saved site) site))))
+                     db
+                     to-sync)
 
           ids (map :lipas-id to-sync)
           ;; Only sites with something persistable: an untouched site (no
@@ -1785,8 +1944,10 @@
                             (reduce-kv (fn [sites lipas-id ptv-meta]
                                          (cond-> sites
                                            (contains? sites lipas-id)
-                                           (assoc-in [lipas-id :ptv-persisted-sync?]
-                                                     (persisted-sync? ptv-meta))))
+                                           (-> (assoc-in [lipas-id :ptv-persisted-sync?]
+                                                         (persisted-sync? ptv-meta))
+                                               (update-in [lipas-id :review-saved :ptv] merge
+                                                          (select-keys ptv-meta [:summary :description :service-ids])))))
                                        sites
                                        saved))))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
