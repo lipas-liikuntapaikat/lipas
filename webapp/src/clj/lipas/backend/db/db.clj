@@ -233,6 +233,16 @@
        (map (fn [{:keys [lipas_id name]}]
               {:lipas-id lipas_id :name name}))))
 
+(defn get-ptv-sync-bases
+  "lipas-id -> the revision the site's last PTV sync wrote, for those of
+  `lipas-ids` that have been synced."
+  [db-spec lipas-ids]
+  (if (empty? lipas-ids)
+    {}
+    (->> (sports-site/get-ptv-sync-bases db-spec {:lipas_ids lipas-ids})
+         (into {} (map (fn [{:keys [lipas_id] :as row}]
+                         [lipas_id (sports-site/unmarshall row)]))))))
+
 (defn get-ptv-adoption
   "One row per site that has ever had a :ptv subtree: `:first-month` of its
   first :ptv revision, `:first-published-month` of its first revision published

@@ -60,9 +60,9 @@
    :ptv.audit
    :ptv.audit.status
    :ptv.double-link
-   :ptv.drift
    :ptv.name-conflict
    :ptv.preview
+   :ptv.review
    :ptv.service
    :ptv.tools.ai
    :ptv.tools.generate-services

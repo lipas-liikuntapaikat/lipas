@@ -999,6 +999,8 @@
 
         ;; Same rule as the backend gate; non-empty blocks Save.
         ptv-save-blockers (<== [::subs/ptv-save-blockers lipas-id])
+        ;; changes made in PTV that a save would overwrite unasked
+        ptv-review-open (when editing? (<== [::subs/ptv-review-open-rows lipas-id]))
 
         can-edit-map? can-publish?
 
@@ -1126,13 +1128,19 @@
             ;; Flag the tab so a blocked Save can be traced from other tabs.
             ;; Missing texts are an unfinished step (warning); no org is a
             ;; real problem (error).
-            :label (if (seq ptv-save-blockers)
+            :label (cond
+                     (seq ptv-save-blockers)
                      (r/as-element [:> Badge {:color (if (= #{:ptv/missing-texts} ptv-save-blockers)
                                                        "warning"
                                                        "error")
                                               :variant "dot"}
                                     "PTV"])
-                     "PTV")}])
+
+                     ;; changes made in PTV wait for the user's choice
+                     (seq ptv-review-open)
+                     (r/as-element [:> Badge {:color "warning" :variant "dot"} "PTV"])
+
+                     :else "PTV")}])
 
         (when view-images?
           [:> Tab

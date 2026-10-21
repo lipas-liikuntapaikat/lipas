@@ -417,8 +417,8 @@
 (deftest upsert-ptv-service-location-refetches-channel-after-connection-updates
   ;; Regression: the PUT response is captured BEFORE the separate
   ;; update-service-connections calls land, so its :services list is stale.
-  ;; The FE caches that response as service-channels[id], and drift detection
-  ;; in compute-service-channel-drift sees stale services → reports
+  ;; The FE caches that response as service-channels[id], and the sync
+  ;; review (lipas.data.ptv/sync-review) sees stale services → reports
   ;; :content-drift → the green "synced" chip never appears immediately
   ;; after sync. The fix refetches the channel via GET after the connection
   ;; updates so the FE caches the canonical post-sync shape.

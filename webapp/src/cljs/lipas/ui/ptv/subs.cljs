@@ -450,6 +450,12 @@
   (fn [idx _]
     (->> idx vals (filter #(> (count %) 1)) (apply concat) set)))
 
+(rf/reg-sub ::sync-bases
+  ;; lipas-id -> what the site's last sync sent (::fetch-ptv-sync-bases)
+  :<- [::ptv]
+  (fn [ptv [_ org-id]]
+    (get-in ptv [:org org-id :data :sync-bases])))
+
 (rf/reg-sub ::sports-sites
   (fn [[_ org-id]]
     [(rf/subscribe [::sites-with-audit org-id])
@@ -457,8 +463,9 @@
      (rf/subscribe [::service-channels-by-id org-id])
      (rf/subscribe [::default-settings org-id])
      (rf/subscribe [:lipas.ui.sports-sites.subs/all-types])
-     (rf/subscribe [::selected-org])])
-  (fn [[sites services service-channels org-defaults types selected-org] [_ org-id]]
+     (rf/subscribe [::selected-org])
+     (rf/subscribe [::sync-bases org-id])])
+  (fn [[sites services service-channels org-defaults types selected-org sync-bases] [_ org-id]]
     (let [org-langs (get-in selected-org [:ptv-data :supported-languages] ptv-data/fallback-languages)]
       (->> sites
            (map (fn [site]
@@ -468,8 +475,39 @@
                                                     :org-langs org-langs}
                                                    service-channels
                                                    services
-                                                   site)))
+                                                   (assoc site :ptv-base
+                                                          (get sync-bases (:lipas-id site))))))
            (sort-by :lipas-id)))))
+
+(rf/reg-sub ::review-choices
+  :<- [::ptv]
+  (fn [ptv [_ lipas-id]]
+    (get-in ptv [:review :choices lipas-id])))
+
+(rf/reg-sub ::editable-site-ids
+  ;; lipas-ids of the org's sites the user may edit as such, not just their
+  ;; PTV data: taking PTV's name for a site renames it in Lipas.
+  (fn [_]
+    [(rf/subscribe [:lipas.ui.user.subs/user-data])
+     (rf/subscribe [::ptv])])
+  (fn [[user ptv] [_ org-id]]
+    (into #{}
+          (keep (fn [[lipas-id site]]
+                  (when (roles/check-privilege user (roles/site-roles-context site)
+                                               :site/create-edit)
+                    lipas-id)))
+          (get-in ptv [:org org-id :data :sports-sites]))))
+
+(rf/reg-sub ::all-review-choices
+  ;; lipas-id -> the choices made in the site's review
+  :<- [::ptv]
+  (fn [ptv _]
+    (get-in ptv [:review :choices])))
+
+(rf/reg-sub ::review-open?
+  :<- [::ptv]
+  (fn [ptv [_ lipas-id]]
+    (boolean (get-in ptv [:review :open lipas-id]))))
 
 (rf/reg-sub ::sports-sites-wizard
   ;; Sports sites filtered by the wizard step 1 sub-category selection.

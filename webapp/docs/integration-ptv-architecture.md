@@ -36,17 +36,19 @@ configured separately in LIPAS.
 
 ## Non-goals
 
-1. **Two-way sync.** PTV-side edits to LIPAS-managed fields are not propagated
-   back to LIPAS. Kuntien who want a change to stick make it in LIPAS.
+1. **Automatic two-way sync.** PTV-side edits to LIPAS-managed fields never
+   flow into LIPAS on their own. The sync review shows them, and a user can
+   take one into LIPAS explicitly (principle #3).
 2. **Real-time sync.** Sync is event-driven (on save) or manual (button). There
    is no background poller, no webhook listener.
-3. **Conflict resolution.** Concurrent edits in LIPAS and PTV resolve via
-   last-write-wins, which under steady state is always LIPAS.
+3. **Automatic conflict resolution.** When LIPAS and PTV both changed a field
+   since the last sync, the user decides which version stays; nothing is
+   merged automatically.
 4. **Mirroring PTV's full data model.** Only fields LIPAS understands and can
    author are integrated. PTV-only metadata (e.g. opening hours in PTV's full
    form) is left untouched.
 5. **Bringing PTV state into LIPAS for display elsewhere.** PTV state is read
-   for drift detection only; it is not surfaced as "live PTV content" anywhere
+   for the sync review only; it is not surfaced as "live PTV content" anywhere
    else in LIPAS.
 
 ## Core principles
@@ -60,22 +62,31 @@ preserved.
 
 ### 2. One-way write
 
-Sync is exclusively LIPAS → PTV. The system never writes PTV state back into
-LIPAS DB. PTV is treated as a downstream replica with respect to LIPAS-managed
-fields.
+Sync is exclusively LIPAS → PTV. The system never writes PTV state into the
+LIPAS DB by itself. PTV is treated as a downstream replica with respect to
+LIPAS-managed fields. A PTV value enters LIPAS only when a user takes it in the
+sync review, and then it is an ordinary LIPAS edit (a new site revision), which
+the sync then pushes.
 
-### 3. Drift visibility, not drift resolution
+### 3. Review before overwrite
 
 When PTV state diverges from what LIPAS will push (typically because a kunta
-edited the PTV record directly), the integration *shows* the divergence in the
-LIPAS UI but does not resolve it by accepting the PTV-side value. The user
-resolves drift by editing LIPAS to match what they wanted, knowing the next
-sync overwrites PTV.
+edited the PTV record directly), the integration shows the divergence in the
+LIPAS UI, says who changed what since the last sync, and lets the user choose
+per field: keep LIPAS's version, take PTV's (it is copied into LIPAS), or write
+their own. A sync that would overwrite a change made in PTV without a decision
+asks first (the wizard export waits until each has one).
 
-This is the most consequential principle. It rules out the mid-way "preserve
-PTV-side edits" patterns the system briefly experimented with — those quietly
-hide PTV-side state from the LIPAS user, which is a worse failure mode than
-overwriting it visibly.
+This rules out the mid-way "preserve PTV-side edits" patterns the system
+briefly experimented with — those quietly hide PTV-side state from the LIPAS
+user, which is a worse failure mode than overwriting it visibly. Nothing is
+preserved silently: a PTV-side value that survives a sync does so because a
+user chose it (or, on a first link, it is one of the location's connections,
+listed in the review), and it then lives in LIPAS.
+
+(Before October 2026 this principle was "drift visibility, not drift
+resolution": the divergence was shown, and the user had to retype PTV's value
+in LIPAS to keep it.)
 
 ### 4. Per-language Finnish fallback
 
@@ -165,19 +176,22 @@ conversion was missing. Centralizing the maps prevents recurrence.
 
 No fetch-merge-write step. The payload is built from LIPAS state alone.
 
-### Inbound: drift detection only (PTV → cache)
+### Inbound: the sync review (PTV → cache)
 
 1. On UI load the backend fetches the org's PTV ServiceChannels and Services
    via PTV list endpoints and returns them to the frontend.
 2. The frontend caches the responses in re-frame app-db per organization,
-   keyed by PTV UUID. (There is no server-side cache.)
-3. `compute-service-channel-drift` (cljc) compares each LIPAS site's
-   *would-be-pushed* values to the cached PTV-side values, returning a
-   structured per-field diff.
+   keyed by PTV UUID. (There is no server-side cache.) It also fetches each
+   synced site's *base*, what its last sync sent
+   (`/actions/fetch-ptv-sync-bases`); the site form fetches the base and the
+   live channel for its one site (`/actions/fetch-ptv-site-review`).
+3. `sync-review` (cljc) compares each site three ways, the saved site, the
+   channel and the base, and returns one row per difference with who changed
+   it (see "Sync review model").
 
-PTV-side edits are read for visibility only. **They are never written back
-into the LIPAS DB.** This is what differentiates "drift visibility" from
-"two-way sync."
+PTV-side edits are read for the review. **They reach the LIPAS DB only when a
+user takes them**, as an edit of the site. This is what differentiates the
+review from "two-way sync."
 
 ### Shadow store for Services (`ptv_service`)
 
@@ -197,7 +211,7 @@ groups, ...). See `integration-ptv-audit.md` → "Service Audits".
 
 | File | Layer | Responsibility |
 |------|-------|---------------|
-| `src/cljc/lipas/data/ptv.cljc` | Pure data | Payload builders, language mapping, drift detection, organization config, `->service-document`. CLJ + CLJS so the same code runs in tests and in the browser preview. |
+| `src/cljc/lipas/data/ptv.cljc` | Pure data | Payload builders, language mapping, sync review (`sync-review`, `annotate-review`, `review-writes`), organization config, `->service-document`. CLJ + CLJS so the same code runs in tests and in the browser preview. |
 | `src/cljc/lipas/schema/sports_sites/ptv.cljc` | Schema | Malli schemas for the `:ptv` metadata block. `{:closed true}` — strict; new fields must be added explicitly. |
 | `src/cljc/lipas/schema/ptv.cljc` | Schema | Malli schemas for Service audits and the `ptv_service` document (reuses the audit schemas above). |
 | `src/clj/lipas/backend/db/ptv_service.clj` | DB accessors | Append-only `ptv_service` table (LIPAS-managed Service content + audits); `ptv_service_current` view queries. |
@@ -208,7 +222,9 @@ groups, ...). See `integration-ptv-audit.md` → "Service Audits".
 | `src/clj/lipas/backend/ptv/eval.clj` | Eval harness | Offline evaluation of AI prompt versions. |
 | `src/cljs/lipas/ui/ptv/views.cljs` | UI views | Wizard, PALVELUT and LIIKUNTAPAIKAT tabs, audit dashboard. |
 | `src/cljs/lipas/ui/ptv/site_view.cljs` | UI views | PTV tab inside the sports-site editor (separate from the PTV dialog). |
-| `src/cljs/lipas/ui/ptv/components.cljs` | UI primitives | Reusable components — service-location preview, drift panel. |
+| `src/cljs/lipas/ui/ptv/components.cljs` | UI primitives | Reusable components — service-location preview. |
+| `src/cljs/lipas/ui/ptv/review.cljs` | UI component | The sync review panel, used by the Liikuntapaikat tab, the wizard and the site form. |
+| `src/cljs/lipas/ui/ptv/review_data.cljs` | UI state | Review state paths, the site form's review, row labels. Free of UI so both the :ptv and :map modules can load it. |
 | `src/cljs/lipas/ui/ptv/events.cljs` / `subs.cljs` | Re-frame | Wizard state, sync triggers, app-db subscriptions. |
 | `src/cljc/lipas/i18n/{fi,se,en}/ptv*.edn` | Translations | UI text. Each `:ptv.*` namespace has its own EDN file. |
 
@@ -224,7 +240,8 @@ language.
 
 It is technically possible to omit `serviceChannelNames` from a PUT entirely
 (PTV will keep the stored list), but this was rejected because it would
-quietly preserve kunta-side edits, contradicting principle #3.
+quietly preserve kunta-side edits, contradicting principle #3. Keeping a
+PTV-side value is an explicit choice in the sync review instead.
 
 ### Per-language fallback (in detail)
 
@@ -243,9 +260,9 @@ For `AlternativeName fi` (LIPAS `:marketing-name`):
 | Blank / nil | No `AlternativeName` entry at all |
 
 This rule is implemented once in `->ptv-service-location` and once in
-`effective-lipas-name` / `effective-lipas-text` for drift detection. The two
-sites must stay aligned — drift detection's idea of "what LIPAS will push"
-must match what the builder actually pushes.
+`effective-lipas-name` / `effective-lipas-text` for the sync review. The two
+sites must stay aligned — the review's idea of "what LIPAS will push" must
+match what the builder actually pushes.
 
 ### Create vs update
 
@@ -273,7 +290,10 @@ Service↔Channel links are managed by a separate PTV endpoint
 2. Computes added/removed service IDs vs the LIPAS-stored set.
 3. Patches the differences via Connection PUTs, one per service.
 
-## Drift detection model
+## Sync review model
+
+Plan, as-built notes and the end-to-end test pass:
+[`wip/ptv-drift-review-plan.md`](wip/ptv-drift-review-plan.md).
 
 ### What's compared
 
@@ -285,49 +305,65 @@ Per LIPAS sports site, with the cached PTV channel:
 | AlternativeName (fi) | site `:marketing-name` | `serviceChannelNames` AlternativeName/fi |
 | Summary (per language) | site `:ptv :summary {:fi :se :en}` | `serviceChannelDescriptions` Summary entries |
 | Description (per language) | site `:ptv :description {:fi :se :en}` | `serviceChannelDescriptions` Description entries |
-| Service link membership | site `:ptv :service-ids` set | channel's `:services` IDs |
+| Service connections | site `:ptv :service-ids` | channel's `:services` IDs |
 
-The LIPAS side is the *effective* value (with fi-fallback applied), so the
-diff reflects what the next sync will actually do.
+The LIPAS side is the *saved* site's effective value (with fi-fallback
+applied), so the diff reflects what the next sync will actually do. The third
+side, the *base*, is what the last sync sent: the first stored revision
+carrying the site's current `:ptv :last-sync` (`get-ptv-sync-bases`, matched on
+the stored string), run through the same derivation. No new storage.
 
-### Output shape
+### Rows
 
-`compute-service-channel-drift` returns a vector of entries:
+`sync-review` returns `{:rows [...] :matching [...] :services {...} :base?
+:first-link?}`. Each row is one difference with an `:origin`:
 
-```clojure
-[{:field :name :type "Name" :language "sv" :locale :se
-  :lipas "Halli" :ptv "KUNTA-Hall"}
- {:field :marketing-name :type "AlternativeName" :language "fi" :locale :fi
-  :lipas "Hallikauppa" :ptv nil}
- {:field :summary :type "Summary" :language "sv" :locale :se
-  :lipas "summary-fi" :ptv "kunta-summary-sv"}
- {:field :services
-  :lipas #{"svc-a"} :ptv #{"svc-a" "svc-b"}
-  :added #{"svc-b"} :removed #{}}]
-```
+- `:ptv` — PTV changed it since the last sync (LIPAS has the base value)
+- `:lipas` — LIPAS changed it; the sync will send it, no choice needed
+- `:both` — both changed it (a conflict)
+- `:first-link` — the location was made in PTV or elsewhere and is being
+  linked for the first time; texts need a choice, connections are kept
+  (`link-service-ids`)
+- `:unknown` — no base to tell by
 
-`sports-site->ptv-input` exposes this on the `:drift-fields` key and sets
-`:sync-status :content-drift` when any drift exists.
+A language LIPAS adds (`:language-added?`) needs no choice. `annotate-review`
+adds what the edit holds now (`:current` `:lipas` / `:ptv` / `:edited`).
+`review-choice-required?` says which rows need a decision; `open-review-rows`
+which of those have none yet.
 
-### How drift is surfaced
+### Choices write into the edit
+
+Taking a version writes it into the edit (`review-writes`,
+`apply-review-writes`), so the form shows the result at once; keeping LIPAS's
+version is recorded as a choice. Rows stay, compared with the saved site,
+until the next sync. Taking PTV's name or marketing name renames the site: the
+site form edits the field like any other; the PTV tool and the wizard send the
+changed names as `:site-names` with the sync, and `upsert-ptv-service-location!`
+writes them into the site in the same revision. That needs `:site/create-edit`
+(403 `:no-permission` otherwise).
+
+### How it is surfaced
 
 - A colored "PTV" chip on the site card shows the sync status
   (`:ok`, `:out-of-date`, `:content-drift`, `:not-synced`).
-- The open service-location card includes a `drift-panel` component (see
-  `lipas.ui.ptv.components/drift-panel`) listing each drifted field with its
-  LIPAS value and PTV value side-by-side, plus a warning ("next sync will
-  overwrite these") and instruction ("update LIPAS to match").
-- Translation namespace: `:ptv.drift/*` in `i18n/{fi,se,en}/ptv_drift.edn`.
+- The review panel (`lipas.ui.ptv.review/review-panel`) in the PTV tool's
+  Liikuntapaikat tab (plus a "Muutettu PTV:ssä" filter), in wizard step 3 and
+  on the site form's PTV tab: collapsed to a bar, Lipas and PTV cards per row
+  with a word diff, a "Liitetyt palvelut" block for connections, bulk buttons.
+- Gates: "Synkronoi nyt" and the site form's save ask before overwriting an
+  undecided change made in PTV; the wizard export is blocked until each has a
+  choice.
+- Translation namespace: `:ptv.review/*` in `i18n/{fi,se,en}/ptv_review.edn`.
 
-### What is *not* drift-detected
+### What is *not* reviewed
 
 - Addresses, phone numbers, email, web pages, opening hours — derived from
   LIPAS site data; if a kunta edits these in PTV they will be overwritten on
   next sync without warning. This is acceptable today because kuntien rarely
-  edit these and the alternative (drift detection on every PTV field) adds
-  noise without proportional benefit.
+  edit these and the alternative (reviewing every PTV field) adds noise
+  without proportional benefit.
 - Service-side drift (per-language `serviceNames`, descriptions on a
-  Service). This is a known gap; planned to mirror the channel-side approach.
+  Service). Planned to mirror the channel-side review in the Palvelut tab.
 
 ## Sync states
 
@@ -338,10 +374,11 @@ Each integrated site has a sync-status derived in `sports-site->ptv-input`:
 | `:not-synced` | Site is sync-enabled but has never been pushed to PTV. |
 | `:ok` | LIPAS and PTV are in agreement and the site hasn't been edited since the last sync. |
 | `:out-of-date` | LIPAS has been edited since the last sync (event-date > last-sync). Next save will sync. |
-| `:content-drift` | PTV-side state differs from what LIPAS would push. The drift panel itemizes the differences. |
+| `:content-drift` | The sync review has a difference that needs the user's decision: made in PTV, on a first-linked location, or of unknown origin. Stays until the sync, also once decided. |
 
-Note: a site can be both out-of-date *and* drifted — the drift panel still
-shows the diff regardless.
+`:out-of-date` also covers a site whose edit differs from PTV with nothing to
+decide (a LIPAS-side change, or a choice already made). The review panel shows
+the differences in either case.
 
 ## Sports-site → PTV candidate gating
 
@@ -359,10 +396,11 @@ auto-sync.
 
 ### LIPAS users cannot edit Swedish-version-only PTV content
 
-Under strict 1-way, the only way for a kunta to have a custom Swedish name in
-PTV is to enter it in LIPAS (`:name-localized :se`). They cannot edit the PTV
-field directly — it gets overwritten. This is by design: it removes ambiguity
-about where the value lives.
+Under strict 1-way, the way for a kunta to have a custom Swedish name in PTV
+is to enter it in LIPAS (`:name-localized :se`). A value edited in PTV
+directly is overwritten by the next sync unless a user takes it into LIPAS in
+the sync review. This is by design: it removes ambiguity about where the value
+lives.
 
 The same applies to descriptions per language and to marketing-name.
 
@@ -374,9 +412,9 @@ This is a transitional state. The principled solution — pull selected fields
 into LIPAS once at adoption time, then resume strict 1-way — is planned (see
 Future Direction).
 
-For ServiceChannels, no adoption flow exists today. If a kunta has a PTV
-ServiceLocation they want LIPAS to take over, the channel is recreated rather
-than adopted.
+For ServiceChannels, linking a site to an existing ServiceLocation is a
+*first link*: the location keeps its PTV connections (`link-service-ids`), and
+the sync review shows its texts against LIPAS's so the user can take them.
 
 ### Service descriptions: PTV authoritative, LIPAS shadow
 
@@ -406,13 +444,10 @@ reconciles, but a transient incomplete state is observable.
 
 ### Adoption-time pull
 
-When a kunta links a LIPAS sub-category to an existing PTV Service (or wants
-LIPAS to adopt an existing ServiceChannel), pull a fixed allowlist of fields
-once into LIPAS DB:
-
-- For ServiceChannels: localized names (sv, en), descriptions (sv, en).
-- For Services: descriptions per language. (Names are sub-category-derived in
-  LIPAS, so don't pull.)
+When a kunta links a LIPAS sub-category to an existing PTV Service, pull a
+fixed allowlist of fields once into LIPAS DB: descriptions per language.
+(Names are sub-category-derived in LIPAS, so don't pull.) For ServiceChannels
+the first-link sync review does this per field.
 
 After the pull, the LIPAS event log records this as a regular site revision
 ("imported from PTV at T") and normal 1-way push resumes. This addresses the
@@ -423,24 +458,23 @@ content — the adopt path already writes an initial revision there.
 
 ### Service-side strict-1-way alignment
 
-Apply the same strict-1-way model + drift detection + drift panel to PTV
-Services. Today the Service-side `upsert-ptv-service!` retains a fetch+merge
+Apply the same strict-1-way model + sync review to PTV Services. Today the Service-side `upsert-ptv-service!` retains a fetch+merge
 that's load-bearing only for the adoption case; once adoption-time pull
 exists, the merge can be removed and Service-side joins the same model as
 ServiceChannels.
 
-### Drift visibility in audit and wizard list views
+### Review in the audit view
 
-Currently only the open site card surfaces the per-field diff. The audit
-dashboard list shows only a status chip; expanding it to the full diff
-in-line is a candidate enhancement.
+The Liikuntapaikat tab, the wizard and the site form show the review; the
+audit dashboard list shows only a status chip. Showing the review there is a
+candidate enhancement.
 
 ### Telemetry on overwrite events
 
 Log a structured event each time a sync overwrites a non-empty PTV-side
 value. This gives us data on how often kuntien actually edit in PTV — useful
 for prioritizing the adoption-pull feature and for deciding whether more
-fields warrant drift detection.
+fields warrant review.
 
 ## See also
 
