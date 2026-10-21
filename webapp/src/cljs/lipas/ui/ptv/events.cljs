@@ -762,7 +762,19 @@
    response carries only the source and target languages, so a whole-field
    merge would drop the others (e.g. Swedish when translating to English)."
   [texts resp]
-  (merge-with merge texts resp))
+  (merge-with merge texts (dissoc resp :shortened)))
+
+(defn- translate-notification
+  "Success, naming the texts the backend had to shorten to fit PTV's
+   character limits (its :shortened), which may have lost something."
+  [tr {:keys [shortened]}]
+  {:success? true
+   :message (if (seq shortened)
+              (tr :notifications/translate-success-shortened
+                  (str/join ", " (for [{:keys [field lang]} shortened]
+                                   (str (str/lower-case (tr (keyword "ptv" (name field))))
+                                        " (" (str/upper-case lang) ")"))))
+              (tr :notifications/translate-success))})
 
 (rf/reg-event-fx ::translate-site-descriptions
   (fn [{:keys [db]} [_ lipas-id from-lang to-langs]]
@@ -800,7 +812,7 @@
                (assoc-in [:ptv :loading-from-lipas :descriptions] false)
                (update-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] merge-translation resp))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification
-                        {:message (tr :notifications/translate-success) :success? true}]]]})))
+                        (translate-notification tr resp)]]]})))
 
 (rf/reg-event-fx ::translate-site-descriptions-failure
   (fn [{:keys [db]} [_ _resp]]
@@ -934,7 +946,7 @@
                (assoc-in [:ptv :loading-from-lipas :descriptions] false)
                (update-in [:sports-sites lipas-id :editing :ptv] merge-translation resp))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification
-                        {:message (tr :notifications/translate-success) :success? true}]]]})))
+                        (translate-notification tr resp)]]]})))
 
 (rf/reg-event-fx ::translate-to-other-langs-failure
   (fn [{:keys [db]} [_]]
@@ -1226,7 +1238,7 @@
                (update-in [:ptv :syncing :service-descriptions] dissoc source-id)
                (update-in [:ptv :org org-id :data :service-candidates source-id] merge-translation resp))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification
-                        {:message (tr :notifications/translate-success) :success? true}]]]})))
+                        (translate-notification tr resp)]]]})))
 
 (rf/reg-event-fx ::translate-service-candidate-failure
   (fn [{:keys [db]} [_ source-id _resp]]
