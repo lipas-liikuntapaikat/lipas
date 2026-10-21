@@ -141,6 +141,9 @@ found none. Without a base (none found, or a first link) a difference is just
 
 ## Code anchors
 
+As they were before the build; what replaced them is under "As built → Where it
+lives".
+
 | What | Where (under `webapp/src`) |
 |---|---|
 | Comparison, status | `cljc/lipas/data/ptv.cljc`: `compute-service-channel-drift`, `sports-site->ptv-input` |

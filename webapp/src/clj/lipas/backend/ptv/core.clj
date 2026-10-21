@@ -520,7 +520,7 @@
                 (ptv/update-service-connections ptv-component org-id service-id #(conj % service-channel-id)))))
         ;; Refetch the channel via GET so the FE caches the canonical
         ;; post-sync shape (the same shape /list/organization returns and
-        ;; that drift detection in `compute-service-channel-drift` expects).
+        ;; that the sync review, `lipas.data.ptv/sync-review`, expects).
         ;; The PUT response is captured BEFORE the separate
         ;; update-service-connections calls land, so its :services list
         ;; can be stale on updates. Without refetching, drift detection
