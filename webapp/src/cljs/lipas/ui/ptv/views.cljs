@@ -62,6 +62,8 @@
             [lipas.ui.ptv.components :as ptv-components]
             [lipas.ui.ptv.controls :as controls]
             [lipas.ui.ptv.events :as events]
+            [lipas.ui.ptv.review :as review]
+            [lipas.ui.ptv.review-data :as review-data]
             [lipas.ui.ptv.subs :as subs]
             [lipas.ui.utils :as utils :refer [<== ==>]]
             [re-frame.core :as rf]
@@ -443,7 +445,9 @@
                            (if syncing?
                              [:> CircularProgress {:size 16 :color "inherit"}]
                              [:> Icon (if synced? "sync" "ios_share")]))
-              :on-click #(==> [::events/create-ptv-service-location (:lipas-id site) [] []])}
+              ;; through the review: asks before overwriting changes made in PTV
+              :on-click #(==> [::events/sync-with-review (:lipas-id site)
+                               (-> site :review :rows)])}
              (if synced?
                (tr :ptv.actions/sync-now)
                (tr :ptv.wizard/export-service-locations-to-ptv))]]]
@@ -536,6 +540,27 @@
       {:lipas-id (:lipas-id site)
        :field-name :description}]]))
 
+(defn- site-review
+  "The site's sync review. `footer` says what the choices go into; by
+   default the next sync (\"Synkronoi nyt\")."
+  [{:keys [tr site footer]}]
+  (let [lipas-id (:lipas-id site)
+        org-id (:org-id site)
+        open? (<== [::subs/review-open? lipas-id])]
+    [review/review-panel
+     {:id (review-data/panel-dom-id lipas-id)
+      :tr tr
+      :review (:review site)
+      :choices (<== [::subs/review-choices lipas-id])
+      :open? open?
+      :on-toggle #(==> [::events/set-review-open lipas-id (not open?)])
+      :on-take (fn [rows side] (==> [::events/review-take :ptv-tool lipas-id rows side]))
+      :on-reset (fn [rows] (==> [::events/review-reset :ptv-tool lipas-id rows]))
+      ;; taking PTV's name renames the site, which needs the right to edit it
+      :names-takeable? (contains? (<== [::subs/editable-site-ids org-id]) lipas-id)
+      :last-sync (:last-sync site)
+      :footer (or footer (tr :ptv.review/sync-tab-footer))}]))
+
 (defn form
   [{:keys [org-id tr site]}]
   (r/with-let [selected-tab (r/atom :fi)]
@@ -546,13 +571,9 @@
                      "https://palvelutietovaranto.trn.suomi.fi")]
       [:> Stack {:spacing 2 :sx #js {:pt 2 :pb 2}}
 
-       ;; Drift panel, for now only its service connections: the next sync
-       ;; disconnects the services the location was connected to in PTV
-       ;; since LIPAS last synced it, which only this tells the user. The
-       ;; text fields stay hidden until we're ready to surface their diff.
-       [ptv-components/drift-panel {:drift-fields (filterv #(= :services (:field %))
-                                                           (:drift-fields site))
-                                    :tr tr}]
+       ;; What differs from PTV and who changed it; the choices made go
+       ;; into the next sync.
+       [site-review {:tr tr :site site}]
 
        [checkboxes/switch
         {:label (tr :ptv.actions/export-disclaimer)
@@ -560,12 +581,14 @@
          ;; Liikuntapaikat tab has no batch "save all" — persist the toggle now.
          :on-change #(==> [::events/toggle-sync-enabled site % :persist? true])}]
 
-       [:> Grid {:container true :spacing 3}
-        [:> Grid {:item true :xs 12 :md 5}
+       ;; Flex rather than a Grid container: its negative margins pushed the
+       ;; row 8px past the table, which then scrolled sideways.
+       [:> Stack {:direction #js {:xs "column" :md "row"} :spacing 3}
+        [:> Stack {:sx #js {:flex "5 1 0" :minWidth 0}}
          [form-left-column {:org-id org-id :tr tr :site site
                             :services services :ptv-base ptv-base
                             :org-languages org-languages :selected-tab selected-tab}]]
-        [:> Grid {:item true :xs 12 :md 7}
+        [:> Stack {:sx #js {:flex "7 1 0" :minWidth 0}}
          [form-right-column {:org-id org-id :tr tr :site site :org-languages org-languages
                              :selected-tab selected-tab}]]]])))
 
@@ -596,7 +619,9 @@
       (when (and (not expanded?) filtering?)
         [:> Chip {:label (if (seq search-text)
                            (str "\"" search-text "\"")
-                           (tr (keyword "ptv" (str "filter-" (name status-filter)))))
+                           (if (= :changed-in-ptv status-filter)
+                             (tr :ptv.review/filter-changed-in-ptv)
+                             (tr (keyword "ptv" (str "filter-" (name status-filter))))))
                   :size "small" :variant "outlined" :color "primary"
                   :onDelete #(do (on-search-change "") (on-status-change :all))}])]
 
@@ -615,6 +640,7 @@
         (status-chip :sync-enabled (tr :ptv/filter-sync-enabled))
         (status-chip :not-synced (tr :ptv/filter-not-synced))
         (status-chip :out-of-date (tr :ptv/filter-out-of-date))
+        (status-chip :changed-in-ptv (tr :ptv.review/filter-changed-in-ptv))
         (status-chip :ok (tr :ptv/filter-ok))
         (status-chip :missing-descriptions (tr :ptv/filter-missing-descriptions))
         (status-chip :sync-disabled (tr :ptv/filter-sync-disabled))]]]]))
@@ -634,6 +660,7 @@
                 :sync-disabled (not sync-enabled)
                 :not-synced (and sync-enabled (= :not-synced sync-status))
                 :out-of-date (and sync-enabled (contains? #{:out-of-date :content-drift} sync-status))
+                :changed-in-ptv (= :content-drift sync-status)
                 :ok (and sync-enabled (= :ok sync-status))
                 :missing-descriptions (not valid)
                 true)))))
@@ -874,6 +901,13 @@
                       [:> Tooltip {:title (tr :ptv.double-link/warning-title)}
                        [:> WarningIcon {:color "warning" :sx #js {:fontSize "1rem"}}]])
                     [:span (:name site)]
+                    ;; a review choice took PTV's name; the sync renames the site
+                    (when (and (:saved-name site) (not= (:name site) (:saved-name site)))
+                      [:> Tooltip {:title (tr :ptv.review/renamed-on-sync-tooltip (:saved-name site))}
+                       [:> Chip {:label (tr :ptv.review/renamed-on-sync)
+                                 :size "small"
+                                 :color "primary"
+                                 :variant "outlined"}]])
                     ;; Kept on screen only because the row is open (see shown-sites)
                     (when-not (matching-ids lipas-id)
                       [:> Chip {:label (tr :ptv/filter-no-longer-matches)
@@ -1398,15 +1432,6 @@
         (when (= selected-tab2 "descriptions")
           [:> Stack {:spacing 2}
 
-          ;; Services selector
-           [controls/services-selector
-            {:options services
-             :value service-ids
-             :value-fn :service-id
-             :on-change (fn [v]
-                          (rf/dispatch [::events/select-services site v]))
-             :label (tr :ptv/services)}]
-
           ;; Service channel selector
 
            [:span (when name-conflict {:style
@@ -1487,6 +1512,22 @@
            [ptv-components/unpublished-languages-alert
             {:tr tr :unpublished (:unpublished-ptv-languages site)}]
 
+           ;; What differs from the linked location (on a first link: the
+           ;; location made in PTV) and the choice of which version stays;
+           ;; the export carries the choices
+           [site-review {:tr tr
+                         :site site
+                         :footer (tr :ptv.review/wizard-footer)}]
+
+           ;; Services selector: after the review, which may change it
+           [controls/services-selector
+            {:options services
+             :value service-ids
+             :value-fn :service-id
+             :on-change (fn [v]
+                          (rf/dispatch [::events/select-services site v]))
+             :label (tr :ptv/services)}]
+
 ;; AI generate + translate buttons
            (let [generating? @(rf/subscribe [::subs/generating-descriptions?])
                  from-lang (keyword selected-tab)
@@ -1524,15 +1565,7 @@
             [lang-selector
              {:value selected-tab
               :on-change (fn [_e v] (set-selected-tab v))
-              :opts org-languages}]
-            (when-let [id (first (seq service-channel-ids))]
-              [:> Tooltip {:title (tr :ptv.actions/load-texts-from-ptv-tooltip)}
-               [:> Button
-                {:size "small" :variant "outlined"
-                 :sx #js {:textTransform "none"}
-                 :startIcon (r/as-element [:> Icon "download"])
-                 :on-click #(==> [::events/load-ptv-texts lipas-id org-id id])}
-                (tr :ptv.actions/load-texts-from-ptv)]])]
+              :opts org-languages}]]
 
           ;; Summary
            (let [summary-val (or (get-in site [:summary selected-tab]) "")
@@ -1578,6 +1611,8 @@
   (let [tr (<== [:lipas.ui.subs/translator])
         sync-status (:sync-status site)
         last-sync (:last-sync site)
+        open-review (ptv-data/open-review-rows (-> site :review :rows)
+                                               (<== [::subs/review-choices (:lipas-id site)]))
         [expanded set-expanded] (hooks/use-state false)]
 
     ;; Auto-collapse when site gets synced during batch
@@ -1611,6 +1646,13 @@
                   :variant "button"
                   :flex 1}}
         (:name site)]
+       ;; Differences from PTV waiting for a choice
+       (when (seq open-review)
+         [:> Tooltip {:title (tr :ptv.review/choose-before-sync)}
+          [:> Chip {:label (tr :ptv.review/count-open (count open-review))
+                    :size "small"
+                    :color "warning"
+                    :variant "outlined"}]])
        ;; PTV sync status indicator
        (case sync-status
          :ok
@@ -1654,6 +1696,15 @@
         ;; Every site selected for export must pass validation, otherwise the
         ;; export is blocked and the offending sites are listed.
         invalid-to-export (filter #(and (:sync-enabled %) (not (:valid %))) sports-sites)
+        ;; ...and every change made in PTV in them must have a choice
+        all-choices (<== [::subs/all-review-choices])
+        editable (<== [::subs/editable-site-ids org-id])
+        open-review (for [{:keys [lipas-id review sync-enabled] :as site} sports-sites
+                          :when sync-enabled
+                          :let [open (ptv-data/open-review-rows (:rows review)
+                                                                (get all-choices lipas-id))]
+                          :when (seq open)]
+                      {:lipas-id lipas-id :name (:name site) :rows open})
 
         [selected-tab set-selected-tab] (hooks/use-state :fi)
 
@@ -1727,11 +1778,37 @@
             {:variant "outlined"
              :disabled (or in-progress?
                            (zero? sports-sites-count-sync)
-                           (seq invalid-to-export))
+                           (seq invalid-to-export)
+                           (seq open-review))
              :color "primary"
              :startIcon (r/as-element [:> Icon "ios_share"])
              :on-click #(==> [::events/create-all-ptv-service-locations sports-sites])}
             (tr :ptv.wizard/export-service-locations-to-ptv)]
+
+           (when (seq open-review)
+             [:> Alert {:severity "warning" :sx #js{:mt 2}}
+              [:> AlertTitle (tr :ptv.review/export-blocked)]
+              [:ul {:style {:margin 0 :padding-left "1.2em"}}
+               (for [{:keys [lipas-id name rows]} open-review]
+                 ^{:key lipas-id}
+                 [:li (str name ": " (str/join ", " (map #(review-data/field-label tr %) rows)))])]
+              [:> Stack {:direction "row" :spacing 1 :flexWrap "wrap" :useFlexGap true :sx #js {:mt 1}}
+               ;; a site's name only where the user may edit the site
+               (let [takeable (keep (fn [{:keys [lipas-id rows] :as site}]
+                                      (when-let [rows (seq (remove #(and (#{:name :marketing-name} (:field %))
+                                                                         (not (editable lipas-id)))
+                                                                   rows))]
+                                        (assoc site :rows rows)))
+                                    open-review)]
+                 (when (seq takeable)
+                   [:> Button {:size "small" :variant "outlined" :color "inherit"
+                               :sx #js {:textTransform "none"}
+                               :on-click #(==> [::events/review-take-sites takeable :ptv])}
+                    (tr :ptv.review/take-all-ptv)]))
+               [:> Button {:size "small" :variant "outlined" :color "inherit"
+                           :sx #js {:textTransform "none"}
+                           :on-click #(==> [::events/review-take-sites open-review :lipas])}
+                (tr :ptv.review/keep-all-lipas)]]])
 
            (when (seq invalid-to-export)
              [:> Alert {:severity "warning" :sx #js{:mt 2}}

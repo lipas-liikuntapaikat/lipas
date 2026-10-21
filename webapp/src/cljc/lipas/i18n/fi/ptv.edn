@@ -12,7 +12,7 @@
  :sports-site-count-singular "liikuntapaikka",
  :synced-to-ptv "Viety PTV:hen",
  :out-of-date "Lipaksessa on uudempia muutoksia kuin PTV:ssä",
- :content-drift "PTV:ssä on eri sisältö kuin Lipaksessa",
+ :content-drift "Muutettu PTV:ssä – käy erot läpi ennen synkronointia",
  :modified-in-ptv "PTV:ssa julkaisemattomia muutoksia – julkaise tai peru muutokset ensin PTV:ssa ennen synkronointia",
  ;; Titles (rendered bold). Used standalone when there's no actionable detail,
  ;; or paired with one of the body strings below for the full message.

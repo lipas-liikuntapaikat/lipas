@@ -15,6 +15,7 @@
             [lipas.backend.search :as search]
             [lipas.data.ptv :as ptv-data]
             [lipas.data.types :as types]
+            [lipas.roles :as roles]
             [lipas.utils :as utils]
             [taoensso.timbre :as log]))
 
@@ -42,6 +43,56 @@
   "Current katselmointi of the given sites (see lipas.backend.ptv.audit/site-audits)."
   [db lipas-ids]
   (audit/site-audits db lipas-ids))
+
+(defn get-ptv-sync-bases
+  "lipas-id -> what the site's last PTV sync sent (ptv-data/->review-base),
+  for the sync review. Sites never synced are left out."
+  [db lipas-ids]
+  (update-vals (db/get-ptv-sync-bases db lipas-ids) ptv-data/->review-base))
+
+(defn- get-channel-or-nil
+  "The service location, or nil when PTV doesn't have it (archived)."
+  [ptv org-id channel-id]
+  (try
+    (ptv/get-org-service-channel ptv org-id channel-id)
+    (catch clojure.lang.ExceptionInfo e
+      (if (= 404 (-> e ex-data :resp :status))
+        nil
+        (throw e)))))
+
+(defn- service-names-by-id
+  "services-by-id shaped {id {:serviceNames ...}} for the services among
+  `service-ids` that PTV has, read one by one: a site has a few."
+  [ptv org-id service-ids]
+  (into {} (keep (fn [id]
+                   (try
+                     [id (select-keys (ptv/get-service ptv org-id id) [:serviceNames])]
+                     (catch clojure.lang.ExceptionInfo e
+                       (log/warnf "PTV service %s not readable for the sync review: %s"
+                                  id (ex-message e))
+                       nil))))
+        service-ids))
+
+(defn get-ptv-site-review
+  "What the site form needs to review a synced site against PTV before a
+  save syncs it over PTV: what the last sync sent (:base), the linked
+  service location as PTV has it now (:channel, nil if gone), names for the
+  services only Lipas connects it to (:services; the location names its own)
+  and the org's PTV languages. nil for a site not synced to a location."
+  [db ptv lipas-id]
+  (let [site (db/get-sports-site db lipas-id)
+        org-id (-> site :ptv :org-id)
+        channel-id (-> site :ptv :service-channel-ids first)]
+    (when (and org-id channel-id (-> site :ptv :last-sync))
+      (let [channel (get-channel-or-nil ptv org-id channel-id)
+            lipas-only (remove (set (ptv-data/channel-service-ids channel))
+                               (-> site :ptv :service-ids))]
+        {:lipas-id lipas-id
+         :base (get (get-ptv-sync-bases db [lipas-id]) lipas-id)
+         :channel channel
+         :services (service-names-by-id ptv org-id lipas-only)
+         :org-langs (or (:supported-languages (ptv/get-org-ptv-config-with-fallback ptv org-id))
+                        ptv-data/fallback-languages)}))))
 
 (defn- enforce-summary-limit
   "Single-result variant of `ai/enforce-summary-limit`. Non-map content
@@ -584,13 +635,23 @@
                      vec)})
 
 (defn upsert-ptv-service-location!
-  [db ptv-component search user {:keys [lipas-id org-id ptv archive?]}]
+  "Syncs the saved site with `ptv` merged in. `site-names` (the sync
+   review's choice of PTV's names, see ptv-data/review-site-names) are
+   written into the site first, which needs the right to edit it."
+  [db ptv-component search user {:keys [lipas-id org-id ptv archive? site-names]}]
   ;; FIXME: This is called from inside tx in save-sports-site! is that a problem?
   ;; FIXME: Separate version from this fn for use in sync-ptv! which doesn't load the
   ;; sports site from db etc.?
   (jdbc/with-db-transaction [tx db]
     (let [site (db/get-sports-site db lipas-id)
           _ (assert (some? site) (str "Sports site " lipas-id " not found in DB"))
+          _ (when (and (seq site-names)
+                       (not (roles/check-privilege user (roles/site-roles-context site)
+                                                   :site/create-edit)))
+              (throw (ex-info "Changing the site's name needs the right to edit the site"
+                              {:type :no-permission :lipas-id lipas-id})))
+          site (cond-> site
+                 (seq site-names) (ptv-data/apply-site-names site-names))
           ;; Reject linking to a service-location another site already owns
           ;; before we touch PTV (a fresh create / unlink has no id and passes).
           _ (assert-no-double-link! tx lipas-id (-> ptv :service-channel-ids first))

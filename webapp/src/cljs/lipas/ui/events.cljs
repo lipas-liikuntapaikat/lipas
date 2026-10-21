@@ -121,6 +121,23 @@
                         :on-cancel     close}]
       (assoc db :active-confirmation confirmation))))
 
+(rf/reg-event-db ::confirm-with
+  ;; ::confirm with its own wording: `message` may be hiccup, and the
+  ;; buttons are labelled for what they do. Without `on-decline` there is
+  ;; no middle button.
+  (fn [db [_ {:keys [title message confirm-label decline-label on-confirm on-decline]}]]
+    (let [tr    (:translator db)
+          close #(==> [:lipas.ui.events/confirmed])]
+      (assoc db :active-confirmation
+             {:title         (or title (tr :confirm/headline))
+              :message       message
+              :cancel-label  (tr :actions/cancel)
+              :decline-label decline-label
+              :confirm-label confirm-label
+              :on-confirm    (comp on-confirm close)
+              :on-decline    (when on-decline (comp on-decline close))
+              :on-cancel     close}))))
+
 (rf/reg-event-fx ::copy-to-clipboard!
   (fn [_ [_ text]]
     {:lipas.ui.effects/copy-to-clipboard! text
