@@ -1841,11 +1841,14 @@
         ["/actions/create-heatmap"
          {:post
           {:no-doc false
-           ;; Was `#_#_`-commented from the experimental phase. The FE has
-           ;; always sent the token here and already hides the tab behind this
-           ;; same privilege (lipas.ui.analysis.subs), so the server was the
-           ;; only place not enforcing it.
-           :require-privilege :analysis-tool/experimental
+           ;; Heatmap is a released analysis tool, gated like the analysis
+           ;; panel that hosts it (lipas.ui.map.views). ::roles/any is needed
+           ;; because :analysis-tool/use comes from `basic`, i.e. from
+           ;; city/type/site-scoped roles that a nil context never matches.
+           :require-privilege [{:type-code ::roles/any
+                                :city-code ::roles/any
+                                :lipas-id ::roles/any}
+                               :analysis-tool/use]
            :parameters {:body heatmap/HeatmapParams}
            :responses {200 {:body heatmap/CreateHeatmapResponse}}
            :handler
@@ -1862,7 +1865,10 @@
          {:post
           {:no-doc false
            ;; See /actions/create-heatmap above.
-           :require-privilege :analysis-tool/experimental
+           :require-privilege [{:type-code ::roles/any
+                                :city-code ::roles/any
+                                :lipas-id ::roles/any}
+                               :analysis-tool/use]
            :parameters {:body heatmap/FacetParams}
            :responses {200 {:body heatmap/GetHeatmapFacetsResponse}}
            :handler
