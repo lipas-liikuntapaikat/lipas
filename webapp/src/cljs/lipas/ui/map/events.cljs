@@ -4,9 +4,11 @@
             [ajax.core :as ajax]
             [goog.string :as gstring]
             [goog.string.format]
+            [lipas.data.ptv :as ptv-data]
             [lipas.gpx :as gpx]
             [lipas.ui.map.hooks :as hooks]
             [lipas.ui.map.utils :as map-utils]
+            [lipas.ui.ptv.review-data :as ptv-review]
             [lipas.ui.utils :refer [==>] :as utils]
             [re-frame.core :as rf]))
 
@@ -163,6 +165,24 @@
 
 ;; Geom editing events ;;
 
+;; Address panel (search an address, or resolve one from a map click —
+;; while the panel is open a map click reverse-geocodes the clicked
+;; point). The helpers live here because the mode-changing events below
+;; close the panel. The events themselves are registered near the end
+;; of this file.
+
+(defn- address-panel-open? [db]
+  (boolean (get-in db [:map :address-panel :open?])))
+
+(defn- close-address-panel
+  "Closes the address panel and clears its results, search state and
+   map marker."
+  [db]
+  (-> db
+      (assoc-in [:map :address-panel] {:open? false})
+      (update-in [:map :address-search] dissoc :keyword :results)
+      (assoc-in [:map :mode :address] nil)))
+
 (defn- get-latest-rev [db lipas-id]
   (or (get-in db [:sports-sites lipas-id :editing])
       (let [latest (get-in db [:sports-sites lipas-id :latest])]
@@ -174,11 +194,13 @@
           geoms (-> site
                     (utils/->feature)
                     (map-utils/strip-z))]
-      {:db (update-in db [:map :mode] merge {:name :editing
-                                             :lipas-id lipas-id
-                                             :geoms geoms
-                                             :sub-mode sub-mode
-                                             :geom-type geom-type})
+      {:db (-> db
+               close-address-panel
+               (update-in [:map :mode] merge {:name :editing
+                                              :lipas-id lipas-id
+                                              :geoms geoms
+                                              :sub-mode sub-mode
+                                              :geom-type geom-type}))
        :dispatch-n [[::show-problems (map-utils/find-problems geoms)]
                     [::show-popup nil]]})))
 
@@ -186,7 +208,9 @@
   (fn [{:keys [db]} [_ view-only?]]
     (let [geoms (-> db :map :mode :geoms)
           sub-mode (if view-only? :view-only :editing)]
-      {:db (update-in db [:map :mode] merge {:name :editing :sub-mode sub-mode})
+      {:db (-> db
+               close-address-panel
+               (update-in [:map :mode] merge {:name :editing :sub-mode sub-mode}))
        :dispatch-n
        [[::show-problems (map-utils/find-problems geoms)]]})))
 
@@ -198,6 +222,7 @@
 (rf/reg-event-db ::start-adding-geom
   (fn [db [_ geom-type]]
     (-> db
+        close-address-panel
         (update-in [:map :mode] merge {:name :adding
                                        :temp {}
                                        :geom-type geom-type
@@ -341,47 +366,66 @@
 
 (rf/reg-event-fx ::map-clicked
   (fn [{:keys [db]} [_ ^js event]]
-    (let [fids (atom #{})
-          lmap (.-map event)
-          opts #js {:layerFilter (fn [layer] (= "edits" (.get layer "name")))
-                    :hitTolerance 5}
-          selecting? (= :selecting (-> db :map :mode :sub-mode))
-          pixel (.-pixel event)]
-      #_(js/console.log event)
-      (when (and pixel selecting?)
-        (.forEachFeatureAtPixel lmap pixel
-                                (fn [^js f]
-                                  (swap! fids conj (.getId f)))
-                                opts))
-      {:fx (into [[:dispatch [::hide-address]]]
-                 (if (seq @fids)
-                   (for [fid @fids]
-                     [:dispatch [::toggle-selected-feature-id fid]])
-                   [(when-not selecting?
-                      [:dispatch [::clear-highlight]])]))})))
+    (if (address-panel-open? db)
+      ;; Reverse lookup mode takes over the click: resolve the clicked
+      ;; point instead of touching the selection. The search box empties
+      ;; too — a stale query above map-click results only misleads.
+      (let [wgs84 (epsg3067->wgs84-fast (.-coordinate event))]
+        {:db (update-in db [:map :address-search] dissoc :keyword :results)
+         :fx [[:dispatch [::reverse-geocode {:lon (aget wgs84 0)
+                                             :lat (aget wgs84 1)}]]]})
+      (let [fids (atom #{})
+            lmap (.-map event)
+            opts #js {:layerFilter (fn [layer] (= "edits" (.get layer "name")))
+                      :hitTolerance 5}
+            selecting? (= :selecting (-> db :map :mode :sub-mode))
+            pixel (.-pixel event)]
+        #_(js/console.log event)
+        (when (and pixel selecting?)
+          (.forEachFeatureAtPixel lmap pixel
+                                  (fn [^js f]
+                                    (swap! fids conj (.getId f)))
+                                  opts))
+        {:fx (into [[:dispatch [::hide-address]]]
+                   (if (seq @fids)
+                     (for [fid @fids]
+                       [:dispatch [::toggle-selected-feature-id fid]])
+                     [(when-not selecting?
+                        [:dispatch [::clear-highlight]])]))}))))
+
+;; NOTE: the OpenLayers select interaction fires independently of
+;; ::map-clicked. While the address panel is open a map click resolves
+;; an address instead of selecting, so these handlers stand down —
+;; otherwise clicking near a site would navigate away mid-lookup.
 
 (rf/reg-event-fx ::sports-site-selected
   (fn [{:keys [db]} [_ _ lipas-id]]
     (let [mode (-> db :map :mode :name)]
-      {:fx
-       [(when (= mode :analysis)
-          [:dispatch [:lipas.ui.analysis.reachability.events/show-analysis lipas-id]])
-        (when (not= mode :analysis)
-          [:dispatch [::show-sports-site lipas-id]])]})))
+      (if (address-panel-open? db)
+        {}
+        {:fx
+         [(when (= mode :analysis)
+            [:dispatch [:lipas.ui.analysis.reachability.events/show-analysis lipas-id]])
+          (when (not= mode :analysis)
+            [:dispatch [::show-sports-site lipas-id]])]}))))
 
 (rf/reg-event-fx ::loi-selected
-  (fn [_ [_ _event loi-id]]
-    {:fx
-     [[:dispatch [::show-loi loi-id]]]}))
+  (fn [{:keys [db]} [_ _event loi-id]]
+    (if (address-panel-open? db)
+      {}
+      {:fx
+       [[:dispatch [::show-loi loi-id]]]})))
 
 (rf/reg-event-fx ::unselected
   (fn [{:keys [db]} [_ _]]
     (let [mode (-> db :map :mode :name)]
-      {:fx
-       [(when (not= mode :analysis)
-          [:dispatch [::show-sports-site nil]])
-        (when (not= mode :analysis)
-          [:dispatch [::show-loi nil]])]})))
+      (if (address-panel-open? db)
+        {}
+        {:fx
+         [(when (not= mode :analysis)
+            [:dispatch [::show-sports-site nil]])
+          (when (not= mode :analysis)
+            [:dispatch [::show-loi nil]])]}))))
 
 ;;; Higher order events ;;;
 
@@ -418,6 +462,8 @@
        [[:lipas.ui.sports-sites.events/edit-site lipas-id]
        ;;[::zoom-to-site lipas-id]
         [::clear-undo-redo]
+        ;; a save syncs a site with PTV sync on: review PTV's changes first
+        [::fetch-ptv-site-review lipas-id]
         [::start-editing lipas-id sub-mode geom-type]
        ;; Also jump to activities/floorball tab if user doesn't have permission to
        ;; edit the basic site data.
@@ -437,6 +483,7 @@
 
 (defn- on-success-default [{:keys [lipas-id]} & [result]]
   (cond-> [[::stop-editing]
+           [::clear-ptv-site-review lipas-id]
            [:lipas.ui.search.events/submit-search]
            [:lipas.ui.map.events/show-sports-site lipas-id]]
     (some-> result :ptv :error)
@@ -449,16 +496,84 @@
   [[:lipas.ui.map.events/show-sports-site lipas-id]])
 
 (rf/reg-event-fx ::save-edits
-  (fn [_ [_ lipas-id]]
-    (let [on-success (partial on-success-default {:lipas-id lipas-id})
-          on-failure (partial on-failure-default {:lipas-id lipas-id})]
-      {:dispatch-n
-      ;; We "unselect" sports-site while saving to make the
-      ;; map "forget" and focus on updated entries once they're saved.
-      ;; Some more elegant solution could be possibly implemented in
-      ;; the future.
-       [[:lipas.ui.map.events/show-sports-site nil]
-        [:lipas.ui.sports-sites.events/save-edits lipas-id on-success on-failure]]})))
+  ;; A save of a site with PTV sync on syncs it over PTV: while a change
+  ;; made in PTV has no choice in the PTV tab's review, ask first.
+  ;; `overwrite-ptv?` is the user's answer: those keep Lipas's value.
+  (fn [{:keys [db]} [_ lipas-id overwrite-ptv?]]
+    (let [tr (:translator db)
+          on-success (partial on-success-default {:lipas-id lipas-id})
+          on-failure (partial on-failure-default {:lipas-id lipas-id})
+          review (ptv-review/site-form-review (get-in db (ptv-review/site-path lipas-id))
+                                              (get-in db [:sports-sites lipas-id :history
+                                                          (get-in db [:sports-sites lipas-id :latest])])
+                                              (get-in db [:sports-sites lipas-id :editing]))
+          choices (get-in db (ptv-review/choices-path lipas-id))
+          open (ptv-data/open-review-rows (:rows review) choices)]
+      (if (and (seq open) (not overwrite-ptv?))
+        {:dispatch [:lipas.ui.events/confirm-with
+                    (ptv-review/overwrite-confirmation
+                      tr
+                      {:title (tr :ptv.review/confirm-save-title)
+                       :intro (tr :ptv.review/confirm-save-intro)
+                       :open open
+                       :confirm-label (tr :ptv.review/save-and-overwrite)
+                       :on-confirm #(==> [::save-edits lipas-id true])
+                       :on-review #(==> [::open-ptv-review lipas-id])})]}
+        ;; the edit holds the decisions
+        {:dispatch-n
+         ;; We "unselect" sports-site while saving to make the
+         ;; map "forget" and focus on updated entries once they're saved.
+         ;; Some more elegant solution could be possibly implemented in
+         ;; the future.
+         [[:lipas.ui.map.events/show-sports-site nil]
+          [:lipas.ui.sports-sites.events/save-edits lipas-id on-success on-failure]]}))))
+
+(rf/reg-event-fx ::fetch-ptv-site-review
+  ;; What the site form reviews a site against PTV with
+  ;; (lipas.ui.ptv.review-data/site-form-review). Only a site synced to a
+  ;; location has anything to review.
+  (fn [{:keys [db]} [_ lipas-id]]
+    (let [latest (get-in db [:sports-sites lipas-id :history
+                             (get-in db [:sports-sites lipas-id :latest])])
+          token (-> db :user :login :token)]
+      (when (and token
+                 (-> latest :ptv :last-sync)
+                 (-> latest :ptv :service-channel-ids first))
+        {:http-xhrio
+         {:method :post
+          :headers {:Authorization (str "Token " token)}
+          :uri (str (:backend-url db) "/actions/fetch-ptv-site-review")
+          :params {:lipas-id lipas-id}
+          :format (ajax/transit-request-format)
+          :response-format (ajax/transit-response-format)
+          :on-success [::fetch-ptv-site-review-success lipas-id]
+          :on-failure [::fetch-ptv-site-review-failure lipas-id]}}))))
+
+(rf/reg-event-db ::fetch-ptv-site-review-success
+  (fn [db [_ lipas-id resp]]
+    (assoc-in db (ptv-review/site-path lipas-id) resp)))
+
+(rf/reg-event-db ::fetch-ptv-site-review-failure
+  ;; Without the review the save syncs as it always has.
+  (fn [db [_ lipas-id _resp]]
+    (update-in db [:ptv :review :site] dissoc lipas-id)))
+
+(rf/reg-event-fx ::open-ptv-review
+  ;; The site form's PTV tab with the review open and in sight.
+  (fn [{:keys [db]} [_ lipas-id]]
+    {:db (-> db
+             (assoc-in [:map :selected-sports-site-tab] 6)
+             (assoc-in (ptv-review/open-path lipas-id) true))
+     :fx [[:lipas.ui.effects/scroll-into-view! (ptv-review/panel-dom-id lipas-id)]]}))
+
+(rf/reg-event-db ::clear-ptv-site-review
+  ;; After a save: it synced, so the review's base and choices are spent.
+  (fn [db [_ lipas-id]]
+    (update-in db [:ptv :review] (fn [review]
+                                   (-> review
+                                       (update :site dissoc lipas-id)
+                                       (update :choices dissoc lipas-id)
+                                       (update :open dissoc lipas-id))))))
 
 (rf/reg-event-fx ::delete-site
   (fn [_]
@@ -478,7 +593,9 @@
 
 (rf/reg-event-fx ::start-adding-new-site
   (fn [{:keys [db]} [_ template opts]]
-    {:db (assoc-in db [:map :mode] {:name :default}) ;; cleanup
+    {:db (-> db
+             close-address-panel
+             (assoc-in [:map :mode] {:name :default})) ;; cleanup
      :dispatch-n [[:lipas.ui.search.events/set-results-view :list]
                   [:lipas.ui.sports-sites.events/start-adding-new-site template opts]
                   [:lipas.ui.loi.events/start-adding-new-loi]]}))
@@ -680,22 +797,25 @@
       {:fx [[:dispatch [::new-geom-drawn simplified]]
             [:dispatch [::toggle-simplify-dialog]]]})))
 
-;; Address search ;;
-
-(rf/reg-event-db ::toggle-address-search-dialog
-  (fn [db _]
-    (-> db
-        (update-in [:map :address-search :dialog-open?] not)
-        (assoc-in [:map :address-search :keyword] "")
-        (assoc-in [:map :address-search :results] []))))
+;; Address search (the forward-geocoding half of the address panel) ;;
 
 (rf/reg-event-db ::clear-address-search-results
   (fn [db _]
     (assoc-in db [:map :address-search :results] [])))
 
+(rf/reg-event-db ::clear-address-search
+  ;; The X on the panel's search box: clears the query and its results,
+  ;; but keeps whatever address details are already showing.
+  (fn [db _]
+    (update-in db [:map :address-search] dissoc :keyword :results)))
+
 (rf/reg-event-fx ::update-address-search-keyword
   (fn [{:keys [db]} [_ s]]
-    {:db (assoc-in db [:map :address-search :keyword] s)
+    {:db (-> db
+             (assoc-in [:map :address-search :keyword] s)
+             ;; A failed lookup shouldn't keep shouting once the user
+             ;; starts a new search.
+             (update-in [:map :address-panel] dissoc :error))
      :dispatch-n [[::search-address s]]}))
 
 ;; https://www.digitransit.fi/en/developers/apis/2-geocoding-api/autocomplete/
@@ -712,13 +832,18 @@
                   "sources=oa,osm"
                   "&text=" s)
         :response-format (ajax/json-response-format {:keywords? true})
-        :on-success [::address-search-success]
+        :on-success [::address-search-success s]
         :on-failure [::address-search-failure]}}
       {:dispatch [::clear-address-search-results]})))
 
 (rf/reg-event-fx ::address-search-success
-  (fn [{:keys [db]} [_ resp]]
-    {:db (assoc-in db [:map :address-search :results] resp)}))
+  ;; Guarded against stale responses: the text field re-fires its current
+  ;; value on blur (so picking a result would resurrect the list), and
+  ;; slow responses can arrive out of typing order.
+  (fn [{:keys [db]} [_ query resp]]
+    (if (= query (get-in db [:map :address-search :keyword]))
+      {:db (assoc-in db [:map :address-search :results] resp)}
+      {})))
 
 (rf/reg-event-fx ::address-search-failure
   (fn [{:keys [db]} [_ error]]
@@ -728,16 +853,19 @@
                   {:message (tr :notifications/get-failed)
                    :success? false}]})))
 
-(rf/reg-event-fx ::show-address
+(rf/reg-event-fx ::select-address-result
+  ;; Focuses the map on the picked geocoding result and reverse-geocodes
+  ;; it, so a searched address gets the same detail rows as a map click.
   (fn [{:keys [db]} [_ {:keys [label geometry]}]]
-    (let [{:keys [lon lat]} (-> geometry :coordinates wgs84->epsg3067)
-
-          feature {:type "Feature" :geometry geometry :properties {:name label}}]
-      {:db (assoc-in db [:map :mode :address] feature)
+    (let [[wgs-lon wgs-lat] (:coordinates geometry)
+          {:keys [lon lat]} (-> geometry :coordinates wgs84->epsg3067)]
+      {:db (-> db
+               (assoc-in [:map :address-search :keyword] label)
+               (assoc-in [:map :address-search :results] nil))
        :dispatch-n
        [[::set-center lat lon]
         [::set-zoom 14]
-        [::toggle-address-search-dialog]]})))
+        [::reverse-geocode {:lon wgs-lon :lat wgs-lat}]]})))
 
 (rf/reg-event-db ::hide-address
   (fn [db _]
@@ -1006,6 +1134,57 @@
 (rf/reg-event-db ::close-address-locator-dialog
   (fn [db _]
     (assoc-in db [:map :address-locator :dialog-open?] false)))
+
+;; Reverse lookup (address from map click)
+
+(defn- ->marker-feature
+  "GeoJSON (WGS84) point feature for the address marker layer."
+  [{:keys [lon lat]}]
+  {:type "Feature"
+   :geometry {:type "Point" :coordinates [lon lat]}})
+
+(rf/reg-event-fx ::toggle-address-panel
+  (fn [{:keys [db]} _]
+    (if (address-panel-open? db)
+      {:db (close-address-panel db)}
+      {:db (assoc-in db [:map :address-panel] {:open? true})})))
+
+(rf/reg-event-db ::close-address-panel
+  (fn [db _]
+    (close-address-panel db)))
+
+(rf/reg-event-fx ::reverse-geocode
+  (fn [{:keys [db]} [_ {:keys [lat lon] :as point}]]
+    {:db (-> db
+             (update-in [:map :address-panel] merge {:point point
+                                                     :loading? true
+                                                     :error nil
+                                                     :result nil})
+             (assoc-in [:map :mode :address] (->marker-feature point)))
+     :http-xhrio
+     {:method :get
+      :uri (str (:backend-url db)
+                "/actions/reverse-geocode"
+                "?lat=" lat
+                "&lon=" lon)
+      ;; Transit like every other LIPAS endpoint (the Digitransit calls above
+      ;; are JSON because they go straight to Pelias). Keyword-valued fields
+      ;; — :postal-code-source, the :sources statuses — arrive as keywords.
+      :response-format (ajax/transit-response-format)
+      :on-success [::reverse-geocode-success]
+      :on-failure [::reverse-geocode-failure]}}))
+
+(rf/reg-event-db ::reverse-geocode-success
+  (fn [db [_ resp]]
+    (update-in db [:map :address-panel] merge {:loading? false
+                                               :error nil
+                                               :result resp})))
+
+(rf/reg-event-db ::reverse-geocode-failure
+  (fn [db [_ resp]]
+    (update-in db [:map :address-panel] merge {:loading? false
+                                               :error resp
+                                               :result nil})))
 
 (rf/reg-event-fx ::download-site-backup
   (fn [{:keys [db]} [_ lipas-id]]

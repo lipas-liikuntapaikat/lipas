@@ -77,7 +77,8 @@
     :disable-escape-key-down true}
    [:> DialogTitle title]
    [:> DialogContent
-    [:> Typography message]]
+    ;; a div, so a message may be hiccup with lists
+    [:> Typography {:component "div"} message]]
    [:> DialogActions
     [:> Button {:on-click on-cancel} cancel-label]
     (when on-decline

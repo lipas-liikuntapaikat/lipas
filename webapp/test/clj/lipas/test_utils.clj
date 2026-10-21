@@ -646,6 +646,10 @@
    "ptv_service"
    "ptv_site_audit"
    "ptv_service_audit"
+   "postal_code"
+   "postal_street_segment"
+   "paavo_area"
+   "postal_data_source"
    "site_note"
    "site_note_status"])
 

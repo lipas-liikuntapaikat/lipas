@@ -12,7 +12,7 @@
  :sports-site-count-singular "sports site"
  :synced-to-ptv "Exported to PTV"
  :out-of-date "LIPAS has newer changes than PTV"
- :content-drift "PTV content differs from LIPAS"
+ :content-drift "Changed in PTV – review the differences before syncing"
  :modified-in-ptv "Unpublished changes in PTV – publish or discard the changes in PTV before syncing"
  ;; Titles (rendered bold). Used standalone when there's no actionable detail,
  ;; or paired with one of the body strings below for the full message.
@@ -28,7 +28,9 @@
  :not-yet-synced "Selected for export, not yet synced to PTV"
  :summary "Summary"
  :user-instruction "User instruction"
+ :writing-guidance-avoid "Avoid:"
  :writing-guidance-description "What should the description contain?"
+ :writing-guidance-summary "What should the summary contain?"
  :writing-guidance-user-instruction "What should the user instruction contain?"
  :tooltip "Export to PTV"
  :wizard "Setup"
@@ -94,4 +96,7 @@
  :unpublished-languages-missing-texts "summary and description missing in Lipas. Add them on the language's tab before syncing: write them yourself, translate from the Finnish texts (\"Translate to other languages\") or generate them with AI (\"Generate descriptions with AI\")."
  :lang-fi "Finnish"
  :lang-se "Swedish"
- :lang-en "English"}
+ :lang-en "English"
+ :blocker-texts-too-short "The summary and description must have at least 5 characters in every language."
+ :text-min-length "at least {1} characters"
+ :sync-failed-body-ptv-message "PTV rejected the data: {1}"}

@@ -45,6 +45,7 @@
    :map.import
    :map.overlay
    :map.resolve-address
+   :map.reverse-lookup
    :map.tools
    :map.tools.simplify
    :menu
@@ -60,9 +61,9 @@
    :ptv.audit
    :ptv.audit.status
    :ptv.double-link
-   :ptv.drift
    :ptv.name-conflict
    :ptv.preview
+   :ptv.review
    :ptv.service
    :ptv.tools.ai
    :ptv.tools.generate-services

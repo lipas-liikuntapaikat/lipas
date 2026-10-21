@@ -19,6 +19,8 @@
             [lipas.ui.ptv.components :as ptv-components]
             [lipas.ui.ptv.controls :as controls]
             [lipas.ui.ptv.events :as events]
+            [lipas.ui.ptv.review :as review]
+            [lipas.ui.ptv.review-data :as review-data]
             [lipas.ui.ptv.subs :as subs]
             [lipas.ui.utils :refer [prod?]]
             [re-frame.core :as rf]
@@ -358,6 +360,29 @@
 
          :else nil))
 
+     ;; What differs from PTV and who changed it. A save syncs the site, so
+     ;; the choices go into the save (:lipas.ui.map.events/save-edits),
+     ;; which asks before overwriting a change made in PTV without one.
+     (when editing?
+       (when-let [site-review @(rf/subscribe [:lipas.ui.map.subs/ptv-site-review lipas-id])]
+         (let [open? @(rf/subscribe [::subs/review-open? lipas-id])]
+           [review/review-panel
+            {:id (review-data/panel-dom-id lipas-id)
+             :tr tr
+             :review site-review
+             :choices @(rf/subscribe [::subs/review-choices lipas-id])
+             :open? open?
+             :on-toggle #(rf/dispatch [::events/set-review-open lipas-id (not open?)])
+             :on-take (fn [rows side]
+                        (rf/dispatch [::events/review-take :site-form lipas-id rows side]))
+             :on-reset (fn [rows]
+                         (rf/dispatch [::events/review-reset :site-form lipas-id rows]))
+             ;; the names are the site's own, edited right here
+             :names-takeable? true
+             :last-sync last-sync
+             :stacked? true
+             :footer (tr :ptv.review/site-form-footer)}])))
+
      ;; 3. Organization selector — only relevant once the user opts in to sync.
      ;; Pre-filled from ::resolved-org-id. Shown as a caption + edit affordance
      ;; when the org is already known; falls back to a raw selector when it isn't.
@@ -532,6 +557,13 @@
           :on-change set-selected-tab
           :enabled-languages (set org-languages)}]
 
+        ;; Per-type-group authoring guidance (DVV). Shown in the user's UI
+        ;; language, not `selected-tab` — these are instructions to the
+        ;; author, who reads them in their own language while writing the
+        ;; text for whichever language tab is open.
+        [ptv-components/site-writing-guidance
+         {:tr tr :type-code type-code :field :summary}]
+
         ;; Summary
         (let [v (or (get-in edit-data [:ptv :summary selected-tab])
                     (get-in sports-site [:ptv :summary selected-tab])
@@ -546,8 +578,8 @@
             :label (str (tr :ptv/summary) " *")
             :value v
             :inputProps #js {:maxLength ptv-data/max-summary-length}
-            :helperText (str (count v) "/" ptv-data/max-summary-length)
-            :error (> (count v) ptv-data/max-summary-length)}])
+            :helperText (controls/text-length-hint tr v ptv-data/max-summary-length)
+            :error (controls/text-length-error? v ptv-data/max-summary-length)}])
 
         ;; Summary audit feedback
         [audit-feedback-component
@@ -555,6 +587,9 @@
           :org-id org-id
           :lipas-id lipas-id
           :field-name :summary}]
+
+        [ptv-components/site-writing-guidance
+         {:tr tr :type-code type-code :field :description}]
 
         ;; Description
         (let [v (or (get-in edit-data [:ptv :description selected-tab])
@@ -571,8 +606,8 @@
             :label (str (tr :ptv/description) " *")
             :value v
             :inputProps #js {:maxLength ptv-data/max-description-length}
-            :helperText (str (count v) "/" ptv-data/max-description-length)
-            :error (> (count v) ptv-data/max-description-length)}])
+            :helperText (controls/text-length-hint tr v ptv-data/max-description-length)
+            :error (controls/text-length-error? v ptv-data/max-description-length)}])
 
         ;; Description audit feedback
         [audit-feedback-component

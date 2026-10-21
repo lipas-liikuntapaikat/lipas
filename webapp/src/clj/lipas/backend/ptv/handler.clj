@@ -137,6 +137,21 @@
                 (deny user (str "no :ptv/manage for the municipality of site " lipas-id)))
             (deny user (str "lipas-id " (pr-str lipas-id) " not found")))))))
 
+(defn site-ptv-review-access?
+  "Gate for the site form's sync review (`:lipas-id` in the body): whoever
+  may edit the site, since saving a site with PTV sync on syncs it over PTV,
+  plus the municipality's PTV managers and auditors."
+  [db]
+  (fn [req]
+    (let [user (:identity req)
+          lipas-id (-> req :parameters :body :lipas-id)]
+      (or (ptv-auditor? user)
+          (if-let [site (db/get-sports-site db lipas-id)]
+            (or (manages-city? user [(-> site :location :city :city-code)])
+                (roles/check-privilege user (roles/site-roles-context site) :site/create-edit)
+                (deny user (str "may not edit site " lipas-id)))
+            (deny user (str "lipas-id " (pr-str lipas-id) " not found")))))))
+
 (defn- site-in-org?
   "True when the site exists, lies in one of `org`'s PTV municipalities and the
   user manages that municipality. Closes the gap where a manager of one city of
@@ -150,6 +165,18 @@
           (deny user (str "site " lipas-id " is outside org " (:id org)
                           " or its municipality isn't managed (" what ")"))))
     (deny user (str "lipas-id " (pr-str lipas-id) " not found (" what ")"))))
+
+(defn- service-error-response
+  "The response for a refusal of ours on a service write (see
+  ptv-core/upsert-ptv-service!), or nil for any other error. The body's
+  :type tells the UI what to say."
+  [e]
+  (let [{:keys [type] :as data} (ex-data e)]
+    (case type
+      (:source-id-in-use :changed-in-ptv :incomplete-language-versions :texts-too-short)
+      {:status 409
+       :body (select-keys data [:type :problems :modified])}
+      nil)))
 
 (defn ptv-org-write-access?
   "Gate for endpoints that WRITE an organisation's PTV data.
@@ -328,6 +355,24 @@
       (fn [req]
         {:status 200
          :body (ptv-core/get-ptv-site-audits db (-> req :parameters :body :lipas-ids))})}}]
+
+   ["/actions/fetch-ptv-sync-bases"
+    {:post
+     {:require-privilege ptv-feature-read-access?
+      :parameters {:body #'lipas-ptv-schema/fetch-sync-bases-body}
+      :handler
+      (fn [req]
+        {:status 200
+         :body (ptv-core/get-ptv-sync-bases db (-> req :parameters :body :lipas-ids))})}}]
+
+   ["/actions/fetch-ptv-site-review"
+    {:post
+     {:require-privilege (site-ptv-review-access? db)
+      :parameters {:body #'lipas-ptv-schema/fetch-site-review-body}
+      :handler
+      (fn [req]
+        {:status 200
+         :body (ptv-core/get-ptv-site-review db ptv (-> req :parameters :body :lipas-id))})}}]
 
    ["/actions/generate-ptv-descriptions"
     {:post
@@ -535,23 +580,34 @@
                           [:description (ptv-schema/localized-string-schema nil)]
                           [:user-instruction {:optional true} (ptv-schema/localized-string-schema nil)]
                           [:service-name {:optional true} [:maybe :string]]
-                          [:service-id {:optional true} [:maybe :string]]]}
+                          ;; "lipas" (default): a LIPAS-created service, by
+                          ;; source-id; its service-id, when it exists, is read
+                          ;; to keep what PTV has that LIPAS doesn't write.
+                          ;; "native": a service made in PTV, its texts
+                          ;; patched by service-id with the keys below.
+                          [:mode {:optional true} [:enum "lipas" "native"]]
+                          [:service-id {:optional true} [:maybe :string]]
+                          [:name {:optional true} (ptv-schema/localized-string-schema nil)]
+                          [:expected-modified {:optional true} [:maybe :string]]
+                          [:remove-languages {:optional true} [:vector [:enum "fi" "se" "en"]]]]}
       :handler
       (fn [req]
         (try
           {:status 200
            :body (ptv-core/upsert-ptv-service! db ptv (:identity req) (-> req :parameters :body))}
           (catch clojure.lang.ExceptionInfo e
-            (if-let [ptv-err (ptv-core/parse-ptv-error e)]
-              (do
-                (log/warnf "save-ptv-service failed (org: %s, source-id: %s, service-id: %s): %s"
-                           (-> req :parameters :body :org-id)
-                           (-> req :parameters :body :source-id)
-                           (-> req :parameters :body :service-id)
-                           (pr-str ptv-err))
-                {:status 409
-                 :body ptv-err})
-              (throw e)))))}}]
+            (if-let [resp (service-error-response e)]
+              resp
+              (if-let [ptv-err (ptv-core/parse-ptv-error e)]
+                (do
+                  (log/warnf "save-ptv-service failed (org: %s, source-id: %s, service-id: %s): %s"
+                             (-> req :parameters :body :org-id)
+                             (-> req :parameters :body :source-id)
+                             (-> req :parameters :body :service-id)
+                             (pr-str ptv-err))
+                  {:status 409
+                   :body ptv-err})
+                (throw e))))))}}]
 
    ["/actions/fetch-ptv-services"
     {:post
@@ -610,6 +666,11 @@
            :body (ptv-core/upsert-ptv-service-location! db ptv search (:identity req) (-> req :parameters :body))}
           (catch clojure.lang.ExceptionInfo e
             (cond
+              ;; Taking PTV's name for the site without the right to edit it
+              (= :no-permission (:type (ex-data e)))
+              {:status 403
+               :body (ex-data e)}
+
               ;; A different sports-site already owns this service-location.
               (= :double-link (:type (ex-data e)))
               (do
@@ -618,6 +679,11 @@
                            (pr-str (ex-data e)))
                 {:status 409
                  :body (ex-data e)})
+
+              ;; Refused before PTV: a text PTV would reject (sync-blockers)
+              (:blockers (ex-data e))
+              {:status 409
+               :body (select-keys (ex-data e) [:blockers])}
 
               (ptv-core/parse-ptv-error e)
               (let [ptv-err (ptv-core/parse-ptv-error e)]

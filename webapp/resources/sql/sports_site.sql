@@ -139,6 +139,24 @@ SELECT lipas_id, document ->> 'name' AS name
 FROM sports_site_current
 WHERE document #> '{ptv,service-channel-ids}' @> to_jsonb(:service_channel_id ::text)
 
+-- :name get-ptv-sync-bases
+-- :command :query
+-- :result :many
+-- :doc For each given site with a PTV sync, the revision that sync wrote: the
+-- :doc first one stored that carries the current revision's [:ptv :last-sync].
+-- :doc Every sync writes a revision with a fresh last-sync and later revisions
+-- :doc copy it forward, so the earliest holding it is the sync's own. Matched
+-- :doc on the stored value, not on event_date, so no timestamp format or
+-- :doc precision can make it miss.
+SELECT DISTINCT ON (s.lipas_id) s.lipas_id, s.document
+FROM sports_site s
+JOIN sports_site_current c USING (lipas_id)
+WHERE s.lipas_id IN (:v*:lipas_ids)
+  AND s.status = 'published'
+  AND c.document #>> '{ptv,last-sync}' IS NOT NULL
+  AND s.document #>> '{ptv,last-sync}' = c.document #>> '{ptv,last-sync}'
+ORDER BY s.lipas_id, s.created_at, s.event_date
+
 -- :name get-ptv-adoption
 -- :command :query
 -- :result :many
