@@ -1,5 +1,6 @@
 (ns lipas.backend.ptv.ai-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
             [lipas.backend.ptv.ai :as ai]))
 
 (def ^:private raw-sports-site
@@ -196,13 +197,13 @@
 
 (deftest enforce-summary-limit-test
   (testing "results within the limit make no follow-up call"
-    (with-redefs [ai/shorten-summaries (fn [_] (throw (ex-info "must not be called" {})))]
+    (with-redefs [ai/shorten-summaries (fn [_ & _] (throw (ex-info "must not be called" {})))]
       (is (= [{:summary {:fi "lyhyt"}}]
              (ai/enforce-summary-limit [{:summary {:fi "lyhyt"}}])))))
 
   (testing "over-long summaries are shortened in one call; others untouched"
     (let [calls (atom [])]
-      (with-redefs [ai/shorten-summaries (fn [items]
+      (with-redefs [ai/shorten-summaries (fn [items & _]
                                            (swap! calls conj items)
                                            {"0/fi" "lyhennetty" "1/se" "förkortad"})]
         (is (= [{:summary {:fi "lyhennetty" :en "ok"}}
@@ -215,7 +216,7 @@
         (is (= #{"0/fi" "1/se"} (set (map :key (first @calls))))))))
 
   (testing "skip-langs are never sent or changed"
-    (with-redefs [ai/shorten-summaries (fn [items]
+    (with-redefs [ai/shorten-summaries (fn [items & _]
                                          (is (= ["0/se"] (map :key items)))
                                          {"0/se" "förkortad"})]
       (is (= [{:summary {:fi long-fi :se "förkortad"}}]
@@ -223,9 +224,41 @@
                                        :skip-langs #{:fi})))))
 
   (testing "a rewrite that isn't shorter, or a failed call, keeps the original"
-    (with-redefs [ai/shorten-summaries (fn [_] {"0/fi" (str long-fi "zz")})]
+    (with-redefs [ai/shorten-summaries (fn [_ & _] {"0/fi" (str long-fi "zz")})]
       (is (= [{:summary {:fi long-fi}}]
              (ai/enforce-summary-limit [{:summary {:fi long-fi}}]))))
-    (with-redefs [ai/shorten-summaries (fn [_] (throw (ex-info "LLM down" {})))]
+    (with-redefs [ai/shorten-summaries (fn [_ & _] (throw (ex-info "LLM down" {})))]
       (is (= [{:summary {:fi long-fi}}]
-             (ai/enforce-summary-limit [{:summary {:fi long-fi}}]))))))
+             (ai/enforce-summary-limit [{:summary {:fi long-fi}}])))))
+
+  (testing "the mode is passed on to the shortening call"
+    (with-redefs [ai/shorten-summaries (fn [_ & {:keys [mode]}]
+                                         (is (= :wording mode))
+                                         {"0/en" "short"})]
+      (is (= [{:summary {:en "short"}}]
+             (ai/enforce-summary-limit [{:summary {:en long-fi}}] :mode :wording))))))
+
+;;; translate-to-other-langs ;;;
+
+(deftest translate-to-other-langs-test
+  ;; Translating under the generation instruction made the model edit: a
+  ;; summary sentence the description didn't back was dropped ("must not
+  ;; contain information absent from the description"), so a changed
+  ;; Finnish summary came back as the old translation.
+  (let [calls (atom [])]
+    (with-redefs [ai/gemini-complete (fn [_config instruction prompt]
+                                       (swap! calls conj {:instruction instruction :prompt prompt})
+                                       {:message {:content {}}})]
+      (ai/translate-to-other-langs {:from "fi" :to #{"se" "en"}
+                                    :summary "Reitillä on iso kissa."
+                                    :description "Kuvaus."})
+      (let [{:keys [instruction prompt]} (first @calls)]
+        (testing "runs as a translator, not under the generation instruction"
+          (is (= ai/translate-system-instruction instruction))
+          (is (not= ai/ptv-system-instruction-v5 instruction)))
+        (testing "names the languages: LIPAS's \"se\" is Swedish, PTV's Northern Sámi"
+          (is (str/includes? prompt "from Finnish to English, Swedish")))
+        (testing "states PTV's character limits"
+          (is (str/includes? prompt "summary: 150 characters")))
+        (testing "carries the source text"
+          (is (str/includes? prompt "Reitillä on iso kissa.")))))))
