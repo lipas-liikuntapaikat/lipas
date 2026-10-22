@@ -1026,6 +1026,14 @@
                                            :description {:fi "bbbbbb" :se ""})))
             "whitespace and blank texts")))
 
+    (testing "turning sync back on for a site saved with sync off needs a sync"
+      ;; Sync off was saved (\"Ei\": keep the location in PTV) and the
+      ;; location is still what Lipas last synced.
+      (let [ptv (channel ["A"] "aaaaaa")]
+        (is (= :out-of-date (status ptv (saved-site {:service-ids ["A"] :sync-enabled false}
+                                                    :sync-enabled true))))
+        (is (= :ok (status ptv (saved-site {:service-ids ["A"] :sync-enabled true}))))))
+
     (testing "without a snapshot the status is what it was"
       (is (= :ok (status (channel ["A" "B"] "aaaaaa")
                          (-> (saved-site {:service-ids ["A"]} :service-ids ["A" "B"])
@@ -1043,6 +1051,10 @@
     (is (sut/unsaved-ptv-edits? (site saved (assoc saved :service-ids ["A" "B"]))))
     (is (sut/unsaved-ptv-edits? (site saved (assoc saved :service-channel-ids ["C2"]))))
     (is (sut/unsaved-ptv-edits? (site saved (assoc-in saved [:description :en] "d"))))
+    (is (sut/unsaved-ptv-edits? (site saved (assoc saved :sync-enabled true)))
+        "sync turned on, saved without it (= off)")
+    (is (false? (sut/unsaved-ptv-edits? (site (assoc saved :sync-enabled false) saved)))
+        "off and missing are the same")
     (is (not (sut/unsaved-ptv-edits? (site saved (assoc saved :user-instruction {:fi "u"}))))
         "only what the sync sends")))
 
