@@ -1419,6 +1419,29 @@
                 {}
                 (sort ptv-langs))))))
 
+(def synced-content-keys
+  "The :ptv keys of a site the PTV tool edits and a sync sends. The tool
+   snapshots them as :ptv-saved whenever it loads or saves a site, to tell an
+   edit that isn't saved yet (see unsaved-ptv-edits?)."
+  [:sync-enabled :service-ids :service-channel-ids :summary :description])
+
+(defn unsaved-ptv-edits?
+  "Whether the PTV tool's edit of `site` (its :ptv) differs from what was
+   saved (its :ptv-saved snapshot) in what a sync sends. Comparing with PTV
+   can't tell: an edit that makes the site match a change made in PTV, such
+   as connecting the service someone connected there, leaves no drift, yet
+   only a sync saves it. Neither can turning sync back on for a site saved
+   with sync off. False when there's no snapshot."
+  [site]
+  (if-let [saved (:ptv-saved site)]
+    (let [edit (:ptv site)
+          ids (fn [ptv k] (into #{} (remove str/blank?) (get ptv k)))]
+      (or (not= (boolean (:sync-enabled edit)) (boolean (:sync-enabled saved)))
+          (not= (ids edit :service-ids) (ids saved :service-ids))
+          (not= (ids edit :service-channel-ids) (ids saved :service-channel-ids))
+          (not (texts-match? edit saved [:summary :description]))))
+    false))
+
 (defn sports-site->ptv-input [{:keys [types org-id org-langs]} service-channels services site]
   (let [service-id (-> site :ptv :service-ids first)
         service-channel-id (-> site :ptv :service-channel-ids first)
@@ -1443,6 +1466,11 @@
         drift-fields (when (and last-sync ptv-channel)
                        (compute-service-channel-drift site ptv-channel services langs))
         has-drift? (boolean (seq drift-fields))
+        ;; An edit made here but not saved: it needs a sync even when it
+        ;; leaves no drift, e.g. connecting the service someone connected in
+        ;; PTV. Without this the site read :ok and the sync that would save
+        ;; the edit was disabled.
+        unsaved-edits? (unsaved-ptv-edits? site)
 
         ;; The languages the channel is published in now: PTV's own record when
         ;; the channel is cached, else what the last sync stored. A difference
@@ -1503,6 +1531,7 @@
                     link-removed? :out-of-date
                     archived-resync? :out-of-date
                     has-drift? :content-drift
+                    unsaved-edits? :out-of-date
                     languages-changed? :out-of-date
                     (= (:event-date site) last-sync) :ok
                     :else :out-of-date)

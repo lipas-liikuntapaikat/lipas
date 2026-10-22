@@ -333,6 +333,14 @@
   [ptv]
   (boolean (:sync-enabled ptv)))
 
+(defn- saved-snapshot
+  "Snapshot of what the SAVED site has in the :ptv keys a sync sends, kept as
+  :ptv-saved next to the live :ptv draft so the site's sync status can tell
+  an edit that isn't saved yet (ptv-data/unsaved-ptv-edits?). Only the load
+  and the save/sync/archive responses may set it."
+  [ptv]
+  (select-keys ptv ptv-data/synced-content-keys))
+
 (rf/reg-event-fx ::fetch-integration-candidates-success
   (fn [{:keys [db]} [_ ptv-org-id resp]]
     (let [new-sites (utils/index-by :lipas-id resp)
@@ -350,7 +358,8 @@
                              (assoc m lipas-id
                                     (-> new-site
                                         (assoc :ptv-persisted persisted
-                                               :ptv-persisted-sync? (persisted-sync? (:ptv new-site)))
+                                               :ptv-persisted-sync? (persisted-sync? (:ptv new-site))
+                                               :ptv-saved (saved-snapshot (:ptv new-site)))
                                         (cond-> (:ptv existing) (update :ptv #(merge (:ptv existing) %)))
                                         ;; a search index not yet reindexed after the
                                         ;; audit move still serves the legacy in-document
@@ -1506,6 +1515,8 @@
                (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv)
                (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv-persisted-sync?]
                          (persisted-sync? ptv))
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv-saved]
+                         (saved-snapshot ptv))
                               ;; The sync persisted the draft — refresh the snapshot audit
                               ;; whose-move states are derived from, so the audit status
                               ;; (row bucket, feedback alert) moves only now, not on keystrokes.
@@ -1564,7 +1575,9 @@
                (update-in [:ptv :syncing :service-location] dissoc lipas-id)
                (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv)
                (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv-persisted-sync?]
-                         (persisted-sync? ptv)))
+                         (persisted-sync? ptv))
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv-saved]
+                         (saved-snapshot ptv)))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification
                         {:message (tr :ptv.actions/archived-in-ptv) :success? true}]]]})))
 
@@ -1672,8 +1685,10 @@
                             (reduce-kv (fn [sites lipas-id ptv-meta]
                                          (cond-> sites
                                            (contains? sites lipas-id)
-                                           (assoc-in [lipas-id :ptv-persisted-sync?]
-                                                     (persisted-sync? ptv-meta))))
+                                           (-> (assoc-in [lipas-id :ptv-persisted-sync?]
+                                                         (persisted-sync? ptv-meta))
+                                               (assoc-in [lipas-id :ptv-saved]
+                                                         (saved-snapshot ptv-meta)))))
                                        sites
                                        saved))))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
