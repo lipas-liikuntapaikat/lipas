@@ -976,6 +976,76 @@
                              (assoc-in [:ptv :publishing-status] "Published")
                              (assoc-in [:ptv :sync-enabled] true))))))))
 
+(deftest sync-status-unsaved-edits-test
+  ;; An edit in the PTV tool that makes the site match a change made in PTV
+  ;; leaves no drift. It used to read :ok, which disabled "Synkronoi nyt", so
+  ;; the edit could never be saved and the difference came back on reload.
+  (let [status (fn [channel site]
+                 (:sync-status (sut/sports-site->ptv-input
+                                 {:org-id "o" :types {} :org-defaults {} :org-langs ["fi"]}
+                                 {"C1" channel} {} site)))
+        texts {:summary {:fi "aaaaaa"} :description {:fi "bbbbbb"}}
+        channel (fn [service-ids summary]
+                  {:id "C1"
+                   :languages ["fi"]
+                   :serviceChannelNames [{:type "Name" :language "fi" :value "X"}]
+                   :serviceChannelDescriptions [{:type "Summary" :language "fi" :value summary}
+                                                {:type "Description" :language "fi" :value "bbbbbb"}]
+                   :services (for [id service-ids] {:service {:id id}})})
+        ;; `saved` as loaded (also its :ptv-saved snapshot), then `edit` made
+        saved-site (fn [saved & {:as edit}]
+                     (let [ptv (merge {:last-sync "T1" :service-channel-ids ["C1"]} texts saved)]
+                       {:lipas-id 1 :name "X" :event-date "T1"
+                        :ptv (merge ptv edit)
+                        :ptv-saved (select-keys ptv sut/synced-content-keys)}))]
+
+    (testing "connecting the service someone connected in PTV needs a sync"
+      (let [ptv (channel ["A" "B"] "aaaaaa")]
+        (is (= :content-drift (status ptv (saved-site {:service-ids ["A"]}))))
+        (is (= :out-of-date (status ptv (saved-site {:service-ids ["A"]} :service-ids ["A" "B"]))))
+        (is (= :ok (status ptv (saved-site {:service-ids ["A" "B"]})))
+            "and is :ok once the sync has saved it")))
+
+    (testing "disconnecting the service someone disconnected in PTV needs a sync"
+      (let [ptv (channel ["A"] "aaaaaa")]
+        (is (= :content-drift (status ptv (saved-site {:service-ids ["A" "B"]}))))
+        (is (= :out-of-date (status ptv (saved-site {:service-ids ["A" "B"]} :service-ids ["A"]))))))
+
+    (testing "taking the text someone wrote in PTV needs a sync"
+      (let [ptv (channel ["A"] "PTV:n teksti")]
+        (is (= :content-drift (status ptv (saved-site {:service-ids ["A"]}))))
+        (is (= :out-of-date (status ptv (saved-site {:service-ids ["A"]}
+                                                    :summary {:fi "PTV:n teksti"}))))))
+
+    (testing "what the sync wouldn't change isn't an unsaved edit"
+      (let [ptv (channel ["A" "B"] "aaaaaa")]
+        (is (= :ok (status ptv (saved-site {:service-ids ["A" "B"]} :service-ids ["B" "A"])))
+            "order")
+        (is (= :ok (status ptv (saved-site {:service-ids ["A" "B"]}
+                                           :summary {:fi "aaaaaa  "}
+                                           :description {:fi "bbbbbb" :se ""})))
+            "whitespace and blank texts")))
+
+    (testing "without a snapshot the status is what it was"
+      (is (= :ok (status (channel ["A" "B"] "aaaaaa")
+                         (-> (saved-site {:service-ids ["A"]} :service-ids ["A" "B"])
+                             (dissoc :ptv-saved))))))))
+
+(deftest unsaved-ptv-edits-test
+  (let [site (fn [saved edit] {:ptv edit :ptv-saved saved})
+        saved {:service-ids ["A"] :service-channel-ids ["C1"]
+               :summary {:fi "s"} :description {:fi "d"}}]
+    (is (false? (sut/unsaved-ptv-edits? (site saved saved))))
+    (is (false? (sut/unsaved-ptv-edits? {:ptv saved})) "no snapshot")
+    (is (false? (sut/unsaved-ptv-edits? (site (dissoc saved :service-ids)
+                                              (assoc saved :service-ids []))))
+        "no ids saved and none edited")
+    (is (sut/unsaved-ptv-edits? (site saved (assoc saved :service-ids ["A" "B"]))))
+    (is (sut/unsaved-ptv-edits? (site saved (assoc saved :service-channel-ids ["C2"]))))
+    (is (sut/unsaved-ptv-edits? (site saved (assoc-in saved [:description :en] "d"))))
+    (is (not (sut/unsaved-ptv-edits? (site saved (assoc saved :user-instruction {:fi "u"}))))
+        "only what the sync sends")))
+
 (deftest resolve-missing-services-test
   ;; Shared by the FE (wizard "missing services" list) and the BE
   ;; (sync-ptv! guard). A sub-category needs a new service ONLY when the
