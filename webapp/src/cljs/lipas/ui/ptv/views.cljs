@@ -63,6 +63,7 @@
             [lipas.ui.ptv.controls :as controls]
             [lipas.ui.ptv.events :as events]
             [lipas.ui.ptv.subs :as subs]
+            [lipas.ui.service-notices.views :as service-notices]
             [lipas.ui.utils :as utils :refer [<== ==>]]
             [re-frame.core :as rf]
             [reagent.core :as r]
@@ -2307,6 +2308,8 @@
       {:sx #js {:display "flex"
                 :flexDirection "column"
                 :gap 2}}
+
+      [service-notices/ptv-notice {:tr tr}]
 
       [:> Stack {:direction "row" :align-items "center" :spacing 2}
        ;; The tabs slot takes the row's slack whether or not the tabs are

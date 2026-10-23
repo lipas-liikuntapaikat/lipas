@@ -1,0 +1,4 @@
+{:mml-maps-title "Häiriö taustakartoissa"
+ :mml-maps "Maanmittauslaitoksen karttapalveluissa on häiriö. Taustakartta voi latautua hitaasti tai jäädä osittain tyhjäksi. Liikuntapaikkojen tiedot ovat käytettävissä normaalisti."
+ :ptv-sync-title "Häiriö PTV:ssä"
+ :ptv-sync "Palvelupaikkojen tallentaminen PTV:hen kestää tällä hetkellä jopa kaksi minuuttia ja voi päättyä virheeseen. Suosittelemme odottamaan synkronoinnin kanssa, kunnes PTV:n häiriö on korjattu."}

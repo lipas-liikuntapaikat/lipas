@@ -1,0 +1,4 @@
+{:mml-maps-title "Störning i bakgrundskartorna"
+ :mml-maps "Det finns en störning i Lantmäteriverkets karttjänster. Bakgrundskartan kan laddas långsamt eller delvis förbli tom. Uppgifterna om idrottsanläggningar kan användas som vanligt."
+ :ptv-sync-title "Störning i PTV"
+ :ptv-sync "Att spara serviceställen i PTV tar för närvarande upp till två minuter och kan sluta med ett fel. Vi rekommenderar att du väntar med synkroniseringen tills störningen i PTV har åtgärdats."}
