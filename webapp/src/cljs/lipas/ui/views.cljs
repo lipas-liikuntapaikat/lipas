@@ -17,6 +17,8 @@
             [lipas.ui.mui :as mui]
             [lipas.ui.navbar :as nav]
             [lipas.ui.reminders.views :as reminders]
+            [lipas.ui.service-notices.subs :as service-notices-subs]
+            [lipas.ui.service-notices.views :as service-notices]
             [lipas.ui.subs :as subs]
             [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
@@ -62,12 +64,14 @@
         ;; changes.
         tr           (<== [::subs/translator])
         impersonating? (some? (<== [::user-subs/impersonator]))
+        notices?     (seq (<== [::service-notices-subs/visible]))
         ;; The map view hides the navbar and renders its sidebar/controls as
         ;; position:fixed elements anchored to the viewport top, which paint over
-        ;; the impersonation banner. On those full-bleed views we make the banner
-        ;; a top bar and give the content its own containing block so the fixed
-        ;; elements anchor below the banner. Normal (navbar) views are untouched.
-        full-bleed?  (and impersonating? (not show-nav?))
+        ;; the banners (impersonation, service notices). On those full-bleed
+        ;; views we make the banners a top bar and give the content its own
+        ;; containing block so the fixed elements anchor below them. Normal
+        ;; (navbar) views are untouched.
+        full-bleed?  (and (or impersonating? notices?) (not show-nav?))
 
         width (mui/use-width)]
 
@@ -78,11 +82,11 @@
     [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
      [:> CssBaseline]
 
-     ;; On full-bleed views (map) lay the banner out as a top bar and give the
+     ;; On full-bleed views (map) lay the banners out as a top bar and give the
      ;; content its own containing block (contain:layout) so the view's
-     ;; position:fixed sidebar/controls anchor below the banner instead of the
+     ;; position:fixed sidebar/controls anchor below the banners instead of the
      ;; viewport top. On every other case these are inert pass-through wrappers,
-     ;; so non-impersonation and normal-view rendering is unchanged.
+     ;; so rendering without banners and on normal views is unchanged.
      [:div
       {:style (if full-bleed?
                 {:display "flex" :flex-direction "column" :height "100%"}
@@ -91,6 +95,10 @@
       ;; Impersonation banner - full-width top bar, above everything below it.
       ;; Visible while impersonating, also on views that hide the navbar (e.g. map).
       [impersonation-banner {:tr tr}]
+
+      ;; Notices about ongoing problems in MML's map services and PTV
+      [mui/mui-theme-provider {:theme mui/jyu-theme-light}
+       [service-notices/banners {:tr tr}]]
 
       [:div
        {:style (if full-bleed?
