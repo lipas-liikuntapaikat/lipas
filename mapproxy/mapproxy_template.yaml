@@ -29,6 +29,14 @@ services:
     restful_template: '/{Layer}/{TileMatrixSet}/{TileMatrix}/{TileCol}/{TileRow}.{Format}'
     kvp: true
 
+globals:
+  http:
+    # How long to wait for MML before failing a tile (the default is 60 s).
+    # MML normally answers within 2 s. When it is down, a long wait holds
+    # browser connections open and stalls the whole app. MapProxy also
+    # uses this as the tile-lock timeout.
+    client_timeout: 5
+
 grids:
   mml_grid:
     tile_size: [256, 256]
