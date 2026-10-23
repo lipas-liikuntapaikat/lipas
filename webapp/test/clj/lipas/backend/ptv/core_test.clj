@@ -1,5 +1,10 @@
 (ns lipas.backend.ptv.core-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
+            [clojure.test.check.clojure-test :refer [defspec]]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as prop]
+            [lipas.backend.ptv.ai :as ai]
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.backend.ptv.integration :as ptv]
             [lipas.data.ptv :as ptv-data]
@@ -201,3 +206,64 @@
              (:summary (ptv-core/select-translation {:from "fi" :to #{"en"}
                                                      :summary "s" :description "d"}
                                                     {:summary {:se "only sv"}})))))))
+
+;;; fit-translation ;;;
+
+(defn- chars-of [n] (apply str (repeat n "a")))
+
+(def ^:private fi->en {:from "fi" :to #{"en"}})
+
+(def ^:private over-long-en
+  ;; 163 characters, a sentence ending at 101
+  (str (chars-of 100) ". " (chars-of 60) "."))
+
+(deftest fit-translation-test
+  ;; A faithful translation can run over PTV's limits. The limits win, but
+  ;; only the steps that may lose something are reported to the user.
+  (testing "within the limits nothing is asked or changed"
+    (with-redefs [ai/shorten-summaries (fn [& _] (throw (ex-info "must not be called" {})))]
+      (is (= {:summary {:fi "s" :en "t"}}
+             (ptv-core/fit-translation fi->en {:summary {:fi "s" :en "t"}})))))
+
+  (testing "rewording that fits keeps every fact, so it isn't reported"
+    (with-redefs [ai/shorten-summaries (fn [_ & {:keys [mode]}]
+                                         (case mode :wording {"0/en" "reworded"}))]
+      (is (= {:summary {:fi "s" :en "reworded"}}
+             (ptv-core/fit-translation fi->en {:summary {:fi "s" :en over-long-en}})))))
+
+  (testing "condensing, when rewording isn't enough, is reported"
+    (with-redefs [ai/shorten-summaries (fn [_ & {:keys [mode]}]
+                                         (case mode
+                                           :wording {"0/en" (subs over-long-en 1)}
+                                           :condense {"0/en" "condensed"}))]
+      (is (= {:summary {:fi "s" :en "condensed"}
+              :shortened [{:field :summary :lang "en"}]}
+             (ptv-core/fit-translation fi->en {:summary {:fi "s" :en over-long-en}})))))
+
+  (testing "when both calls fail the text is cut after its last whole sentence"
+    (with-redefs [ai/shorten-summaries (fn [& _] (throw (ex-info "LLM down" {})))]
+      (is (= {:summary {:fi "s" :en (str (chars-of 100) ".")}
+              :shortened [{:field :summary :lang "en"}]}
+             (ptv-core/fit-translation fi->en {:summary {:fi "s" :en over-long-en}})))))
+
+  (testing "the source language is the user's own text and stays as written"
+    (with-redefs [ai/shorten-summaries (fn [& _] (throw (ex-info "must not be called" {})))]
+      (is (= {:summary {:fi over-long-en :en "t"}}
+             (ptv-core/fit-translation fi->en {:summary {:fi over-long-en :en "t"}})))))
+
+  (testing "descriptions are held to their limit too"
+    (let [long-description (str (chars-of 4990) ". " (chars-of 20) ".")]
+      (is (= {:description {:fi "d" :en (str (chars-of 4990) ".")}
+              :shortened [{:field :description :lang "en"}]}
+             (ptv-core/fit-translation fi->en {:description {:fi "d" :en long-description}}))))))
+
+(defspec cut-to-limit-fits-and-keeps-the-start 200
+  (prop/for-all [words (gen/vector (gen/elements ["Latu" "on" "auki." "Reitillä" "kissa." "ja,"
+                                                  "1,7" "km!" "Onko?" "talvella" "–"])
+                                   0 60)
+                 limit (gen/choose 1 150)]
+                (let [s (str/join " " words)
+                      cut (ptv-core/cut-to-limit s limit)]
+                  (and (<= (count cut) limit)
+                       (str/starts-with? s cut)
+                       (or (> (count s) limit) (= s cut))))))
