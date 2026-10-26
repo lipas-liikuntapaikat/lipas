@@ -1,6 +1,5 @@
 (ns lipas.data.ptv
-  (:require [clojure.set :as set]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
             [lipas.data.types :as types]
             [lipas.utils :as utils]
             [taoensso.timbre :as log]))
@@ -83,7 +82,7 @@
 
    `sports-sites` — seq of maps with :lipas-id :type-code :sub-category-id
    :summary {:fi …} :description {:fi …} :last-sync (from
-   lipas.data.ptv/sports-site->ptv-input shape).
+   lipas.data.ptv-review/sports-site->ptv-input shape).
 
    Returns {:summary string :description string} in Finnish, or nil."
   [sports-sites {:keys [type-code sub-category-id exclude-lipas-id]}]
@@ -221,7 +220,7 @@
   "LIPAS locale keyword -> PTV language code"
   {:fi "fi", :se "sv", :en "en"})
 
-(defn- resolve-lang-pairs
+(defn resolve-lang-pairs
   "Given a set/seq of LIPAS language codes (\"fi\" \"se\" \"en\"),
    returns seq of [ptv-lang lipas-locale] pairs for iteration."
   [languages]
@@ -664,12 +663,6 @@
         email (parse-email (:email sports-site))
         web-pages (->ptv-web-pages languages sports-site)
         phone-number (parse-phone-number (:phone-number sports-site))]
-
-    #?(:clj (println "PTV data"))
-    #?(:clj (prn ptv))
-
-    ; (println "Languages resolved" languages)
-    ; (prn location)
 
     (cond-> {:organizationId (or (:org-id ptv) org-id)
              ;; Keep using existing sourceId for sites that were already initialized in PTV,
@@ -1210,12 +1203,6 @@
    :service-ids
    :service-channel-ids])
 
-(def service-channel-compare-fields
-  "Fields to compare when checking drift against a PTV ServiceChannel.
-   PTV ServiceChannels don't carry :user-instruction — that's a Service-level
-   concept — so leave it out of the comparison."
-  [:summary :description])
-
 (defn normalize-ws
   "Normalize whitespace for *comparing* PTV/LIPAS free-text values — never for
    storing or pushing them. PTV collapses runs of horizontal whitespace in
@@ -1236,9 +1223,8 @@
 (defn texts-match?
   "Compare LIPAS-side texts with PTV-side texts. Returns true if all
    non-nil fields match. Whitespace is normalized for comparison
-   (see `normalize-ws`). `fields` defaults to all three lipas text fields;
-   callers comparing against a PTV ServiceChannel should pass
-   `service-channel-compare-fields`. `locales` limits the comparison to the
+   (see `normalize-ws`). `fields` defaults to all three lipas text fields.
+   `locales` limits the comparison to the
    languages that get published (default: all three) — a draft text in a
    language the org doesn't publish never reaches PTV, so it can't match."
   ([lipas-texts ptv-texts]
@@ -1257,37 +1243,6 @@
                                  (= l p))))
                          locales)))
              fields))))
-
-(defn- effective-lipas-name
-  "What LIPAS will push for [type, locale] under the strict 1-way model.
-   Mirrors the per-language fallback rule in `->ptv-service-location`:
-   sv/en use the localized name when entered, else the Finnish name.
-   Returns nil when LIPAS has nothing to push (e.g., AlternativeName
-   without a marketing-name)."
-  [site type locale]
-  (case type
-    "Name" (let [v (get-in site [:name-localized locale])]
-             (if (str/blank? v) (:name site) v))
-    "AlternativeName" (when-not (str/blank? (:marketing-name site))
-                        (:marketing-name site))))
-
-(defn- effective-lipas-text
-  "Mirrors the description fallback in `->ptv-service-location`: use the
-   localized value if entered, else the Finnish value, else nil."
-  [site field locale]
-  (let [m (get-in site [:ptv field])
-        v (get m locale)]
-    (if (str/blank? v) (get m :fi) v)))
-
-(defn- resolve-service-name
-  "Resolve a service ID to a human-readable Finnish name from the
-   services-by-id map. Falls back to the ID when the service isn't
-   in the cache (e.g. external services or stale cache)."
-  [services service-id]
-  (or (some-> (get services service-id)
-              :serviceNames
-              select-service-name)
-      service-id))
 
 (defn channel-service-ids
   "Ids of the services the PTV service location `channel` (GET shape) is
@@ -1317,329 +1272,6 @@
     (if (and channel (first-link? site-ptv channel))
       (into ids (remove (set ids)) (channel-service-ids channel))
       ids)))
-
-;;; Sync review: who changed what since the last sync ;;;
-
-(def review-base-ptv-keys
-  "The :ptv keys of a sync's own revision that the sync review compares
-   against: what the sync sent and which location it went to."
-  [:summary :description :service-ids :service-channel-ids :languages :last-sync])
-
-(defn ->review-base
-  "The part of `site`, the revision a PTV sync wrote, that the sync review
-   needs: what that sync sent. Fetched for every synced site of an org, so
-   kept small."
-  [site]
-  (-> (select-keys site [:lipas-id :name :name-localized :marketing-name])
-      (assoc :ptv (select-keys (:ptv site) review-base-ptv-keys))))
-
-(defn- usable-review-base
-  "`base` when it is what the last sync of `site` sent to `channel`; nil when
-   it isn't (another sync since, or the site now points at another
-   location)."
-  [site base channel]
-  (when (and base
-             (= (-> base :ptv :last-sync) (-> site :ptv :last-sync))
-             (= (-> base :ptv :service-channel-ids first) (:id channel)))
-    base))
-
-(defn- review-origin
-  "Who changed a value since the last sync: :lipas, :ptv, or :both (each to
-   something else). nil when Lipas and PTV agree."
-  [base lipas ptv]
-  (cond
-    (= lipas ptv) nil
-    (= base ptv) :lipas
-    (= base lipas) :ptv
-    :else :both))
-
-(defn review-text-path
-  "Where a text row's Lipas value lives in a site."
-  [{:keys [field locale]}]
-  (case field
-    :name (if (= :fi locale) [:name] [:name-localized locale])
-    :marketing-name [:marketing-name]
-    (:summary :description) [:ptv field locale]))
-
-(defn sync-review
-  "Compares a site with its PTV service location three ways: `site` (the
-   saved site: what a sync of it sends), `channel` (PTV now, GET shape) and
-   `base` (what the last sync sent, see ->review-base). nil without a
-   channel, else
-
-   {:rows [...] :matching [...] :services {...} :base? bool :first-link? bool}
-
-   A row is a difference between Lipas and PTV, keyed by :key:
-   - a text: :field (:name, :marketing-name, :summary or :description),
-     :language (PTV code), :locale, and :lipas, :ptv and :base, the values
-     as they are or were sent (:base nil when the last sync didn't send it),
-     and :saved, the site's own value at the row's path (no fallback);
-   - a connection: :field :services, :id, :name, and :lipas?, :ptv? and
-     :base?, whether each is connected to the service.
-   Its :origin says who changed it since the last sync: :lipas, :ptv or
-   :both. Without a usable base it is :first-link (LIPAS hasn't synced the
-   site to this location) or :unknown (it has, but the base wasn't found).
-   :language-added? marks a text in a language that neither the last sync
-   nor PTV has: Lipas adds the language version.
-
-   :matching lists the {:field :language} pairs (texts) and {:field
-   :services} that agree, for telling the user what is up to date.
-   :services has every service each side connects the location to,
-   {:lipas [{:id :name}] :ptv [...]}, for showing a difference in context.
-
-   `services` resolves service names (services-by-id); `langs` are the
-   languages the next sync publishes (effective-languages)."
-  [site base channel services langs]
-  (when channel
-    (let [base (usable-review-base site base channel)
-          no-base (if (first-link? (:ptv site) channel) :first-link :unknown)
-          base-locales (set (map keyword (or (-> base :ptv :languages) langs)))
-          ptv-names (into {} (map (juxt (juxt :type :language) :value))
-                          (:serviceChannelNames channel))
-          ptv-descs (into {} (map (juxt (juxt :type :language) :value))
-                          (:serviceChannelDescriptions channel))
-          sent (fn [locale v]
-                 (when (and base (contains? base-locales locale)) v))
-          texts (concat
-                  (for [[lang locale] (resolve-lang-pairs langs)]
-                    {:field :name
-                     :language lang
-                     :locale locale
-                     :lipas (effective-lipas-name site "Name" locale)
-                     :ptv (get ptv-names ["Name" lang])
-                     :base (sent locale (effective-lipas-name base "Name" locale))})
-                  [{:field :marketing-name
-                    :language "fi"
-                    :locale :fi
-                    :lipas (effective-lipas-name site "AlternativeName" :fi)
-                    :ptv (get ptv-names ["AlternativeName" "fi"])
-                    :base (sent :fi (effective-lipas-name base "AlternativeName" :fi))}]
-                  (for [[field type] [[:summary "Summary"] [:description "Description"]]
-                        [lang locale] (resolve-lang-pairs langs)]
-                    {:field field
-                     :language lang
-                     :locale locale
-                     :lipas (effective-lipas-text site field locale)
-                     :ptv (get ptv-descs [type lang])
-                     :base (sent locale (effective-lipas-text base field locale))}))
-          compared (for [{:keys [field language locale lipas ptv] :as text} texts]
-                     (let [l (normalize-ws lipas)
-                           p (normalize-ws ptv)]
-                       (assoc text
-                              :key [field language]
-                              :saved (get-in site (review-text-path text))
-                              :origin (cond
-                                        (= l p) nil
-                                        base (review-origin (normalize-ws (:base text)) l p)
-                                        :else no-base)
-                              :language-added? (boolean (and base
-                                                             (not (contains? base-locales locale))
-                                                             (nil? p))))))
-          lipas-ids (set (-> site :ptv :service-ids))
-          ptv-ids (set (channel-service-ids channel))
-          base-ids (set (-> base :ptv :service-ids))
-          ;; The location names the services it is connected to, also those
-          ;; of other organisations that `services` doesn't have.
-          channel-names (into {} (keep (fn [{:keys [service]}]
-                                         (when (:name service)
-                                           [(:id service) (:name service)])))
-                              (:services channel))
-          service-name (fn [id]
-                         (let [n (resolve-service-name services id)]
-                           (if (= n id) (get channel-names id id) n)))
-          named (fn [ids]
-                  (->> ids
-                       (map (fn [id] {:id id :name (service-name id)}))
-                       (sort-by (comp str/lower-case :name))
-                       vec))
-          connections (for [id (sort (set/union lipas-ids ptv-ids))
-                            :let [l? (contains? lipas-ids id)
-                                  p? (contains? ptv-ids id)]
-                            :when (not= l? p?)]
-                        {:key [:services id]
-                         :field :services
-                         :id id
-                         :name (service-name id)
-                         :lipas? l?
-                         :ptv? p?
-                         :base? (when base (contains? base-ids id))
-                         :origin (if base
-                                   (review-origin (contains? base-ids id) l? p?)
-                                   no-base)})]
-      {:rows (vec (concat (filter :origin compared) connections))
-       :matching (vec (concat
-                        (for [{:keys [field language origin lipas]} compared
-                              :when (and (nil? origin) (normalize-ws lipas))]
-                          {:field field :language language})
-                        (when (and (empty? connections) (seq lipas-ids))
-                          [{:field :services}])))
-       :services {:lipas (named lipas-ids) :ptv (named ptv-ids)}
-       :base? (some? base)
-       :first-link? (= :first-link no-base)})))
-
-(defn review-choice-required?
-  "Whether `row` needs the user's decision before a sync overwrites PTV with
-   Lipas: PTV changed it, or who did can't be told. On a first link the
-   location keeps its connections (link-service-ids), so a connection row
-   needs no decision there."
-  [row]
-  (case (:origin row)
-    (:ptv :both :unknown) true
-    :first-link (not= :services (:field row))
-    false))
-
-(defn- assoc-text
-  [site path v]
-  (if (str/blank? v)
-    (if (= 1 (count path))
-      (dissoc site (first path))
-      (update-in site (butlast path) dissoc (last path)))
-    (assoc-in site path v)))
-
-(defn- assoc-text*
-  "assoc-text that also takes non-text values (a vector of service ids)."
-  [site path v]
-  (if (string? v)
-    (assoc-text site path v)
-    (if (nil? v)
-      (assoc-text site path nil)
-      (assoc-in site path v))))
-
-;; The review is made against the saved site; the user decides by making
-;; the edit (draft) hold one side's version, or a text of their own.
-
-(defn review-saved-site
-  "`draft` with the fields the review compares as `saved` has them
-   (->review-base of the saved site), the site the review is made against.
-   `draft` itself without `saved`."
-  [draft saved]
-  (if-not saved
-    draft
-    (let [put (fn [m k v] (if (some? v) (assoc m k v) (dissoc m k)))]
-      (-> (reduce (fn [site k] (put site k (get saved k)))
-                  draft
-                  [:name :name-localized :marketing-name])
-          (update :ptv (fn [ptv]
-                         (reduce (fn [ptv k] (put ptv k (get-in saved [:ptv k])))
-                                 ptv
-                                 [:summary :description :service-ids])))))))
-
-(defn- review-draft-value
-  [draft {:keys [field locale]}]
-  (case field
-    :name (effective-lipas-name draft "Name" locale)
-    :marketing-name (effective-lipas-name draft "AlternativeName" :fi)
-    (:summary :description) (effective-lipas-text draft field locale)))
-
-(defn review-current
-  "Which version of `row` the edit `draft` holds: :lipas (the saved one),
-   :ptv, or :edited (a text of the user's own)."
-  [draft row]
-  (if (= :services (:field row))
-    (if (= (contains? (set (-> draft :ptv :service-ids)) (:id row)) (:ptv? row))
-      :ptv
-      :lipas)
-    (let [v (normalize-ws (review-draft-value draft row))]
-      (cond
-        (= v (normalize-ws (:ptv row))) :ptv
-        (= v (normalize-ws (:lipas row))) :lipas
-        :else :edited))))
-
-(defn annotate-review
-  "`review` (sync-review of the saved site) with what the edit `draft` now
-   holds on each row: :current (review-current) and :draft, its text."
-  [review draft]
-  (cond-> review
-    review (update :rows (fn [rows]
-                           (mapv (fn [row]
-                                   (cond-> (assoc row :current (review-current draft row))
-                                     (not= :services (:field row))
-                                     (assoc :draft (review-draft-value draft row))))
-                                 rows)))))
-
-(defn review-choice-seen
-  "The PTV side of `row` a decision is made against. A decision counts
-   only while PTV still has it (see review-choice)."
-  [row]
-  (if (= :services (:field row))
-    (:ptv? row)
-    (normalize-ws (:ptv row))))
-
-(defn review-choice
-  "The decision to keep Lipas's version of `row` recorded in `choices` (row
-   :key -> {:choice :lipas :seen}), or nil when there is none or it was made
-   against a PTV value that has changed since. Taking PTV's version or
-   editing the text needs no record: the edit shows it."
-  [choices row]
-  (when-let [choice (get choices (:key row))]
-    (when (= (:seen choice) (review-choice-seen row))
-      choice)))
-
-(defn review-decided?
-  "Whether the user has decided `row` (annotated, see annotate-review): the
-   edit holds PTV's version or their own text, or they chose to keep
-   Lipas's."
-  [choices row]
-  (boolean (or (#{:ptv :edited} (:current row))
-               (review-choice choices row))))
-
-(defn open-review-rows
-  "The rows of `rows` (annotated) that need a decision and don't have one."
-  [rows choices]
-  (filterv #(and (review-choice-required? %)
-                 (not (review-decided? choices %)))
-           rows))
-
-(defn review-writes
-  "What to write into the edit `draft` to make it hold `side`'s version of
-   `row` (:ptv, or :lipas for the saved one): {path value}, a nil value
-   removing the key."
-  [draft row side]
-  (if (= :services (:field row))
-    (let [connected? (if (= :ptv side) (:ptv? row) (:lipas? row))
-          ids (vec (-> draft :ptv :service-ids))]
-      {[:ptv :service-ids] (if connected?
-                             (vec (distinct (conj ids (:id row))))
-                             (vec (remove #{(:id row)} ids)))})
-    (let [v (if (= :ptv side) (:ptv row) (:saved row))]
-      {(review-text-path row) (when-not (str/blank? v) v)})))
-
-(defn apply-review-writes
-  "`draft` with `writes` (review-writes) made."
-  [draft writes]
-  (reduce-kv assoc-text* draft writes))
-
-(def ^:private site-name-paths
-  [[:name] [:name-localized :se] [:name-localized :en] [:marketing-name]])
-
-(defn review-site-names
-  "The site's own names that `draft` changes from `saved` (->review-base),
-   shaped like the site ({:name …, :name-localized {:se …}, :marketing-name
-   …}; nil removes one). A sync from the PTV tool sends these for the
-   backend to write into the site, since it syncs the saved site. nil when
-   no name changed."
-  [saved draft]
-  (not-empty
-    (reduce (fn [names path]
-              (let [v (not-empty (get-in draft path))]
-                (if (= v (not-empty (get-in saved path)))
-                  names
-                  (assoc-in names path v))))
-            {}
-            site-name-paths)))
-
-(defn apply-site-names
-  "`site` with `names` (review-site-names) written in. A blank value
-   removes a localized or marketing name."
-  [site names]
-  (cond-> site
-    (not (str/blank? (:name names))) (assoc :name (:name names))
-    (contains? names :marketing-name) (assoc-text [:marketing-name] (:marketing-name names))
-    (:name-localized names) (as-> site
-                                  (reduce-kv (fn [site locale v]
-                                               (assoc-text site [:name-localized locale] v))
-                                             site
-                                             (:name-localized names)))))
 
 (defn unpublished-ptv-languages
   "Languages the linked PTV service location has texts in that the next sync
@@ -1671,134 +1303,6 @@
                 {}
                 (sort ptv-langs))))))
 
-(defn sports-site->ptv-input [{:keys [types org-id org-langs]} service-channels services site]
-  (let [service-id (-> site :ptv :service-ids first)
-        service-channel-id (-> site :ptv :service-channel-ids first)
-
-        summary (-> site :ptv :summary)
-        description (-> site :ptv :description)
-        user-instruction (-> site :ptv :user-instruction)
-
-        last-sync (-> site :ptv :last-sync)
-
-        ptv-channel (get service-channels service-channel-id)
-        ptv-texts (when ptv-channel (ptv-descriptions->texts (:serviceChannelDescriptions ptv-channel)))
-        ;; The languages the next sync would publish, from the org's live
-        ;; config — not the site's stored :languages, which is a snapshot of
-        ;; the last sync and would hide e.g. English texts written after the
-        ;; org enabled English.
-        langs (effective-languages site (or org-langs fallback-languages))
-        ;; What differs from PTV and who changed it since the last sync, for
-        ;; the saved site; the edit (`site`) shows what the user decided.
-        ;; `:ptv-base` is what that sync sent and `:review-saved` the saved
-        ;; site (both ->review-base), joined in by the caller; without the
-        ;; base nobody can be told and every difference needs a decision.
-        saved (review-saved-site site (:review-saved site))
-        review (-> (sync-review saved (:ptv-base site) ptv-channel services
-                                (effective-languages saved (or org-langs fallback-languages)))
-                   (annotate-review site))
-        changed-in-ptv? (boolean (some review-choice-required? (:rows review)))
-        ;; The edit differs from PTV (a review choice, or texts edited here):
-        ;; the next sync has something to send.
-        has-drift? (boolean (or (seq (:rows review))
-                                (seq (:rows (sync-review site (:ptv-base site) ptv-channel
-                                                         services langs)))))
-
-        ;; The languages the channel is published in now: PTV's own record when
-        ;; the channel is cached, else what the last sync stored. A difference
-        ;; means the next sync adds or removes a language version, so the site
-        ;; needs a sync even when no text compared in `langs` changed.
-        published-langs (if ptv-channel
-                          (keep (comp #(some-> % name) lang->locale) (:languages ptv-channel))
-                          (-> site :ptv :languages))
-        languages-changed? (boolean (and last-sync
-                                         (seq published-langs)
-                                         (not= (set published-langs) (set langs))))
-
-        ;; A site that was synced before (last-sync present) but now has no
-        ;; service-channel-id was deliberately unlinked by the user — a
-        ;; successful sync always writes service-channel-ids back, so this
-        ;; combination can't arise any other way. (Use str/blank? rather than
-        ;; empty?: clearing the autocomplete can leave service-channel-ids as
-        ;; [nil]/[""], not [].) Treat it as out-of-date so the sync button
-        ;; re-activates and the backend create-path (channel id nil) builds a
-        ;; fresh PTV service-location. Without this, has-drift? is false (no
-        ;; channel left to diff) and event-date still equals last-sync, so
-        ;; sync-status would wrongly read :ok and the button would stay
-        ;; disabled ("up to date").
-        link-removed? (and last-sync (str/blank? service-channel-id))
-
-        ;; A channel archived in PTV ("Deleted") that the user has re-enabled
-        ;; needs a sync to resurrect it (the upsert PUTs publishingStatus
-        ;; "Published" on the same channel). Without this, event-date still
-        ;; equals last-sync (from the archive) and the archived channel can't be
-        ;; diffed, so status reads :ok and "Synkronoi nyt" stays disabled.
-        archived-resync? (and (= "Deleted" (-> site :ptv :publishing-status))
-                              (get-in site [:ptv :sync-enabled] false))]
-
-    {:valid (boolean (and (some-> description :fi count (> 5))
-                          (some-> summary :fi count (> 5))))
-     :lipas-id (:lipas-id site)
-     :name (:name site)
-     ;; differs from :name while a review choice renames the site
-     :saved-name (:name saved)
-     :event-date (:event-date site)
-     :name-conflict (detect-name-conflict site (vals service-channels))
-     :marketing-name (:marketing-name site)
-     :type (-> site :search-meta :type :name :fi)
-     :type-code (-> site :type :type-code)
-     :sub-category (-> site :search-meta :type :sub-category :name :fi)
-     :sub-category-id (-> site :type :type-code types :sub-category)
-     :org-id org-id
-     :admin (-> site :search-meta :admin :name :fi)
-     :owner (-> site :search-meta :owner :name :fi)
-     :summary summary
-     :description description
-     :user-instruction user-instruction
-     :languages langs
-
-     :sync-enabled (get-in site [:ptv :sync-enabled] false)
-     :last-sync last-sync
-
-     :sync-status (cond
-                    (not last-sync) :not-synced
-                    link-removed? :out-of-date
-                    archived-resync? :out-of-date
-                    changed-in-ptv? :content-drift
-                    has-drift? :out-of-date
-                    languages-changed? :out-of-date
-                    (= (:event-date site) last-sync) :ok
-                    :else :out-of-date)
-
-     :review review
-     :unpublished-ptv-languages (unpublished-ptv-languages site ptv-channel
-                                                           (or org-langs fallback-languages))
-
-     :ptv-texts ptv-texts
-
-     :service-ids (-> site :ptv :service-ids)
-     :service-name (-> services
-                       (get service-id)
-                       :serviceNames
-                       (select-service-name))
-     :service-channel-id service-channel-id
-     :service-channel-ids (-> site :ptv :service-channel-ids)
-     :service-channel-name (-> (get service-channels service-channel-id)
-                               (resolve-service-channel-name))
-     ;; Live status from the cached PTV channel (nil once archived — PTV drops
-     ;; Deleted channels from /list/organization).
-     :service-channel-publishing-status (:publishingStatus ptv-channel)
-     ;; LIPAS-persisted status from the last sync/archive. Stays "Deleted" for
-     ;; an archived channel, so the UI can label it instead of showing a bare
-     ;; UUID it can no longer resolve to a name.
-     :publishing-status (-> site :ptv :publishing-status)
-
-     ;; The audit record itself, so the listing can caption its status
-     ;; symbol (date + which field). This map replaces the site for the
-     ;; listing, so reading it back off :ptv there finds nothing.
-     :audit (-> site :ptv :audit)
-     :audit-status (determine-audit-status (with-persisted-audit-content site))}))
-
 (defn sports-site->service-ids [types source-id->service sports-site]
   (let [sub-cat-id (-> sports-site :type :type-code types :sub-category)
         org-id (-> sports-site :ptv :org-id)
@@ -1824,6 +1328,17 @@
                   ;; Huoltorakennus
                   ;; Opastuspiste
                   (not (#{7000 207} type-code))))))
+
+(defn save-syncs?
+  "Whether saving `site` (a saved revision, not a draft) also writes to
+   PTV: sync is on, or an archive is asked for, and the site belongs there
+   or is there already. lipas.backend.core/save-sports-site! syncs by it;
+   the UI tells the user a save will take PTV's time."
+  [site]
+  (boolean (and (or (-> site :ptv :sync-enabled)
+                    (-> site :ptv :delete-existing))
+                (or (ptv-candidate? site)
+                    (is-sent-to-ptv? site)))))
 
 (defn ptv-ready?
   [site]

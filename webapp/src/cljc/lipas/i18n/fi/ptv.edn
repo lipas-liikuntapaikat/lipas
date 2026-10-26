@@ -18,6 +18,7 @@
  ;; or paired with one of the body strings below for the full message.
  :sync-failed "Synkronointi PTV:hen epäonnistui",
  :saved-but-sync-failed "Liikuntapaikka tallennettu, mutta PTV-synkronointi epäonnistui",
+ :saving-and-syncing "Tallennetaan ja synkronoidaan PTV:hen… Tämä voi kestää hetken."
  ;; Bodies for the dialog-driven sync flows (PTV dialog wizard / Liikuntapaikat tab).
  :sync-failed-body-ptv-modified "PTV:ssä on julkaisemattomia muutoksia. Julkaise tai peru muutokset PTV:ssä ja yritä uudelleen.",
  :sync-failed-body-invalid-postal-code "Postinumeroa '{1}' ei tunneta PTV:ssä (ei löydy Postin rekisteristä). Korjaa kohteen postinumero (esim. 'Selvitä osoite automaattisesti' -toiminnolla kohteen perustiedoissa), tallenna ja yritä synkronointia uudelleen.",

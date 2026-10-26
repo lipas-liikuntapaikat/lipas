@@ -4,11 +4,12 @@
    how rows are named. Free of UI and of the :ptv module so either can load
    it."
   (:require [clojure.string :as str]
-            [lipas.data.ptv :as ptv-data]))
+            [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-review :as ptv-review]))
 
 (defn choices-path
-  "The choices made in a site's review: row :key -> {:choice :lipas | :ptv |
-   :merge, :text, :seen} (see ptv-data/review-choice)."
+  "The choices made in a site's review: row :key -> {:choice :lipas :seen}
+   (see ptv-review/review-choice)."
   [lipas-id]
   [:ptv :review :choices lipas-id])
 
@@ -36,9 +37,9 @@
   [fetched saved draft]
   (let [{:keys [base channel services org-langs]} fetched]
     (when (and channel saved (-> draft :ptv :sync-enabled))
-      (-> (ptv-data/sync-review saved base channel services
-                                (ptv-data/effective-languages saved org-langs))
-          (ptv-data/annotate-review draft)))))
+      (-> (ptv-review/sync-review saved base channel services
+                                  (ptv-data/effective-languages saved org-langs))
+          (ptv-review/annotate-review draft)))))
 
 (defn field-label
   "\"Tiivistelmä (SV)\", \"Markkinointinimi\", \"Liitetty palvelu Uimahallit\"."

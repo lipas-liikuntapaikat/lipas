@@ -18,6 +18,7 @@
  ;; or paired with one of the body strings below for the full message.
  :sync-failed "Sync to PTV failed"
  :saved-but-sync-failed "Sports site saved, but PTV sync failed"
+ :saving-and-syncing "Saving and syncing to PTV… This may take a while."
  ;; Bodies for the dialog-driven sync flows.
  :sync-failed-body-ptv-modified "PTV has unpublished changes. Publish or discard changes in PTV and try again."
  :sync-failed-body-invalid-postal-code "Postal code '{1}' is not recognized by PTV (not found in Posti's registry). Update the site's postal code (e.g. with 'Resolve address automatically' on the site's basic data), save, and try syncing again."

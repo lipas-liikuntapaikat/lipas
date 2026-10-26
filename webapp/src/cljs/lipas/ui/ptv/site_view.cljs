@@ -363,25 +363,29 @@
      ;; What differs from PTV and who changed it. A save syncs the site, so
      ;; the choices go into the save (:lipas.ui.map.events/save-edits),
      ;; which asks before overwriting a change made in PTV without one.
-     (when editing?
-       (when-let [site-review @(rf/subscribe [:lipas.ui.map.subs/ptv-site-review lipas-id])]
-         (let [open? @(rf/subscribe [::subs/review-open? lipas-id])]
-           [review/review-panel
-            {:id (review-data/panel-dom-id lipas-id)
-             :tr tr
-             :review site-review
-             :choices @(rf/subscribe [::subs/review-choices lipas-id])
-             :open? open?
-             :on-toggle #(rf/dispatch [::events/set-review-open lipas-id (not open?)])
-             :on-take (fn [rows side]
-                        (rf/dispatch [::events/review-take :site-form lipas-id rows side]))
-             :on-reset (fn [rows]
-                         (rf/dispatch [::events/review-reset :site-form lipas-id rows]))
-             ;; the names are the site's own, edited right here
-             :names-takeable? true
-             :last-sync last-sync
-             :stacked? true
-             :footer (tr :ptv.review/site-form-footer)}])))
+     ;; Viewing the site shows the differences only: choosing writes into
+     ;; an edit.
+     (when-let [site-review @(rf/subscribe [:lipas.ui.map.subs/ptv-site-review lipas-id])]
+       (let [open? @(rf/subscribe [::subs/review-open? lipas-id])]
+         [review/review-panel
+          {:id (review-data/panel-dom-id lipas-id)
+           :tr tr
+           :review site-review
+           :choices @(rf/subscribe [::subs/review-choices lipas-id])
+           :open? open?
+           :on-toggle #(rf/dispatch [::events/set-review-open lipas-id (not open?)])
+           :on-take (fn [rows side]
+                      (rf/dispatch [::events/review-take :site-form lipas-id rows side]))
+           :on-reset (fn [rows]
+                       (rf/dispatch [::events/review-reset :site-form lipas-id rows]))
+           ;; the names are the site's own, edited right here
+           :names-takeable? true
+           :last-sync last-sync
+           :stacked? true
+           :read-only? (not editing?)
+           :footer (tr (if editing?
+                         :ptv.review/site-form-footer
+                         :ptv.review/view-mode-footer))}]))
 
      ;; 3. Organization selector — only relevant once the user opts in to sync.
      ;; Pre-filled from ::resolved-org-id. Shown as a caption + edit affordance

@@ -49,6 +49,7 @@
             [clojure.string :as str]
             [goog.string.format]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-review :as ptv-review]
             [lipas.data.ptv-service-guidance :as service-guidance]
             [lipas.data.types :as types]
             [lipas.ui.components.autocompletes :refer [autocomplete2]]
@@ -542,7 +543,8 @@
 
 (defn- site-review
   "The site's sync review. `footer` says what the choices go into; by
-   default the next sync (\"Synkronoi nyt\")."
+   default the next sync, named as its button is (see the form's sync
+   button: \"Synkronoi nyt\", or the first export's label)."
   [{:keys [tr site footer]}]
   (let [lipas-id (:lipas-id site)
         org-id (:org-id site)
@@ -559,7 +561,11 @@
       ;; taking PTV's name renames the site, which needs the right to edit it
       :names-takeable? (contains? (<== [::subs/editable-site-ids org-id]) lipas-id)
       :last-sync (:last-sync site)
-      :footer (or footer (tr :ptv.review/sync-tab-footer))}]))
+      :footer (or footer
+                  (if (:last-sync site)
+                    (tr :ptv.review/sync-tab-footer (tr :ptv.actions/sync-now))
+                    (tr :ptv.review/export-tab-footer
+                        (tr :ptv.wizard/export-service-locations-to-ptv))))}]))
 
 (defn form
   [{:keys [org-id tr site]}]
@@ -1611,8 +1617,8 @@
   (let [tr (<== [:lipas.ui.subs/translator])
         sync-status (:sync-status site)
         last-sync (:last-sync site)
-        open-review (ptv-data/open-review-rows (-> site :review :rows)
-                                               (<== [::subs/review-choices (:lipas-id site)]))
+        open-review (ptv-review/open-review-rows (-> site :review :rows)
+                                                 (<== [::subs/review-choices (:lipas-id site)]))
         [expanded set-expanded] (hooks/use-state false)]
 
     ;; Auto-collapse when site gets synced during batch
@@ -1686,6 +1692,33 @@
 
      [service-location-details props]]))
 
+(defn- export-halted-alert
+  "Where a halted export stopped, why, and how to go on
+   (::events/resume-service-locations-creation)."
+  [{:keys [tr sports-sites failed skipped-count]}]
+  (let [{:keys [lipas-id error]} failed
+        site-name (some #(when (= lipas-id (:lipas-id %)) (:name %)) sports-sites)]
+    [:> Alert {:severity "error" :sx #js {:mt 2}}
+     [:> AlertTitle (tr :ptv.wizard/export-halted)]
+     [:> Stack {:spacing 1}
+      [:> Typography {:variant "body2"}
+       (tr :ptv.wizard/export-failed-site (or site-name lipas-id))]
+      (when-let [body (events/ptv-error-body tr error)]
+        [:> Typography {:variant "body2"} body])
+      (when (pos? skipped-count)
+        [:> Typography {:variant "body2"}
+         (if (= 1 skipped-count)
+           (tr :ptv.wizard/export-skipped-one)
+           (tr :ptv.wizard/export-skipped skipped-count))])
+      [:> Typography {:variant "body2"}
+       (tr :ptv.wizard/export-resume-hint)]
+      [:> Button {:size "small"
+                  :variant "outlined"
+                  :color "inherit"
+                  :sx #js {:alignSelf "flex-start" :textTransform "none"}
+                  :on-click #(==> [::events/resume-service-locations-creation])}
+       (tr :ptv.wizard/export-resume)]]]))
+
 (r/defc integrate-service-locations
   [_props]
   (let [tr (<== [:lipas.ui.subs/translator])
@@ -1701,8 +1734,8 @@
         editable (<== [::subs/editable-site-ids org-id])
         open-review (for [{:keys [lipas-id review sync-enabled] :as site} sports-sites
                           :when sync-enabled
-                          :let [open (ptv-data/open-review-rows (:rows review)
-                                                                (get all-choices lipas-id))]
+                          :let [open (ptv-review/open-review-rows (:rows review)
+                                                                  (get all-choices lipas-id))]
                           :when (seq open)]
                       {:lipas-id lipas-id :name (:name site) :rows open})
 
@@ -1769,7 +1802,9 @@
                       processed-count
                       total-count
                       processed-percent
-                      halt?]}
+                      halt?
+                      failed
+                      skipped-count]}
               (<== [::subs/service-location-creation-progress])]
 
           [:<>
@@ -1828,9 +1863,10 @@
               [:> Typography (str processed-count "/" total-count)]])
 
            (when halt?
-             [:> Alert {:severity "error" :sx #js{:mt 2}}
-              [:> AlertTitle (tr :notifications/save-failed)]
-              (tr :ptv.wizard/export-error-try-again)])])]]
+             [export-halted-alert {:tr tr
+                                   :sports-sites sports-sites
+                                   :failed failed
+                                   :skipped-count skipped-count}])])]]
 
       ;; Results
 
@@ -1865,11 +1901,9 @@
                (if sync-halt?
                  (tr :ptv.wizard/export-halted)
                  (tr :ptv.wizard/export-complete))]
+              ;; a halted export says where and why beside its button
               [:> Typography {:variant "body2"}
                (tr :ptv.wizard/export-result sync-processed-count sync-total)]
-              (when sync-halt?
-                [:> Typography {:variant "body2" :sx #js {:mt 1}}
-                 (tr :ptv.wizard/export-error-try-again)])
               [:> Stack {:direction "row" :spacing 1 :sx #js {:mt 2} :flex-wrap "wrap"}
                [:> Button
                 {:size "small" :variant "outlined"
@@ -2410,6 +2444,8 @@
           [:span
            [:> IconButton
             {:disabled (or (nil? selected-org) any-loading?)
+             ;; the tooltip sits on the span, which a disabled button needs
+             :aria-label (tr :ptv.actions/refresh-data)
              :on-click #(==> [::events/fetch-ptv-org-data selected-org])}
             [:> Icon "refresh"]]]])
        [:> Box {:sx #js {:minWidth 250}}

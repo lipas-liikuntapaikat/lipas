@@ -9,7 +9,7 @@
             [lipas.backend.org :as backend-org]
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.backend.ptv.integration :as ptv-integration]
-            [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-review :as ptv-review]
             [lipas.data.types :as types]
             [lipas.test-utils :as tu]
             [lipas.utils :as utils]
@@ -398,7 +398,7 @@
                          (is (= 200 (:status resp)))
                          (some #(when (= lipas-id (:lipas-id %)) %) body)))
           sync-status (fn [candidate]
-                        (:sync-status (ptv-data/sports-site->ptv-input
+                        (:sync-status (ptv-review/sports-site->ptv-input
                                         {:types types/all :org-id "test-org-id" :org-langs ["fi"]}
                                         {} {} candidate)))
           before (candidates)

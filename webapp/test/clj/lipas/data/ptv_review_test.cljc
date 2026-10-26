@@ -1,9 +1,11 @@
 (ns lipas.data.ptv-review-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.set :as set]
+            [clojure.test :refer [deftest is testing]]
             [clojure.test.check.clojure-test :refer [defspec]]
             [clojure.test.check.generators :as gen]
             [clojure.test.check.properties :as prop]
-            [lipas.data.ptv :as sut]))
+            [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-review :as sut]))
 
 (def ^:private langs ["fi" "se" "en"])
 
@@ -49,13 +51,20 @@
       (is (false? (:base? review)))
       (is (every? #(= :unknown (:origin %)) (:rows review))))
 
-    (testing "an sv name edited in PTV; Lipas sends the Finnish name for it"
-      (is (= {:lipas "Halli" :ptv "KUNTA-Hall" :base nil}
-             (select-keys (row review [:name "sv"]) [:lipas :ptv :base]))))
+    (testing "a language Lipas doesn't publish (no sv texts) has no text rows"
+      (is (not-any? #(= "sv" (:language %)) (:rows review))))
 
-    (testing "an sv summary added in PTV; Lipas sends the Finnish one for it"
-      (is (= ["summary-fi" "kunta-summary-sv"]
-             ((juxt :lipas :ptv) (row review [:summary "sv"])))))
+    (let [review (sut/sync-review (-> site
+                                      (assoc-in [:ptv :summary :se] "summary-sv")
+                                      (assoc-in [:ptv :description :se] "desc-fi"))
+                                  nil channel services langs)]
+      (testing "an sv name edited in PTV; Lipas sends the Finnish name for it"
+        (is (= {:lipas "Halli" :ptv "KUNTA-Hall" :base nil}
+               (select-keys (row review [:name "sv"]) [:lipas :ptv :base]))))
+
+      (testing "an sv summary edited in PTV"
+        (is (= ["summary-sv" "kunta-summary-sv"]
+               ((juxt :lipas :ptv) (row review [:summary "sv"]))))))
 
     (testing "a connection made in PTV carries the service's name"
       (is (= {:field :services :id "svc-b" :name "Liikuntahallit" :lipas? false :ptv? true}
@@ -91,7 +100,10 @@
 (deftest sync-review-first-link-test
   (let [linked (-> site
                    (update :ptv dissoc :last-sync)
-                   (assoc-in [:ptv :source-id] nil))
+                   (assoc-in [:ptv :source-id] nil)
+                   ;; published in sv, so sv texts are compared
+                   (assoc-in [:ptv :summary :se] "summary-sv")
+                   (assoc-in [:ptv :description :se] "desc-fi"))
         review (sut/sync-review linked nil channel services langs)]
     (testing "a location LIPAS hasn't synced the site to is a first link"
       (is (true? (:first-link? review)))
@@ -321,7 +333,7 @@
                                               (set-ptv-text synced-channel "Summary" "fi" p)
                                               services ["fi"])
                       r (row review [:summary "fi"])
-                      [b l p] (map sut/normalize-ws [b l p])]
+                      [b l p] (map ptv-data/normalize-ws [b l p])]
                   (and (= (some? r) (not= l p))
                        (or (nil? r)
                            (= (:origin r) (cond (= b p) :lipas
@@ -372,7 +384,121 @@
                                                  (sut/apply-review-writes draft (sut/review-writes draft r :lipas))))
                                              site
                                              rows)]
-                  (and (= (sut/normalize-ws (get-in site [:ptv :summary :fi]))
-                          (sut/normalize-ws (get-in there-and-back [:ptv :summary :fi])))
+                  (and (= (ptv-data/normalize-ws (get-in site [:ptv :summary :fi]))
+                          (ptv-data/normalize-ws (get-in there-and-back [:ptv :summary :fi])))
                        (= (set (-> site :ptv :service-ids))
                           (set (-> there-and-back :ptv :service-ids)))))))
+
+;;; Coverage and projection ;;;
+
+(def ^:private full-site
+  "A site with every field a sync derives from."
+  (-> synced-site
+      (assoc :marketing-name "Markkinointinimi"
+             :name-localized {:se "Hallen" :en "Hall"}
+             :email "info@kunta.fi"
+             :phone-number "040 123 4567"
+             :www "www.kunta.fi"
+             :reservations-link "https://varaus.kunta.fi"
+             :status "active"
+             :location {:address "Katu 1" :postal-code "00100" :city {:city-code 91}})))
+
+(deftest payload-coverage-test
+  (let [payload-keys (fn [site] (set (keys (ptv-data/->ptv-service-location
+                                             "o" (constantly [1 2]) "now" site))))
+        all-keys (into (payload-keys full-site)
+                       ;; without contacts: the deleteAll* flags
+                       (payload-keys (dissoc full-site :email :phone-number :www :reservations-link)))
+        reviewed (into #{} (mapcat :reads) sut/review-fields)
+        explained (set (keys sut/not-reviewed-payload-keys))]
+    (testing "every key a sync sends is reviewed or explained"
+      (is (= #{} (set/difference all-keys reviewed explained))))
+    (testing "nothing is explained that a sync doesn't send"
+      (is (= #{} (set/difference explained all-keys))))
+    (testing "nothing is both"
+      (is (= #{} (set/intersection reviewed explained))))))
+
+(deftest location-values-test
+  (let [langs ["fi" "en"]
+        payload (sut/site->location full-site langs)
+        values (sut/location-values payload)]
+    (testing "texts by field and PTV language, as the sync sends them"
+      (is (= "Halli" (get values [:name "fi"])))
+      (is (= "Hall" (get values [:name "en"])))
+      (is (= "Markkinointinimi" (get values [:marketing-name "fi"])))
+      (is (= "desc-fi" (get values [:description "en"]))))
+    (testing "a language not published has no texts"
+      (is (nil? (get values [:name "sv"]))))
+    (testing "languages and connections"
+      (is (= #{"fi" "en"} (get values [:languages])))
+      (is (= #{"svc-a"} (get values [:services]))))
+    (testing "PTV's GET shape gives the same values"
+      (is (= values (sut/location-values
+                      (assoc payload :services [{:service {:id "svc-a" :name "Pallokentät"}}])))))
+    (testing "the placeholder for a missing Finnish text is no text"
+      (is (nil? (get (sut/location-values
+                       (sut/site->location (update-in full-site [:ptv :summary] dissoc :fi) langs))
+                     [:summary "fi"]))))))
+
+;;; Properties over every text field ;;;
+
+(def ^:private text-key-gens
+  "[field language locale] of the texts compared for synced-site (fi and en
+   published), with values that can be on each side: PTV has a name in every
+   language version and a summary and description in Finnish; Lipas a
+   Finnish name."
+  (let [some-text (gen/elements ["a" "a " "b" "c"])
+        any-text (gen/elements [nil "" "a" "b" "c"])]
+    {[:name "fi" :fi] {:lipas some-text :ptv some-text}
+     [:name "en" :en] {:lipas any-text :ptv some-text}
+     [:marketing-name "fi" :fi] {:lipas any-text :ptv any-text}
+     [:summary "fi" :fi] {:lipas any-text :ptv some-text}
+     [:description "fi" :fi] {:lipas any-text :ptv some-text}}))
+
+(defn- with-text [site [field _ locale] v]
+  (sut/apply-review-writes site {(sut/review-text-path {:field field :locale locale}) v}))
+
+(defn- as-channel
+  "The location a sync of `site` leaves in PTV."
+  [site]
+  (-> (ptv-data/->ptv-service-location "o" (constantly nil) "now" site)
+      (assoc :id "C1")
+      (update :services (fn [ids] (mapv (fn [id] {:service {:id id}}) ids)))))
+
+(def ^:private text-case-gen
+  (gen/bind (gen/elements (keys text-key-gens))
+            (fn [k]
+              (let [{:keys [lipas ptv]} (text-key-gens k)]
+                (gen/tuple (gen/return k) lipas lipas ptv)))))
+
+(defspec text-origin-follows-who-changed-it 300
+  (prop/for-all [[k b l p] text-case-gen]
+                (let [base-site (with-text synced-site k b)
+                      review (sut/sync-review (with-text synced-site k l)
+                                              (sut/->review-base base-site)
+                                              (as-channel (with-text synced-site k p))
+                                              services ["fi" "en"])
+                      r (row review (vec (take 2 k)))
+                      value (fn [v] (-> (with-text synced-site k v)
+                                        (sut/site->location ["fi" "en"])
+                                        sut/location-values
+                                        (get (vec (take 2 k)))
+                                        ptv-data/normalize-ws))
+                      [nb nl np] (map value [b l p])]
+                  (and (= (some? r) (not= nl np))
+                       (or (nil? r)
+                           (= (:origin r) (cond (= nb np) :lipas
+                                                (= nb nl) :ptv
+                                                :else :both)))))))
+
+(defspec taking-ptv-leaves-no-text-difference 300
+  (prop/for-all [[k b l p] text-case-gen]
+                (let [base (sut/->review-base (with-text synced-site k b))
+                      channel (as-channel (with-text synced-site k p))
+                      site (with-text synced-site k l)
+                      rows (:rows (sut/sync-review site base channel services ["fi" "en"]))
+                      taken (reduce (fn [draft r]
+                                      (sut/apply-review-writes draft (sut/review-writes draft r :ptv)))
+                                    site
+                                    rows)]
+                  (empty? (:rows (sut/sync-review taken base channel services ["fi" "en"]))))))

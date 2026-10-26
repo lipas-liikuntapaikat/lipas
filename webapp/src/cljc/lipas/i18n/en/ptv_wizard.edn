@@ -48,6 +48,12 @@
  :export-halted "Export interrupted",
  :export-complete "Export complete",
  :export-result "{1}/{2} sports facilities exported to PTV.",
+ :export-failed-site "Exporting the sports facility {1} to PTV failed.",
+ :export-skipped "The export stopped there, so {1} sports facilities were not exported.",
+ :export-skipped-one "The export stopped there, so one sports facility was not exported.",
+ :export-resume-hint
+ "Continue the export once the cause is fixed. If PTV didn't respond, try again in a while. Contact LIPAS support (lipasinfo@jyu.fi) if the problem persists.",
+ :export-resume "Continue the export",
  :start-new-export "Start a new export",
  :go-to-sports-sites-tab "Go to the Sports facilities tab",
  :go-to-services-tab "Go to the Services tab"}

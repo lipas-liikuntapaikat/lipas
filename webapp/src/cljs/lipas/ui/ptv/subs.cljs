@@ -1,6 +1,7 @@
 (ns lipas.ui.ptv.subs
   (:require [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-review :as ptv-review]
             [lipas.data.types :as types]
             [lipas.roles :as roles]
             [lipas.schema.sports-sites.ptv :as ptv-schema]
@@ -456,27 +457,56 @@
   (fn [ptv [_ org-id]]
     (get-in ptv [:org org-id :data :sync-bases])))
 
+(rf/reg-sub ::org-sports-sites
+  ;; lipas-id -> the org's cached site, as fetched (no audit joined)
+  :<- [::ptv]
+  (fn [ptv [_ org-id]]
+    (get-in ptv [:org org-id :data :sports-sites])))
+
+(defonce ^:private ptv-input-cache
+  ;; lipas-id -> {:args [...] :result ptv-input}: the PTV tool's row for a
+  ;; site (sports-site->ptv-input, which runs the sync review), reused while
+  ;; its inputs are the very same values. re-frame keeps unchanged app-db
+  ;; values identical, so an edit to one site, or a change elsewhere under
+  ;; :ptv, recomputes only what changed instead of every site of the org.
+  (atom {}))
+
+(defn- ptv-input
+  [ctx service-channels services site audit base]
+  (let [args [service-channels services site audit base]
+        hit (get @ptv-input-cache (:lipas-id site))]
+    (if (and hit
+             (= ctx (:ctx hit))
+             (every? true? (map identical? args (:args hit))))
+      (:result hit)
+      (let [result (ptv-review/sports-site->ptv-input
+                     ctx service-channels services
+                     (cond-> (assoc site :ptv-base base)
+                       audit (assoc-in [:ptv :audit] audit)))]
+        (swap! ptv-input-cache assoc (:lipas-id site) {:ctx ctx :args args :result result})
+        result))))
+
 (rf/reg-sub ::sports-sites
   (fn [[_ org-id]]
-    [(rf/subscribe [::sites-with-audit org-id])
+    [(rf/subscribe [::org-sports-sites org-id])
+     (rf/subscribe [::site-audits org-id])
      (rf/subscribe [::services-by-id org-id])
      (rf/subscribe [::service-channels-by-id org-id])
      (rf/subscribe [::default-settings org-id])
      (rf/subscribe [:lipas.ui.sports-sites.subs/all-types])
      (rf/subscribe [::selected-org])
      (rf/subscribe [::sync-bases org-id])])
-  (fn [[sites services service-channels org-defaults types selected-org sync-bases] [_ org-id]]
-    (let [org-langs (get-in selected-org [:ptv-data :supported-languages] ptv-data/fallback-languages)]
-      (->> sites
+  (fn [[sites audits services service-channels org-defaults types selected-org sync-bases] [_ org-id]]
+    (let [ctx {:org-id org-id
+               :types types
+               :org-defaults org-defaults
+               :org-langs (get-in selected-org [:ptv-data :supported-languages]
+                                  ptv-data/fallback-languages)}]
+      (->> (vals sites)
            (map (fn [site]
-                  (ptv-data/sports-site->ptv-input {:org-id org-id
-                                                    :types types
-                                                    :org-defaults org-defaults
-                                                    :org-langs org-langs}
-                                                   service-channels
-                                                   services
-                                                   (assoc site :ptv-base
-                                                          (get sync-bases (:lipas-id site))))))
+                  (let [lipas-id (:lipas-id site)]
+                    (ptv-input ctx service-channels services site
+                               (get audits lipas-id) (get sync-bases lipas-id)))))
            (sort-by :lipas-id)))))
 
 (rf/reg-sub ::review-choices
@@ -639,11 +669,15 @@
 
 (rf/reg-sub ::service-location-creation-progress
   :<- [::service-locations-creation]
-  (fn [{:keys [processed-ids size halt? in-progress?]} _]
+  (fn [{:keys [processed-ids size halt? in-progress? failed]} _]
     (let [processed-count (count processed-ids)]
       {:processed-lipas-ids (set processed-ids)
        :in-progress? in-progress?
        :halt? halt?
+       ;; {:lipas-id :error} of the site a halted export stopped at, and
+       ;; how many after it weren't tried
+       :failed failed
+       :skipped-count (when failed (max 0 (- size processed-count 1)))
        :total-count size
        :processed-count processed-count
        :processed-percent (if (pos? size)
@@ -708,7 +742,7 @@
 (rf/reg-sub ::sites-with-audit
   ;; The org's cached sites joined with their stored audit as [:ptv :audit],
   ;; the shape the cljc audit fns read (site-audit-fields,
-  ;; determine-audit-status, sports-site->ptv-input).
+  ;; determine-audit-status). ::sports-sites joins it per site itself.
   (fn [[_ org-id]]
     [(rf/subscribe [::ptv])
      (rf/subscribe [::site-audits org-id])])

@@ -2,6 +2,7 @@
   (:require [clojure.string :as str]
             [goog.array :as garray]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-review :as ptv-sync]
             [lipas.ui.ptv.review-data :as ptv-review]
             [re-frame.core :as rf]
             [reagent.ratom :as ratom]))
@@ -590,7 +591,7 @@
     [(rf/subscribe [::ptv-site-review lipas-id])
      (rf/subscribe [::ptv-review-choices lipas-id])])
   (fn [[review choices] _]
-    (ptv-data/open-review-rows (:rows review) choices)))
+    (ptv-sync/open-review-rows (:rows review) choices)))
 
 (rf/reg-sub ::ptv-review-choices
   (fn [db [_ lipas-id]]

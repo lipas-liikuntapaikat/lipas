@@ -13,6 +13,7 @@
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.backend.ptv.integration :as ptvi]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-review :as ptv-review]
             [lipas.utils :as utils]))
 
 (def org "3d1759a2-e47a-4947-9a31-cab1c1e2512b")
@@ -254,8 +255,8 @@
              :last-sync (-> site :ptv :last-sync)}
      :ptv (channel-texts ch)
      :review (mapv (juxt :key :origin)
-                   (:rows (ptv-data/sync-review site base ch {}
-                                                (ptv-data/effective-languages site ["fi" "en"]))))}))
+                   (:rows (ptv-review/sync-review site base ch {}
+                                                  (ptv-data/effective-languages site ["fi" "en"]))))}))
 
 (defn report
   "Each scenario site's review, as the PTV tool computes it."
@@ -267,8 +268,8 @@
                :let [site (db/get-sports-site (dbc) id)
                      ch-id (-> site :ptv :service-channel-ids first)
                      ch (when ch-id (ptvi/get-org-service-channel (ptv) org ch-id))
-                     review (ptv-data/sync-review site (get bases id) ch {}
-                                                  (ptv-data/effective-languages site langs))]]
+                     review (ptv-review/sync-review site (get bases id) ch {}
+                                                    (ptv-data/effective-languages site langs))]]
            [id (:name site)
             (mapv (fn [r] [(:key r) (:origin r) (when (:language-added? r) :lang-added)])
                   (:rows review))]))))

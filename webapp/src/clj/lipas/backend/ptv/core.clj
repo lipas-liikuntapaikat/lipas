@@ -14,6 +14,7 @@
             [lipas.backend.ptv.integration :as ptv]
             [lipas.backend.search :as search]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-review :as ptv-review]
             [lipas.data.types :as types]
             [lipas.roles :as roles]
             [lipas.utils :as utils]
@@ -45,10 +46,10 @@
   (audit/site-audits db lipas-ids))
 
 (defn get-ptv-sync-bases
-  "lipas-id -> what the site's last PTV sync sent (ptv-data/->review-base),
+  "lipas-id -> what the site's last PTV sync sent (ptv-review/->review-base),
   for the sync review. Sites never synced are left out."
   [db lipas-ids]
-  (update-vals (db/get-ptv-sync-bases db lipas-ids) ptv-data/->review-base))
+  (update-vals (db/get-ptv-sync-bases db lipas-ids) ptv-review/->review-base))
 
 (defn- get-channel-or-nil
   "The service location, or nil when PTV doesn't have it (archived)."
@@ -636,7 +637,7 @@
 
 (defn upsert-ptv-service-location!
   "Syncs the saved site with `ptv` merged in. `site-names` (the sync
-   review's choice of PTV's names, see ptv-data/review-site-names) are
+   review's choice of PTV's names, see ptv-review/review-site-names) are
    written into the site first, which needs the right to edit it."
   [db ptv-component search user {:keys [lipas-id org-id ptv archive? site-names]}]
   ;; FIXME: This is called from inside tx in save-sports-site! is that a problem?
@@ -651,7 +652,7 @@
               (throw (ex-info "Changing the site's name needs the right to edit the site"
                               {:type :no-permission :lipas-id lipas-id})))
           site (cond-> site
-                 (seq site-names) (ptv-data/apply-site-names site-names))
+                 (seq site-names) (ptv-review/apply-site-names site-names))
           ;; Reject linking to a service-location another site already owns
           ;; before we touch PTV (a fresh create / unlink has no id and passes).
           _ (assert-no-double-link! tx lipas-id (-> ptv :service-channel-ids first))

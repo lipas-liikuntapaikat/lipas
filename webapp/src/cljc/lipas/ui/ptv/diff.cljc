@@ -6,8 +6,10 @@
      [:removed \"only in a\"]         ;; in `a` but not in `b`
      [:added   \"only in b\"]         ;; in `b` but not in `a`
 
-   Tokens are alternating runs of whitespace and non-whitespace, so the
-   output preserves the source spacing verbatim when reassembled.
+   Tokens are runs of whitespace, single punctuation marks and the words
+   between them, so the output preserves the source verbatim when
+   reassembled, and an added full stop marks only the stop, not the word
+   before it.
 
    The algorithm is the classic Wagner–Fischer LCS dynamic-programming
    table followed by a backwards walk to recover the diff path. The
@@ -20,14 +22,20 @@
    end. See the bench comment block at the bottom for measured numbers."
   (:require [clojure.string :as str]))
 
+(def ^:private token-re
+  ;; Whitespace runs, one punctuation mark, or a word: anything else up to
+  ;; the next of those. The marks are listed rather than matched as a
+  ;; Unicode class, which a JS regex without the u flag can't do.
+  #"\s+|[.,;:!?()\[\]{}\"'«»“”‘’/\-–—…]|[^\s.,;:!?()\[\]{}\"'«»“”‘’/\-–—…]+")
+
 (defn tokenize
-  "Split `s` into alternating non-whitespace and whitespace runs.
+  "Split `s` into whitespace runs, punctuation marks and words.
 
    Returns a vector. Empty/nil input yields an empty vector."
   [s]
   (if (str/blank? (or s ""))
     []
-    (vec (re-seq #"\s+|\S+" s))))
+    (vec (re-seq token-re s))))
 
 #?(:clj
    (defn- new-int-array [n]

@@ -3,7 +3,8 @@
    base the review tells PTV's changes from Lipas's by), and who may fetch it.
    The site form's review is open to whoever may edit the site, because
    saving a site with PTV sync on syncs it over PTV."
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [clojure.set :as set]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.org :as backend-org]
@@ -89,8 +90,12 @@
       (save! admin (site lipas-id "2026-04-01T08:00:00.000Z" "Toinen synkka" "2026-04-01T08:00:00.000Z"))
       (is (= "Toinen synkka" (get-in (base) [:ptv :summary :fi]))))
 
-    (testing "only what the review compares is sent"
-      (is (= #{:lipas-id :name :ptv} (set (keys (base)))))
+    (testing "only what a sync derives the location from is sent, no geometry"
+      (is (= #{} (set/difference (set (keys (base)))
+                                 #{:lipas-id :name :name-localized :marketing-name :email
+                                   :phone-number :www :reservations-link :location :ptv})))
+      (is (= #{} (set/difference (set (keys (:location (base))))
+                                 #{:address :postal-code :postal-office :city})))
       (is (not (contains? (:ptv (base)) :sync-enabled))))))
 
 ;;; HTTP ;;;

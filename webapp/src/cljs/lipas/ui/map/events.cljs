@@ -5,6 +5,7 @@
             [goog.string :as gstring]
             [goog.string.format]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-review :as ptv-sync]
             [lipas.gpx :as gpx]
             [lipas.ui.map.hooks :as hooks]
             [lipas.ui.map.utils :as map-utils]
@@ -466,7 +467,11 @@
                                                           (get-in db [:sports-sites lipas-id :latest])])
                                               (get-in db [:sports-sites lipas-id :editing]))
           choices (get-in db (ptv-review/choices-path lipas-id))
-          open (ptv-data/open-review-rows (:rows review) choices)]
+          open (ptv-sync/open-review-rows (:rows review) choices)
+          ;; the form closes at once, but a save that writes to PTV takes
+          ;; PTV's time: say so until the save's own notification replaces
+          ;; this (sports-sites.events/save-success, save-failure)
+          syncs? (ptv-data/save-syncs? (get-in db [:sports-sites lipas-id :editing]))]
       (if (and (seq open) (not overwrite-ptv?))
         {:dispatch [:lipas.ui.events/confirm-with
                     (ptv-review/overwrite-confirmation
@@ -484,6 +489,12 @@
          ;; Some more elegant solution could be possibly implemented in
          ;; the future.
          [[:lipas.ui.map.events/show-sports-site nil]
+          (when syncs?
+            [:lipas.ui.events/set-active-notification
+             {:message (tr :ptv/saving-and-syncing)
+              :severity :info
+              :sticky? true
+              :progress? true}])
           [:lipas.ui.sports-sites.events/save-edits lipas-id on-success on-failure]]}))))
 
 (rf/reg-event-fx ::fetch-ptv-site-review

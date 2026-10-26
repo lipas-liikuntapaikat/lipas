@@ -3,6 +3,7 @@
             [clojure.set :as set]
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-review :as ptv-review]
             [lipas.roles :as roles]
             [lipas.schema.sports-sites.ptv :as ptv-schema]
             [lipas.ui.ptv.review-data :as review-data]
@@ -353,7 +354,7 @@
                                         (assoc :ptv-persisted persisted
                                                :ptv-persisted-sync? (persisted-sync? (:ptv new-site))
                                                ;; what the sync review compares PTV with
-                                               :review-saved (ptv-data/->review-base new-site))
+                                               :review-saved (ptv-review/->review-base new-site))
                                         (cond-> (:ptv existing) (update :ptv #(merge (:ptv existing) %)))
                                         ;; a search index not yet reindexed after the
                                         ;; audit move still serves the legacy in-document
@@ -1554,7 +1555,7 @@
                          (select-keys ptv ptv-data/site-audited-field-keys))
                ;; What this sync sent is the next review's base, and the
                ;; choices made for it are spent.
-               (as-> db (let [synced (ptv-data/->review-base
+               (as-> db (let [synced (ptv-review/->review-base
                                        (get-in db [:ptv :org org-id :data :sports-sites lipas-id]))]
                           (-> db
                               (assoc-in [:ptv :org org-id :data :sync-bases lipas-id] synced)
@@ -1606,7 +1607,7 @@
   (fn [{:keys [db]} [_ target lipas-id rows side]]
     (let [path (draft-path db target lipas-id)
           draft (get-in db path)
-          edited (reduce #(ptv-data/apply-review-writes %1 (ptv-data/review-writes %1 %2 side))
+          edited (reduce #(ptv-review/apply-review-writes %1 (ptv-review/review-writes %1 %2 side))
                          draft
                          rows)
           db (update-in db (review-data/choices-path lipas-id)
@@ -1614,7 +1615,7 @@
                           (reduce (fn [choices row]
                                     (if (= :lipas side)
                                       (assoc choices (:key row)
-                                             {:choice :lipas :seen (ptv-data/review-choice-seen row)})
+                                             {:choice :lipas :seen (ptv-review/review-choice-seen row)})
                                       (dissoc choices (:key row))))
                                   choices
                                   rows)))]
@@ -1624,7 +1625,7 @@
         :site-form {:db db
                     :fx [[:dispatch [:lipas.ui.sports-sites.events/edit-fields lipas-id
                                      (into {}
-                                           (comp (mapcat #(keys (ptv-data/review-writes draft % side)))
+                                           (comp (mapcat #(keys (ptv-review/review-writes draft % side)))
                                                  (distinct)
                                                  (map (fn [p] [p (get-in edited p)])))
                                            rows)]]]}))))
@@ -1658,7 +1659,7 @@
 
 (rf/reg-event-fx ::sync-with-review
   ;; "Synkronoi nyt" with the site's review `rows` (annotated, see
-  ;; ptv-data/annotate-review): while a change made in PTV is undecided,
+  ;; ptv-review/annotate-review): while a change made in PTV is undecided,
   ;; ask before overwriting it; otherwise sync the edit, which holds the
   ;; decisions. `overwrite?` is the user's answer: undecided rows keep the
   ;; saved Lipas version.
@@ -1666,7 +1667,7 @@
     (let [tr (:translator db)
           org-id (-get-ptv-org-id db)
           site (get-in db [:ptv :org org-id :data :sports-sites lipas-id])
-          open (ptv-data/open-review-rows rows (get-in db (review-data/choices-path lipas-id)))]
+          open (ptv-review/open-review-rows rows (get-in db (review-data/choices-path lipas-id)))]
       (if (and (seq open) (not overwrite?))
         {:fx [[:dispatch [:lipas.ui.events/confirm-with
                           (review-data/overwrite-confirmation
@@ -1680,7 +1681,7 @@
         ;; The sync sends the saved site's names: PTV's names taken in the
         ;; review travel with it for the backend to write.
         {:db (assoc-in db [:ptv :review :site-names lipas-id]
-                       (ptv-data/review-site-names (:review-saved site) site))
+                       (ptv-review/review-site-names (:review-saved site) site))
          :fx [[:dispatch [::create-ptv-service-location lipas-id [] []]]]}))))
 
 ;;; Explicit archive (publishingStatus "Deleted") ;;;
@@ -1725,7 +1726,9 @@
           ids* (get-in db [:ptv :service-locations-creation :ids])
           processed (set/difference (set ids*) (set ids))
           on-single-success [[:dispatch [::create-all-ptv-service-locations* org-id (rest ids)]]]
-          on-single-failure [[:dispatch [::halt-service-locations-creation]]]]
+          ;; a failing PTV is likely to fail the next one too, and a 502 can
+          ;; leave a draft behind: stop and say where (::resume-service-locations-creation)
+          on-single-failure [[:dispatch [::halt-service-locations-creation (first ids)]]]]
       {:db (-> db
                (update-in [:ptv :service-locations-creation]
                           merge
@@ -1756,6 +1759,17 @@
         valid? (m/validator ptv-schema/ptv-meta)]
     (comp valid? decode)))
 
+(defn- with-review-site-names
+  "`db` with the names the sync of each of `lipas-ids` writes back to the
+   site, from the choices made in its review."
+  [db org-id lipas-ids]
+  (reduce (fn [db lipas-id]
+            (let [site (get-in db [:ptv :org org-id :data :sports-sites lipas-id])]
+              (assoc-in db [:ptv :review :site-names lipas-id]
+                        (ptv-review/review-site-names (:review-saved site) site))))
+          db
+          lipas-ids))
+
 (rf/reg-event-fx ::create-all-ptv-service-locations
   ;; The view blocks the export while a site to sync has an undecided
   ;; change made in PTV; the edits hold the decisions.
@@ -1767,14 +1781,8 @@
                                                   :to-sync
                                                   :to-save))
                                               sports-sites)
-          db (reduce (fn [db {:keys [lipas-id]}]
-                       (let [site (get-in db [:ptv :org org-id :data :sports-sites lipas-id])]
-                         (assoc-in db [:ptv :review :site-names lipas-id]
-                                   (ptv-data/review-site-names (:review-saved site) site))))
-                     db
-                     to-sync)
-
           ids (map :lipas-id to-sync)
+          db (with-review-site-names db org-id ids)
           ;; Only sites with something persistable: an untouched site (no
           ;; texts yet) or one with over-long texts would fail the backend's
           ;; ptv-meta validation and take the whole meta save down with it.
@@ -1788,15 +1796,35 @@
                       :halt? false
                       :in-progress? true
                       :size (count ids)
-                      :ids (set ids)
+                      ;; in order, for resuming after a failure
+                      :ids (vec ids)
                       :processed-ids #{}})
        :fx [[:dispatch [::create-all-ptv-service-locations* org-id ids]]
             [:dispatch [::save-ptv-meta to-save]]]})))
 
 (rf/reg-event-db ::halt-service-locations-creation
-  (fn [db _]
-    (-> db
-        (assoc-in [:ptv :service-locations-creation :halt?] true))))
+  ;; After ::create-ptv-service-location-failure, which stored the error.
+  (fn [db [_ failed-lipas-id]]
+    (update-in db [:ptv :service-locations-creation] merge
+               {:halt? true
+                :in-progress? false
+                :failed {:lipas-id failed-lipas-id
+                         :error (get-in db [:ptv :errors :service-locations-creation])}})))
+
+(rf/reg-event-fx ::resume-service-locations-creation
+  ;; Goes on from the site that failed with those not exported yet; the
+  ;; progress keeps counting the whole export.
+  (fn [{:keys [db]} _]
+    (let [org-id (-get-ptv-org-id db)
+          {:keys [ids processed-ids failed]} (get-in db [:ptv :service-locations-creation])
+          ;; the failed one first, then the rest in the original order
+          remaining (distinct (cons (:lipas-id failed)
+                                    (remove (set processed-ids) ids)))]
+      {:db (-> db
+               (with-review-site-names org-id remaining)
+               (update-in [:ptv :service-locations-creation] merge
+                          {:halt? false :in-progress? true :failed nil}))
+       :fx [[:dispatch [::create-all-ptv-service-locations* org-id remaining]]]})))
 
 (rf/reg-event-fx ::save-ptv-meta
   (fn [{:keys [db]} [_ sports-sites]]

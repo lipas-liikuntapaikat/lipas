@@ -931,6 +931,15 @@
        (keep identity)))
 
 ;; Works as both display and edit views
+(r/defc ptv-review-fetcher
+  "Fetches the PTV sync review of a site being viewed, for the PTV tab's
+   dot and its read-only review. Editing fetches its own (::edit-site)."
+  [{:keys [lipas-id]}]
+  (hooks/use-effect (fn []
+                      (==> [::events/fetch-ptv-site-review lipas-id]))
+                    [lipas-id])
+  nil)
+
 (defn sports-site-view
   [{:keys [tr site-data width]}]
   (let [display-data (:display-data site-data)
@@ -999,8 +1008,9 @@
 
         ;; Same rule as the backend gate; non-empty blocks Save.
         ptv-save-blockers (<== [::subs/ptv-save-blockers lipas-id])
-        ;; changes made in PTV that a save would overwrite unasked
-        ptv-review-open (when editing? (<== [::subs/ptv-review-open-rows lipas-id]))
+        ;; changes made in PTV that a save would overwrite unasked; viewing
+        ;; the site shows them too, to be decided in an edit
+        ptv-review-open (when view-ptv? (<== [::subs/ptv-review-open-rows lipas-id]))
 
         can-edit-map? can-publish?
 
@@ -1072,6 +1082,9 @@
             {:style {:margin-left "-0.25em"}
              :on-click #(==> [::events/show-sports-site nil])}
             [:> Icon "close"]])]]]
+
+      (when (and view-ptv? (not editing?))
+        ^{:key lipas-id} [ptv-review-fetcher {:lipas-id lipas-id}])
 
       ;; Tabs
       [:> Grid {:item true :xs 12}

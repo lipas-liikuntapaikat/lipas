@@ -48,6 +48,12 @@
  :export-halted "Vienti keskeytyi",
  :export-complete "Vienti valmis",
  :export-result "{1}/{2} liikuntapaikkaa viety PTV:hen.",
+ :export-failed-site "Liikuntapaikan {1} vienti PTV:hen epäonnistui.",
+ :export-skipped "Vienti pysähtyi siihen, joten {1} liikuntapaikkaa jäi viemättä.",
+ :export-skipped-one "Vienti pysähtyi siihen, joten yksi liikuntapaikka jäi viemättä.",
+ :export-resume-hint
+ "Jatka vientiä, kun syy on korjattu. Jos PTV ei vastannut, yritä hetken päästä uudelleen. Jos ongelma toistuu, ota yhteyttä Lipaksen tukeen (lipasinfo@jyu.fi).",
+ :export-resume "Jatka vientiä",
  :start-new-export "Aloita uusi vienti",
  :go-to-sports-sites-tab "Siirry Liikuntapaikat-välilehdelle",
  :go-to-services-tab "Siirry Palvelut-välilehdelle"}

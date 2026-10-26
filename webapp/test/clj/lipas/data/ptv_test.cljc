@@ -2,6 +2,7 @@
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [lipas.data.ptv :as sut]
+            [lipas.data.ptv-review :as ptv-review]
             [lipas.schema.sports-sites.ptv :as ptv-schema]
             [malli.core :as m]))
 
@@ -722,7 +723,7 @@
 
 (deftest sync-status-unlink-test
   (let [ctx {:org-id "o" :types {} :org-defaults {} :org-langs ["fi"]}
-        status (fn [site] (:sync-status (sut/sports-site->ptv-input ctx {} {} site)))
+        status (fn [site] (:sync-status (ptv-review/sports-site->ptv-input ctx {} {} site)))
         base {:lipas-id 1 :name "X" :event-date "T1"
               :ptv {:last-sync "T1"
                     :summary {:fi "aaaaaa"}
@@ -750,7 +751,7 @@
   ;; languages stored at the last sync (["fi"]), so English texts never
   ;; activated the sync button.
   (let [status (fn [org-langs channels site]
-                 (:sync-status (sut/sports-site->ptv-input
+                 (:sync-status (ptv-review/sports-site->ptv-input
                                  {:org-id "o" :types {} :org-defaults {} :org-langs org-langs}
                                  channels {} site)))
         base {:lipas-id 1 :name "X" :event-date "T1"
@@ -783,9 +784,9 @@
       (is (= :out-of-date (status ["fi"] {} (assoc-in with-en [:ptv :languages] ["fi" "en"])))))
 
     (testing ":languages reports what the next sync publishes"
-      (is (= ["fi" "en"] (:languages (sut/sports-site->ptv-input
+      (is (= ["fi" "en"] (:languages (ptv-review/sports-site->ptv-input
                                        {:types {} :org-langs ["fi" "en"]} {} {} with-en))))
-      (is (= ["fi"] (:languages (sut/sports-site->ptv-input
+      (is (= ["fi"] (:languages (ptv-review/sports-site->ptv-input
                                   {:types {} :org-langs ["fi" "en"]} {} {} base)))))))
 
 (deftest unpublished-ptv-languages-test
@@ -827,7 +828,7 @@
 
 (deftest sync-status-archived-resync-test
   (let [ctx {:org-id "o" :types {} :org-defaults {} :org-langs ["fi"]}
-        status (fn [site] (:sync-status (sut/sports-site->ptv-input ctx {} {} site)))
+        status (fn [site] (:sync-status (ptv-review/sports-site->ptv-input ctx {} {} site)))
         ;; Archived in PTV but still linked, event-date == last-sync (the
         ;; archive). service-channels {} so the archived channel can't be diffed.
         base {:lipas-id 1 :name "X" :event-date "T1"

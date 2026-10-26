@@ -4,8 +4,8 @@
  :keywords "Nyckelord",
  :loading-from-ptv "Hämtar information från PTV...",
  :service "Service",
- :service-channel "Servicepunkt",
- :service-channels "Servicepunkt",
+ :service-channel "Serviceställe",
+ :service-channels "Servicekanaler kopplade till tjänsten i PTV",
  :services "Service",
  :sports-sites "Idrottsanläggningar",
  :sports-sites-count "idrottsanläggningar",
@@ -18,6 +18,7 @@
  ;; or paired with one of the body strings below for the full message.
  :sync-failed "Synkronisering till PTV misslyckades",
  :saved-but-sync-failed "Idrottsanläggningen sparades, men PTV-synkroniseringen misslyckades",
+ :saving-and-syncing "Sparar och synkroniserar till PTV… Det kan ta en stund."
  ;; Bodies for the dialog-driven sync flows.
  :sync-failed-body-ptv-modified "PTV har opublicerade ändringar. Publicera eller ångra ändringarna i PTV och försök igen.",
  :sync-failed-body-invalid-postal-code "Postnumret '{1}' godkänns inte av PTV (finns inte i Postis register). Uppdatera idrottsanläggningens postnummer (t.ex. via 'Hitta adress automatiskt' under grunduppgifterna), spara och försök synkronisera igen.",
@@ -50,8 +51,8 @@
  :integration-enabled "PTV-integrationen är aktiv"
  :integration-enabled-sync-off "PTV-integrationen är aktiv, men synkroniseringen av idrottsanläggningen till PTV är avstängd."
  :will-be-archived-on-save "Idrottsanläggningen arkiveras från PTV när du sparar"
- :will-be-archived-type-changed "Idrottsanläggningen har tidigare exporterats till PTV, men uppgifterna har ändrats så att de inte längre exporteras. PTV-servicepunkten arkiveras när du sparar."
- :new-service-location-will-be-created "Idrottsanläggningen har inte tidigare exporterats till PTV. En ny servicepunkt skapas när du sparar."
+ :will-be-archived-type-changed "Idrottsanläggningen har tidigare exporterats till PTV, men uppgifterna har ändrats så att de inte längre exporteras. PTV-servicestället arkiveras när du sparar."
+ :new-service-location-will-be-created "Idrottsanläggningen har inte tidigare exporterats till PTV. Ett nytt serviceställe skapas när du sparar."
  :data-incomplete "PTV-uppgifterna är ofullständiga. Fyll i de uppgifter som saknas så exporteras idrottsanläggningen till PTV när du sparar."
  :integration-error "Fel i PTV-integrationen, de senaste uppgifterna har inte exporterats till PTV."
  :open-in-ptv "Öppna i PTV"

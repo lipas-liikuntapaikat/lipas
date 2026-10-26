@@ -1765,11 +1765,8 @@
              {:prev (not-empty prev)
               :resp
               (if (and (not draft?)
-                       (or (:sync-enabled (:ptv resp))
-                           (:delete-existing (:ptv resp)))
                        ;; TODO: Check privilage :ptv/basic or such
-                       (or (ptv-data/ptv-candidate? resp)
-                           (ptv-data/is-sent-to-ptv? resp)))
+                       (ptv-data/save-syncs? resp))
                 ;; NOTE:  this will create a new sports-site rev.
                 ;; Make it instead update the sports-site already created in the tx?
                 ;; Otherwise each save-sports-site! will create two sports-site revs.
