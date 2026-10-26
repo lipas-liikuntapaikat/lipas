@@ -149,12 +149,21 @@
 (def ^:private dialog-body-keys
   {:modified            :ptv/sync-failed-body-ptv-modified
    :invalid-postal-code :ptv/sync-failed-body-invalid-postal-code
-   :duplicate-name      :ptv/sync-failed-body-name-conflict})
+   :duplicate-name      :ptv/sync-failed-body-name-conflict
+   :changed-since-review :ptv/sync-failed-body-changed-since-review})
 
 (def ^:private save-body-keys
   {:modified            :ptv/saved-but-sync-failed-body-ptv-modified
    :invalid-postal-code :ptv/saved-but-sync-failed-body-invalid-postal-code
-   :duplicate-name      :ptv/saved-but-sync-failed-body-name-conflict})
+   :duplicate-name      :ptv/saved-but-sync-failed-body-name-conflict
+   :changed-since-review :ptv/saved-but-sync-failed-body-changed-since-review})
+
+(defn changed-since-review?
+  "Whether a sync was refused because the location changed in PTV after the
+   review: the endpoint's 409, or the error sync-ptv! stored on the site."
+  [resp]
+  (= :ptv-changed-since-review
+     (some-> (or (:type (:response resp)) (:type resp)) keyword)))
 
 (defn- ptv-sync-error-body
   "Localized actionable body text for a PTV sync failure. `body-keys`
@@ -169,6 +178,16 @@
         ;; service-location endpoint answers with them
         blockers (or (seq (:blockers resp)) (seq (:blockers refusal)))]
     (cond
+      ;; changed in PTV after the user's review: nothing was written
+      (changed-since-review? resp)
+      (tr (:changed-since-review body-keys))
+
+      (= :no-permission (some-> refusal :type keyword))
+      (tr :ptv.review/needs-edit-right)
+
+      (= :double-link (some-> refusal :type keyword))
+      (tr :ptv.double-link/explanation)
+
       ;; LIPAS's own refusals on a service write
       (= :changed-in-ptv (some-> refusal :type keyword))
       (tr :ptv.service/changed-in-ptv)
@@ -197,6 +216,11 @@
 
       dup-name
       (tr (:duplicate-name body-keys) dup-name)
+
+      ;; PTV failed mid-write: it may have left a draft that blocks the
+      ;; next write until it's published or discarded in PTV
+      (>= (or (:ptv-status refusal) (:ptv-status resp) 0) 500)
+      (tr :ptv/sync-failed-body-ptv-down)
 
       :else
       (some->> (ptv-rejection-text resp)
@@ -559,7 +583,8 @@
             [:dispatch [::fetch-ptv-services lipas-org]]
             [:dispatch [::fetch-ptv-service-channels lipas-org]]
             [:dispatch [::fetch-ptv-service-collections lipas-org]]
-            [:dispatch [::fetch-ptv-service-audits lipas-org]]]})))
+            [:dispatch [::fetch-ptv-service-audits lipas-org]]
+            [:dispatch [::fetch-awaiting-archive (get-in lipas-org [:ptv-data :org-id])]]]})))
 
 (rf/reg-event-fx ::fetch-ptv-org
   (fn [{:keys [db]} [_ lipas-org]]
@@ -1610,6 +1635,8 @@
                         (update :ptv #(merge {:org-id org-id} %)))
         ;; Always use org languages (site typically doesn't store this)
         org-languages (get-in db [:ptv :selected-org :ptv-data :supported-languages] ptv-data/fallback-languages)
+        channel (get-in db [:ptv :org org-id :data :service-channels
+                            (-> sports-site :ptv :service-channel-ids first)])
         ptv (merge (select-keys (:default-settings (:ptv db))
                                 [:sync-enabled])
                    {:service-channel-ids []}
@@ -1632,7 +1659,12 @@
       ;; the site's own data the review took from PTV: the backend writes
       ;; it into the site, which the sync then sends
       (get-in db [:ptv :review :site-patch lipas-id])
-      (assoc :site-patch (get-in db [:ptv :review :site-patch lipas-id])))))
+      (assoc :site-patch (get-in db [:ptv :review :site-patch lipas-id]))
+
+      ;; what the review was made against: a location changed in PTV since
+      ;; is refused, not overwritten unseen
+      (review-data/reviewed channel)
+      (assoc :reviewed (review-data/reviewed channel)))))
 
 (rf/reg-event-fx ::create-ptv-service-location
   (fn [{:keys [db]} [_ lipas-id success-fx failure-fx]]
@@ -1707,8 +1739,12 @@
                (cond->
                  (and modified? channel-id)
                  (assoc-in [:ptv :org org-id :data :service-channels channel-id :publishingStatus] "Modified")))
-       :fx (into (or (seq extra-fx) [])
-                 [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
+       :fx (cond-> (into (or (seq extra-fx) [])
+                         [[:dispatch [:lipas.ui.events/set-active-notification notification]]])
+             ;; changed in PTV since the review: show the review on fresh data
+             (changed-since-review? resp)
+             (into [[:dispatch [::refresh-service-channel org-id channel-id]]
+                    [:dispatch [::show-review lipas-id]]]))})))
 
 ;;; Sync review ;;;
 ;; The review compares PTV with the saved site; a decision is made by
@@ -2017,6 +2053,83 @@
                (assoc-in [:ptv :save-in-progress] false)
                (assoc-in [:ptv :errors :save] resp))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
+;;; Sites waiting to be archived in PTV (D2) ;;;
+
+(rf/reg-event-fx ::fetch-awaiting-archive
+  ;; Sites removed in Lipas (or no longer PTV's) while still published in
+  ;; PTV: an editor without PTV rights can't archive them, a PTV manager does
+  ;; here. Not among the integration candidates, hence a query of their own.
+  (fn [{:keys [db]} [_ org-id]]
+    (when org-id
+      {:fx [[:http-xhrio
+             {:method :post
+              :headers {:Authorization (str "Token " (-> db :user :login :token))}
+              :uri (str (:backend-url db) "/actions/get-ptv-awaiting-archive")
+              :params {:org-id org-id}
+              :format (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success [::fetch-awaiting-archive-success org-id]
+              :on-failure [::fetch-awaiting-archive-failure org-id]}]]})))
+
+(rf/reg-event-db ::fetch-awaiting-archive-success
+  (fn [db [_ org-id resp]]
+    (assoc-in db [:ptv :org org-id :data :awaiting-archive] resp)))
+
+(rf/reg-event-db ::fetch-awaiting-archive-failure
+  ;; nothing to show: the list is a convenience, PTV is untouched
+  (fn [db [_ org-id _resp]]
+    (update-in db [:ptv :org org-id :data] dissoc :awaiting-archive)))
+
+(rf/reg-event-fx ::archive-awaiting
+  ;; "Arkistoi PTV:ssä": a status-only archive of a site waiting for it
+  (fn [{:keys [db]} [_ org-id lipas-id]]
+    {:db (assoc-in db [:ptv :syncing :service-location lipas-id] true)
+     :fx [[:http-xhrio
+           {:method :post
+            :headers {:Authorization (str "Token " (-> db :user :login :token))}
+            :uri (str (:backend-url db) "/actions/archive-ptv-site")
+            :params {:org-id org-id :lipas-id lipas-id}
+            :format (ajax/transit-request-format)
+            :response-format (ajax/transit-response-format)
+            :on-success [::archive-awaiting-success org-id lipas-id]
+            :on-failure [::archive-awaiting-failure lipas-id]}]]}))
+
+(rf/reg-event-fx ::archive-awaiting-success
+  (fn [{:keys [db]} [_ org-id lipas-id _resp]]
+    {:db (-> db
+             (update-in [:ptv :syncing :service-location] dissoc lipas-id)
+             (update-in [:ptv :org org-id :data :awaiting-archive]
+                        (fn [sites] (vec (remove #(= lipas-id (:lipas-id %)) sites)))))
+     :fx [[:dispatch [:lipas.ui.events/set-active-notification
+                      {:message ((:translator db) :ptv.actions/archived-in-ptv) :success? true}]]]}))
+
+(rf/reg-event-fx ::archive-awaiting-failure
+  (fn [{:keys [db]} [_ lipas-id resp]]
+    {:db (update-in db [:ptv :syncing :service-location] dissoc lipas-id)
+     :fx [[:dispatch [:lipas.ui.events/set-active-notification
+                      (ptv-sync-error-notification (:translator db) resp)]]]}))
+
+;;; Synkronoi kaikki valmiit ;;;
+
+(rf/reg-event-fx ::sync-all-ready
+  ;; Clears the backlog of sites ready to sync (D2: editors' saves wait for a
+  ;; PTV manager) without opening each row. Same gate as one site's sync:
+  ;; a site with a change made in PTV still waiting for a choice is skipped,
+  ;; and the confirmation names it.
+  (fn [{:keys [db]} [_ ready awaiting]]
+    (let [tr (:translator db)]
+      {:fx [[:dispatch [:lipas.ui.events/confirm-with
+                        {:title (tr :ptv/sync-all-ready-title (count ready))
+                         :message [:div
+                                   [:p {:style {:margin-top 0}}
+                                    (tr :ptv/sync-all-ready-intro (count ready))]
+                                   (when (seq awaiting)
+                                     [:<>
+                                      [:p (tr :ptv/sync-all-ready-skipped)]
+                                      (into [:ul] (for [{:keys [name]} awaiting] [:li name]))])]
+                         :confirm-label (tr :ptv/sync-all-ready-confirm)
+                         :on-confirm #(rf/dispatch [::create-all-ptv-service-locations ready])}]]]})))
 
 ;;; Fresh PTV data for an opened row ;;;
 

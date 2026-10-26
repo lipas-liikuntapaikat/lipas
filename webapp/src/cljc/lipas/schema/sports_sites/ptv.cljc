@@ -153,4 +153,11 @@
      ;; (lipas.data.ptv-review/review-site-patch): the fields a site editor
      ;; may take, validated as a site save validates them; nil removes an
      ;; optional value. Needs the right to edit the site.
-     [:site-patch {:optional true} site-patch]]))
+     [:site-patch {:optional true} site-patch]
+     ;; What the user's sync review was made against: PTV's :modified and
+     ;; connections of the location. A location changed since is refused
+     ;; (409 :ptv-changed-since-review). Absent: no check.
+     [:reviewed {:optional true}
+      [:map {:closed true}
+       [:modified {:optional true} [:maybe :string]]
+       [:service-ids {:optional true} [:vector :string]]]]]))

@@ -53,6 +53,7 @@
             [lipas.data.ptv :as ptv-data]
             [lipas.data.ptv-review :as ptv-review]
             [lipas.data.ptv-service-guidance :as service-guidance]
+            [lipas.data.status :as status]
             [lipas.data.types :as types]
             [lipas.ui.components.autocompletes :refer [autocomplete2]]
             [lipas.ui.components.checkboxes :as checkboxes]
@@ -744,6 +745,95 @@
                :variant "outlined"
                :icon (r/as-element [:> icon {:fontSize "small"}])}]]))
 
+(defn- export-halted-alert
+  "Where a halted export stopped, why, and how to go on
+   (::events/resume-service-locations-creation)."
+  [{:keys [tr sports-sites failed skipped-count]}]
+  (let [{:keys [lipas-id error]} failed
+        site-name (some #(when (= lipas-id (:lipas-id %)) (:name %)) sports-sites)]
+    [:> Alert {:severity "error" :sx #js {:mt 2}}
+     [:> AlertTitle (tr :ptv.wizard/export-halted)]
+     [:> Stack {:spacing 1}
+      [:> Typography {:variant "body2"}
+       (tr :ptv.wizard/export-failed-site (or site-name lipas-id))]
+      (when-let [body (events/ptv-error-body tr error)]
+        [:> Typography {:variant "body2"} body])
+      (when (pos? skipped-count)
+        [:> Typography {:variant "body2"}
+         (if (= 1 skipped-count)
+           (tr :ptv.wizard/export-skipped-one)
+           (tr :ptv.wizard/export-skipped skipped-count))])
+      [:> Typography {:variant "body2"}
+       (tr :ptv.wizard/export-resume-hint)]
+      [:> Button {:size "small"
+                  :variant "outlined"
+                  :color "inherit"
+                  :sx #js {:alignSelf "flex-start" :textTransform "none"}
+                  :on-click #(==> [::events/resume-service-locations-creation])}
+       (tr :ptv.wizard/export-resume)]]]))
+
+(defn- awaiting-archive
+  "Sites removed in Lipas, or no longer PTV's, whose location is still
+   published in PTV: an editor without PTV rights can't archive it (D2), a
+   PTV manager does it here. The ① notice, once per site."
+  [{:keys [tr org-id]}]
+  (let [sites (<== [::subs/awaiting-archive org-id])
+        locale (tr)]
+    (when (seq sites)
+      [:> Stack {:spacing 1 :sx #js {:mx 2 :mt 1}}
+       [:> Typography {:variant "subtitle2"}
+        (tr :ptv/awaiting-archive-title (count sites))]
+       (for [{:keys [lipas-id name status event-date]} sites
+             :let [syncing? (<== [::subs/syncing-service-location? lipas-id])
+                   removed? (#{"incorrect-data" "out-of-service-permanently"} status)]]
+         ^{:key lipas-id}
+         [:> Alert {:severity "warning" :variant "outlined"
+                    :action (r/as-element
+                              [:> Stack {:direction "row" :spacing 1}
+                               [:> Button {:size "small" :color "inherit" :variant "outlined"
+                                           :disabled syncing?
+                                           :sx #js {:textTransform "none" :whiteSpace "nowrap"}
+                                           :on-click #(==> [::events/archive-awaiting org-id lipas-id])}
+                                (tr :ptv/archive-in-ptv-now)]
+                               [:> Button {:size "small" :color "inherit"
+                                           :sx #js {:textTransform "none" :whiteSpace "nowrap"}
+                                           :on-click #(do (==> [::events/close-dialog])
+                                                          (==> [:lipas.ui.map.events/show-sports-site lipas-id]))}
+                                (tr :ptv/open-site)]])}
+          [:> AlertTitle name]
+          (if removed?
+            (tr :ptv/awaiting-archive-removed
+                (get-in status/statuses [status (keyword locale)] status)
+                (some-> event-date utils/->human-date))
+            (tr :ptv/awaiting-archive-not-candidate))])])))
+
+(defn- sync-all-ready
+  "\"Synkronoi kaikki valmiit (n)\", and the progress of the run: the sites
+   ready to sync, without opening each (D2: editors' saves wait for a PTV
+   manager). Sites still waiting for a choice are skipped."
+  [{:keys [tr sites]}]
+  (let [ready (filter #(and (:sync-enabled %) (:valid %) (= :ready (:sync-status %))) sites)
+        awaiting (filter #(and (:sync-enabled %) (= :awaiting-choice (:sync-status %))) sites)
+        {:keys [in-progress? processed-count total-count failed skipped-count]}
+        (<== [::subs/service-location-creation-progress])]
+    [:<>
+     (when (or (seq ready) in-progress?)
+       [:> Stack {:direction "row" :spacing 2 :alignItems "center" :sx #js {:mx 2 :mt 1}}
+        [:> Button {:variant "outlined" :size "small" :color "secondary"
+                    :disabled (or in-progress? (empty? ready))
+                    :sx #js {:textTransform "none"}
+                    :startIcon (r/as-element [:> Icon "sync"])
+                    :on-click #(==> [::events/sync-all-ready ready awaiting])}
+         (tr :ptv/sync-all-ready (count ready))]
+        (when in-progress?
+          [:> Stack {:direction "row" :spacing 1 :alignItems "center"}
+           [:> CircularProgress {:size 16}]
+           [:> Typography {:variant "body2"} (str processed-count "/" total-count)]])])
+     (when failed
+       [:> Stack {:sx #js {:mx 2}}
+        [export-halted-alert {:tr tr :sports-sites sites :failed failed
+                              :skipped-count skipped-count}]])]))
+
 (defn table []
   (r/with-let [expanded-rows (r/atom {})
                search-text (r/atom "")
@@ -825,6 +915,8 @@
                    #_{:key :service-channel-description :label "Kuvaus"}]]
 
       [:<>
+       [awaiting-archive {:tr tr :org-id org-id}]
+       [sync-all-ready {:tr tr :sites sites}]
        ;; changes made in PTV waiting for a choice: say how many, and lead to them
        (let [n (count (filter #(and (:sync-enabled %) (= :awaiting-choice (:sync-status %))) sites))]
          (when (pos? n)
@@ -1669,33 +1761,6 @@
          [status-chip tr site])]]
 
      [service-location-details props]]))
-
-(defn- export-halted-alert
-  "Where a halted export stopped, why, and how to go on
-   (::events/resume-service-locations-creation)."
-  [{:keys [tr sports-sites failed skipped-count]}]
-  (let [{:keys [lipas-id error]} failed
-        site-name (some #(when (= lipas-id (:lipas-id %)) (:name %)) sports-sites)]
-    [:> Alert {:severity "error" :sx #js {:mt 2}}
-     [:> AlertTitle (tr :ptv.wizard/export-halted)]
-     [:> Stack {:spacing 1}
-      [:> Typography {:variant "body2"}
-       (tr :ptv.wizard/export-failed-site (or site-name lipas-id))]
-      (when-let [body (events/ptv-error-body tr error)]
-        [:> Typography {:variant "body2"} body])
-      (when (pos? skipped-count)
-        [:> Typography {:variant "body2"}
-         (if (= 1 skipped-count)
-           (tr :ptv.wizard/export-skipped-one)
-           (tr :ptv.wizard/export-skipped skipped-count))])
-      [:> Typography {:variant "body2"}
-       (tr :ptv.wizard/export-resume-hint)]
-      [:> Button {:size "small"
-                  :variant "outlined"
-                  :color "inherit"
-                  :sx #js {:alignSelf "flex-start" :textTransform "none"}
-                  :on-click #(==> [::events/resume-service-locations-creation])}
-       (tr :ptv.wizard/export-resume)]]]))
 
 (r/defc integrate-service-locations
   [_props]

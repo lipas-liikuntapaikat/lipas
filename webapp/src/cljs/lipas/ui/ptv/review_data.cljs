@@ -7,7 +7,8 @@
   (:require [clojure.string :as str]
             [lipas.data.cities :as cities]
             [lipas.data.ptv :as ptv-data]
-            [lipas.data.ptv-review :as ptv-review]))
+            [lipas.data.ptv-review :as ptv-review]
+            [lipas.roles :as roles]))
 
 (defn choices-path
   "The choices made in a site's review: row :key -> {:choice :lipas :seen}
@@ -177,3 +178,33 @@
   (let [a (name-words site-name)
         b (name-words ptv-name)]
     (boolean (and (seq a) (seq b) (empty? (filter a b))))))
+
+(defn app-user
+  "The user as privileges are checked (:lipas.ui.user.subs/user-data), for
+   an event handler: with the developer's privilege overrides."
+  [db]
+  (some-> (:user db)
+          (assoc :dev/overrides (:lipas.ui.project-devtools/privilege-override db))))
+
+(defn ptv-manager-for?
+  "Whether `user` manages PTV for `site`'s municipality: only their save
+   writes to PTV (D2, lipas.backend.core/ptv-sync-by?)."
+  [user site]
+  (boolean (roles/check-privilege user {:city-code (get-in site [:location :city :city-code])}
+                                  :ptv/manage)))
+
+(defn save-syncs?
+  "Whether `user`'s save of the edit `site` writes to PTV (the backend's
+   lipas.backend.core/ptv-sync-by?)."
+  [user site]
+  (and (ptv-data/save-syncs? site) (ptv-manager-for? user site)))
+
+(defn reviewed
+  "What a review against `channel` (PTV's location, GET shape) was made
+   against, for the backend to refuse a write over a change made in PTV
+   since: {:modified :service-ids}. nil without a channel or its
+   :modified."
+  [channel]
+  (when (:modified channel)
+    {:modified (:modified channel)
+     :service-ids (vec (ptv-data/channel-service-ids channel))}))

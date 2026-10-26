@@ -246,3 +246,13 @@ FROM sports_site_current s,
 WHERE s.document #>> '{ptv,org-id}' = :ptv_org_id
   AND s.document #>> '{ptv,publishing-status}' = 'Published'
 GROUP BY lang
+
+-- :name get-ptv-published-sites
+-- :command :query
+-- :result :many
+-- :doc The current revisions of a PTV organisation's sites whose service
+-- :doc location is published in PTV, as their last sync stored it.
+SELECT *
+FROM sports_site_current
+WHERE document #>> '{ptv,org-id}' = :ptv_org_id
+  AND document #>> '{ptv,publishing-status}' = 'Published'

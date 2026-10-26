@@ -243,6 +243,12 @@
          (into {} (map (fn [{:keys [lipas_id] :as row}]
                          [lipas_id (sports-site/unmarshall row)]))))))
 
+(defn get-ptv-published-sites
+  "The current revisions of the PTV org's sites published in PTV."
+  [db-spec ptv-org-id]
+  (->> (sports-site/get-ptv-published-sites db-spec {:ptv_org_id ptv-org-id})
+       (mapv sports-site/unmarshall)))
+
 (defn get-ptv-language-usage
   "LIPAS language code -> how many of the PTV org's published service
   locations are in it, as their last sync stored it."

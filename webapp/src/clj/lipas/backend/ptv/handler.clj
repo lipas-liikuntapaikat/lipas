@@ -680,6 +680,11 @@
               {:status 403
                :body (ex-data e)}
 
+              ;; Changed in PTV after the user's review: nothing was written
+              (= :ptv-changed-since-review (:type (ex-data e)))
+              {:status 409
+               :body {:type :ptv-changed-since-review}}
+
               ;; A different sports-site already owns this service-location.
               (= :double-link (:type (ex-data e)))
               (do
@@ -705,6 +710,37 @@
 
               :else
               (throw e)))))}}]
+
+   ["/actions/get-ptv-awaiting-archive"
+    {:post
+     {:require-privilege (ptv-org-read-access? db)
+      :parameters {:body [:map {:closed true} [:org-id :string]]}
+      :handler
+      (fn [req]
+        {:status 200
+         :body (ptv-core/get-ptv-awaiting-archive db (-> req :parameters :body :org-id))})}}]
+
+   ["/actions/archive-ptv-site"
+    {:post
+     {:require-privilege (ptv-org-write-access? db)
+      :parameters {:body [:map {:closed true}
+                          [:org-id :string]
+                          [:lipas-id #'sports-sites-schema/lipas-id]]}
+      :handler
+      (fn [req]
+        (try
+          {:status 200
+           :body (ptv-core/archive-ptv-site! db ptv search (:identity req)
+                                             (-> req :parameters :body))}
+          (catch clojure.lang.ExceptionInfo e
+            (cond
+              (#{:not-published :double-link} (:type (ex-data e)))
+              {:status 409 :body (select-keys (ex-data e) [:type :lipas-id :service-channel-id])}
+
+              (ptv-core/parse-ptv-error e)
+              {:status 409 :body (ptv-core/parse-ptv-error e)}
+
+              :else (throw e)))))}}]
 
    ["/actions/save-ptv-meta"
     {:post

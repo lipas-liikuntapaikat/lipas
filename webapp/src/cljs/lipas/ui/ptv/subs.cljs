@@ -569,6 +569,13 @@
                                (get all-choices lipas-id)))))
            (sort-by :lipas-id)))))
 
+(rf/reg-sub ::awaiting-archive
+  ;; Sites still published in PTV although removed in Lipas (or no longer
+  ;; PTV's), waiting for a PTV manager to archive them (D2)
+  :<- [::ptv]
+  (fn [ptv [_ org-id]]
+    (get-in ptv [:org org-id :data :awaiting-archive])))
+
 (rf/reg-sub ::unreachable-channels
   ;; ids of the service locations whose refetch failed (not as archived):
   ;; their review is on the data the dialog opened with

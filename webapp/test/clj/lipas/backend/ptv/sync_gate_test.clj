@@ -198,11 +198,18 @@
                           (assoc site :ptv (merge {:sync-enabled true :org-id ptv-org-a} texts)))]
           (is (= 403 (:status resp)))
           (is (empty? @sync-calls))))
-      (testing "...but can keep editing an integrated site; it still re-syncs"
+      (testing "...but can keep editing an integrated site, which stays in Lipas (D2)"
         (let [site (seed-site! own-city (merge {:sync-enabled true :org-id ptv-org-a
                                                 :service-ids [] :service-channel-ids []}
                                                texts))
               resp (save! (city-manager own-city) (assoc site :name "Uusi nimi"))]
+          (is (= 201 (:status resp)))
+          (is (empty? @sync-calls))))
+      (testing "the municipality's PTV manager's edit syncs"
+        (let [site (seed-site! own-city (merge {:sync-enabled true :org-id ptv-org-a
+                                                :service-ids [] :service-channel-ids []}
+                                               texts))
+              resp (save! (ptv-manager own-city) (assoc site :name "Uusi nimi"))]
           (is (= 201 (:status resp)))
           (is (= 1 (count @sync-calls))))))))
 
@@ -211,12 +218,20 @@
             and the sync failure is stored on the site instead of being skipped silently"
     (seed-org! ptv-org-a [own-city])
     ;; real sync-ptv!: its guard throws before any PTV request
-    (let [site (seed-site! own-city {:sync-enabled true})
-          resp (save! (city-manager own-city) (assoc site :name "Uusi nimi"))
-          stored (current (:lipas-id site))]
-      (is (= 201 (:status resp)))
-      (is (= "Uusi nimi" (:name stored)))
-      (is (= ["ptv/no-org"] (map name (get-in stored [:ptv :error :blockers])))))))
+    (testing "a site editor's save stays in Lipas (D2)"
+      (let [site (seed-site! own-city {:sync-enabled true})
+            resp (save! (city-manager own-city) (assoc site :name "Uusi nimi"))
+            stored (current (:lipas-id site))]
+        (is (= 201 (:status resp)))
+        (is (= "Uusi nimi" (:name stored)))
+        (is (nil? (get-in stored [:ptv :error])))))
+    (testing "a PTV manager's save tries the sync and stores why it can't"
+      (let [site (seed-site! own-city {:sync-enabled true})
+            resp (save! (ptv-manager own-city) (assoc site :name "Uusi nimi"))
+            stored (current (:lipas-id site))]
+        (is (= 201 (:status resp)))
+        (is (= "Uusi nimi" (:name stored)))
+        (is (= ["ptv/no-org"] (map name (get-in stored [:ptv :error :blockers]))))))))
 
 ;;; Site editors without PTV rights ;;;
 
@@ -267,13 +282,13 @@
               (is (= integrated-ptv (:ptv stored)))
               (is (empty? @sync-calls)))))))))
 
-(deftest no-ptv-rights-edit-keeps-ptv-and-resyncs-test
+(deftest no-ptv-rights-edit-keeps-ptv-and-stays-in-lipas-test
   (seed-org! ptv-org-a [own-city])
   (with-sync-stub
     (fn []
-      (testing "a name edit by a site editor without PTV rights keeps :ptv as stored
-                and re-syncs under the site's org, even when the browser's copy of
-                the sync's record is stale or forged"
+      (testing "a name edit by a site editor without PTV rights keeps :ptv as stored,
+                even when the browser's copy of the sync's record is stale or
+                forged, and doesn't sync (D2): a PTV manager syncs it later"
         (let [site (seed-site! own-city integrated-ptv)
               resp (save! (city-manager own-city)
                           (-> site
@@ -288,6 +303,14 @@
           (is (= 201 (:status resp)))
           (is (= "Uusi nimi" (:name stored)))
           (is (= integrated-ptv (:ptv stored)))
+          (is (nil? call) "no sync")))
+
+      (testing "the same edit by the municipality's PTV manager syncs under the site's org"
+        (reset! sync-calls [])
+        (let [site (seed-site! own-city integrated-ptv)
+              resp (save! (ptv-manager own-city) (assoc site :name "Uusi nimi"))
+              [call] @sync-calls]
+          (is (= 201 (:status resp)))
           (is (= 1 (count @sync-calls)))
           (is (= ptv-org-a (:org-id call)))
           (is (= integrated-ptv (:ptv call)) "the sync got the stored settings and PTV ids"))))))
@@ -324,8 +347,11 @@
 
 (def ^:private ptv-requests (atom []))
 
+(def ^:private ptv-modified "2026-10-01T10:00:01.000000")
+
 (defn- ptv-channel [id {:keys [services publishing-status name]}]
   {:id id
+   :modified ptv-modified
    :sourceId "lipas-src-1"
    :organizationId ptv-org-a
    :serviceChannelType "ServiceLocation"
@@ -371,15 +397,32 @@
                          (throw (ex-info (str "Fake PTV doesn't serve " method " " path) {})))))]
        (f)))))
 
-(deftest no-ptv-rights-edit-syncs-to-ptv-test
+;; D2: only a PTV manager's save reaches PTV.
+
+(deftest no-ptv-rights-edit-doesnt-reach-ptv-test
   (testing "a site editor without PTV rights renames an integrated site: the
+            rename is stored, PTV isn't called, and the PTV record is as it was
+            (the site reads 'ready to sync' in the PTV tool)"
+    (seed-org! ptv-org-a [own-city])
+    (with-fake-ptv
+      (fn []
+        (let [site (seed-site! own-city integrated-ptv)
+              resp (save! (city-manager own-city) (assoc site :name "Uusi nimi"))
+              stored (current (:lipas-id site))]
+          (is (= 201 (:status resp)))
+          (is (empty? @ptv-requests))
+          (is (= "Uusi nimi" (:name stored)))
+          (is (= integrated-ptv (:ptv stored))))))))
+
+(deftest ptv-manager-edit-syncs-to-ptv-test
+  (testing "the municipality's PTV manager renames an integrated site: the
             stored settings are written to the site's existing channel, under
             the site's org, and the sync's result is stored"
     (seed-org! ptv-org-a [own-city])
     (with-fake-ptv
       (fn []
         (let [site (seed-site! own-city integrated-ptv)
-              resp (save! (city-manager own-city) (assoc site :name "Uusi nimi"))
+              resp (save! (ptv-manager own-city) (assoc site :name "Uusi nimi"))
               stored (current (:lipas-id site))
               writes (remove (comp #{:get} second) @ptv-requests)
               [[org-id _ path body]] writes]
@@ -399,38 +442,77 @@
                    (select-keys (:ptv stored) ptv-data/user-controlled-ptv-keys)))
             (is (= "Published" (get-in stored [:ptv :publishing-status])))
             (is (= ["channel-1"] (get-in stored [:ptv :service-channel-ids])))
+            (is (= ptv-modified (get-in stored [:ptv :ptv-modified])))
             (is (not= (:last-sync integrated-ptv) (get-in stored [:ptv :last-sync])))
             (is (nil? (get-in stored [:ptv :error])))))))))
 
-(deftest no-ptv-rights-removal-archives-in-ptv-test
+(defn- removal-waits-for-a-ptv-manager!
+  [status]
   (seed-org! ptv-org-a [own-city])
-  (doseq [status ["out-of-service-permanently" "incorrect-data"]]
-    (testing (str "a site editor without PTV rights sets an integrated site "
-                  status ": its channel is archived with a status-only PUT")
+  (let [awaiting #(set (map :lipas-id (ptv-core/get-ptv-awaiting-archive (test-db) ptv-org-a)))]
+    (testing (str "a site editor without PTV rights sets an integrated site " status)
       (with-fake-ptv
         (fn []
           (let [site (seed-site! own-city integrated-ptv)
                 resp (save! (city-manager own-city) (assoc site :status status))
-                stored (current (:lipas-id site))
-                writes (remove (comp #{:get} second) @ptv-requests)]
+                stored (current (:lipas-id site))]
             (is (= 201 (:status resp)))
-            (is (= [[ptv-org-a :put "/v11/ServiceChannel/ServiceLocation/channel-1"
-                     {:publishingStatus "Deleted"}]]
-                   writes))
-            (is (= status (:status stored)))
-            (is (= "Deleted" (get-in stored [:ptv :publishing-status])))
-            (testing "the LIPAS↔PTV link survives, so re-activating re-publishes the same channel"
-              (is (= "lipas-src-1" (get-in stored [:ptv :source-id])))
-              (is (= ["channel-1"] (get-in stored [:ptv :service-channel-ids]))))))))))
+            (testing "nothing reaches PTV: the location stays published"
+              (is (empty? @ptv-requests))
+              (is (= status (:status stored)))
+              (is (= "Published" (get-in stored [:ptv :publishing-status]))))
+            (testing "it waits in the PTV tool for a PTV manager"
+              (is (contains? (awaiting) (:lipas-id site))))
 
-(deftest no-ptv-rights-edit-survives-ptv-failure-test
-  (testing "PTV failing doesn't fail a save by a site editor without PTV rights;
-            the edit is stored and the error is shown on the site"
+            (testing "archiving needs PTV rights"
+              (is (= 403 (:status (post "/api/actions/archive-ptv-site"
+                                        {:org-id ptv-org-a :lipas-id (:lipas-id site)}
+                                        (city-manager own-city))))))
+
+            (testing "a PTV manager archives it with a status-only PUT"
+              (let [resp (post "/api/actions/archive-ptv-site"
+                               {:org-id ptv-org-a :lipas-id (:lipas-id site)}
+                               (ptv-manager own-city))
+                    writes (remove (comp #{:get} second) @ptv-requests)
+                    stored (current (:lipas-id site))]
+                (is (= 200 (:status resp)))
+                (is (= [[ptv-org-a :put "/v11/ServiceChannel/ServiceLocation/channel-1"
+                         {:publishingStatus "Deleted"}]]
+                       writes))
+                (is (= status (:status stored)))
+                (is (= "Deleted" (get-in stored [:ptv :publishing-status])))
+                (is (not (contains? (awaiting) (:lipas-id site))))
+                (testing "the LIPAS↔PTV link survives, so re-activating re-publishes the same channel"
+                  (is (= "lipas-src-1" (get-in stored [:ptv :source-id])))
+                  (is (= ["channel-1"] (get-in stored [:ptv :service-channel-ids]))))))))))))
+
+(deftest permanently-out-waits-for-a-ptv-manager-test
+  (removal-waits-for-a-ptv-manager! "out-of-service-permanently"))
+
+(deftest incorrect-data-waits-for-a-ptv-manager-test
+  (removal-waits-for-a-ptv-manager! "incorrect-data"))
+
+(deftest ptv-manager-removal-archives-at-once-test
+  (seed-org! ptv-org-a [own-city])
+  (with-fake-ptv
+    (fn []
+      (let [site (seed-site! own-city integrated-ptv)
+            resp (save! (ptv-manager own-city) (assoc site :status "incorrect-data"))
+            writes (remove (comp #{:get} second) @ptv-requests)]
+        (is (= 201 (:status resp)))
+        (is (= [[ptv-org-a :put "/v11/ServiceChannel/ServiceLocation/channel-1"
+                 {:publishingStatus "Deleted"}]]
+               writes))
+        (is (empty? (ptv-core/get-ptv-awaiting-archive (test-db) ptv-org-a)))))))
+
+(deftest ptv-manager-edit-survives-ptv-failure-test
+  (testing "PTV failing doesn't fail a PTV manager's save; the edit is stored
+            and the error is shown on the site"
     (seed-org! ptv-org-a [own-city])
     (with-fake-ptv 500
       (fn []
         (let [site (seed-site! own-city integrated-ptv)
-              resp (save! (city-manager own-city) (assoc site :name "Uusi nimi"))
+              resp (save! (ptv-manager own-city) (assoc site :name "Uusi nimi"))
               stored (current (:lipas-id site))]
           (is (= 201 (:status resp)))
           (is (= "Uusi nimi" (:name stored)))
@@ -439,6 +521,66 @@
             (is (= "Published" (get-in stored [:ptv :publishing-status])))
             (is (= (:last-sync integrated-ptv) (get-in stored [:ptv :last-sync])))
             (is (= ["channel-1"] (get-in stored [:ptv :service-channel-ids])))))))))
+
+;; D3: a review that went stale doesn't overwrite PTV.
+
+(deftest stale-review-isnt-written-over-test
+  (seed-org! ptv-org-a [own-city])
+  (let [reviewed {:modified ptv-modified :service-ids ["service-1"]}]
+    (testing "the site form: a PTV change after the review saves Lipas and skips the sync"
+      (with-fake-ptv
+        (fn []
+          (let [site (seed-site! own-city integrated-ptv)
+                resp (save! (ptv-manager own-city)
+                            (assoc site :name "Uusi nimi"
+                                   :reviewed (assoc reviewed :modified "2026-09-01T00:00:00.000000")))
+                stored (current (:lipas-id site))]
+            (is (= 201 (:status resp)))
+            (is (= "Uusi nimi" (:name stored)))
+            (is (empty? (remove (comp #{:get} second) @ptv-requests)) "no write")
+            (is (= "ptv-changed-since-review" (get-in stored [:ptv :error :type])))
+            (is (not (contains? stored :reviewed)) "not stored")))))
+
+    (testing "a connection made in PTV after the review counts too"
+      (with-fake-ptv
+        (fn []
+          (let [site (seed-site! own-city integrated-ptv)]
+            (save! (ptv-manager own-city)
+                   (assoc site :name "Uusi nimi" :reviewed (assoc reviewed :service-ids [])))
+            (is (empty? (remove (comp #{:get} second) @ptv-requests)))))))
+
+    (testing "the review PTV still matches: the sync goes through"
+      (with-fake-ptv
+        (fn []
+          (let [site (seed-site! own-city integrated-ptv)]
+            (save! (ptv-manager own-city) (assoc site :name "Uusi nimi" :reviewed reviewed))
+            (is (= 1 (count (remove (comp #{:get} second) @ptv-requests))))
+            (is (nil? (get-in (current (:lipas-id site)) [:ptv :error])))))))
+
+    (testing "no :reviewed (an old browser tab): today's behaviour, no check"
+      (with-fake-ptv
+        (fn []
+          (let [site (seed-site! own-city integrated-ptv)]
+            (save! (ptv-manager own-city) (assoc site :name "Uusi nimi"))
+            (is (= 1 (count (remove (comp #{:get} second) @ptv-requests))))))))))
+
+(deftest stale-review-in-ptv-tool-test
+  (seed-org! ptv-org-a [own-city])
+  (let [reviewed {:modified ptv-modified :service-ids ["service-1"]}]
+    (testing "the PTV tool: 409, and nothing is written"
+      (with-fake-ptv
+        (fn []
+          (let [site (seed-site! own-city integrated-ptv)
+                resp (post "/api/actions/save-ptv-service-location"
+                           {:org-id ptv-org-a
+                            :lipas-id (:lipas-id site)
+                            :ptv (select-keys integrated-ptv [:org-id :sync-enabled :service-ids
+                                                              :service-channel-ids :summary :description])
+                            :reviewed (assoc reviewed :modified "2026-09-01T00:00:00.000000")}
+                           (ptv-manager own-city))]
+            (is (= 409 (:status resp)))
+            (is (= "ptv-changed-since-review" (get-in resp [:parsed :type])))
+            (is (empty? (remove (comp #{:get} second) @ptv-requests)))))))))
 
 ;;; Server-owned :ptv keys ;;;
 

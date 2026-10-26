@@ -513,8 +513,26 @@
                    (:lipas-id site) previous type-code (-> site :ptv :service-ids) ids)
         (assoc ptv :service-ids ids)))))
 
+(defn- check-unchanged-since-review!
+  "Throws {:type :ptv-changed-since-review} when PTV's `location` (fresh
+  GET) changed after the review `reviewed` ({:modified :service-ids}, the
+  channel the user's review was made against) was made: a newer :modified,
+  or other connections (connecting from the service side doesn't move
+  :modified). Without `reviewed` there is no check (D3: no API writers;
+  an old browser tab keeps today's behaviour)."
+  [reviewed location]
+  (when (and reviewed location)
+    (let [modified-changed? (and (contains? reviewed :modified)
+                                 (not= (:modified reviewed) (:modified location)))
+          services-changed? (and (contains? reviewed :service-ids)
+                                 (not= (set (:service-ids reviewed))
+                                       (set (ptv-data/channel-service-ids location))))]
+      (when (or modified-changed? services-changed?)
+        (throw (ex-info "The PTV service location changed after the review"
+                        {:type :ptv-changed-since-review}))))))
+
 (defn upsert-ptv-service-location!*
-  [ptv-component {:keys [org-id site ptv archive?] :as _m}]
+  [ptv-component {:keys [org-id site ptv archive? reviewed] :as _m}]
   (let [id (-> ptv :service-channel-ids first)
         ;; Languages are determined by the org's live PTV config at sync time —
         ;; we don't trust the site's persisted :languages because it may be a
@@ -548,6 +566,10 @@
                                    (if (= 404 (-> e ex-data :resp :status))
                                      nil
                                      (throw e)))))
+        ;; Nothing PTV got since the user's review is overwritten unseen. A
+        ;; status-only archive writes no content.
+        _ (when-not archive?
+            (check-unchanged-since-review! reviewed old-service-location))
         ;; A type change swaps the sub-category's service, whichever way the
         ;; sync was started (rebind-on-type-change).
         ptv (if archive?
@@ -691,7 +713,7 @@
   "Syncs the saved site with `ptv` merged in. `site-patch` (the site's own
    data the sync review took from PTV, see ptv-review/review-site-patch) is
    written into the site first, which needs the right to edit it."
-  [db ptv-component search user {:keys [lipas-id org-id ptv archive? site-patch]}]
+  [db ptv-component search user {:keys [lipas-id org-id ptv archive? site-patch reviewed]}]
   ;; FIXME: This is called from inside tx in save-sports-site! is that a problem?
   ;; FIXME: Separate version from this fn for use in sync-ptv! which doesn't load the
   ;; sports site from db etc.?
@@ -713,7 +735,8 @@
                                                                  {:org-id org-id
                                                                   :site site
                                                                   :ptv ptv
-                                                                  :archive? archive?})]
+                                                                  :archive? archive?
+                                                                  :reviewed reviewed})]
 
       (let [resp (core/upsert-sports-site! tx
                                            user
@@ -761,7 +784,7 @@
 ;; Used through resolve due to circular dep
 ;; TODO: Check if code can be moved around to avoid this
 ^{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn sync-ptv! [tx search ptv-component user {:keys [sports-site ptv org-id lipas-id]}]
+(defn sync-ptv! [tx search ptv-component user {:keys [sports-site ptv org-id lipas-id reviewed]}]
   (try
     (let [ready? (ptv-data/ptv-ready? sports-site)
           archive? (to-archive? sports-site ptv)]
@@ -788,7 +811,8 @@
                                                                       {:org-id org-id
                                                                        :ptv ptv
                                                                        :site sports-site
-                                                                       :archive? archive?})
+                                                                       :archive? archive?
+                                                                       :reviewed reviewed})
 
               resp (core/upsert-sports-site! tx
                                              user
@@ -808,8 +832,11 @@
       ;; bearer token. The parsed `:ptv-status`/`:ptv-error` covers
       ;; everything the frontend and operators actually need.
       (let [new-ptv-data (assoc ptv :error (merge {:message (.getMessage e)}
-                                                  ;; our own guards above
-                                                  (select-keys (ex-data e) [:blockers])
+                                                  ;; our own guards above, and a
+                                                  ;; change made in PTV after
+                                                  ;; the review (the save is
+                                                  ;; stored, the sync skipped)
+                                                  (select-keys (ex-data e) [:blockers :type])
                                                   (parse-ptv-error e)))]
         (log/errorf e "Sports site %d updated but PTV sync failed" lipas-id)
         (let [resp (core/upsert-sports-site! tx
@@ -822,6 +849,37 @@
           ;; Failure path also wrote a new revision (with :error captured
           ;; on :ptv). Return the same :event-date so DB and ES match.
           {:ptv (:ptv resp) :event-date (:event-date resp)})))))
+
+(defn get-ptv-awaiting-archive
+  "The PTV org's sites whose location is still published in PTV although
+  the site no longer belongs there (removed, or its owner or type changed:
+  not ptv-data/ptv-candidate?). An editor without PTV rights can't archive
+  in PTV (D2), so they wait in the PTV tool for a PTV manager. The search
+  index doesn't index :ptv, hence the database."
+  [db ptv-org-id]
+  (->> (db/get-ptv-published-sites db ptv-org-id)
+       (remove ptv-data/ptv-candidate?)
+       (mapv (fn [site]
+               {:lipas-id (:lipas-id site)
+                :name (:name site)
+                :status (:status site)
+                :event-date (:event-date site)
+                :type-code (-> site :type :type-code)
+                :owner (:owner site)
+                :service-channel-id (-> site :ptv :service-channel-ids first)}))))
+
+(defn archive-ptv-site!
+  "Archives the site's published PTV location with a status-only write, as
+  waiting in get-ptv-awaiting-archive, and stores what PTV answered."
+  [db ptv-component search user {:keys [lipas-id org-id]}]
+  (let [site (db/get-sports-site db lipas-id)]
+    (when-not (and site (ptv-data/is-sent-to-ptv? site))
+      (throw (ex-info "The site isn't published in PTV" {:type :not-published :lipas-id lipas-id})))
+    (upsert-ptv-service-location! db ptv-component search user
+                                  {:lipas-id lipas-id
+                                   :org-id org-id
+                                   :ptv (:ptv site)
+                                   :archive? true})))
 
 (defn save-ptv-integration-definitions
   "Saves ptv definitions under key :ptv. Does not notify webhooks,
