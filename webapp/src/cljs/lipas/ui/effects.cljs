@@ -40,6 +40,14 @@
                             (.scrollIntoView #js {:block "start"}))
                    100)))
 
+(rf/reg-fx ::focus!
+  ;; Moves the keyboard focus to the element with this DOM id, once the
+  ;; render that may have just shown it (and a scroll) has run.
+  (fn [id]
+    (js/setTimeout #(some-> (js/document.getElementById id)
+                            (.focus #js {:preventScroll true}))
+                   150)))
+
 (rf/reg-fx ::copy-to-clipboard!
   (fn [text]
     (-> (js/navigator.clipboard.writeText text)

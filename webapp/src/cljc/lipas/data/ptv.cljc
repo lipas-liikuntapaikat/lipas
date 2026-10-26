@@ -1790,36 +1790,6 @@
             new-ids (sports-site->service-ids types/all source-id->service site)]
         (vec (distinct (concat (remove old-ids ids) new-ids)))))))
 
-(defn unpublished-ptv-languages
-  "Languages the linked PTV service location has texts in that the next sync
-   won't publish — and so will remove, since a service location sync replaces
-   the whole channel. Returns nil when there are none (or no channel), else a
-   map of LIPAS language codes. A language LIPAS doesn't support keeps its
-   PTV code, upper-cased so it can't pass for a LIPAS code (PTV's se is
-   Northern Sámi, LIPAS's is Swedish):
-   - :not-enabled   not in the org's PTV languages (only LIPAS admins can
-                    enable one) or not supported by LIPAS at all
-   - :missing-texts enabled for the org, but the site has no summary and
-                    description in it"
-  [site ptv-channel org-langs]
-  (when ptv-channel
-    (let [ptv-langs (->> (concat (:serviceChannelNames ptv-channel)
-                                 (:serviceChannelDescriptions ptv-channel))
-                         (remove (comp str/blank? :value))
-                         (keep :language)
-                         set)
-          published (set (effective-languages site org-langs))
-          enabled (set org-langs)]
-      (not-empty
-        (reduce (fn [acc ptv-lang]
-                  (let [lang (some-> (lang->locale ptv-lang) name)]
-                    (cond
-                      (contains? published lang) acc
-                      (contains? enabled lang) (update acc :missing-texts (fnil conj []) lang)
-                      :else (update acc :not-enabled (fnil conj []) (or lang (str/upper-case ptv-lang))))))
-                {}
-                (sort ptv-langs))))))
-
 (def synced-content-keys
   "The :ptv keys of a site the PTV tool edits and a sync sends. The tool
    snapshots them as :ptv-saved whenever it loads or saves a site, to tell an

@@ -229,3 +229,20 @@ WHERE lipas_id = :lipas_id AND event_date > :event_date ::timestamptz
 SELECT *
 FROM sports_site_current
 WHERE city_code = :city_code
+
+-- :name get-ptv-language-usage
+-- :command :query
+-- :result :many
+-- :doc For a PTV organisation, how many of its service locations published
+-- :doc in PTV each language version is in (LIPAS codes), as their last sync
+-- :doc stored them: what a sync removes when the org stops publishing it.
+SELECT lang, count(*) AS n
+FROM sports_site_current s,
+     jsonb_array_elements_text(
+       CASE WHEN jsonb_typeof(s.document #> '{ptv,languages}') = 'array'
+            THEN s.document #> '{ptv,languages}'
+            ELSE '[]'::jsonb
+       END) AS lang
+WHERE s.document #>> '{ptv,org-id}' = :ptv_org_id
+  AND s.document #>> '{ptv,publishing-status}' = 'Published'
+GROUP BY lang

@@ -1640,6 +1640,13 @@
       (log/error e "Failed to enqueue background jobs after save"
                  {:lipas-id (:lipas-id resp)}))))
 
+(defn get-ptv-language-usage
+  "LIPAS language code -> how many of the PTV org's published service
+  locations are in it: what removing the language from the org's PTV config
+  deletes from PTV on their next syncs."
+  [db ptv-org-id]
+  (db/get-ptv-language-usage db ptv-org-id))
+
 (defn- ptv-orgs
   "Every LIPAS org with a PTV config."
   [db]

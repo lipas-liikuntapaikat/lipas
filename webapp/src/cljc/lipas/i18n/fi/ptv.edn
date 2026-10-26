@@ -94,4 +94,13 @@
  :lang-en "englanti"
  :blocker-texts-too-short "Tiivistelmässä ja kuvauksessa pitää olla vähintään 5 merkkiä jokaisella kielellä."
  :text-min-length "vähintään {1} merkkiä"
- :sync-failed-body-ptv-message "PTV hylkäsi tiedot: {1}"}
+ :sync-failed-body-ptv-message "PTV hylkäsi tiedot: {1}"
+ :filter-awaiting-choice "Odottaa valintaa"
+ :filter-ready "Valmis synkronoitavaksi"
+ :filter-blocked "Estetty"
+ :status-awaiting-choice "PTV:ssä on tehty muutoksia, jotka odottavat valintaa ennen synkronointia"
+ :status-ready "Lipaksessa on muutoksia, jotka synkronointi vie PTV:hen"
+ :status-blocked "Synkronointi ei mene läpi: PTV:ssä on julkaisematon luonnos tai edellinen synkronointi epäonnistui"
+ :awaiting-choice-banner "{1} liikuntapaikassa on PTV:ssä tehtyjä muutoksia, jotka odottavat valintaa."
+ :show-awaiting-choice "Näytä ne"
+ :will-be-republished "Palvelupaikka on arkistoitu PTV:ssä. Tallennus julkaisee saman palvelupaikan uudelleen."}

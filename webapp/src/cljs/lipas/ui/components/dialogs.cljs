@@ -69,8 +69,10 @@
          close-label])]]))
 
 (defn confirmation-dialog
+  "`confirm-primary?` marks the confirm button as the main action, for when
+   it is the safe one."
   [{:keys [title message on-cancel on-decline decline-label
-           cancel-label on-confirm confirm-label]}]
+           cancel-label on-confirm confirm-label confirm-primary?]}]
   [:> Dialog
    {:open                    true
     :on-close                #()
@@ -83,4 +85,6 @@
     [:> Button {:on-click on-cancel} cancel-label]
     (when on-decline
       [:> Button {:on-click on-decline} decline-label])
-    [:> Button {:on-click on-confirm} confirm-label]]])
+    [:> Button (cond-> {:on-click on-confirm}
+                 confirm-primary? (assoc :variant "contained" :color "secondary"))
+     confirm-label]]])

@@ -1754,6 +1754,19 @@
                                                  (map (fn [p] [p (get-in edited p)])))
                                            rows)]]]}))))
 
+(rf/reg-event-fx ::review-take-value
+  ;; Make the edit hold `value`, one of PTV's values of a one-slot `row`,
+  ;; or for other web pages {:slot :url}: the URL taken into that slot.
+  (fn [{:keys [db]} [_ target lipas-id row value]]
+    (let [path (draft-path db target lipas-id)
+          writes (ptv-review/review-value-writes row value)
+          ;; taking a value decides the row: no keep-Lipas record
+          db (update-in db (review-data/choices-path lipas-id) dissoc (:key row))]
+      (case target
+        :ptv-tool {:db (update-in db path ptv-review/apply-review-writes writes)}
+        :site-form {:db db
+                    :fx [[:dispatch [:lipas.ui.sports-sites.events/edit-fields lipas-id writes]]]}))))
+
 (rf/reg-event-fx ::review-take-sites
   ;; Bulk over the PTV tool's sites: `side` for the rows of each
   ;; {:lipas-id :rows}.
@@ -1776,10 +1789,12 @@
     (assoc-in db (review-data/open-path lipas-id) open?)))
 
 (rf/reg-event-fx ::show-review
-  ;; Opened from a confirmation: the panel may be out of sight.
+  ;; Opened from a confirmation: the panel may be out of sight. The focus
+  ;; moves to the first change still to decide.
   (fn [{:keys [db]} [_ lipas-id]]
     {:db (assoc-in db (review-data/open-path lipas-id) true)
-     :fx [[:lipas.ui.effects/scroll-into-view! (review-data/panel-dom-id lipas-id)]]}))
+     :fx [[:lipas.ui.effects/scroll-into-view! (review-data/panel-dom-id lipas-id)]
+          [:lipas.ui.effects/focus! (review-data/first-open-dom-id lipas-id)]]}))
 
 (rf/reg-event-fx ::sync-with-review
   ;; "Synkronoi nyt" with the site's review `rows` (annotated, see
@@ -1796,11 +1811,9 @@
         {:fx [[:dispatch [:lipas.ui.events/confirm-with
                           (review-data/overwrite-confirmation
                             tr
-                            {:title (tr :ptv.review/confirm-sync-title)
-                             :intro (tr :ptv.review/confirm-sync-intro)
-                             :open open
-                             :confirm-label (tr :ptv.review/sync-and-overwrite)
-                             :on-confirm #(rf/dispatch [::sync-with-review lipas-id rows true])
+                            {:open open
+                             :languages (review-data/language-removals rows)
+                             :on-overwrite #(rf/dispatch [::sync-with-review lipas-id rows true])
                              :on-review #(rf/dispatch [::show-review lipas-id])})]]]}
         ;; The sync sends the saved site: what the review took from PTV
         ;; into the site's own data travels with it for the backend to write.
@@ -2005,31 +2018,46 @@
                (assoc-in [:ptv :errors :save] resp))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
-(rf/reg-event-fx ::load-ptv-texts
-  (fn [{:keys [db]} [_ lipas-id org-id service-channel-id]]
-    (let [token (-> db :user :login :token)]
-      {;; :db (assoc-in db [:ptv :loading-from-ptv :ptv-text] true)
-       :fx [[:http-xhrio
-             {:method :post
-              :headers {:Authorization (str "Token " token)}
-              :uri (str (:backend-url db) "/actions/fetch-ptv-service-channel")
-              :params {:org-id org-id
-                       :service-channel-id service-channel-id}
-              :format (ajax/transit-request-format)
-              :response-format (ajax/transit-response-format)
-              :on-success [::load-ptv-texts-success lipas-id org-id]
-              :on-failure [::load-ptv-texts-failure lipas-id org-id]}]]})))
+;;; Fresh PTV data for an opened row ;;;
 
-(rf/reg-event-fx ::load-ptv-texts-success
-  (fn [{:keys [db]} [_ lipas-id org-id resp]]
-    {:db (-> db
-             ;; (assoc-in [:ptv :loading-from-ptv :ptv-text] false)
-             (update-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] merge (ptv-data/ptv-service-channel->texts resp)))}))
+(rf/reg-event-fx ::refresh-service-channel
+  ;; The PTV tool's channels are as they were when the dialog opened; an
+  ;; opened row refetches its own (one GET), so its review isn't as old.
+  (fn [{:keys [db]} [_ org-id channel-id]]
+    (when (and org-id channel-id)
+      (let [token (-> db :user :login :token)]
+        {:fx [[:http-xhrio
+               {:method :post
+                :headers {:Authorization (str "Token " token)}
+                :uri (str (:backend-url db) "/actions/fetch-ptv-service-channel")
+                :params {:org-id org-id :service-channel-id channel-id}
+                :format (ajax/transit-request-format)
+                :response-format (ajax/transit-response-format)
+                :on-success [::refresh-service-channel-success org-id channel-id]
+                :on-failure [::refresh-service-channel-failure org-id channel-id]}]]}))))
 
-(rf/reg-event-fx ::load-ptv-texts-failure
-  (fn [{:keys [db]} _]
-    {:db (-> db)}))
-             ;; (assoc-in [:ptv :loading-from-ptv :ptv-text] false)
+(rf/reg-event-db ::refresh-service-channel-success
+  (fn [db [_ org-id channel-id resp]]
+    (-> db
+        (assoc-in [:ptv :org org-id :data :service-channels channel-id] resp)
+        (update-in [:ptv :unreachable-channels] disj channel-id))))
+
+(rf/reg-event-db ::refresh-service-channel-failure
+  ;; An archived location 404s: PTV no longer lists it, nothing to refresh.
+  ;; Any other failure leaves the review on older data, which ① says.
+  (fn [db [_ _org-id channel-id resp]]
+    (if (= 404 (:status resp))
+      db
+      (update-in db [:ptv :unreachable-channels] (fnil conj #{}) channel-id))))
+
+(rf/reg-event-fx ::republish
+  ;; "Julkaise uudelleen" for a location archived in PTV: a sync re-publishes
+  ;; the same location. With sync off it is turned on first, and the sync is
+  ;; then the user's to start.
+  (fn [_ [_ site]]
+    (if (:sync-enabled site)
+      {:fx [[:dispatch [::sync-with-review (:lipas-id site) (-> site :review :rows)]]]}
+      {:fx [[:dispatch [::toggle-sync-enabled site true :persist? true]]]})))
 
 ;;; Double-link detection (single-site PTV tab) ;;;
 

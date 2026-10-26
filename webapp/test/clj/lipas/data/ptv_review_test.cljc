@@ -268,25 +268,47 @@
     (testing "in sync"
       (is (= :ok (status site))))
     (testing "changes made only in Lipas just need a sync"
-      (is (= :out-of-date (status (assoc-in site [:ptv :summary :fi] "Lipaksen teksti")))))
+      (is (= :ready (status (assoc-in site [:ptv :summary :fi] "Lipaksen teksti")))))
     (testing "a language added in Lipas just needs a sync"
-      (is (= :out-of-date (status (-> site
-                                      (assoc-in [:ptv :summary :se] "sammanfattning")
-                                      (assoc-in [:ptv :description :se] "beskrivning"))
-                                  ["fi" "se" "en"]))))
+      (is (= :ready (status (-> site
+                                (assoc-in [:ptv :summary :se] "sammanfattning")
+                                (assoc-in [:ptv :description :se] "beskrivning"))
+                            ["fi" "se" "en"]))))
     (testing "a rename in Lipas just needs a sync"
-      (is (= :out-of-date (status (assoc site :name "Uusi nimi")))))
+      (is (= :ready (status (assoc site :name "Uusi nimi")))))
     (testing "a change made in PTV needs a choice"
-      (is (= :content-drift
+      (is (= :awaiting-choice
              (:sync-status (sut/sports-site->ptv-input
                              {:org-id "o" :types {} :org-defaults {} :org-langs ["fi" "en"]}
                              {"C1" (set-ptv-text synced-channel "Summary" "fi" "PTV:n teksti")}
                              services
                              (assoc site :event-date "T1"))))))
     (testing "without the base every difference needs a look"
-      (is (= :content-drift (status (-> site
-                                        (dissoc :ptv-base)
-                                        (assoc-in [:ptv :summary :fi] "Lipaksen teksti"))))))))
+      (is (= :awaiting-choice (status (-> site
+                                          (dissoc :ptv-base)
+                                          (assoc-in [:ptv :summary :fi] "Lipaksen teksti"))))))))
+
+(deftest sync-status-follows-decisions-test
+  (let [channel (set-ptv-text synced-channel "Summary" "fi" "PTV:n teksti")
+        status (fn [site & {:keys [choices channel] :or {channel channel}}]
+                 (:sync-status (sut/sports-site->ptv-input
+                                 {:org-id "o" :types {} :org-defaults {} :org-langs ["fi" "en"]}
+                                 {"C1" channel} services
+                                 ;; :review-saved: the site as loaded, which the
+                                 ;; review compares PTV with (the tool sets it)
+                                 (assoc site :event-date "T1" :ptv-base base
+                                        :review-saved base :review-choices choices))))
+        row (row (sut/sync-review synced-site base channel services ["fi" "en"]) [:summary "fi"])]
+    (testing "a change made in PTV waits for a choice"
+      (is (= :awaiting-choice (status synced-site))))
+    (testing "once decided, the site is ready: the chip doesn't stay"
+      (is (= :ready (status synced-site :choices {[:summary "fi"] {:choice :lipas
+                                                                   :seen (sut/review-choice-seen row)}})))
+      (is (= :ready (status (assoc-in synced-site [:ptv :summary :fi] "PTV:n teksti")))
+          "taking PTV's version is a decision too"))
+    (testing "PTV's unpublished draft or a failed sync blocks it"
+      (is (= :blocked (status synced-site :channel (assoc channel :publishingStatus "Modified"))))
+      (is (= :blocked (status (assoc-in synced-site [:ptv :error] {:message "PTV 502"})))))))
 
 (deftest review-site-patch-test
   (let [saved (sut/->review-base (assoc synced-site :marketing-name "Vanha markkinointinimi"

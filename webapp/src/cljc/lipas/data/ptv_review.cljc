@@ -913,7 +913,25 @@
 
 ;;; The PTV tool's view of a site ;;;
 
-(defn sports-site->ptv-input [{:keys [types org-id org-langs]} service-channels services site]
+(def sync-statuses
+  "A site's sync status in the PTV tool, as its chip shows it:
+   - :not-synced      never exported (\"Ei viety\")
+   - :blocked         a sync can't go through: PTV holds an unpublished
+                      draft of the location, or the last sync failed
+                      (\"Estetty\")
+   - :awaiting-choice changes made in PTV wait for the user's choice
+                      (\"Odottaa valintaa\")
+   - :ready           a sync has something to send, all decided
+                      (\"Valmis synkronoitavaksi\")
+   - :ok              up to date (\"Ajan tasalla\")"
+  [:not-synced :blocked :awaiting-choice :ready :ok])
+
+(defn sports-site->ptv-input
+  "The PTV tool's row for `site`: its texts, links and sync status, and the
+   sync review (`:review`, annotated with the edit). The caller joins in
+   `:ptv-base` and `:review-saved` (->review-base) and `:review-choices`
+   (the decisions recorded in the review, see review-choice)."
+  [{:keys [types org-id org-langs]} service-channels services site]
   (let [service-id (-> site :ptv :service-ids first)
         service-channel-id (-> site :ptv :service-channel-ids first)
 
@@ -939,7 +957,8 @@
         review (-> (sync-review saved (:ptv-base site) ptv-channel services
                                 (ptv-data/effective-languages saved org-langs))
                    (annotate-review site))
-        changed-in-ptv? (boolean (some review-choice-required? (:rows review)))
+        ;; a change made in PTV still waiting for the user's choice
+        awaiting-choice? (boolean (seq (open-review-rows (:rows review) (:review-choices site))))
         ;; The edit differs from PTV (a review choice, or texts edited here):
         ;; the next sync has something to send.
         has-drift? (boolean (or (seq (:rows review))
@@ -1009,17 +1028,17 @@
 
      :sync-status (cond
                     (not last-sync) :not-synced
-                    link-removed? :out-of-date
-                    archived-resync? :out-of-date
-                    changed-in-ptv? :content-drift
-                    has-drift? :out-of-date
-                    unsaved-edits? :out-of-date
-                    languages-changed? :out-of-date
+                    ;; PTV refuses every write until its draft is published
+                    ;; or discarded in PTV's own UI
+                    (= "Modified" (:publishingStatus ptv-channel)) :blocked
+                    (-> site :ptv :error) :blocked
+                    awaiting-choice? :awaiting-choice
+                    (or link-removed? archived-resync? has-drift? unsaved-edits?
+                        languages-changed?) :ready
                     (= (:event-date site) last-sync) :ok
-                    :else :out-of-date)
+                    :else :ready)
 
      :review review
-     :unpublished-ptv-languages (ptv-data/unpublished-ptv-languages site ptv-channel org-langs)
 
      :service-ids (-> site :ptv :service-ids)
      :service-name (-> services

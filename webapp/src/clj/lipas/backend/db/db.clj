@@ -243,6 +243,13 @@
          (into {} (map (fn [{:keys [lipas_id] :as row}]
                          [lipas_id (sports-site/unmarshall row)]))))))
 
+(defn get-ptv-language-usage
+  "LIPAS language code -> how many of the PTV org's published service
+  locations are in it, as their last sync stored it."
+  [db-spec ptv-org-id]
+  (into {} (map (juxt :lang :n))
+        (sports-site/get-ptv-language-usage db-spec {:ptv_org_id ptv-org-id})))
+
 (defn get-ptv-adoption
   "One row per site that has ever had a :ptv subtree: `:first-month` of its
   first :ptv revision, `:first-published-month` of its first revision published

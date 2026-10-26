@@ -94,4 +94,13 @@
  :lang-en "engelska"
  :blocker-texts-too-short "Sammanfattningen och beskrivningen ska ha minst 5 tecken på varje språk."
  :text-min-length "minst {1} tecken"
- :sync-failed-body-ptv-message "PTV avvisade uppgifterna: {1}"}
+ :sync-failed-body-ptv-message "PTV avvisade uppgifterna: {1}"
+ :filter-awaiting-choice "Väntar på val"
+ :filter-ready "Klar att synkroniseras"
+ :filter-blocked "Blockerad"
+ :status-awaiting-choice "I PTV har gjorts ändringar som väntar på ett val före synkroniseringen"
+ :status-ready "LIPAS har ändringar som synkroniseringen för till PTV"
+ :status-blocked "Synkroniseringen går inte igenom: PTV har ett opublicerat utkast, eller den förra synkroniseringen misslyckades"
+ :awaiting-choice-banner "{1} idrottsplatser har ändringar i PTV som väntar på ett val."
+ :show-awaiting-choice "Visa dem"
+ :will-be-republished "Servicestället är arkiverat i PTV. Sparandet publicerar samma serviceställe igen."}

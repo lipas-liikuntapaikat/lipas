@@ -25,4 +25,5 @@
  :test-password-label "Test Password"
  :test-password-placeholder "Enter test environment password"
  :test-username-label "Test Username"
- :test-username-placeholder "e.g. API15@testi.fi"}
+ :test-username-placeholder "e.g. API15@testi.fi"
+ :language-removal-warning "The next sync removes the {1} language version from {2} service locations published in it."}

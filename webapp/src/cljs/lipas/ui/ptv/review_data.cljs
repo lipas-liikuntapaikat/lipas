@@ -1,9 +1,11 @@
 (ns lipas.ui.ptv.review-data
   "PTV sync review state shared by the PTV tool (:ptv module) and the site
-   form (:map module): where it lives in app-db, the site form's review, and
-   how rows are named. Free of UI and of the :ptv module so either can load
-   it."
+   form (:map module): where it lives in app-db, the site form's review, how
+   rows are named and shown, and the confirmation before a write that would
+   overwrite changes made in PTV. Free of UI and of the :ptv module so
+   either can load it."
   (:require [clojure.string :as str]
+            [lipas.data.cities :as cities]
             [lipas.data.ptv :as ptv-data]
             [lipas.data.ptv-review :as ptv-review]))
 
@@ -23,6 +25,12 @@
   [lipas-id]
   (str "ptv-review-" lipas-id))
 
+(defn first-open-dom-id
+  "The DOM id of the first choice button of a site's first undecided row,
+   where \"Käy muutokset läpi\" moves the focus."
+  [lipas-id]
+  (str (panel-dom-id lipas-id) "-first-open"))
+
 (defn site-path
   "What the site form fetched to review a site (fetch-ptv-site-review)."
   [lipas-id]
@@ -41,41 +49,131 @@
                                   (ptv-data/effective-languages saved org-langs))
           (ptv-review/annotate-review draft)))))
 
+(defn takeable?
+  "Whether the user may take PTV's version of `row` into Lipas: `rights`
+   {:site-editor? :ptv-manager?} against the row's :takeable-by."
+  [rights row]
+  (case (:takeable-by row)
+    :site-editor (boolean (:site-editor? rights))
+    :ptv-manager (boolean (:ptv-manager? rights))
+    false))
+
+(defn language-name
+  "\"Ruotsi\" for \"sv\" (a PTV language code); the code itself for a
+   language Lipas has no name for."
+  [tr lang]
+  (case lang
+    "fi" (tr :ptv.review/lang-fi)
+    "sv" (tr :ptv.review/lang-sv)
+    "en" (tr :ptv.review/lang-en)
+    (str/upper-case (str lang))))
+
+(defn language-adjective
+  "\"ruotsinkielisen\" for \"sv\" (genitive, as in \"… kieliversion\"), or
+   with `nominative?` \"Ruotsinkielinen\"; \"SE-kielisen\" for a language
+   Lipas has no name for."
+  [tr lang nominative?]
+  (let [k #(keyword "ptv.review" (str (if nominative? "lang-nom-" "lang-adj-") %))]
+    (case lang
+      ("fi" "sv" "en") (tr (k lang))
+      (tr (k "other") (str/upper-case (str lang))))))
+
 (defn field-label
-  "\"Tiivistelmä (SV)\", \"Markkinointinimi\", \"Liitetty palvelu Uimahallit\"."
+  "\"Tiivistelmä (SV)\", \"Puhelinnumero\", \"Liitetty palvelu Uimahallit\",
+   \"Ruotsi (SV)\"."
   [tr {:keys [field language name]}]
   (case field
     :services (tr :ptv.review/service name)
     :marketing-name (tr :ptv.review/field-marketing-name)
+    :phone (tr :ptv.review/field-phone)
+    :email (tr :ptv.review/field-email)
+    :www (tr :ptv.review/field-www)
+    :reservations-link (tr :ptv.review/field-reservations-link)
+    :other-web-pages (tr :ptv.review/field-other-web-pages)
+    :address (tr :ptv.review/field-address)
+    :municipality (tr :ptv.review/field-municipality)
+    :point (tr :ptv.review/field-point)
+    :languages (str (language-name tr language) " (" (str/upper-case language) ")")
     (str (tr (case field
                :name :ptv.review/field-name
                :summary :ptv.review/field-summary
                :description :ptv.review/field-description))
          " (" (str/upper-case language) ")")))
 
+(defn- municipality-text
+  [code]
+  (let [city (some-> code parse-long cities/by-city-code)]
+    (str/trim (str code " " (or (-> city :name :fi) "")))))
+
+(defn value-text
+  "One side's value `v` of a `field` row as shown, nil for none. A Lipas
+   address shows the site's own postal office (`postal-office`), which
+   the sync doesn't send."
+  ([field v] (value-text field v nil))
+  ([field v postal-office]
+   (case field
+     :phone (not-empty (str/join ", " (map ptv-review/format-phone (sort-by str v))))
+     (:email :www :reservations-link :other-web-pages) (not-empty (str/join ", " (sort v)))
+     :address (when v
+                (not-empty
+                  (str/join ", " (remove str/blank?
+                                         [(:street v)
+                                          (str/trim (str (:postal-code v) " "
+                                                         (or (:post-office v) postal-office)))]))))
+     :municipality (some-> v municipality-text)
+     v)))
+
+(defn short-row?
+  "Whether `row`'s values are short enough to show both in a list."
+  [row]
+  (contains? #{:short :one-slot :extra :address :info} (:kind row)))
+
 (defn overwritten-line
-  "What a sync that keeps Lipas's side of `row` does to PTV, for the
-   confirmation listing the PTV changes a sync would overwrite."
-  [tr {:keys [field origin ptv? name] :as row}]
+  "What a write that keeps Lipas's side of `row` does to PTV, for the
+   confirmation listing the PTV changes it would overwrite."
+  [tr {:keys [field kind ptv? name lipas ptv] :as row}]
   (cond
     (and (= :services field) ptv?) (tr :ptv.review/overwritten-connection-removed name)
     (= :services field) (tr :ptv.review/overwritten-connection-restored name)
-    (= :both origin) (tr :ptv.review/overwritten-both (field-label tr row))
+    (= :languages kind) (tr :ptv.review/overwritten-language (language-adjective tr (:language row) true))
+    (short-row? row) (tr :ptv.review/overwritten-value (field-label tr row)
+                         (or (value-text field ptv) (tr :ptv.review/empty))
+                         (or (value-text field lipas) (tr :ptv.review/empty)))
     :else (tr :ptv.review/overwritten-text (field-label tr row))))
 
 (defn overwrite-confirmation
-  "Options for :lipas.ui.events/confirm-with asking before a write (`intro`
-   says which) overwrites the changes made in PTV that `open` (rows without
-   a choice) lists. `on-review` opens the review instead."
-  [tr {:keys [title intro open confirm-label on-confirm on-review]}]
-  {:title title
+  "Options for :lipas.ui.events/confirm-with before a write overwrites the
+   changes made in PTV that `open` (rows without a choice) lists, and the
+   language versions in `languages` (rows) it removes. Reviewing them is
+   the main action; `on-overwrite` writes anyway."
+  [tr {:keys [open languages on-overwrite on-review]}]
+  {:title (tr :ptv.review/gate-title)
    :message [:div
-             [:p {:style {:margin-top 0}} intro]
+             [:p {:style {:margin-top 0}} (tr :ptv.review/gate-intro)]
              (into [:ul]
-                   (for [row open]
+                   (for [row (concat open languages)]
                      [:li (overwritten-line tr row)]))
              [:p {:style {:margin-bottom 0}} (tr :ptv.review/confirm-hint)]]
-   :confirm-label confirm-label
-   :decline-label (tr :ptv.review/review)
-   :on-confirm on-confirm
-   :on-decline on-review})
+   :confirm-label (tr :ptv.review/review)
+   :confirm-primary? true
+   :on-confirm on-review
+   :decline-label (tr :ptv.review/overwrite)
+   :on-decline on-overwrite})
+
+(defn language-removals
+  "The rows of `rows` that are a language version the sync removes."
+  [rows]
+  (filterv #(= :languages (:kind %)) rows))
+
+(defn- name-words
+  [s]
+  (into #{} (filter #(>= (count %) 3))
+        (str/split (str/lower-case (str s)) #"[\s,.;:()/\-–]+")))
+
+(defn names-differ-wholesale?
+  "Whether a site's name and its PTV location's name share no word (of
+   three letters or more): the site may be linked to the wrong location."
+  [site-name ptv-name]
+  (let [a (name-words site-name)
+        b (name-words ptv-name)]
+    (boolean (and (seq a) (seq b) (empty? (filter a b))))))

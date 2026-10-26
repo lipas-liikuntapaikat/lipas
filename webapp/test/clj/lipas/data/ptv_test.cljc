@@ -741,11 +741,11 @@
                          (update :ptv dissoc :last-sync)
                          (assoc-in [:ptv :service-channel-ids] []))))))
 
-    (testing "unlinking a previously-synced site re-activates sync (:out-of-date)"
+    (testing "unlinking a previously-synced site re-activates sync (:ready)"
       ;; Clearing the single-select autocomplete can leave service-channel-ids
       ;; as [], [nil] or [""] — all must be detected as a removed link.
       (doseq [cleared [[] [nil] [""] ["   "]]]
-        (is (= :out-of-date
+        (is (= :ready
                (status (assoc-in base [:ptv :service-channel-ids] cleared)))
             (str "cleared as " (pr-str cleared)))))))
 
@@ -777,59 +777,22 @@
       (is (= :ok (status ["fi" "en"] fi-channel base))))
 
     (testing "en texts written: needs a sync, channel cached or not"
-      (is (= :out-of-date (status ["fi" "en"] {} with-en)))
+      (is (= :ready (status ["fi" "en"] {} with-en)))
       ;; a language version PTV doesn't have: Lipas adds it, its own change
-      (is (= :out-of-date (status ["fi" "en"] fi-channel with-en))))
+      (is (= :ready (status ["fi" "en"] fi-channel with-en))))
 
     (testing "en texts in LIPAS but the org doesn't publish en: nothing to sync"
       (is (= :ok (status ["fi"] {} with-en)))
       (is (= :ok (status ["fi"] fi-channel with-en))))
 
     (testing "a language published in PTV that LIPAS would no longer send needs a sync"
-      (is (= :out-of-date (status ["fi"] {} (assoc-in with-en [:ptv :languages] ["fi" "en"])))))
+      (is (= :ready (status ["fi"] {} (assoc-in with-en [:ptv :languages] ["fi" "en"])))))
 
     (testing ":languages reports what the next sync publishes"
       (is (= ["fi" "en"] (:languages (ptv-review/sports-site->ptv-input
                                        {:types {} :org-langs ["fi" "en"]} {} {} with-en))))
       (is (= ["fi"] (:languages (ptv-review/sports-site->ptv-input
                                   {:types {} :org-langs ["fi" "en"]} {} {} base)))))))
-
-(deftest unpublished-ptv-languages-test
-  ;; Linking a site to an existing PTV service location whose texts exist in
-  ;; languages LIPAS won't publish: the first sync removes them (Uusikaupunki
-  ;; lost their English this way). The UI warns from this.
-  (let [channel (fn [& langs]
-                  {:serviceChannelNames (for [l langs] {:type "Name" :language l :value "n"})
-                   :serviceChannelDescriptions (for [l langs] {:type "Summary" :language l :value "s"})})
-        fi-site {:ptv {:summary {:fi "s"} :description {:fi "d"}}}
-        en-site {:ptv {:summary {:fi "s" :en "s"} :description {:fi "d" :en "d"}}}]
-    (testing "nothing to warn about"
-      (is (nil? (sut/unpublished-ptv-languages fi-site nil ["fi"])) "no channel")
-      (is (nil? (sut/unpublished-ptv-languages fi-site (channel "fi") ["fi"])))
-      (is (nil? (sut/unpublished-ptv-languages en-site (channel "fi" "en") ["fi" "en"]))))
-
-    (testing "a language the org hasn't enabled"
-      (is (= {:not-enabled ["en" "se"]}
-             (sut/unpublished-ptv-languages fi-site (channel "fi" "sv" "en") ["fi"]))
-          "PTV's sv is LIPAS se"))
-
-    (testing "an enabled language the site has no texts in"
-      (is (= {:missing-texts ["en"]}
-             (sut/unpublished-ptv-languages fi-site (channel "fi" "en") ["fi" "en"]))))
-
-    (testing "a language LIPAS doesn't support at all"
-      (is (= {:not-enabled ["RU"]}
-             (sut/unpublished-ptv-languages fi-site (channel "fi" "ru") ["fi"])))
-      (is (= {:not-enabled ["SE"]}
-             (sut/unpublished-ptv-languages fi-site (channel "fi" "se") ["fi"]))
-          "PTV's se is Northern Sámi, not LIPAS se (Swedish)"))
-
-    (testing "blank PTV values don't count as texts"
-      (is (nil? (sut/unpublished-ptv-languages
-                  fi-site
-                  {:serviceChannelNames [{:type "Name" :language "fi" :value "n"}
-                                         {:type "Name" :language "en" :value " "}]}
-                  ["fi"]))))))
 
 (deftest sync-status-archived-resync-test
   (let [ctx {:org-id "o" :types {} :org-defaults {} :org-langs ["fi"]}
@@ -842,8 +805,8 @@
                     :service-channel-ids ["C1"]
                     :summary {:fi "aaaaaa"}
                     :description {:fi "bbbbbb"}}}]
-    (testing "re-enabling an archived site needs a resurrect sync (:out-of-date)"
-      (is (= :out-of-date (status (assoc-in base [:ptv :sync-enabled] true)))))
+    (testing "re-enabling an archived site needs a resurrect sync (:ready)"
+      (is (= :ready (status (assoc-in base [:ptv :sync-enabled] true)))))
 
     (testing "an archived site left disabled is not forced to needs-sync"
       (is (= :ok (status (assoc-in base [:ptv :sync-enabled] false)))))
@@ -883,21 +846,21 @@
 
     (testing "connecting the service someone connected in PTV needs a sync"
       (let [ptv (channel ["A" "B"] "aaaaaa")]
-        (is (= :content-drift (status ptv (saved-site {:service-ids ["A"]}))))
-        (is (= :out-of-date (status ptv (saved-site {:service-ids ["A"]} :service-ids ["A" "B"]))))
+        (is (= :awaiting-choice (status ptv (saved-site {:service-ids ["A"]}))))
+        (is (= :ready (status ptv (saved-site {:service-ids ["A"]} :service-ids ["A" "B"]))))
         (is (= :ok (status ptv (saved-site {:service-ids ["A" "B"]})))
             "and is :ok once the sync has saved it")))
 
     (testing "disconnecting the service someone disconnected in PTV needs a sync"
       (let [ptv (channel ["A"] "aaaaaa")]
-        (is (= :content-drift (status ptv (saved-site {:service-ids ["A" "B"]}))))
-        (is (= :out-of-date (status ptv (saved-site {:service-ids ["A" "B"]} :service-ids ["A"]))))))
+        (is (= :awaiting-choice (status ptv (saved-site {:service-ids ["A" "B"]}))))
+        (is (= :ready (status ptv (saved-site {:service-ids ["A" "B"]} :service-ids ["A"]))))))
 
     (testing "taking the text someone wrote in PTV needs a sync"
       (let [ptv (channel ["A"] "PTV:n teksti")]
-        (is (= :content-drift (status ptv (saved-site {:service-ids ["A"]}))))
-        (is (= :out-of-date (status ptv (saved-site {:service-ids ["A"]}
-                                                    :summary {:fi "PTV:n teksti"}))))))
+        (is (= :awaiting-choice (status ptv (saved-site {:service-ids ["A"]}))))
+        (is (= :ready (status ptv (saved-site {:service-ids ["A"]}
+                                              :summary {:fi "PTV:n teksti"}))))))
 
     (testing "what the sync wouldn't change isn't an unsaved edit"
       (let [ptv (channel ["A" "B"] "aaaaaa")]
@@ -912,8 +875,8 @@
       ;; Sync off was saved (\"Ei\": keep the location in PTV) and the
       ;; location is still what Lipas last synced.
       (let [ptv (channel ["A"] "aaaaaa")]
-        (is (= :out-of-date (status ptv (saved-site {:service-ids ["A"] :sync-enabled false}
-                                                    :sync-enabled true))))
+        (is (= :ready (status ptv (saved-site {:service-ids ["A"] :sync-enabled false}
+                                              :sync-enabled true))))
         (is (= :ok (status ptv (saved-site {:service-ids ["A"] :sync-enabled true}))))))
 
     (testing "without a snapshot the status is what it was"

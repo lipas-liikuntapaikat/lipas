@@ -75,36 +75,6 @@
          feedback
          (tr :ptv.audit/changes-requested-no-feedback))])))
 
-(defn unpublished-languages-alert
-  "Warns that the linked PTV service location has texts in languages the next
-   sync won't publish, and so will remove. `unpublished` is the result of
-   `ptv-data/unpublished-ptv-languages`; renders nothing when it is nil.
-   Organisations can't enable languages themselves, hence the contact address
-   in the :not-enabled message."
-  [{:keys [tr unpublished]}]
-  (when unpublished
-    (let [{:keys [not-enabled missing-texts]} unpublished
-          lang-name (fn [lang]
-                      (case lang
-                        "fi" (tr :ptv/lang-fi)
-                        "se" (tr :ptv/lang-se)
-                        "en" (tr :ptv/lang-en)
-                        ;; already an upper-cased PTV code
-                        lang))
-          row (fn [langs explanation]
-                [:> Typography {:component "li" :variant "body2" :sx #js {:mt 0.5 :fontWeight 400}}
-                 [:b (str/capitalize (str/join ", " (map lang-name langs)))]
-                 " – " explanation])]
-      [:> Alert {:severity "warning" :variant "outlined"}
-       [:> AlertTitle (tr :ptv/unpublished-languages-title)]
-       [:> Typography {:variant "body2" :sx #js {:fontWeight 400}}
-        (tr :ptv/unpublished-languages-intro)]
-       [:> Typography {:component "ul" :sx #js {:m 0 :mt 0.5 :pl 2.5}}
-        (when (seq not-enabled)
-          (row not-enabled (tr :ptv/unpublished-languages-not-enabled)))
-        (when (seq missing-texts)
-          (row missing-texts (tr :ptv/unpublished-languages-missing-texts)))]])))
-
 (defn ptv-link-field
   "Shows PTV items as links with an edit button to switch to selector mode.
    When an item has no :url, renders as plain text instead of a link.

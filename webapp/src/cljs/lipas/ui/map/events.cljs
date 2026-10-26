@@ -476,11 +476,9 @@
         {:dispatch [:lipas.ui.events/confirm-with
                     (ptv-review/overwrite-confirmation
                       tr
-                      {:title (tr :ptv.review/confirm-save-title)
-                       :intro (tr :ptv.review/confirm-save-intro)
-                       :open open
-                       :confirm-label (tr :ptv.review/save-and-overwrite)
-                       :on-confirm #(==> [::save-edits lipas-id true])
+                      {:open open
+                       :languages (ptv-review/language-removals (:rows review))
+                       :on-overwrite #(==> [::save-edits lipas-id true])
                        :on-review #(==> [::open-ptv-review lipas-id])})]}
         ;; the edit holds the decisions
         {:dispatch-n
@@ -533,7 +531,8 @@
     {:db (-> db
              (assoc-in [:map :selected-sports-site-tab] 6)
              (assoc-in (ptv-review/open-path lipas-id) true))
-     :fx [[:lipas.ui.effects/scroll-into-view! (ptv-review/panel-dom-id lipas-id)]]}))
+     :fx [[:lipas.ui.effects/scroll-into-view! (ptv-review/panel-dom-id lipas-id)]
+          [:lipas.ui.effects/focus! (ptv-review/first-open-dom-id lipas-id)]]}))
 
 (rf/reg-event-db ::clear-ptv-site-review
   ;; After a save: it synced, so the review's base and choices are spent.

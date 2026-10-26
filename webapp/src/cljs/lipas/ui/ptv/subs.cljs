@@ -529,8 +529,8 @@
   (atom {}))
 
 (defn- ptv-input
-  [ctx service-channels services site audit base]
-  (let [args [service-channels services site audit base]
+  [ctx service-channels services site audit base choices]
+  (let [args [service-channels services site audit base choices]
         hit (get @ptv-input-cache (:lipas-id site))]
     (if (and hit
              (= ctx (:ctx hit))
@@ -538,7 +538,7 @@
       (:result hit)
       (let [result (ptv-review/sports-site->ptv-input
                      ctx service-channels services
-                     (cond-> (assoc site :ptv-base base)
+                     (cond-> (assoc site :ptv-base base :review-choices choices)
                        audit (assoc-in [:ptv :audit] audit)))]
         (swap! ptv-input-cache assoc (:lipas-id site) {:ctx ctx :args args :result result})
         result))))
@@ -552,8 +552,10 @@
      (rf/subscribe [::default-settings org-id])
      (rf/subscribe [:lipas.ui.sports-sites.subs/all-types])
      (rf/subscribe [::selected-org])
-     (rf/subscribe [::sync-bases org-id])])
-  (fn [[sites audits services service-channels org-defaults types selected-org sync-bases] [_ org-id]]
+     (rf/subscribe [::sync-bases org-id])
+     (rf/subscribe [::all-review-choices])])
+  (fn [[sites audits services service-channels org-defaults types selected-org sync-bases
+        all-choices] [_ org-id]]
     (let [ctx {:org-id org-id
                :types types
                :org-defaults org-defaults
@@ -563,8 +565,16 @@
            (map (fn [site]
                   (let [lipas-id (:lipas-id site)]
                     (ptv-input ctx service-channels services site
-                               (get audits lipas-id) (get sync-bases lipas-id)))))
+                               (get audits lipas-id) (get sync-bases lipas-id)
+                               (get all-choices lipas-id)))))
            (sort-by :lipas-id)))))
+
+(rf/reg-sub ::unreachable-channels
+  ;; ids of the service locations whose refetch failed (not as archived):
+  ;; their review is on the data the dialog opened with
+  :<- [::ptv]
+  (fn [ptv _]
+    (get ptv :unreachable-channels #{})))
 
 (rf/reg-sub ::review-choices
   :<- [::ptv]
