@@ -75,21 +75,19 @@
  :tt-service-classes
  "Serviceklasserna enligt PTV:s anvisningar är definierade för varje undergrupp av Lipas idrottsplatstyper och kommer med i tjänstens uppgifter automatiskt.",
  :target-groups "Målgrupper",
- :tt-target-groups "Tjänstens målgrupp är alltid \"Medborgare\"",
+ :tt-target-groups "Lipas anger tjänstens målgrupp som \"Medborgare\" när den skapar tjänsten. Målgrupperna kan ändras i PTV.",
  :ontology-terms "Ontologibegrepp",
  :tt-ontology-terms
  "Ontologibegreppen, dvs. nyckelorden enligt PTV:s anvisningar, är definierade för varje huvud- och undergrupp i Lipas idrottsplatsklassificering och läggs till i tjänstens uppgifter automatiskt.",
  :funding "Finansiering",
- :tt-funding "Finansieringstypen är alltid \"Offentligt finansierad\".",
+ :tt-funding "Lipas anger finansieringstypen som \"Offentligt finansierad\" när den skapar tjänsten. Den kan ändras i PTV.",
  :service-producers "Serviceproducenter",
- :tt-service-producers
- "Serviceproducenten är den organisation (kommun) som har tagit integrationen i bruk.",
+ :tt-service-producers "Lipas anger den organisation (kommun) som har tagit integrationen i bruk som serviceproducent när den skapar tjänsten. Producenterna kan ändras i PTV.",
  :provision-type "Produktionssätt",
- :tt-provision-type "Tjänstens produktionssätt är alltid \"Egen produktion\".",
+ :tt-provision-type "Lipas anger produktionssättet som \"Egen produktion\" när den skapar tjänsten. Det kan ändras i PTV.",
  :main-organization "Ansvarig organisation",
  :tt-main-organization "Organisationen (kommunen) som använder integrationen.",
  :area-type "Områdets typ",
- :tt-area-type "Områdets typ är alltid \"Kommun\".",
+ :tt-area-type "Lipas anger områdets typ som \"Kommun\" när den skapar tjänsten. Området kan ändras i PTV.",
  :area-codes "Områdeskoder",
- :tt-area-codes
- "Områdeskoden är kommunnumret för den organisation (kommun) som har tagit integrationen i bruk."}
+ :tt-area-codes "Lipas anger den organisation (kommun) som har tagit integrationen i bruk som område när den skapar tjänsten. Området kan ändras i PTV."}

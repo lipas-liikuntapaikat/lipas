@@ -330,10 +330,17 @@
           desc (when @source-id (get descriptions @source-id))
           generating? @(rf/subscribe [::subs/generating-service-descriptions? @source-id])
           syncing? (when @source-id @(rf/subscribe [::subs/syncing-service? @source-id]))
+          data (merge {:org-id org-id
+                       :source-id @source-id
+                       :sub-category-id (some-> @source-id ptv-data/parse-service-source-id)
+                       :languages org-languages}
+                      desc)
           valid? (and @source-id
                       (some-> desc :summary :fi count (> 5))
                       (some-> desc :description :fi count (> 5))
-                      (some-> desc :user-instruction :fi count (> 5)))]
+                      (some-> desc :user-instruction :fi count (> 5))
+                      ;; nor any text PTV would reject in what the export sends
+                      (empty? (ptv-data/lipas-service-text-errors data nil)))]
       [:> Stack {:spacing 2}
        [:> Typography {:variant "subtitle1" :fontWeight "medium"}
         (tr :ptv.service/create-new)]
@@ -419,14 +426,9 @@
                             (if syncing?
                               [:> CircularProgress {:size 16 :color "inherit"}]
                               [:> Icon "ios_share"]))
-               :on-click #(let [data (merge {:org-id org-id
-                                             :source-id @source-id
-                                             :sub-category-id (ptv-data/parse-service-source-id @source-id)
-                                             :languages org-languages}
-                                            desc)]
-                            (rf/dispatch [::events/create-ptv-service
-                                          org-id @source-id data [] [] lipas-id])
-                            (on-cancel))}
+               :on-click #(do (rf/dispatch [::events/create-ptv-service
+                                            org-id @source-id data [] [] lipas-id])
+                              (on-cancel))}
               (tr :ptv.wizard/export-services-to-ptv)]])
 
           [:> Button
@@ -450,8 +452,8 @@
                 :fullWidth true
                 :multiline true :variant "outlined" :label (tr :ptv/summary) :value v
                 :inputProps #js {:maxLength ptv-data/max-summary-length}
-                :helperText (str (count v) "/" ptv-data/max-summary-length)
-                :error (> (count v) ptv-data/max-summary-length)}])
+                :helperText (controls/text-length-hint tr v ptv-data/max-summary-length)
+                :error (controls/text-length-error? v ptv-data/max-summary-length)}])
 
             (let [v (or (get-in desc [:description @selected-tab]) "")]
               [text-fields/text-field
@@ -459,8 +461,8 @@
                 :fullWidth true
                 :variant "outlined" :rows 7 :multiline true :label (tr :ptv/description) :value v
                 :inputProps #js {:maxLength ptv-data/max-description-length}
-                :helperText (str (count v) "/" ptv-data/max-description-length)
-                :error (> (count v) ptv-data/max-description-length)}])
+                :helperText (controls/text-length-hint tr v ptv-data/max-description-length)
+                :error (controls/text-length-error? v ptv-data/max-description-length)}])
 
             (let [v (or (get-in desc [:user-instruction @selected-tab]) "")]
               [text-fields/text-field
@@ -468,51 +470,17 @@
                 :fullWidth true
                 :variant "outlined" :rows 5 :multiline true :label (tr :ptv/user-instruction) :value v
                 :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
-                :helperText (str (count v) "/" ptv-data/max-user-instruction-length)
-                :error (> (count v) ptv-data/max-user-instruction-length)}])]])]])))
-
-(defn add-service-link-form
-  "Form for linking (adopting) an existing PTV service into LIPAS management.
-   Props:
-   - :org-id (required)
-   - :on-cancel (required)
-   - :lipas-id (optional) — when set, the linked service-id is auto-added to
-     that site's :ptv :service-ids on success."
-  [{:keys [org-id on-cancel lipas-id]}]
-  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
-        all-services @(rf/subscribe [::subs/services org-id])
-        non-lipas-services (remove #(some-> (:source-id %) (str/starts-with? "lipas-")) all-services)
-        org-languages @(rf/subscribe [::subs/org-languages org-id])]
-    [:> Stack {:spacing 2}
-     [:> Typography {:variant "subtitle1" :fontWeight "medium"}
-      (tr :ptv.service/link-existing)]
-     [controls/services-selector
-      {:options non-lipas-services
-       :multiple false
-       :value nil
-       :value-fn :service-id
-       :on-change (fn [service-id]
-                    (when service-id
-                      (let [service (some #(when (= (:service-id %) service-id) %) all-services)
-                            data (merge {:org-id org-id
-                                         :service-id service-id
-                                         :languages org-languages}
-                                        (select-keys service [:summary :description :user-instruction]))]
-                        (rf/dispatch [::events/create-ptv-service org-id nil data [] [] lipas-id])
-                        (on-cancel))))
-       :label (tr :ptv.service/select-service)}]
-     [:> Button
-      {:size "small" :variant "text" :sx #js {:textTransform "none"}
-       :on-click on-cancel}
-      (tr :actions/cancel)]]))
+                :helperText (controls/text-length-hint tr v ptv-data/max-user-instruction-length)
+                :error (controls/text-length-error? v ptv-data/max-user-instruction-length)}])]])]])))
 
 (defn add-service-panel
-  "Two-button entry point for adding a PTV service. Default state shows
-   \"Create new\" / \"Link existing\"; click switches to the corresponding form.
+  "Entry point for adding a PTV service: \"Create new\" switches to the
+   creation form. (A service already in PTV isn't added here: sites link to
+   it as is, and its panel offers to capture it.)
    Props:
    - :org-id (required)
    - :locked-sub-category-id (optional) — passed to add-service-create-form
-   - :lipas-id (optional) — passed to both forms for auto-attach"
+   - :lipas-id (optional) — passed to the form for auto-attach"
   [{:keys [org-id locked-sub-category-id lipas-id]}]
   (r/with-let [mode (r/atom nil)]
     (let [tr @(rf/subscribe [:lipas.ui.subs/translator])]
@@ -522,23 +490,9 @@
                                            :locked-sub-category-id locked-sub-category-id
                                            :lipas-id lipas-id
                                            :on-cancel #(reset! mode nil)}]
-         :link   [add-service-link-form {:org-id org-id
-                                         :lipas-id lipas-id
-                                         :on-cancel #(reset! mode nil)}]
          [:> Stack {:direction "row" :spacing 1}
           [:> Button
            {:variant "outlined" :size "small" :sx #js {:textTransform "none"}
             :startIcon (r/as-element [:> Icon "add"])
             :on-click #(reset! mode :create)}
-           (tr :ptv.service/create-new)]
-          ;; HIDDEN: "Liitä olemassa oleva PTV-palvelu" entry point is
-          ;; reader-discarded (`#_`) until the adoption flow is verified
-          ;; on fix/ptv-adopt-preserve-target-groups. Restore by removing
-          ;; the `#_` below. The :link case in the case-form above is
-          ;; unreachable while this is hidden but is intentionally kept
-          ;; so add-service-link-form remains wired up for restoration.
-          #_[:> Button
-             {:variant "outlined" :size "small" :sx #js {:textTransform "none"}
-              :startIcon (r/as-element [:> Icon "link"])
-              :on-click #(reset! mode :link)}
-             (tr :ptv.service/link-existing)]])])))
+           (tr :ptv.service/create-new)]])])))

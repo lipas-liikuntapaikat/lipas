@@ -56,4 +56,6 @@
  :export-resume "Continue the export",
  :start-new-export "Start a new export",
  :go-to-sports-sites-tab "Go to the Sports facilities tab",
- :go-to-services-tab "Go to the Services tab"}
+ :go-to-services-tab "Go to the Services tab"
+ :linked-services "Linked to existing PTV services"
+ :link-existing-helper "The sports facilities of the type class are linked to the selected service and no new service is created. The service's texts can be updated later on the Services tab."}

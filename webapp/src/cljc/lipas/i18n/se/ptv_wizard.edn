@@ -57,4 +57,6 @@
  :export-resume "Fortsätt överföringen",
  :start-new-export "Börja en ny överföring",
  :go-to-sports-sites-tab "Gå till fliken Idrottsplatser",
- :go-to-services-tab "Gå till fliken Tjänster"}
+ :go-to-services-tab "Gå till fliken Tjänster"
+ :linked-services "Kopplade till befintliga PTV-tjänster"
+ :link-existing-helper "Typklassens idrottsanläggningar kopplas till den valda tjänsten och ingen ny tjänst skapas. Tjänstens texter kan uppdateras senare på fliken Tjänster."}

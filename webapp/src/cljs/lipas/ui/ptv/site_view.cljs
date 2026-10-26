@@ -575,8 +575,8 @@
             :label (str (tr :ptv/summary) " *")
             :value v
             :inputProps #js {:maxLength ptv-data/max-summary-length}
-            :helperText (str (count v) "/" ptv-data/max-summary-length)
-            :error (> (count v) ptv-data/max-summary-length)}])
+            :helperText (controls/text-length-hint tr v ptv-data/max-summary-length)
+            :error (controls/text-length-error? v ptv-data/max-summary-length)}])
 
         ;; Summary audit feedback
         [audit-feedback-component
@@ -600,8 +600,8 @@
             :label (str (tr :ptv/description) " *")
             :value v
             :inputProps #js {:maxLength ptv-data/max-description-length}
-            :helperText (str (count v) "/" ptv-data/max-description-length)
-            :error (> (count v) ptv-data/max-description-length)}])
+            :helperText (controls/text-length-hint tr v ptv-data/max-description-length)
+            :error (controls/text-length-error? v ptv-data/max-description-length)}])
 
         ;; Description audit feedback
         [audit-feedback-component

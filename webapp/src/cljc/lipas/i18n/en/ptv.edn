@@ -95,4 +95,7 @@
  :unpublished-languages-missing-texts "summary and description missing in Lipas. Add them on the language's tab before syncing: write them yourself, translate from the Finnish texts (\"Translate to other languages\") or generate them with AI (\"Generate descriptions with AI\")."
  :lang-fi "Finnish"
  :lang-se "Swedish"
- :lang-en "English"}
+ :lang-en "English"
+ :blocker-texts-too-short "The summary and description must have at least 5 characters in every language."
+ :text-min-length "at least {1} characters"
+ :sync-failed-body-ptv-message "PTV rejected the data: {1}"}
