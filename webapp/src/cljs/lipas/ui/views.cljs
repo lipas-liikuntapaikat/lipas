@@ -96,7 +96,7 @@
       ;; Visible while impersonating, also on views that hide the navbar (e.g. map).
       [impersonation-banner {:tr tr}]
 
-      ;; Notices about ongoing problems in MML's map services and PTV
+      ;; Notices about ongoing problems in services Lipas depends on
       [mui/mui-theme-provider {:theme mui/jyu-theme-light}
        [service-notices/banners {:tr tr}]]
 
@@ -153,15 +153,22 @@
        ;; Reminders dialog
          [reminders/dialog]
 
-       ;; AI assistant launcher + panel (privilege-gated inside)
-         [assistant/view]
-
        ;; Global UI-blocking confirmation dialog
          (when confirmation
-           [dialogs/confirmation-dialog confirmation])
+           [dialogs/confirmation-dialog confirmation])]]]]
 
-       ;; Global ephmeral notifications
-         (when notification
-           [notifications/notification
-            {:notification notification
-             :on-close     #(==> [::events/set-active-notification nil])}])]]]]]))
+     ;; Overlays that stay above everything, full-screen dialogs included.
+     ;; They are position:fixed without a portal, so they live outside the
+     ;; content wrapper: on full-bleed views its contain:layout would trap
+     ;; them in its stacking context, beneath the dialogs that MUI portals to
+     ;; <body> (e.g. PTV's).
+     [mui/mui-theme-provider {:theme mui/jyu-theme-light}
+
+      ;; AI assistant launcher + panel (privilege-gated inside)
+      [assistant/view]
+
+      ;; Global ephemeral notifications
+      (when notification
+        [notifications/notification
+         {:notification notification
+          :on-close     #(==> [::events/set-active-notification nil])}])]]))
