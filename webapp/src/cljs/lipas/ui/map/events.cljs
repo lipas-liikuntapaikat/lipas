@@ -548,6 +548,7 @@
 
 (rf/reg-event-db ::clear-ptv-site-review
   ;; After a save: it synced, so the review's base and choices are spent.
+  ;; After a cancel: the choices went with the edit.
   (fn [db [_ lipas-id]]
     (update-in db [:ptv :review] (fn [review]
                                    (-> review
@@ -586,6 +587,8 @@
         (tr :confirm/discard-changes?)
         (fn []
           (==> [:lipas.ui.sports-sites.events/discard-edits lipas-id])
+          ;; the PTV choices were part of the edit
+          (==> [::clear-ptv-site-review lipas-id])
           (==> [::stop-editing])
           (==> [:lipas.ui.search.events/submit-search]))]})))
 
