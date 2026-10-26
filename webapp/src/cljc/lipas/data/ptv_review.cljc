@@ -512,6 +512,10 @@
                                 (and (not= saved site)
                                      (seq (:rows (sync-review site (:ptv-base site) ptv-channel
                                                               services langs))))))
+        ;; An edit made in the PTV tool but not saved that leaves no difference
+        ;; to review, e.g. turning sync back on for a site saved with sync off.
+        ;; Without this the site read :ok and its sync was disabled.
+        unsaved-edits? (ptv-data/unsaved-ptv-edits? site)
 
         ;; The languages the channel is published in now: PTV's own record when
         ;; the channel is cached, else what the last sync stored. A difference
@@ -575,6 +579,7 @@
                     archived-resync? :out-of-date
                     changed-in-ptv? :content-drift
                     has-drift? :out-of-date
+                    unsaved-edits? :out-of-date
                     languages-changed? :out-of-date
                     (= (:event-date site) last-sync) :ok
                     :else :out-of-date)

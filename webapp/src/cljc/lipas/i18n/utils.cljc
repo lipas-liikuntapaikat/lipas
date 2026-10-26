@@ -73,6 +73,7 @@
    :reset-password
    :retkikartta
    :search
+   :service-notices
    :sport
    :sports-site.elevation-profile
    :stats

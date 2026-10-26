@@ -291,7 +291,7 @@
         (is (not (contains? #{400 401 403} (:status resp)))
             (str "expected to clear coercion and the gate, got " (:status resp)))))))
 
-(deftest heatmap-requires-experimental-privilege-test
+(deftest heatmap-requires-analysis-privilege-test
   (let [bbox {:min-x 24.0 :max-x 25.0 :min-y 60.0 :max-y 61.0}
         bodies {"/api/actions/create-heatmap" {:zoom 8
                                                :bbox bbox
@@ -306,21 +306,24 @@
       (testing (str path " anonymous")
         (is (= 401 (:status (call path nil))) path))
 
-      (testing (str path " signed in without :analysis-tool/experimental")
-        ;; A regular user has :analysis-tool/use via `basic`, but NOT
-        ;; :analysis-tool/experimental — so this also pins that the two
-        ;; privileges stay distinct.
-        (let [token (jwt/create-token (tu/gen-regular-user :db-component (test-db)))]
-          (is (= 403 (:status (call path token))) path)))
-
-      (testing (str path " holder of :analysis-tool/experimental gets through")
+      (testing (str path " signed in without :analysis-tool/use")
         (let [user (tu/gen-user {:db? true
                                  :db-component (test-db)
-                                 :permissions {:roles [{:role "analysis-experimental-user"}]}})
-              resp (call path (jwt/create-token user))]
-          (is (not (contains? #{400 401 403} (:status resp)))
-              (str path " expected to clear coercion and the gate, got "
-                   (:status resp))))))))
+                                 :permissions {:roles []}})]
+          (is (= 403 (:status (call path (jwt/create-token user)))) path)))
+
+      ;; Regression: city-manager gets :analysis-tool/use via `basic`, scoped
+      ;; to its city. The UI showed the tab while the endpoint answered 403.
+      (doseq [role [{:role "city-manager" :city-code [91]}
+                    {:role "analysis-user"}]]
+        (testing (str path " " (:role role) " gets through")
+          (let [user (tu/gen-user {:db? true
+                                   :db-component (test-db)
+                                   :permissions {:roles [role]}})
+                resp (call path (jwt/create-token user))]
+            (is (not (contains? #{400 401 403} (:status resp)))
+                (str path " expected to clear coercion and the gate, got "
+                     (:status resp)))))))))
 
 (comment
   (t/run-test search-loi-by-status)

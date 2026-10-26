@@ -1303,6 +1303,29 @@
                 {}
                 (sort ptv-langs))))))
 
+(def synced-content-keys
+  "The :ptv keys of a site the PTV tool edits and a sync sends. The tool
+   snapshots them as :ptv-saved whenever it loads or saves a site, to tell an
+   edit that isn't saved yet (see unsaved-ptv-edits?)."
+  [:sync-enabled :service-ids :service-channel-ids :summary :description])
+
+(defn unsaved-ptv-edits?
+  "Whether the PTV tool's edit of `site` (its :ptv) differs from what was
+   saved (its :ptv-saved snapshot) in what a sync sends. Comparing with PTV
+   can't tell: an edit that makes the site match a change made in PTV, such
+   as connecting the service someone connected there, leaves no drift, yet
+   only a sync saves it. Neither can turning sync back on for a site saved
+   with sync off. False when there's no snapshot."
+  [site]
+  (if-let [saved (:ptv-saved site)]
+    (let [edit (:ptv site)
+          ids (fn [ptv k] (into #{} (remove str/blank?) (get ptv k)))]
+      (or (not= (boolean (:sync-enabled edit)) (boolean (:sync-enabled saved)))
+          (not= (ids edit :service-ids) (ids saved :service-ids))
+          (not= (ids edit :service-channel-ids) (ids saved :service-channel-ids))
+          (not (texts-match? edit saved [:summary :description]))))
+    false))
+
 (defn sports-site->service-ids [types source-id->service sports-site]
   (let [sub-cat-id (-> sports-site :type :type-code types :sub-category)
         org-id (-> sports-site :ptv :org-id)
