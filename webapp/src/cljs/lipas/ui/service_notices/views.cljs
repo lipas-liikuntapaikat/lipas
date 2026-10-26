@@ -1,9 +1,13 @@
 (ns lipas.ui.service-notices.views
-  "Notices about ongoing problems in services Lipas depends on.
+  "Notices about ongoing problems in services Lipas depends on, shown as
+  warning bars at the top of the app.
 
-  These are temporary. Once a problem is resolved, delete its entry in
-  `texts`, its condition in `subs/::visible` and its keys in
-  `i18n/*/service-notices.edn`."
+  To add one, give it an entry in `texts`, keys in
+  `i18n/*/service-notices.edn` and a condition for who sees it in
+  `subs/::visible`. Full-screen dialogs, such as PTV's, cover the bars, so
+  render the notice inside them too. Commit b23a735ba is an example: an MML
+  notice on the map and a PTV notice for PTV users, also in the PTV dialog.
+  Once the problem is resolved, delete the notice the same way."
   (:require ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/AlertTitle$default" :as AlertTitle]
             ["@mui/material/Stack$default" :as Stack]
@@ -11,11 +15,8 @@
             [lipas.ui.service-notices.subs :as subs]
             [lipas.ui.utils :refer [<== ==>]]))
 
-(def texts
-  {:mml-maps {:title :service-notices/mml-maps-title
-              :body  :service-notices/mml-maps}
-   :ptv-sync {:title :service-notices/ptv-sync-title
-              :body  :service-notices/ptv-sync}})
+;; notice id -> {:title <tr key> :body <tr key>}
+(def texts {})
 
 (defn notice [{:keys [tr id sx]}]
   (let [{:keys [title body]} (texts id)]
@@ -35,9 +36,3 @@
      (for [id ids]
        ^{:key id}
        [notice {:tr tr :id id :sx #js {:borderRadius 0}}])]))
-
-(defn ptv-notice
-  "The PTV notice for the full-screen PTV dialog, which covers the banners."
-  [{:keys [tr]}]
-  (when (<== [::subs/visible? :ptv-sync])
-    [notice {:tr tr :id :ptv-sync}]))
