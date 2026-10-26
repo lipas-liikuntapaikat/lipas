@@ -186,7 +186,7 @@
   "The user as privileges are checked (:lipas.ui.user.subs/user-data), for
    an event handler: with the developer's privilege overrides."
   [db]
-  (some-> (:user db)
+  (some-> (get-in db [:user :login])
           (assoc :dev/overrides (:lipas.ui.project-devtools/privilege-override db))))
 
 (defn ptv-manager-for?
