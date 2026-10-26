@@ -1698,6 +1698,23 @@
               :on-success [::create-ptv-service-location-success lipas-id success-fx]
               :on-failure [::create-ptv-service-location-failure lipas-id failure-fx]}]]})))
 
+(defn- reload-map-site?
+  "Whether the site the PTV tool just wrote is loaded in the map, and not
+   under an edit there: it holds the revision before the write (and what a
+   sync took from PTV), so an edit would start from it and its save revert
+   the write."
+  [db lipas-id]
+  (and (get-in db [:sports-sites lipas-id :latest])
+       (not (get-in db [:sports-sites lipas-id :editing]))))
+
+(defn- reload-map-site-fx
+  "Reloads the site in the map (reload-map-site?), and its site-form review
+   when one was fetched."
+  [db lipas-id]
+  [:dispatch [:lipas.ui.sports-sites.events/get lipas-id
+              (when (get-in db (review-data/site-path lipas-id))
+                [[:lipas.ui.map.events/fetch-ptv-site-review lipas-id]])]])
+
 (rf/reg-event-fx ::create-ptv-service-location-success
   (fn [{:keys [db]} [_ lipas-id extra-fx {:keys [ptv-resp ptv]}]]
     (let [tr (:translator db)
@@ -1736,9 +1753,10 @@
                (update-in [:ptv :review :choices] dissoc lipas-id)
                (update-in [:ptv :review :open] dissoc lipas-id)
                (update-in [:ptv :review :site-patch] dissoc lipas-id))
-       :fx (into (or (seq extra-fx) [])
-                 [[:dispatch [:lipas.ui.events/set-active-notification
-                              {:message (tr :notifications/save-success) :success? true}]]])})))
+       :fx (cond-> (into (or (seq extra-fx) [])
+                         [[:dispatch [:lipas.ui.events/set-active-notification
+                                      {:message (tr :notifications/save-success) :success? true}]]])
+             (reload-map-site? db lipas-id) (conj (reload-map-site-fx db lipas-id)))})))
 
 (rf/reg-event-fx ::create-ptv-service-location-failure
   (fn [{:keys [db]} [_ lipas-id extra-fx resp]]
@@ -1923,8 +1941,9 @@
                          (persisted-sync? ptv))
                (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv-saved]
                          (saved-snapshot ptv)))
-       :fx [[:dispatch [:lipas.ui.events/set-active-notification
-                        {:message (tr :ptv.actions/archived-in-ptv) :success? true}]]]})))
+       :fx (cond-> [[:dispatch [:lipas.ui.events/set-active-notification
+                                {:message (tr :ptv.actions/archived-in-ptv) :success? true}]]]
+             (reload-map-site? db lipas-id) (conj (reload-map-site-fx db lipas-id)))})))
 
 (rf/reg-event-fx ::create-all-ptv-service-locations*
   (fn [{:keys [db]} [_ org-id ids]]
