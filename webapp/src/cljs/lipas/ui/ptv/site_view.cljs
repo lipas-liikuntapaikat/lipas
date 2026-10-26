@@ -176,7 +176,6 @@
         ;; fetched for a previous link)
         linked-channel (let [c @(rf/subscribe [::subs/site-service-channel lipas-id])]
                          (when (and channel-id (= channel-id (:id c))) c))
-        site-review-fetched? (some? @(rf/subscribe [:lipas.ui.map.subs/ptv-site-review-data lipas-id]))
         archived? (and channel-id (= "Deleted" (-> site :ptv :publishing-status)))
         ;; ① the state of the link, as the PTV tool says it
         notices (cond-> []
@@ -255,15 +254,6 @@
                         (when (and channel-id org-id)
                           (rf/dispatch [::events/fetch-site-service-channel lipas-id org-id channel-id])))
                       [lipas-id org-id channel-id last-sync])
-
-    ;; The review is fetched when editing starts (the save gate needs it).
-    ;; Viewing the tab fetches it too, so a site whose sync was refused
-    ;; shows what is waiting for a choice; a save clears it, and the tab
-    ;; then fetches PTV's state after that save.
-    (hooks/use-effect (fn []
-                        (when-not site-review-fetched?
-                          (rf/dispatch [:lipas.ui.map.events/fetch-ptv-site-review lipas-id])))
-                      [lipas-id site-review-fetched?])
 
     ;; Detect a pre-existing double-link: another sports-site bound to the same
     ;; PTV service-location. This view loads neither the org's channels nor its
