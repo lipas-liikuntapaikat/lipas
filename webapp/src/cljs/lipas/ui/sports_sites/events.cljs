@@ -86,12 +86,16 @@
 ;; Save by lipas-id. Sets :event-date to current-timestamp.
 (rf/reg-event-fx ::save-edits
   (fn [{:keys [db]} [_ lipas-id on-success on-failure]]
-    (let [rev    (get-in db [:sports-sites lipas-id :editing])
-          type   (get-in db [:sports-sites :types (-> rev :type :type-code)])
-          rev    (-> rev
-                     utils/make-saveable
-                     (update :properties #(select-keys % (-> type :props keys)))
-                     (assoc :event-date (utils/timestamp)))
+    (let [edit   (get-in db [:sports-sites lipas-id :editing])
+          type   (get-in db [:sports-sites :types (-> edit :type :type-code)])
+          rev    (cond-> (-> edit
+                             utils/make-saveable
+                             (update :properties #(select-keys % (-> type :props keys)))
+                             (assoc :event-date (utils/timestamp)))
+                   ;; as reviewed: make-saveable's clean would drop the
+                   ;; :service-ids [] of a location without connections,
+                   ;; and the backend then skips comparing them
+                   (:reviewed edit) (assoc :reviewed (:reviewed edit)))
           draft? false]
       {:dispatch [::commit-rev rev draft? on-success on-failure]})))
 
