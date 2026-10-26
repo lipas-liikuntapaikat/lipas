@@ -7,6 +7,11 @@
             [lipas.data.ptv :as ptv-data]
             [lipas.data.ptv-review :as sut]))
 
+(defn- annotate
+  "annotate-review for a draft that publishes the review's languages."
+  [review draft]
+  (sut/annotate-review review draft (:langs review)))
+
 (def ^:private langs ["fi" "se" "en"])
 
 (def ^:private site
@@ -210,7 +215,7 @@
                     (set-ptv-text "Summary" "fi" "PTV:n teksti")
                     (assoc :services [{:service {:id "svc-a"}} {:service {:id "svc-b"}}]))
         review (sut/sync-review synced-site base channel services ["fi" "en"])
-        rows-of (fn [draft] (:rows (sut/annotate-review review draft)))
+        rows-of (fn [draft] (:rows (annotate review draft)))
         take (fn [draft side & keys]
                (reduce (fn [draft k]
                          (let [r (row review k)]
@@ -414,7 +419,7 @@
                   (and (empty? (decidable (:rows (sut/sync-review taken base channel services ["fi"]))))
                        ;; and every row of the saved site's review now reads as PTV's
                        (every? #(= :ptv (:current %))
-                               (decidable (:rows (sut/annotate-review
+                               (decidable (:rows (annotate
                                                    (sut/sync-review site base channel services ["fi"])
                                                    taken))))))))
 

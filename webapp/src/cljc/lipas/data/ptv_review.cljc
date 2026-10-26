@@ -66,7 +66,8 @@
     :takeable-by :site-editor :reads #{:addresses}}
    {:field :municipality :group :location :kind :info :reads #{:addresses}}
    {:field :point :group :location :kind :distance :reads #{:addresses}}
-   {:field :languages :group :languages :kind :languages :reads #{:languages}}
+   {:field :languages :group :languages :kind :languages
+    :takeable-by :ptv-manager :reads #{:languages}}
    {:field :services :group :services :kind :set
     :takeable-by :ptv-manager :reads #{:services}}])
 
@@ -737,13 +738,15 @@
 (defn annotate-review
   "`review` (sync-review of the saved site) with what the edit `draft` now
    holds on each row: :current (:lipas, :ptv or :edited) and :draft, its
-   value. The edit is projected as its sync sends it, with the same
+   value. The edit is projected as its sync sends it, in `langs` (the
+   languages it publishes, ptv-data/effective-languages of the draft: a
+   language version whose texts were taken from PTV stays), with the same
    type-change swap as the review's Lipas side."
-  [review draft]
+  [review draft langs]
   (if-not review
     review
     (let [values (location-values (site->location (with-sent-service-ids draft (:services-by-id review))
-                                                  (:langs review)))
+                                                  langs))
           ptv-pages (some #(when (= :extra (:kind %)) (:ptv %)) (:rows review))]
       (update review :rows (fn [rows]
                              (mapv (fn [row]
@@ -1118,7 +1121,7 @@
         saved (review-saved-site site (:review-saved site))
         review (-> (sync-review saved (:ptv-base site) ptv-channel services
                                 (ptv-data/effective-languages saved org-langs))
-                   (annotate-review site))
+                   (annotate-review site langs))
         ;; a change made in PTV still waiting for the user's choice
         awaiting-choice? (boolean (seq (open-review-rows (:rows review) (:review-choices site))))
         ;; The edit differs from PTV (a review choice, or texts edited here):

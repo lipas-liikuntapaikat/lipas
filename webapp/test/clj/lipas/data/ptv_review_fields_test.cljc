@@ -10,6 +10,11 @@
             [lipas.data.ptv :as ptv-data]
             [lipas.data.ptv-review :as sut]))
 
+(defn- annotate
+  "annotate-review for a draft that publishes the review's languages."
+  [review draft]
+  (sut/annotate-review review draft (:langs review)))
+
 (def ^:private last-sync "2026-10-01T10:00:00.000Z")
 (def ^:private right-after "2026-10-01T10:00:02.123456")
 (def ^:private days-later "2026-10-05T08:30:00.000000")
@@ -147,7 +152,7 @@
     (testing "taking it writes the site's phone, as Lipas keeps it"
       (let [taken (sut/apply-review-writes site (sut/review-writes site phone :ptv))]
         (is (= "+358 401234567" (:phone-number taken)))
-        (is (= :ptv (:current (row (sut/annotate-review r taken) [:phone]))))
+        (is (= :ptv (:current (row (annotate r taken) [:phone]))))
         (is (nil? (row (review taken channel) [:phone])) "nothing left to review")))
     (testing "keeping Lipas's puts the saved value back"
       (is (= {[:phone-number] "08 5875 5700"} (sut/review-writes site phone :lipas)))))
@@ -161,12 +166,12 @@
       (is (= 2 (count (:ptv phone))))
       (is (not (sut/takeable-in-bulk? phone)) "which one is the user's pick")
       (testing "PTV keeping Lipas's number beside the new one decides nothing"
-        (let [annotated (row (sut/annotate-review r site) [:phone])]
+        (let [annotated (row (annotate r site) [:phone])]
           (is (= :lipas (:current annotated)))
           (is (= [annotated] (sut/open-review-rows [annotated] {})) "a sync would remove PTV's other")))
       (let [taken (sut/apply-review-writes site (sut/review-value-writes phone new-number))]
         (is (= "+358 401234567" (:phone-number taken)))
-        (is (= :ptv (:current (row (sut/annotate-review r taken) [:phone])))))
+        (is (= :ptv (:current (row (annotate r taken) [:phone])))))
       (testing "taking Lipas's own number from PTV's is keeping Lipas's version"
         (is (sut/lipas-value? phone (some #(when (= "858755700" (:number %)) %) (sut/ptv-values phone))))
         (is (not (sut/lipas-value? phone new-number))))))
@@ -194,7 +199,7 @@
       (testing "taken as the site's web page"
         (let [taken (sut/apply-review-writes site (sut/review-value-writes
                                                     other {:slot :www :url "https://skeittiparkit.fi"}))
-              annotated (sut/annotate-review r taken)]
+              annotated (annotate r taken)]
           (is (= "https://skeittiparkit.fi" (:www taken)))
           (is (= :ptv (:current (row annotated [:other-web-pages]))))
           (is (= :ptv (:current (row annotated [:www]))) "the slot holds PTV's page")
@@ -228,7 +233,7 @@
       (let [taken (sut/apply-review-writes site (sut/review-writes site address :ptv))]
         (is (= {:address "Ahmatie 6" :postal-code "91610" :postal-office "Kunta"}
                (select-keys (:location taken) [:address :postal-code :postal-office])))
-        (is (= :ptv (:current (row (sut/annotate-review r taken) [:address]))))))))
+        (is (= :ptv (:current (row (annotate r taken) [:address]))))))))
 
 (deftest municipality-and-point-test
   (testing "another municipality in PTV is information, not a choice"
@@ -265,6 +270,7 @@
               :texts {:name "Hallen" :summary "Sammanfattning" :description "Beskrivning"}}
              (select-keys sv [:origin :locale :texts])))
       (is (not (sut/review-choice-required? sv)))
+      (is (= :ptv-manager (:takeable-by sv)) "a PTV manager may keep the language")
       (is (not-any? #(and (= "sv" (:language %)) (not= :languages (:field %))) (:rows r))))
     (testing "taking PTV's texts writes the language into the site"
       (let [taken (sut/apply-review-writes site (sut/review-writes site sv :ptv))]
@@ -272,7 +278,15 @@
         (is (= "Sammanfattning" (get-in taken [:ptv :summary :se])))
         (is (= "Beskrivning" (get-in taken [:ptv :description :se])))
         (testing "and a sync that publishes it keeps it"
-          (is (nil? (row (sut/sync-review taken base channel {} ["fi" "se" "en"]) [:languages "sv"]))))))))
+          (is (nil? (row (sut/sync-review taken base channel {} ["fi" "se" "en"]) [:languages "sv"]))))
+        (testing "in the edit, the language then reads as PTV's version"
+          (is (= :ptv (:current (row (sut/annotate-review r taken (ptv-data/effective-languages
+                                                                    taken ["fi" "se" "en"]))
+                                     [:languages "sv"])))))
+        (testing "unless the org doesn't publish it"
+          (is (= :lipas (:current (row (sut/annotate-review r taken (ptv-data/effective-languages
+                                                                      taken ["fi" "en"]))
+                                       [:languages "sv"])))))))))
 
 ;;; PTV's postal addresses (D8) ;;;
 
@@ -334,7 +348,7 @@
         (is (= {[:services "svc-a"] [:lipas false] [:services "svc-u"] [:lipas true]}
                (into {} (for [x (:rows r)] [(:key x) [(:origin x) (:lipas? x)]]))))
         (testing "and the edit, projected the same way, holds them"
-          (is (every? #(= :lipas (:current %)) (:rows (sut/annotate-review r swimming)))))))))
+          (is (every? #(= :lipas (:current %)) (:rows (annotate r swimming)))))))))
 
 ;;; Properties ;;;
 
@@ -402,7 +416,7 @@
         t1 (review (with-fi-summary (as-channel site :modified days-later) "PTV:n T1"))
         t2 (review (with-fi-summary (as-channel site :modified "2026-10-09T08:00:00.000000") "PTV:n T2"))
         edit (fn [text] (assoc-in site [:ptv :summary :fi] text))
-        annotated (fn [r draft] (row (sut/annotate-review r draft) k))
+        annotated (fn [r draft] (row (annotate r draft) k))
         open? (fn [x choices] (= [x] (sut/open-review-rows [x] choices)))]
 
     (testing "PTV's version taken: decided, until PTV changes it again"
@@ -428,10 +442,10 @@
   (testing "one of PTV's values taken into a one-slot field, then PTV's values change"
     (let [ch (fn [modified phones] (with-phones (as-channel site :modified modified) phones))
           taken (assoc site :phone-number "+358 401111111")
-          before (row (sut/annotate-review (review (ch days-later [["+358" "401111111" "fi"]])) taken) [:phone])
-          after (row (sut/annotate-review (review (ch "2026-10-09T08:00:00.000000"
-                                                      [["+358" "402222222" "fi"] ["+358" "403333333" "fi"]]))
-                                          taken)
+          before (row (annotate (review (ch days-later [["+358" "401111111" "fi"]])) taken) [:phone])
+          after (row (annotate (review (ch "2026-10-09T08:00:00.000000"
+                                           [["+358" "402222222" "fi"] ["+358" "403333333" "fi"]]))
+                               taken)
                      [:phone])]
       (is (= :ptv (:current before)))
       (is (= [after] (sut/open-review-rows [after] {}))))))

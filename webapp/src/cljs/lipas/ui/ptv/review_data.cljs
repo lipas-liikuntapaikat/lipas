@@ -48,7 +48,7 @@
     (when (and channel saved (-> draft :ptv :sync-enabled))
       (-> (ptv-review/sync-review saved base channel services
                                   (ptv-data/effective-languages saved org-langs))
-          (ptv-review/annotate-review draft)))))
+          (ptv-review/annotate-review draft (ptv-data/effective-languages draft org-langs))))))
 
 (defn takeable?
   "Whether the user may take PTV's version of `row` into Lipas: `rights`
@@ -165,9 +165,10 @@
    :on-decline on-overwrite})
 
 (defn language-removals
-  "The rows of `rows` that are a language version the sync removes."
+  "The rows of `rows` (annotated) that are a language version the sync
+   removes: not one whose texts were taken from PTV."
   [rows]
-  (filterv #(= :languages (:kind %)) rows))
+  (filterv #(and (= :languages (:kind %)) (not= :ptv (:current %))) rows))
 
 (defn- name-words
   [s]

@@ -576,7 +576,7 @@
              (= channel-id (-> saved :ptv :service-channel-ids first)))
     (let [open (-> (ptv-review/sync-review saved base location {}
                                            (ptv-data/effective-languages saved org-langs))
-                   (ptv-review/annotate-review site)
+                   (ptv-review/annotate-review site (ptv-data/effective-languages site org-langs))
                    :rows
                    (ptv-review/open-review-rows nil))]
       (when (seq open)
