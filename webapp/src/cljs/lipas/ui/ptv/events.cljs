@@ -1902,7 +1902,10 @@
              {:method :post
               :headers {:Authorization (str "Token " token)}
               :uri (str (:backend-url db) "/actions/save-ptv-service-location")
-              :params (assoc (service-location-payload db lipas-id) :archive? true)
+              ;; status only: no review choices are written into the site
+              :params (-> (service-location-payload db lipas-id)
+                          (dissoc :site-patch)
+                          (assoc :archive? true))
               :format (ajax/transit-request-format)
               :response-format (ajax/transit-response-format)
               :on-success [::archive-ptv-service-location-success lipas-id]
@@ -2007,12 +2010,17 @@
 
 (rf/reg-event-db ::halt-service-locations-creation
   ;; After ::create-ptv-service-location-failure, which stored the error.
+  ;; The sites not reached drop their review patches; a resume makes them
+  ;; again from the choices of that time.
   (fn [db [_ failed-lipas-id]]
-    (update-in db [:ptv :service-locations-creation] merge
-               {:halt? true
-                :in-progress? false
-                :failed {:lipas-id failed-lipas-id
-                         :error (get-in db [:ptv :errors :service-locations-creation])}})))
+    (let [{:keys [ids processed-ids]} (get-in db [:ptv :service-locations-creation])]
+      (-> db
+          (update-in [:ptv :review :site-patch] #(apply dissoc % (remove (set processed-ids) ids)))
+          (update-in [:ptv :service-locations-creation] merge
+                     {:halt? true
+                      :in-progress? false
+                      :failed {:lipas-id failed-lipas-id
+                               :error (get-in db [:ptv :errors :service-locations-creation])}})))))
 
 (rf/reg-event-fx ::resume-service-locations-creation
   ;; Goes on from the site that failed with those not exported yet; the

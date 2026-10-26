@@ -224,11 +224,13 @@
   (let [_org (seed-org!)
         admin (tu/gen-admin-user :db-component (test-db))
         lipas-id (:lipas-id (save! admin (site nil "2026-02-01T10:00:00.000Z" "Synkattu" "2026-02-01T10:00:00.000Z")))
-        sync! (fn [user]
+        sync! (fn [user & {:keys [archive? site-patch]}]
                 (with-redefs [ptv-integration/get-org-service-channel
                               (fn [_ _ id] {:id id :sourceId "lipas-source" :services []})
                               ptv-integration/update-service-location
                               (fn [_ id _] {:id id :sourceId "lipas-source" :publishingStatus "Published"})
+                              ptv-integration/archive-service-location
+                              (fn [_ _ id] {:id id :sourceId "lipas-source" :publishingStatus "Deleted"})
                               ptv-integration/get-org-ptv-config-with-fallback
                               (fn [_ _] {:supported-languages ["fi"]})]
                   (ptv-core/upsert-ptv-service-location!
@@ -243,13 +245,15 @@
                            :description {:fi "Pidempi kuvaus"}}
                      ;; the review the PTV tool made of that location
                      :reviewed {:service-ids []}
-                     :site-patch {:name "PTV:n nimi"
-                                  :marketing-name "Tekojää"
-                                  :phone-number "+358 40 1234567"
-                                  :email "info@kunta.fi"
-                                  :www nil
-                                  :location {:address "Käärmetie 10" :postal-code "00650"
-                                             :postal-office "Helsinki"}}})))]
+                     :archive? archive?
+                     :site-patch (or site-patch
+                                     {:name "PTV:n nimi"
+                                      :marketing-name "Tekojää"
+                                      :phone-number "+358 40 1234567"
+                                      :email "info@kunta.fi"
+                                      :www nil
+                                      :location {:address "Käärmetie 10" :postal-code "00650"
+                                                 :postal-office "Helsinki"}})})))]
     (testing "taking PTV's data into the site needs the right to edit the site"
       (is (thrown-with-msg? clojure.lang.ExceptionInfo #"needs the right to edit"
                             (sync! (user-with-role "ptv-manager" own-city))))
@@ -264,7 +268,11 @@
         (is (= "info@kunta.fi" (:email saved)))
         (is (= {:address "Käärmetie 10" :postal-code "00650" :postal-office "Helsinki"}
                (select-keys (:location saved) [:address :postal-code :postal-office])))
-        (is (= 91 (get-in saved [:location :city :city-code])) "the rest of the location stays")))))
+        (is (= 91 (get-in saved [:location :city :city-code])) "the rest of the location stays")))
+
+    (testing "an archive is status only: a patch sent with it isn't written"
+      (sync! admin :archive? true :site-patch {:name "Arkistoinnin nimi"})
+      (is (= "PTV:n nimi" (:name (core/get-sports-site (test-db) lipas-id)))))))
 
 (defn- stub-ptv
   "PTV for an upsert: the location's GET (before and after the write) is

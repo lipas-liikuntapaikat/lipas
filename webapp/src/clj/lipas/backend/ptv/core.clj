@@ -789,7 +789,9 @@
   ;; FIXME: Separate version from this fn for use in sync-ptv! which doesn't load the
   ;; sports site from db etc.?
   (jdbc/with-db-transaction [tx db]
-    (let [site (db/get-sports-site db lipas-id)
+    (let [;; an archive is status only: it writes nothing into the site
+          site-patch (when-not archive? site-patch)
+          site (db/get-sports-site db lipas-id)
           _ (assert (some? site) (str "Sports site " lipas-id " not found in DB"))
           _ (when (and (seq site-patch)
                        (not (roles/check-privilege user (roles/site-roles-context site)
