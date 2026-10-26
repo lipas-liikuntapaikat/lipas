@@ -640,10 +640,13 @@
                           [:service-channel-id :string]]}
       :handler
       (fn [req]
-        {:status 200
-         :body (ptv-core/fetch-ptv-service-channel ptv
-                                                   (-> req :parameters :body :org-id)
-                                                   (-> req :parameters :body :service-channel-id))})}}]
+        ;; 404 for a location PTV no longer has (archived): the PTV tool
+        ;; has nothing to refresh then, which isn't PTV being unreachable
+        (if-let [channel (ptv-core/fetch-ptv-service-channel ptv
+                                                             (-> req :parameters :body :org-id)
+                                                             (-> req :parameters :body :service-channel-id))]
+          {:status 200 :body channel}
+          {:status 404 :body {:type :service-channel-not-found}}))}}]
 
    ["/actions/check-ptv-service-channel-link"
     {:post

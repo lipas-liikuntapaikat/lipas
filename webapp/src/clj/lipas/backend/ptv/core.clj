@@ -462,9 +462,10 @@
 (defn fetch-ptv-service-channel
   "One service location, refetched when the PTV tool opens its row, with
   PTV's unpublished draft of it marked (with-draft-status): the org's
-  listing can't show one."
+  listing can't show one. nil when PTV doesn't have it (archived)."
   [ptv org-id service-channel-id]
-  (with-draft-status ptv org-id (ptv/get-org-service-channel ptv org-id service-channel-id)))
+  (some->> (get-channel-or-nil ptv org-id service-channel-id)
+           (with-draft-status ptv org-id)))
 
 ;; Single source of truth lives in lipas.data.ptv so the sync path and the
 ;; no-sync meta path persist exactly the same editable keys.
