@@ -235,12 +235,18 @@
 
 ;;; Site editors without PTV rights ;;;
 
+(def ^:private ptv-modified
+  "PTV's :modified of the fake location (with-fake-ptv), as the last sync
+  stored it: nobody has edited the location in PTV since."
+  "2026-10-01T10:00:01.000000")
+
 (def ^:private integrated-ptv
   "`:ptv` of a site already published in PTV."
   (merge {:sync-enabled true :org-id ptv-org-a
           :service-ids ["service-1"]
           :publishing-status "Published"
           :last-sync "2026-01-13T06:06:39.000Z"
+          :ptv-modified ptv-modified
           :source-id "lipas-src-1"
           :service-channel-ids ["channel-1"]
           :previous-type-code 2510}
@@ -346,8 +352,6 @@
 ;; channel 404s on reads.
 
 (def ^:private ptv-requests (atom []))
-
-(def ^:private ptv-modified "2026-10-01T10:00:01.000000")
 
 (defn- ptv-channel [id {:keys [services publishing-status name]}]
   {:id id
@@ -557,12 +561,27 @@
             (is (= 1 (count (remove (comp #{:get} second) @ptv-requests))))
             (is (nil? (get-in (current (:lipas-id site)) [:ptv :error])))))))
 
-    (testing "no :reviewed (an old browser tab): today's behaviour, no check"
+    (testing "no :reviewed (a quick edit, an older tab): syncs while PTV holds nothing undecided"
       (with-fake-ptv
         (fn []
           (let [site (seed-site! own-city integrated-ptv)]
             (save! (ptv-manager own-city) (assoc site :name "Uusi nimi"))
-            (is (= 1 (count (remove (comp #{:get} second) @ptv-requests))))))))))
+            (is (= 1 (count (remove (comp #{:get} second) @ptv-requests))))))))
+
+    (testing "no :reviewed and a change made in PTV since the last sync: saved, not synced"
+      (with-fake-ptv
+        (fn []
+          (let [;; PTV's :modified moved after the sync: its name, "Vanha
+                ;; nimi", is an edit made in PTV that nobody has decided about
+                site (seed-site! own-city (assoc integrated-ptv :ptv-modified "2026-09-01T00:00:00.000000"))
+                resp (save! (ptv-manager own-city) (assoc site :phone-number "0401234567"))
+                stored (current (:lipas-id site))]
+            (is (= 201 (:status resp)))
+            (is (= "0401234567" (:phone-number stored)))
+            (is (empty? (remove (comp #{:get} second) @ptv-requests)) "no write")
+            (is (= "ptv-not-reviewed" (get-in stored [:ptv :error :type])))
+            (is (= (get-in stored [:ptv :error :at]) (:event-date stored) (get-in resp [:parsed :event-date]))
+                "the error names the revision it is on, so the UI knows it is this save's")))))))
 
 (deftest stale-review-in-ptv-tool-test
   (seed-org! ptv-org-a [own-city])
@@ -581,6 +600,22 @@
             (is (= 409 (:status resp)))
             (is (= "ptv-changed-since-review" (get-in resp [:parsed :type])))
             (is (empty? (remove (comp #{:get} second) @ptv-requests)))))))))
+
+(deftest unreviewed-sync-in-ptv-tool-test
+  (seed-org! ptv-org-a [own-city])
+  (testing "no :reviewed (the location wasn't in the tool's cache) over a change made in PTV: 409"
+    (with-fake-ptv
+      (fn []
+        (let [site (seed-site! own-city (assoc integrated-ptv :ptv-modified "2026-09-01T00:00:00.000000"))
+              resp (post "/api/actions/save-ptv-service-location"
+                         {:org-id ptv-org-a
+                          :lipas-id (:lipas-id site)
+                          :ptv (select-keys integrated-ptv [:org-id :sync-enabled :service-ids
+                                                            :service-channel-ids :summary :description])}
+                         (ptv-manager own-city))]
+          (is (= 409 (:status resp)))
+          (is (= "ptv-not-reviewed" (get-in resp [:parsed :type])))
+          (is (empty? (remove (comp #{:get} second) @ptv-requests))))))))
 
 ;;; Server-owned :ptv keys ;;;
 

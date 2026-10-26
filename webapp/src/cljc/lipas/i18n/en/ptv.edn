@@ -99,6 +99,8 @@
  :delete-waits-for-archive "This facility has been exported to PTV. Its service location is archived in PTV once the municipality's PTV manager approves it."
  :sync-failed-body-changed-since-review "The data in PTV has changed since you opened the view. Check the changes and sync again."
  :saved-but-sync-failed-body-changed-since-review "The facility was saved but not synced, because the data in PTV has changed since you opened it. Review the changes on the PTV tab and save again."
+ :sync-failed-body-not-reviewed "PTV has changes that nobody has reviewed. Review them and sync again."
+ :saved-but-sync-failed-body-not-reviewed "The facility was saved but not synced, because PTV has changes that nobody has reviewed. Review them in the PTV tool or on the facility's PTV tab, and sync."
  :sync-failed-body-ptv-down "PTV didn't answer. If an unfinished draft was left in PTV, publish or discard it in PTV before the next sync."
  :awaiting-archive-title "Waiting to be archived ({1})"
  :awaiting-archive-removed "The facility is marked removed in LIPAS ({1}, {2}). Its service location still shows in PTV."

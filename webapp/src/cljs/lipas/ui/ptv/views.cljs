@@ -2429,7 +2429,11 @@
                                  :languages org-languages
                                  ;; PTV's names, kept unless edited, as the
                                  ;; texts are (current-texts)
-                                 :name (:name service)}
+                                 :name (:name service)
+                                 ;; the service as these edits were made on:
+                                 ;; one changed in PTV since is refused, as
+                                 ;; it holds PTV's texts as they were then
+                                 :expected-modified (:service-modified service)}
                                 current-texts)
                    edited-name (assoc :service-name edited-name)))
           ;; A native's patch, built as the backend builds it

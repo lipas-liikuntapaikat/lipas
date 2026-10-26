@@ -131,16 +131,18 @@
   (contains? #{:short :one-slot :extra :address :info} (:kind row)))
 
 (defn overwritten-line
-  "What a write that keeps Lipas's side of `row` does to PTV, for the
-   confirmation listing the PTV changes it would overwrite."
-  [tr {:keys [field kind ptv? name lipas ptv] :as row}]
+  "What a write that sends the edit's side of `row` (Lipas's, or the user's
+   own value) does to PTV, for the confirmation listing the PTV changes it
+   would overwrite."
+  [tr {:keys [field kind ptv? name lipas ptv current draft] :as row}]
   (cond
     (and (= :services field) ptv?) (tr :ptv.review/overwritten-connection-removed name)
     (= :services field) (tr :ptv.review/overwritten-connection-restored name)
     (= :languages kind) (tr :ptv.review/overwritten-language (language-adjective tr (:language row) true))
     (short-row? row) (tr :ptv.review/overwritten-value (field-label tr row)
                          (or (value-text field ptv) (tr :ptv.review/empty))
-                         (or (value-text field lipas) (tr :ptv.review/empty)))
+                         (or (value-text field (if (= :edited current) draft lipas))
+                             (tr :ptv.review/empty)))
     :else (tr :ptv.review/overwritten-text (field-label tr row))))
 
 (defn overwrite-confirmation

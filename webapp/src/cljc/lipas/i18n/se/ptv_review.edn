@@ -47,6 +47,8 @@
  :copy "Kopiera"
  :diff-legend "Markerat: ord som bara finns i den här versionen."
  :edited-title "Formuläret har en redigerad text"
+ :edited-value-title "Formuläret har ett redigerat värde"
+ :use-edited "För den redigerade versionen till PTV"
  :conflict-hint "Du kan också kombinera båda ändringarna genom att redigera texten i formuläret."
 
  :name-changes-site "Byter också idrottsplatsens namn i LIPAS"

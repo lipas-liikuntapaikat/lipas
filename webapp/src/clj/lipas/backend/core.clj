@@ -1797,7 +1797,10 @@
                                   :org-id (:org-id (:ptv resp))
                                   :lipas-id (:lipas-id resp)
                                   :ptv (:ptv resp)
-                                  :reviewed reviewed})]
+                                  :reviewed reviewed
+                                  ;; as stored before: a sync without a
+                                  ;; review checks PTV holds nothing undecided
+                                  :saved prev})]
                   (log/infof "Sports site updated and PTV integration enabled")
                   ;; sync-ptv! wrote a new revision (success or failure)
                   ;; and returned the event-date it used. Adopt both so

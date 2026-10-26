@@ -47,6 +47,8 @@
  :copy "Copy"
  :diff-legend "Highlighted: words that are only in this version."
  :edited-title "The form has an edited text"
+ :edited-value-title "The form has an edited value"
+ :use-edited "Send the edited version to PTV"
  :conflict-hint "You can also combine both changes by editing the text in the form."
 
  :name-changes-site "Also changes the facility's name in LIPAS"

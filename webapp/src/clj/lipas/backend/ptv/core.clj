@@ -332,12 +332,20 @@
   An update leaves out the defaults LIPAS sets only on creation and resends
   PTV's own target groups and the entries LIPAS never writes (see
   ptv-data/lipas-service-update-body). `service-id`, the service's PTV id
-  when it already exists, is only read from, to know what PTV has."
-  [ptv {:keys [org-id source-id service-id] :as m}]
+  when it already exists, is only read from, to know what PTV has.
+
+  The client sends PTV's names and texts where the user edited none, as
+  they were when its page loaded them (`expected-modified`): a service
+  changed in PTV since is refused rather than overwritten with those."
+  [ptv {:keys [org-id source-id service-id expected-modified] :as m}]
   (let [create-body (ptv-data/->ptv-service (assoc m :languages (org-languages ptv org-id)))
-        update-body (ptv-data/lipas-service-update-body
-                      create-body
-                      (live-lipas-service ptv org-id source-id service-id))]
+        live (live-lipas-service ptv org-id source-id service-id)
+        _ (when (and live expected-modified (not= expected-modified (:modified live)))
+            (throw (ex-info "PTV service changed since it was loaded"
+                            {:type :changed-in-ptv
+                             :service-id service-id
+                             :modified (:modified live)})))
+        update-body (ptv-data/lipas-service-update-body create-body live)]
     (check-text-lengths! update-body)
     (try
       (ptv/update-service ptv source-id update-body)
@@ -551,8 +559,37 @@
         (throw (ex-info "The PTV service location changed after the review"
                         {:type :ptv-changed-since-review}))))))
 
+(defn- check-nothing-unreviewed!
+  "Throws {:type :ptv-not-reviewed} when a sync that carries no review (no
+  :reviewed: a quick edit in the search table, a status change from the
+  delete dialog, a site-form save whose review couldn't be fetched, an
+  older browser tab) would overwrite a change made in PTV that nobody has
+  decided about. Runs the review the PTV tool would show: `saved` (the site
+  as stored before this sync) against its `base` and PTV's `location`
+  (fresh GET), with `site`, what this sync sends, as the edit. So a save
+  goes through as before while PTV holds nothing undecided. Only for the
+  location `saved` was last synced to: a first link is reviewed in the UI."
+  [{:keys [saved base location channel-id site org-langs]}]
+  (when (and location
+             (-> saved :ptv :last-sync)
+             (= channel-id (-> saved :ptv :service-channel-ids first)))
+    (let [open (-> (ptv-review/sync-review saved base location {}
+                                           (ptv-data/effective-languages saved org-langs))
+                   (ptv-review/annotate-review site)
+                   :rows
+                   (ptv-review/open-review-rows nil))]
+      (when (seq open)
+        (throw (ex-info "PTV has changes nobody has reviewed"
+                        {:type :ptv-not-reviewed
+                         :rows (mapv :key open)}))))))
+
 (defn upsert-ptv-service-location!*
-  [ptv-component {:keys [org-id site ptv archive? reviewed] :as _m}]
+  "Writes `site` with `ptv` merged in to PTV. `reviewed` is what the user's
+  review was made against (check-unchanged-since-review!); without it,
+  `saved` and `base` (the site as stored and what its last sync sent) let
+  the write check that PTV holds nothing undecided
+  (check-nothing-unreviewed!)."
+  [ptv-component {:keys [org-id site ptv archive? reviewed saved base] :as _m}]
   (let [id (-> ptv :service-channel-ids first)
         ;; Languages are determined by the org's live PTV config at sync time —
         ;; we don't trust the site's persisted :languages because it may be a
@@ -586,10 +623,18 @@
                                    (if (= 404 (-> e ex-data :resp :status))
                                      nil
                                      (throw e)))))
-        ;; Nothing PTV got since the user's review is overwritten unseen. A
+        ;; Nothing PTV got since the user's review is overwritten unseen, nor
+        ;; a change made in PTV that a sync without a review would. A
         ;; status-only archive writes no content.
         _ (when-not archive?
-            (check-unchanged-since-review! reviewed old-service-location))
+            (if reviewed
+              (check-unchanged-since-review! reviewed old-service-location)
+              (check-nothing-unreviewed! {:saved saved
+                                          :base base
+                                          :location old-service-location
+                                          :channel-id id
+                                          :site (update site :ptv merge ptv)
+                                          :org-langs org-langs})))
         ;; A type change swaps the sub-category's service, whichever way the
         ;; sync was started (rebind-on-type-change).
         ptv (if archive?
@@ -621,6 +666,11 @@
                  ;; out (ptv-data/ptv-postal-addresses)
                  (update data :addresses into
                          (:kept (ptv-data/ptv-postal-addresses old-service-location (:languages data))))
+                 ;; ...and so are PTV's street names in other languages, the
+                 ;; address's and the phone's additional information and the
+                 ;; phone's charge, while they belong to what Lipas sends
+                 (cond-> data
+                   old-service-location (ptv-review/with-ptv-extras old-service-location))
                  (cond-> data
                    archive? (assoc :publishingStatus "Deleted"))))
         ;; Note: Update request doesn't update Service connections!
@@ -745,6 +795,7 @@
                                                    :site/create-edit)))
               (throw (ex-info "Changing the site's own data needs the right to edit the site"
                               {:type :no-permission :lipas-id lipas-id})))
+          saved site
           site (cond-> site
                  (seq site-patch) (ptv-review/apply-site-patch site-patch))
           ;; Reject linking to a service-location another site already owns
@@ -756,7 +807,10 @@
                                                                   :site site
                                                                   :ptv ptv
                                                                   :archive? archive?
-                                                                  :reviewed reviewed})]
+                                                                  :reviewed reviewed
+                                                                  :saved saved
+                                                                  :base (get (get-ptv-sync-bases tx [lipas-id])
+                                                                             lipas-id)})]
 
       (let [resp (core/upsert-sports-site! tx
                                            user
@@ -804,7 +858,11 @@
 ;; Used through resolve due to circular dep
 ;; TODO: Check if code can be moved around to avoid this
 ^{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defn sync-ptv! [tx search ptv-component user {:keys [sports-site ptv org-id lipas-id reviewed]}]
+(defn sync-ptv!
+  "Syncs a saved site from the site-form save path. `saved` is the site as
+  stored before this save, for the check that a sync without `reviewed`
+  overwrites nothing undecided in PTV."
+  [tx search ptv-component user {:keys [sports-site ptv org-id lipas-id reviewed saved]}]
   (try
     (let [ready? (ptv-data/ptv-ready? sports-site)
           archive? (to-archive? sports-site ptv)]
@@ -832,7 +890,11 @@
                                                                        :ptv ptv
                                                                        :site sports-site
                                                                        :archive? archive?
-                                                                       :reviewed reviewed})
+                                                                       :reviewed reviewed
+                                                                       :saved saved
+                                                                       :base (when saved
+                                                                               (get (get-ptv-sync-bases tx [lipas-id])
+                                                                                    lipas-id))})
 
               resp (core/upsert-sports-site! tx
                                              user
@@ -851,7 +913,13 @@
       ;; JSONB column, and `(ex-data e) :req :headers` carries the PTV
       ;; bearer token. The parsed `:ptv-status`/`:ptv-error` covers
       ;; everything the frontend and operators actually need.
-      (let [new-ptv-data (assoc ptv :error (merge {:message (.getMessage e)}
+      (let [now (utils/timestamp)
+            new-ptv-data (assoc ptv :error (merge {:message (.getMessage e)
+                                                   ;; the revision it is stored
+                                                   ;; on: the UI tells this
+                                                   ;; save's failure from an
+                                                   ;; earlier one by it
+                                                   :at now}
                                                   ;; our own guards above, and a
                                                   ;; change made in PTV after
                                                   ;; the review (the save is
@@ -862,7 +930,7 @@
         (let [resp (core/upsert-sports-site! tx
                                              user
                                              (-> sports-site
-                                                 (assoc :event-date (utils/timestamp))
+                                                 (assoc :event-date now)
                                                  (assoc :ptv new-ptv-data))
                                              false)]
           (core/index! search resp :sync (core/index-context tx))

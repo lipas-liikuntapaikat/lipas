@@ -150,20 +150,28 @@
   {:modified            :ptv/sync-failed-body-ptv-modified
    :invalid-postal-code :ptv/sync-failed-body-invalid-postal-code
    :duplicate-name      :ptv/sync-failed-body-name-conflict
-   :changed-since-review :ptv/sync-failed-body-changed-since-review})
+   :changed-since-review :ptv/sync-failed-body-changed-since-review
+   :not-reviewed        :ptv/sync-failed-body-not-reviewed})
 
 (def ^:private save-body-keys
   {:modified            :ptv/saved-but-sync-failed-body-ptv-modified
    :invalid-postal-code :ptv/saved-but-sync-failed-body-invalid-postal-code
    :duplicate-name      :ptv/saved-but-sync-failed-body-name-conflict
-   :changed-since-review :ptv/saved-but-sync-failed-body-changed-since-review})
+   :changed-since-review :ptv/saved-but-sync-failed-body-changed-since-review
+   :not-reviewed        :ptv/saved-but-sync-failed-body-not-reviewed})
+
+(defn- refusal-type
+  "The :type of the endpoint's refusal, or of the error sync-ptv! stored on
+   the site."
+  [resp]
+  (some-> (or (:type (:response resp)) (:type resp)) keyword))
 
 (defn changed-since-review?
-  "Whether a sync was refused because the location changed in PTV after the
-   review: the endpoint's 409, or the error sync-ptv! stored on the site."
+  "Whether a sync was refused because PTV holds a change the user hasn't
+   decided about: one made after their review, or, for a sync without a
+   review (a quick edit, a status change), one made since the last sync."
   [resp]
-  (= :ptv-changed-since-review
-     (some-> (or (:type (:response resp)) (:type resp)) keyword)))
+  (contains? #{:ptv-changed-since-review :ptv-not-reviewed} (refusal-type resp)))
 
 (defn- ptv-sync-error-body
   "Localized actionable body text for a PTV sync failure. `body-keys`
@@ -178,7 +186,11 @@
         ;; service-location endpoint answers with them
         blockers (or (seq (:blockers resp)) (seq (:blockers refusal)))]
     (cond
-      ;; changed in PTV after the user's review: nothing was written
+      ;; nothing was written: a change made in PTV nobody has reviewed...
+      (= :ptv-not-reviewed (refusal-type resp))
+      (tr (:not-reviewed body-keys))
+
+      ;; ...or one made after the user's review
       (changed-since-review? resp)
       (tr (:changed-since-review body-keys))
 
@@ -1767,19 +1779,23 @@
 
 (rf/reg-event-fx ::review-take
   ;; Make the edit hold `side`'s version (:ptv, or :lipas for the saved
-  ;; one) of each of `rows`.
+  ;; one) of each of `rows`; :edited confirms the value the edit already
+  ;; holds, of the user's own, against PTV's value now.
   (fn [{:keys [db]} [_ target lipas-id rows side]]
     (let [path (draft-path db target lipas-id)
           draft (get-in db path)
-          edited (reduce #(ptv-review/apply-review-writes %1 (ptv-review/review-writes %1 %2 side))
-                         draft
-                         rows)
+          edited (if (= :edited side)
+                   draft
+                   (reduce #(ptv-review/apply-review-writes %1 (ptv-review/review-writes %1 %2 side))
+                           draft
+                           rows))
           db (update-in db (review-data/choices-path lipas-id)
                         (fn [choices]
                           (reduce (fn [choices row]
-                                    (if (= :lipas side)
-                                      (assoc choices (:key row)
-                                             {:choice :lipas :seen (ptv-review/review-choice-seen row)})
+                                    (case side
+                                      :lipas (assoc choices (:key row)
+                                                    {:choice :lipas :seen (ptv-review/review-choice-seen row)})
+                                      :edited (assoc choices (:key row) (ptv-review/edited-choice row))
                                       (dissoc choices (:key row))))
                                   choices
                                   rows)))]
@@ -1787,12 +1803,13 @@
         :ptv-tool {:db (assoc-in db path edited)}
         ;; through edit-fields, which also recalculates derived fields
         :site-form {:db db
-                    :fx [[:dispatch [:lipas.ui.sports-sites.events/edit-fields lipas-id
-                                     (into {}
-                                           (comp (mapcat #(keys (ptv-review/review-writes draft % side)))
-                                                 (distinct)
-                                                 (map (fn [p] [p (get-in edited p)])))
-                                           rows)]]]}))))
+                    :fx (when-not (= :edited side)
+                          [[:dispatch [:lipas.ui.sports-sites.events/edit-fields lipas-id
+                                       (into {}
+                                             (comp (mapcat #(keys (ptv-review/review-writes draft % side)))
+                                                   (distinct)
+                                                   (map (fn [p] [p (get-in edited p)])))
+                                             rows)]]])}))))
 
 (rf/reg-event-fx ::review-take-value
   ;; Make the edit hold `value`, one of PTV's values of a one-slot `row`,

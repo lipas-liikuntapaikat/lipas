@@ -704,8 +704,9 @@
 (defn- row-current
   "Which version of `row` the edit holds, given its `values`
    (location-values of the edit): :lipas (the saved one), :ptv, or :edited
-   (something of the user's own)."
-  [values {:keys [field kind] :as row}]
+   (something of the user's own). `ptv-pages` are PTV's web pages under no
+   Lipas name, which can be taken into a web-page slot."
+  [values ptv-pages {:keys [field kind] :as row}]
   (case kind
     :set (if (= (contains? (get values [:services]) (:id row)) (:ptv? row))
            :ptv
@@ -725,8 +726,12 @@
         ;; the saved value, even when it is one of PTV's several: PTV's
         ;; others are a change the user hasn't decided about yet
         (= v (comparable field (:lipas row))) :lipas
-        ;; another of PTV's several values taken into the one slot
-        (and (= :one-slot kind) (= 1 (count v)) (contains? p (first v))) :ptv
+        ;; another of PTV's several values taken into the one slot, or one
+        ;; of PTV's other web pages taken into a web-page slot
+        (and (= :one-slot kind) (= 1 (count v))
+             (or (contains? p (first v))
+                 (and (#{:www :reservations-link} field)
+                      (contains? (comparable field ptv-pages) (first v))))) :ptv
         :else :edited))))
 
 (defn annotate-review
@@ -738,10 +743,11 @@
   (if-not review
     review
     (let [values (location-values (site->location (with-sent-service-ids draft (:services-by-id review))
-                                                  (:langs review)))]
+                                                  (:langs review)))
+          ptv-pages (some #(when (= :extra (:kind %)) (:ptv %)) (:rows review))]
       (update review :rows (fn [rows]
                              (mapv (fn [row]
-                                     (cond-> (assoc row :current (row-current values row))
+                                     (cond-> (assoc row :current (row-current values ptv-pages row))
                                        (not= :services (:field row))
                                        (assoc :draft (get values (:key row)))))
                                    rows))))))
@@ -754,21 +760,39 @@
     (:ptv? row)
     (comparable (:field row) (:ptv row))))
 
+(defn edited-choice
+  "The record of sending the user's own value of `row` (annotated) to PTV:
+   made against PTV's value of the time (:seen), for exactly the value the
+   edit holds (:draft)."
+  [row]
+  {:choice :edited
+   :seen (review-choice-seen row)
+   :draft (comparable (:field row) (:draft row))})
+
 (defn review-choice
-  "The decision to keep Lipas's version of `row` recorded in `choices` (row
-   :key -> {:choice :lipas :seen}), or nil when there is none or it was made
-   against a PTV value that has changed since. Taking PTV's version or
-   editing the value needs no record: the edit shows it."
+  "The decision recorded for `row` in `choices` (row :key -> {:choice
+   :seen}), or nil when there is none or it no longer holds: PTV's value has
+   changed since it was made, or the edit no longer holds what was chosen.
+   :lipas keeps the saved version; :edited sends the user's own value
+   (edited-choice), as long as it is the value confirmed. Taking PTV's
+   version needs no record: the edit shows it."
   [choices row]
   (when-let [choice (get choices (:key row))]
-    (when (= (:seen choice) (review-choice-seen row))
+    (when (and (= (:seen choice) (review-choice-seen row))
+               (= (:choice choice) (or (:current row) :lipas))
+               (or (not= :edited (:choice choice))
+                   (= (:draft choice) (comparable (:field row) (:draft row)))))
       choice)))
 
 (defn review-decided?
   "Whether the user has decided `row` (annotated, see annotate-review): the
-   edit holds PTV's version or their own, or they chose to keep Lipas's."
+   edit holds PTV's version, or a choice recorded against PTV's value now
+   holds (review-choice). A value of the user's own counts only once they
+   have confirmed it, so neither a change PTV made after it nor a text
+   written into the edit by something else (AI generation) is sent over
+   PTV's unseen."
   [choices row]
-  (boolean (or (#{:ptv :edited} (:current row))
+  (boolean (or (= :ptv (:current row))
                (review-choice choices row))))
 
 (defn open-review-rows
@@ -919,6 +943,75 @@
                 (assoc-in site path v))))
           site
           (filter site-patch-path? (site-patch-paths-of patch))))
+
+;;; What a sync keeps of PTV's ;;;
+
+(defn- kept-street
+  "PTV's street `value` in another language, with PTV's separate street
+   `number`, which the payload, sending the number in the street, has no
+   field for."
+  [value number]
+  (if (and number (not (str/ends-with? (str/trim value) (str " " number))))
+    (str (str/trim value) " " number)
+    value))
+
+(defn with-ptv-extras
+  "The sync payload `data` with what PTV's location `channel` (GET shape)
+   holds on its visiting address and phone that Lipas has no field for,
+   sent back as PTV has it, in the payload's languages. Like the postal
+   addresses (D8), the integration leaves alone what Lipas doesn't have:
+   - while PTV's visiting address is the one Lipas sends (the same street
+     and postal code, as the review compares them), its street names in
+     the other languages and its additional information;
+   - for PTV's phone with the number Lipas sends, its additional
+     information and charge.
+   Once Lipas sends another address or number, they belonged to the old
+   one and go with it."
+  [data channel]
+  (let [langs (set (:languages data))
+        location? #(= "Location" (:type %))
+        ptv-street (some #(when (location? %) (:streetAddress %)) (:addresses channel))
+        same-address? (when-let [v (comparable :address (address-value data))]
+                        (= v (comparable :address (address-value channel))))
+        number (some-> (:streetNumber ptv-street) str/trim not-empty)
+        streets (into {} (for [{:keys [value language]} (:street ptv-street)
+                               :when (and (not= "fi" language) (not (str/blank? value)))]
+                           [language (kept-street value number)]))
+        info (vec (for [{:keys [value language]} (:additionalInformation ptv-street)
+                        :when (and (contains? langs language) (not (str/blank? value)))]
+                    {:value value :language language}))
+        ptv-phone (fn [{:keys [number prefixNumber]}]
+                    (some #(when (and (= number (:number %)) (= prefixNumber (:prefixNumber %))) %)
+                          (:phoneNumbers channel)))]
+    (cond-> data
+      same-address?
+      (update :addresses
+              (fn [addresses]
+                (mapv (fn [a]
+                        (if (location? a)
+                          (update a :streetAddress
+                                  (fn [s]
+                                    (cond-> (update s :street
+                                                    (fn [ss]
+                                                      (mapv (fn [{:keys [language] :as x}]
+                                                              (if-let [v (get streets language)]
+                                                                (assoc x :value v)
+                                                                x))
+                                                            ss)))
+                                      (seq info) (assoc :additionalInformation info))))
+                          a))
+                      addresses)))
+
+      (seq (:phoneNumbers data))
+      (update :phoneNumbers
+              (fn [phones]
+                (mapv (fn [p]
+                        (if-let [q (ptv-phone p)]
+                          (merge p (into {} (remove (comp str/blank? str val))
+                                         (select-keys q [:additionalInformation :serviceChargeType
+                                                         :chargeDescription])))
+                          p))
+                      phones))))))
 
 ;;; Services (the Palvelut tab) ;;;
 

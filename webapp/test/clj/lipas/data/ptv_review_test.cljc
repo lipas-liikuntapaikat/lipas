@@ -239,12 +239,13 @@
         (is (contains? (open-keys draft {}) [:summary "fi"]) "without the record: undecided")
         (is (not (contains? (open-keys draft (keep-lipas [:summary "fi"])) [:summary "fi"])))))
 
-    (testing "a text of one's own counts as decided"
+    (testing "a text of one's own counts as decided once confirmed"
       (let [draft (assoc-in synced-site [:ptv :summary :fi] "Oma teksti")
             r (some #(when (= [:summary "fi"] (:key %)) %) (rows-of draft))]
         (is (= :edited (:current r)))
         (is (= "Oma teksti" (:draft r)))
-        (is (not (contains? (open-keys draft {}) [:summary "fi"])))))
+        (is (contains? (open-keys draft {}) [:summary "fi"]) "written into the edit, not yet confirmed")
+        (is (not (contains? (open-keys draft {[:summary "fi"] (sut/edited-choice r)}) [:summary "fi"])))))
 
     (testing "a record made against a PTV value that has changed since doesn't count"
       (is (nil? (sut/review-choice {[:summary "fi"] {:choice :lipas :seen "jotain muuta"}}

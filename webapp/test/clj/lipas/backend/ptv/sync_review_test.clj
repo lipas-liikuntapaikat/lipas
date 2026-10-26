@@ -241,6 +241,8 @@
                            :service-ids []
                            :summary {:fi "Synkattu"}
                            :description {:fi "Pidempi kuvaus"}}
+                     ;; the review the PTV tool made of that location
+                     :reviewed {:service-ids []}
                      :site-patch {:name "PTV:n nimi"
                                   :marketing-name "Tekojää"
                                   :phone-number "+358 40 1234567"
@@ -278,7 +280,9 @@
    #'ptv-integration/get-org-ptv-config-with-fallback (fn [_ _] {:supported-languages ["fi"]})})
 
 (defn- tool-sync!
-  [user lipas-id ptv]
+  "A sync from the PTV tool, after a review of `channel` (the stub's
+   location): what the tool sends as :reviewed."
+  [user lipas-id ptv channel]
   (ptv-core/upsert-ptv-service-location!
     (test-db) (:lipas/ptv @test-system) (:lipas/search @test-system) user
     {:lipas-id lipas-id
@@ -289,7 +293,9 @@
                   :service-ids ["svc-a"]
                   :summary {:fi "Synkattu"}
                   :description {:fi "Pidempi kuvaus"}}
-                 ptv)}))
+                 ptv)
+     :reviewed (cond-> {:service-ids (mapv (comp :id :service) (:services channel))}
+                 (:modified channel) (assoc :modified (:modified channel)))}))
 
 (def ^:private visiting
   {:type "Location" :subType "Single"
@@ -312,7 +318,7 @@
                  :modified "2026-02-03T08:00:00.123456"
                  :addresses [visiting po-box unsendable]}
         {:keys [ptv]} (with-redefs-fn (stub-ptv calls channel)
-                        #(tool-sync! admin lipas-id {}))
+                        #(tool-sync! admin lipas-id {} channel))
         sent (some (fn [[k data]] (when (= :put k) data)) @calls)]
     (testing "PTV's postal address goes back, kept to the location's languages"
       (is (= [{:type "Postal" :subType "PostOfficeBox" :country "FI"
@@ -353,7 +359,7 @@
     (testing "a sync from the PTV tool swaps the sub-category's service, the others stay"
       (let [calls (atom [])
             {:keys [ptv]} (with-redefs-fn (stub-ptv calls channel :services services)
-                            #(tool-sync! admin lipas-id {:service-ids ["svc-ice" "svc-own"]}))]
+                            #(tool-sync! admin lipas-id {:service-ids ["svc-ice" "svc-own"]} channel))]
         (is (= #{"svc-own" "svc-swim"} (set (:service-ids ptv))))
         (is (= 3110 (:previous-type-code ptv)))
         (is (= #{[:connect "svc-ice" #{}] [:connect "svc-swim" #{channel-id}]}
@@ -365,7 +371,7 @@
                        (assoc-in [:ptv :service-ids] [])))
       (let [calls (atom [])
             e (try (with-redefs-fn (stub-ptv calls channel :services services)
-                     #(tool-sync! admin lipas-id {:service-ids []}))
+                     #(tool-sync! admin lipas-id {:service-ids []} channel))
                    nil
                    (catch clojure.lang.ExceptionInfo e e))]
         (is (= [:ptv/missing-service] (:blockers (ex-data e))))

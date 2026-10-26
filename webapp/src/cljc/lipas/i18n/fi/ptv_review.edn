@@ -47,6 +47,8 @@
  :copy "Kopioi"
  :diff-legend "Korostettu: sanat, jotka ovat vain tässä versiossa."
  :edited-title "Lomakkeessa on muokattu teksti"
+ :edited-value-title "Lomakkeessa on muokattu arvo"
+ :use-edited "Vie muokattu versio PTV:hen"
  :conflict-hint "Voit myös yhdistää molempien muutokset muokkaamalla tekstiä lomakkeessa."
 
  :name-changes-site "Muuttaa myös liikuntapaikan nimen Lipaksessa"

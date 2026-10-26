@@ -197,7 +197,7 @@
               annotated (sut/annotate-review r taken)]
           (is (= "https://skeittiparkit.fi" (:www taken)))
           (is (= :ptv (:current (row annotated [:other-web-pages]))))
-          (is (= :edited (:current (row annotated [:www]))) "the slot holds a value of the user's choosing")
+          (is (= :ptv (:current (row annotated [:www]))) "the slot holds PTV's page")
           (is (= [] (sut/open-review-rows (:rows annotated) {})))))))
 
   (testing "a booking link Lipas added since the last sync (#269) is Lipas's"
@@ -388,6 +388,102 @@
                                  [field])]
                   (and (sut/review-choice choices x)
                        (nil? (sut/review-choice choices later))))))
+
+(defn- with-fi-summary [channel text]
+  (update channel :serviceChannelDescriptions
+          (fn [ds] (mapv #(cond-> % (and (= "Summary" (:type %)) (= "fi" (:language %)))
+                                  (assoc :value text))
+                         ds))))
+
+(deftest decisions-hold-against-ptvs-value-now-test
+  ;; PTV changed the fi summary to T1; after the user decided, PTV changes
+  ;; it again to T2. Nothing decided against T1 may be sent over T2 unseen.
+  (let [k [:summary "fi"]
+        t1 (review (with-fi-summary (as-channel site :modified days-later) "PTV:n T1"))
+        t2 (review (with-fi-summary (as-channel site :modified "2026-10-09T08:00:00.000000") "PTV:n T2"))
+        edit (fn [text] (assoc-in site [:ptv :summary :fi] text))
+        annotated (fn [r draft] (row (sut/annotate-review r draft) k))
+        open? (fn [x choices] (= [x] (sut/open-review-rows [x] choices)))]
+
+    (testing "PTV's version taken: decided, until PTV changes it again"
+      (is (not (open? (annotated t1 (edit "PTV:n T1")) {})))
+      (let [x (annotated t2 (edit "PTV:n T1"))]
+        (is (= :edited (:current x)) "the edit holds neither side now")
+        (is (open? x {}))))
+
+    (testing "a kept version stops counting once the edit holds something else"
+      (let [x (annotated t1 site)
+            choices {k {:choice :lipas :seen (sut/review-choice-seen x)}}]
+        (is (not (open? x choices)))
+        (is (open? (annotated t1 (edit "Oma teksti")) choices))))
+
+    (testing "a value of the user's own counts once confirmed, for that value and PTV's value of the time"
+      (let [x (annotated t1 (edit "Oma teksti"))
+            choices {k (sut/edited-choice x)}]
+        (is (open? x {}) "an edit alone, e.g. written by AI generation, decides nothing")
+        (is (not (open? x choices)))
+        (is (open? (annotated t1 (edit "Oma teksti, jatkettu")) choices) "another value than the one confirmed")
+        (is (open? (annotated t2 (edit "Oma teksti")) choices) "PTV changed after the confirmation"))))
+
+  (testing "one of PTV's values taken into a one-slot field, then PTV's values change"
+    (let [ch (fn [modified phones] (with-phones (as-channel site :modified modified) phones))
+          taken (assoc site :phone-number "+358 401111111")
+          before (row (sut/annotate-review (review (ch days-later [["+358" "401111111" "fi"]])) taken) [:phone])
+          after (row (sut/annotate-review (review (ch "2026-10-09T08:00:00.000000"
+                                                      [["+358" "402222222" "fi"] ["+358" "403333333" "fi"]]))
+                                          taken)
+                     [:phone])]
+      (is (= :ptv (:current before)))
+      (is (= [after] (sut/open-review-rows [after] {}))))))
+
+(deftest sync-keeps-ptvs-address-and-phone-extras-test
+  ;; Lipas has one street and one phone, without languages, extra text or a
+  ;; charge: what PTV holds of those stays while it belongs to what Lipas
+  ;; sends (D8's rule for postal addresses)
+  (let [payload (sut/site->location site langs)
+        channel (-> (as-channel site)
+                    (update-in [:addresses 0 :streetAddress] assoc
+                               :street [{:value "Urheilutie 4" :language "fi"}
+                                        {:value "Sports Road 4" :language "en"}]
+                               :additionalInformation [{:value "2. krs." :language "fi"}
+                                                       {:value "Ingång B" :language "sv"}])
+                    (with-phones [["+358" "858755700" "fi"]])
+                    (update-in [:phoneNumbers 0] assoc
+                               :additionalInformation "Vaihde" :serviceChargeType "FreeOfCharge"))
+        kept (sut/with-ptv-extras payload channel)
+        street (fn [d lang] (some #(when (= lang (:language %)) (:value %))
+                                  (-> d :addresses first :streetAddress :street)))]
+    (testing "the same address: PTV's street in another language and its extra text stay"
+      (is (= "Urheilutie 4" (street kept "fi")) "the Finnish street is Lipas's")
+      (is (= "Sports Road 4" (street kept "en")))
+      (is (= [{:value "2. krs." :language "fi"}]
+             (-> kept :addresses first :streetAddress :additionalInformation))
+          "in the payload's languages only"))
+
+    (testing "PTV's street number kept apart goes with its other-language street"
+      (let [split (update-in channel [:addresses 0 :streetAddress] assoc
+                             :street [{:value "Urheilutie" :language "fi"}
+                                      {:value "Sports Road" :language "en"}]
+                             :streetNumber "4")]
+        (is (= "Sports Road 4" (street (sut/with-ptv-extras payload split) "en")))))
+
+    (testing "another address in Lipas: PTV's extras belonged to the old one"
+      (let [moved (sut/with-ptv-extras (sut/site->location (assoc-in site [:location :address] "Kolmas tie 3") langs)
+                    channel)]
+        (is (= "Kolmas tie 3" (street moved "en")))
+        (is (nil? (-> moved :addresses first :streetAddress :additionalInformation)))))
+
+    (testing "the phone with the number Lipas sends keeps PTV's information and charge"
+      (is (= {:additionalInformation "Vaihde" :serviceChargeType "FreeOfCharge"}
+             (select-keys (first (:phoneNumbers kept)) [:additionalInformation :serviceChargeType]))))
+
+    (testing "another number doesn't"
+      (let [other (sut/with-ptv-extras (sut/site->location (assoc site :phone-number "040 111 2222") langs)
+                    channel)]
+        (is (nil? (:additionalInformation (first (:phoneNumbers other)))))))
+
+    (testing "kept extras are no difference in the review afterwards"
+      (is (= [] (:rows (review (merge channel (select-keys kept [:addresses :phoneNumbers])))))))))
 
 (defspec a-one-slot-field-ends-with-one-value 100
   (prop/for-all [numbers (gen/vector-distinct (gen/elements ["401111111" "402222222" "403333333"])

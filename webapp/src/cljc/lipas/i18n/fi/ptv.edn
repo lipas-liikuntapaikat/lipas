@@ -95,6 +95,8 @@
  :delete-waits-for-archive "Tämä liikuntapaikka on viety PTV:hen. Palvelupaikka arkistoidaan PTV:ssä, kun kunnan PTV-vastaava hyväksyy sen."
  :sync-failed-body-changed-since-review "PTV:ssä on muutettu tietoja sen jälkeen, kun avasit näkymän. Tarkista muutokset ja synkronoi uudelleen."
  :saved-but-sync-failed-body-changed-since-review "Liikuntapaikka tallennettiin, mutta sitä ei synkronoitu, koska PTV:ssä on muutettu tietoja sen jälkeen, kun avasit liikuntapaikan. Käy muutokset läpi PTV-välilehdellä ja tallenna uudelleen."
+ :sync-failed-body-not-reviewed "PTV:ssä on muutoksia, joita ei ole käyty läpi. Käy ne läpi ja synkronoi uudelleen."
+ :saved-but-sync-failed-body-not-reviewed "Liikuntapaikka tallennettiin, mutta sitä ei synkronoitu, koska PTV:ssä on muutoksia, joita ei ole käyty läpi. Käy ne läpi PTV-työkalussa tai liikuntapaikan PTV-välilehdellä ja synkronoi."
  :sync-failed-body-ptv-down "PTV ei vastannut. Jos PTV:hen jäi keskeneräinen luonnos, julkaise tai peru se PTV:ssä ennen uutta synkronointia."
  :awaiting-archive-title "Odottaa arkistointia ({1})"
  :awaiting-archive-removed "Liikuntapaikka on merkitty Lipaksessa poistetuksi ({1}, {2}). Palvelupaikka näkyy yhä PTV:ssä."

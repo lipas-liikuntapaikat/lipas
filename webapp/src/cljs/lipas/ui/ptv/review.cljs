@@ -166,6 +166,23 @@
    [:> Grid {:item true :xs 12 :md (if stacked? 12 6)} lipas-card]
    [:> Grid {:item true :xs 12 :md (if stacked? 12 6)} ptv-card]])
 
+(defn- edited-alert
+  "The user's own value in the edit (:current :edited). Where the row needs
+   a decision, it is sent only once confirmed against PTV's value now
+   (ptv-review/edited-choice): a change PTV makes afterwards, or a text
+   written into the edit by AI generation, asks again."
+  [{:keys [tr row choices on-take title text]}]
+  [:> Alert {:severity "info" :variant "outlined" :icon false}
+   [:> AlertTitle title]
+   [:> Stack {:spacing 1}
+    [:> Typography {:variant "body2" :sx #js {:fontWeight 400 :whiteSpace "pre-wrap"}}
+     (or (not-empty text) (tr :ptv.review/empty))]
+    (when (ptv-review/review-choice-required? row)
+      [choice-button {:label (tr :ptv.review/use-edited)
+                      :subject (review-data/field-label tr row)
+                      :chosen? (some? (ptv-review/review-choice choices row))
+                      :on-click #(on-take [row] :edited)}])]])
+
 (defn- text-row
   "A name, marketing name, summary or description."
   [{:keys [tr row choices on-take can-take? stacked? read-only? site-tab first-open-id]}]
@@ -214,10 +231,8 @@
 
        ;; the user's own text, written in the form
        (= :edited current)
-       [:> Alert {:severity "info" :variant "outlined" :icon false}
-        [:> AlertTitle (tr :ptv.review/edited-title)]
-        [:> Typography {:variant "body2" :sx #js {:fontWeight 400 :whiteSpace "pre-wrap"}}
-         (or (not-empty draft) (tr :ptv.review/empty))]]
+       [edited-alert {:tr tr :row row :choices choices :on-take on-take
+                      :title (tr :ptv.review/edited-title) :text draft}]
 
        ;; a conflict can be resolved in the form with a text of both
        (and (= :both origin) long?)
@@ -292,6 +307,10 @@
                                              :chosen? (= :ptv shown)
                                              :on-click #(on-take [row] :ptv)}]
                              (some->> (changes-site-caption tr row site-tab) caption)])}]]
+     (when (and (not read-only?) (= :edited current))
+       [edited-alert {:tr tr :row row :choices choices :on-take on-take
+                      :title (tr :ptv.review/edited-value-title)
+                      :text (review-data/value-text field (:draft row))}])
      (caption (tr :ptv.review/one-slot-note (str/lower-case subject)))]))
 
 (defn- other-pages-row
@@ -378,6 +397,10 @@
                                              :chosen? (= :ptv shown)
                                              :on-click #(on-take [row] :ptv)}]
                              (some->> (changes-site-caption tr row site-tab) caption)])}]]
+     (when (and (not read-only?) (= :edited (:current row)))
+       [edited-alert {:tr tr :row row :choices choices :on-take on-take
+                      :title (tr :ptv.review/edited-value-title)
+                      :text (review-data/value-text :address (:draft row))}])
      (caption (tr :ptv.review/one-slot-note (str/lower-case subject)))]))
 
 (defn- info-row

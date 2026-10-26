@@ -95,6 +95,8 @@
  :delete-waits-for-archive "Idrottsplatsen har förts till PTV. Servicestället arkiveras i PTV när kommunens PTV-ansvariga godkänner det."
  :sync-failed-body-changed-since-review "Uppgifterna i PTV har ändrats efter att du öppnade vyn. Kontrollera ändringarna och synkronisera på nytt."
  :saved-but-sync-failed-body-changed-since-review "Idrottsplatsen sparades men synkroniserades inte, eftersom uppgifterna i PTV har ändrats efter att du öppnade den. Gå igenom ändringarna på PTV-fliken och spara på nytt."
+ :sync-failed-body-not-reviewed "PTV har ändringar som ingen har gått igenom. Gå igenom dem och synkronisera på nytt."
+ :saved-but-sync-failed-body-not-reviewed "Idrottsplatsen sparades men synkroniserades inte, eftersom PTV har ändringar som ingen har gått igenom. Gå igenom dem i PTV-verktyget eller på idrottsplatsens PTV-flik och synkronisera."
  :sync-failed-body-ptv-down "PTV svarade inte. Om ett ofärdigt utkast blev kvar i PTV, publicera eller ångra det i PTV före nästa synkronisering."
  :awaiting-archive-title "Väntar på arkivering ({1})"
  :awaiting-archive-removed "Idrottsplatsen är märkt som borttagen i LIPAS ({1}, {2}). Servicestället syns fortfarande i PTV."

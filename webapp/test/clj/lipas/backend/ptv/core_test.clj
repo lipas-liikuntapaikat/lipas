@@ -351,6 +351,15 @@
              (:live-source-id (refusal (live-service :sourceId "lipas-other-1")
                                        {:service-id test-service-id})))))
 
+    (testing "a service changed in PTV since the client loaded it is refused: the
+              client sends PTV's texts as they were then"
+      (is (= :changed-in-ptv
+             (:type (refusal live {:service-id test-service-id
+                                   :expected-modified "2026-10-01T00:00:00"}))))
+      (is (some? (:put (sync! live {:service-id test-service-id
+                                    :expected-modified (:modified live)})))
+          "unchanged since: written"))
+
     (testing "a text under PTV's minimum length is refused before PTV, carried-over ones included"
       (is (= {:type :texts-too-short :problems [{:type "Summary" :language "fi"}]}
              (refusal live {:service-id test-service-id :summary {:fi "Uusi"}})))

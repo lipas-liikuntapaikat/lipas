@@ -101,16 +101,27 @@
    ;; dispatched.
     (let [tr              (-> db :translator)
           lipas-id        (-> result :lipas-id)
-          dispatch-extras (when on-success (on-success result))]
+          dispatch-extras (when on-success (on-success result))
+          ;; This save's sync was refused over a change made in PTV that
+          ;; nobody has reviewed (a quick edit, a status change): the site
+          ;; is saved but PTV isn't. The error is on the revision this save
+          ;; wrote (:at), not one an earlier save left.
+          error           (-> result :ptv :error)
+          not-reviewed?   (and (= "ptv-not-reviewed" (some-> (:type error) name))
+                               (some? (:at error))
+                               (= (:at error) (:event-date result)))]
       {:db             (-> db
                            (utils/add-to-db result)
                            (assoc-in [:sports-sites lipas-id :editing] nil)
                            (assoc-in [:sports-sites :save-in-progress?] false))
-       :dispatch-n     (into
-                         [[:lipas.ui.events/set-active-notification
-                           {:message  (tr :notifications/save-success)
-                            :success? true}]]
-                         dispatch-extras)
+       :dispatch-n     (cond-> (into
+                                 [[:lipas.ui.events/set-active-notification
+                                   {:message  (tr :notifications/save-success)
+                                    :success? true}]]
+                                 dispatch-extras)
+                         ;; the handler lives in the lazy :ptv module
+                         not-reviewed? (conj [:lipas.ui.lazy/load-then :ptv
+                                              [:lipas.ui.ptv.events/notify-if-sync-failed result]]))
        :tracker/event! ["sports-site" "save" "lipas-id" lipas-id]})))
 
 (rf/reg-event-fx ::save-failure

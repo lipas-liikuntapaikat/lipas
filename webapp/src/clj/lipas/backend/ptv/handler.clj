@@ -682,10 +682,12 @@
               {:status 403
                :body (ex-data e)}
 
-              ;; Changed in PTV after the user's review: nothing was written
-              (= :ptv-changed-since-review (:type (ex-data e)))
+              ;; Changed in PTV after the user's review, or a change made in
+              ;; PTV that a sync without a review would overwrite: nothing
+              ;; was written
+              (#{:ptv-changed-since-review :ptv-not-reviewed} (:type (ex-data e)))
               {:status 409
-               :body {:type :ptv-changed-since-review}}
+               :body {:type (:type (ex-data e))}}
 
               ;; A different sports-site already owns this service-location.
               (= :double-link (:type (ex-data e)))
