@@ -132,6 +132,10 @@
                    :serviceChannelNames [{:type "Name" :language "fi" :value "Oulunkylän tekojää"}]
                    :serviceChannelDescriptions []
                    :services [{:service {:id "svc-b" :name "Luistelu"}}]})
+                ptv-integration/get-active-service-channel
+                (fn [_ptv _org-id id]
+                  (swap! ptv-calls conj [:active id])
+                  {:id id :publishingStatus "Published"})
                 ptv-integration/get-service
                 (fn [_ptv _org-id id]
                   (swap! ptv-calls conj [:service id])
@@ -180,12 +184,41 @@
         (testing "and the municipality's PTV manager"
           (is (= 200 (status (user-with-role "ptv-manager" own-city)))))
 
+        (testing "PTV's unpublished draft, which blocks the sync, is marked"
+          (with-redefs [ptv-integration/get-active-service-channel
+                        (fn [_ _ id] {:id id :publishingStatus "Modified"})]
+            (is (= "Modified" (-> (ptv-core/get-ptv-site-review (test-db) nil lipas-id)
+                                  :channel :publishingStatus)))))
+
         (testing "nobody else"
           (reset! ptv-calls [])
           (is (= 403 (status (user-with-role "city-manager" other-city))))
           (is (= 403 (status (user-with-role "ptv-manager" other-city))))
           (is (= 401 (status nil)))
           (is (empty? @ptv-calls) "no PTV call for a refused request"))))))
+
+(deftest unpublished-draft-is-marked-test
+  ;; PTV's listing and a GET give the published version; only /active/ shows
+  ;; a draft, and PTV refuses every write while one exists. The refetch of an
+  ;; opened row marks it, so its review says so before a sync is tried.
+  (let [published {:id channel-id :publishingStatus "Published"}
+        active (atom nil)
+        fetch #(ptv-core/fetch-ptv-service-channel nil ptv-org-id channel-id)]
+    (with-redefs [ptv-integration/get-org-service-channel (fn [_ _ _] published)
+                  ptv-integration/get-active-service-channel (fn [_ _ _] @active)]
+      (testing "a draft in PTV"
+        (reset! active (assoc published :publishingStatus "Modified"))
+        (is (= "Modified" (:publishingStatus (fetch)))))
+      (testing "no draft"
+        (reset! active published)
+        (is (= published (fetch))))
+      (testing "/active/ doesn't know the location"
+        (reset! active nil)
+        (is (= published (fetch))))
+      (testing "no answer from /active/ leaves the location as it is"
+        (with-redefs [ptv-integration/get-active-service-channel
+                      (fn [_ _ _] (throw (ex-info "HTTP Error: 502" {})))]
+          (is (= published (fetch))))))))
 
 (deftest sync-writes-chosen-site-data-test
   (let [_org (seed-org!)

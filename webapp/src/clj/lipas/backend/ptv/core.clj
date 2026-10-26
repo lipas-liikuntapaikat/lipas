@@ -51,6 +51,22 @@
   [db lipas-ids]
   (update-vals (db/get-ptv-sync-bases db lipas-ids) ptv-review/->review-base))
 
+(defn- with-draft-status
+  "`channel`, PTV's published version, with :publishingStatus \"Modified\"
+  when PTV also holds an unpublished draft of it. Only PTV's /active/
+  endpoint shows the draft, and PTV refuses every write until it is
+  published or discarded in PTV, so the review says so before a sync is
+  tried. Without an answer from /active/ the channel is returned as is."
+  [ptv org-id channel]
+  (let [active (when channel
+                 (try
+                   (ptv/get-active-service-channel ptv org-id (:id channel))
+                   (catch Exception e
+                     (log/warnf "PTV draft check failed for %s: %s" (:id channel) (ex-message e))
+                     nil)))]
+    (cond-> channel
+      (= "Modified" (:publishingStatus active)) (assoc :publishingStatus "Modified"))))
+
 (defn- get-channel-or-nil
   "The service location, or nil when PTV doesn't have it (archived)."
   [ptv org-id channel-id]
@@ -106,7 +122,7 @@
         org-id (-> site :ptv :org-id)
         channel-id (-> site :ptv :service-channel-ids first)]
     (when (and org-id channel-id (-> site :ptv :last-sync))
-      (let [channel (get-channel-or-nil ptv org-id channel-id)
+      (let [channel (with-draft-status ptv org-id (get-channel-or-nil ptv org-id channel-id))
             lipas-only (remove (set (ptv-data/channel-service-ids channel))
                                (-> site :ptv :service-ids))]
         {:lipas-id lipas-id
@@ -436,8 +452,11 @@
   (ptv/get-org-service-channels ptv org-id))
 
 (defn fetch-ptv-service-channel
+  "One service location, refetched when the PTV tool opens its row, with
+  PTV's unpublished draft of it marked (with-draft-status): the org's
+  listing can't show one."
   [ptv org-id service-channel-id]
-  (ptv/get-org-service-channel ptv org-id service-channel-id))
+  (with-draft-status ptv org-id (ptv/get-org-service-channel ptv org-id service-channel-id)))
 
 ;; Single source of truth lives in lipas.data.ptv so the sync path and the
 ;; no-sync meta path persist exactly the same editable keys.

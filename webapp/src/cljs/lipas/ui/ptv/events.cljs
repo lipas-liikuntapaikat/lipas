@@ -1800,8 +1800,15 @@
   (fn [{:keys [db]} [_ target lipas-id row value]]
     (let [path (draft-path db target lipas-id)
           writes (ptv-review/review-value-writes row value)
-          ;; taking a value decides the row: no keep-Lipas record
-          db (update-in db (review-data/choices-path lipas-id) dissoc (:key row))]
+          ;; Taking another of PTV's values decides the row by itself (the
+          ;; edit holds it). Lipas's own value, which PTV also has, leaves
+          ;; the edit as it was: that is keeping Lipas's version.
+          db (update-in db (review-data/choices-path lipas-id)
+                        (fn [choices]
+                          (if (and (= :one-slot (:kind row)) (ptv-review/lipas-value? row value))
+                            (assoc choices (:key row)
+                                   {:choice :lipas :seen (ptv-review/review-choice-seen row)})
+                            (dissoc choices (:key row)))))]
       (case target
         :ptv-tool {:db (update-in db path ptv-review/apply-review-writes writes)}
         :site-form {:db db

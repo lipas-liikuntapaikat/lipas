@@ -160,9 +160,16 @@
           new-number (some #(when (= "401234567" (:number %)) %) (sut/ptv-values phone))]
       (is (= 2 (count (:ptv phone))))
       (is (not (sut/takeable-in-bulk? phone)) "which one is the user's pick")
+      (testing "PTV keeping Lipas's number beside the new one decides nothing"
+        (let [annotated (row (sut/annotate-review r site) [:phone])]
+          (is (= :lipas (:current annotated)))
+          (is (= [annotated] (sut/open-review-rows [annotated] {})) "a sync would remove PTV's other")))
       (let [taken (sut/apply-review-writes site (sut/review-value-writes phone new-number))]
         (is (= "+358 401234567" (:phone-number taken)))
-        (is (= :ptv (:current (row (sut/annotate-review r taken) [:phone])))))))
+        (is (= :ptv (:current (row (sut/annotate-review r taken) [:phone])))))
+      (testing "taking Lipas's own number from PTV's is keeping Lipas's version"
+        (is (sut/lipas-value? phone (some #(when (= "858755700" (:number %)) %) (sut/ptv-values phone))))
+        (is (not (sut/lipas-value? phone new-number))))))
 
   (testing "a Finnish service number has no prefix"
     (is (= "0600123456" (sut/format-phone {:prefix nil :number "0600123456" :service? true})))

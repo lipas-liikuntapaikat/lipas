@@ -722,9 +722,11 @@
           p (comparable field (:ptv row))]
       (cond
         (= v p) :ptv
-        ;; one of PTV's several values taken into the one slot
-        (and (= :one-slot kind) (= 1 (count v)) (contains? p (first v))) :ptv
+        ;; the saved value, even when it is one of PTV's several: PTV's
+        ;; others are a change the user hasn't decided about yet
         (= v (comparable field (:lipas row))) :lipas
+        ;; another of PTV's several values taken into the one slot
+        (and (= :one-slot kind) (= 1 (count v)) (contains? p (first v))) :ptv
         :else :edited))))
 
 (defn annotate-review
@@ -835,6 +837,13 @@
                                     :when v]
                                 [path v]))
           {})))))
+
+(defn lipas-value?
+  "Whether `value`, one of PTV's values of a one-slot `row`, is the one Lipas
+   has saved: taking it keeps Lipas's version, which is recorded as that
+   choice, since the edit doesn't change."
+  [row value]
+  (= (comparable (:field row) #{value}) (comparable (:field row) (:lipas row))))
 
 (defn review-value-writes
   "What to write into the edit to make it hold one of PTV's values: `value`

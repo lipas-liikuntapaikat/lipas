@@ -271,7 +271,11 @@
                                       [:> Typography {:variant "body2" :sx body} text]
                                       [choice-button {:label (tr :ptv.review/take-this)
                                                       :subject (str subject ": " text)
-                                                      :chosen? (and (some? held) (same-slot-value? held v))
+                                                      ;; Lipas's own value, when PTV has it, is
+                                                      ;; chosen by keeping Lipas's version
+                                                      :chosen? (if (= :lipas shown)
+                                                                 (ptv-review/lipas-value? row v)
+                                                                 (and (some? held) (same-slot-value? held v)))
                                                       :on-click #(on-take-value row v)}]]))
                              [value-line tr (review-data/value-text field ptv)])
                   :button (cond
