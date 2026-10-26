@@ -985,11 +985,14 @@
         (<== [::subs/sports-site-view lipas-id type-code])
 
         ;; Show PTV tab in read-only mode only when sync is enabled.
-        ;; In edit mode show only when it's possible to sync.
+        ;; In edit mode show it when it's possible to sync, and when the
+        ;; save writes to PTV anyway (a synced site edited out of PTV's
+        ;; scope): its review is where the save dialog leads.
         ;; PTV rights for THIS site's municipality — the backend gate
         ;; (core/check-ptv-save!) rejects PTV edits without them.
         view-ptv? (and (if editing?
-                         (ptv-data/ptv-candidate? edit-data)
+                         (or (ptv-data/ptv-candidate? edit-data)
+                             (ptv-data/save-syncs? edit-data))
                          (:sync-enabled (:ptv display-data)))
                        (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :ptv/manage]))
 
