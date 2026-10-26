@@ -531,8 +531,11 @@
         (is (= {[:summary "fi"] :both} (keys-of r)))
         (is (sut/review-choice-required? row))
         (is (= :lipas (:current row)) "the edit holds the user's text")
-        (is (empty? (sut/open-review-rows (:rows r) {[:summary "fi"] {:choice :lipas
-                                                                      :seen (sut/review-choice-seen row)}})))))
+        (is (empty? (sut/open-review-rows (:rows r) {[:summary "fi"] (sut/service-kept-choice row)})))
+        (testing "keeping it holds only for the text kept: an edit after it asks again"
+          (let [r2 (review (assoc-in ptv [:summary :fi] "Oma tiivistelmä, tekoälyn jatkama") base)]
+            (is (= [[:summary "fi"]]
+                   (map :key (sut/open-review-rows (:rows r2) {[:summary "fi"] (sut/service-kept-choice row)}))))))))
     (testing "without a base (Lipas hasn't written the service) every edit is Lipas's"
       (is (= {[:summary "fi"] :lipas}
              (keys-of (review (assoc-in ptv [:summary :fi] "Oma tiivistelmä") nil)))))

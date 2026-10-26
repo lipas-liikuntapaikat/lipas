@@ -2125,8 +2125,7 @@
                         (fn [choices]
                           (reduce (fn [choices row]
                                     (if (= :lipas side)
-                                      (assoc choices (:key row)
-                                             {:choice :lipas :seen (ptv-review/review-choice-seen row)})
+                                      (assoc choices (:key row) (ptv-review/service-kept-choice row))
                                       (dissoc choices (:key row))))
                                   choices
                                   rows)))]

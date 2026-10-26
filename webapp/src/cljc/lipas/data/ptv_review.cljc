@@ -772,19 +772,34 @@
    :seen (review-choice-seen row)
    :draft (comparable (:field row) (:draft row))})
 
+(defn service-kept-choice
+  "The record of keeping the user's edit of a service text `row`
+   (service-review) over PTV's: made against PTV's text of the time
+   (:seen), for exactly the text the edit holds (:draft)."
+  [row]
+  {:choice :lipas
+   :seen (review-choice-seen row)
+   :draft (comparable (:field row) (:lipas row))})
+
 (defn review-choice
   "The decision recorded for `row` in `choices` (row :key -> {:choice
    :seen}), or nil when there is none or it no longer holds: PTV's value has
    changed since it was made, or the edit no longer holds what was chosen.
    :lipas keeps the saved version; :edited sends the user's own value
-   (edited-choice), as long as it is the value confirmed. Taking PTV's
-   version needs no record: the edit shows it."
+   (edited-choice), as long as it is the value confirmed; a service row's
+   kept edit (service-kept-choice) likewise. Taking PTV's version needs no
+   record: the edit shows it."
   [choices row]
   (when-let [choice (get choices (:key row))]
     (when (and (= (:seen choice) (review-choice-seen row))
                (= (:choice choice) (or (:current row) :lipas))
-               (or (not= :edited (:choice choice))
-                   (= (:draft choice) (comparable (:field row) (:draft row)))))
+               ;; a choice made for a value of the user's own holds while
+               ;; the edit holds that value: a site row's :draft, a service
+               ;; row's :lipas (the edit)
+               (or (not (contains? choice :draft))
+                   (= (:draft choice) (comparable (:field row) (if (:service? row)
+                                                                 (:lipas row)
+                                                                 (:draft row))))))
       choice)))
 
 (defn review-decided?
