@@ -11,9 +11,6 @@
  :sports-sites-count "liikuntapaikkaa",
  :sports-site-count-singular "liikuntapaikka",
  :synced-to-ptv "Viety PTV:hen",
- :out-of-date "Lipaksessa on uudempia muutoksia kuin PTV:ssä",
- :content-drift "Muutettu PTV:ssä – käy erot läpi ennen synkronointia",
- :modified-in-ptv "PTV:ssa julkaisemattomia muutoksia – julkaise tai peru muutokset ensin PTV:ssa ennen synkronointia",
  ;; Titles (rendered bold). Used standalone when there's no actionable detail,
  ;; or paired with one of the body strings below for the full message.
  :sync-failed "Synkronointi PTV:hen epäonnistui",
@@ -38,7 +35,6 @@
  :filter-sync-disabled "Integraatio pois"
  :filter-no-longer-matches "Ei enää vastaa suodatinta"
  :filter-not-synced "Ei vielä viety"
- :filter-out-of-date "Muuttunut"
  :filter-ok "Ajan tasalla"
  :filter-missing-descriptions "Kuvaukset puuttuvat"
  :search-placeholder "Hae nimellä..."
@@ -58,7 +54,6 @@
  :open-in-ptv "Avaa PTV:ssä"
  :open-in-suomi-fi "Avaa suomi.fi:ssä"
  :service-missing-for-type "Liikuntapaikan tyyppi on muuttunut ja uutta tyyppiä vastaava Palvelu puuttuu PTV:stä."
- :type-changed-may-rebind "Liikuntapaikan tyyppi on vaihdettu. Liikuntapaikka liitetään PTV:ssä mahdollisesti toiseen Palveluun vaihdon seurauksena."
  :delete-will-archive "Tämä liikuntapaikka on viety PTV:hen. Poistaminen arkistoi myös PTV-palvelupaikan."
  :error-summary-too-long "Tiivistelmä on liian pitkä (enintään 150 merkkiä)."
  :error-description-too-long "Kuvaus on liian pitkä (enintään 5000 merkkiä)."
@@ -85,13 +80,6 @@
  :step-texts-hint "Kirjoita ne alle tai luo ne tekoälyllä."
  :finish-footer "Liikuntapaikka viedään PTV:hen, kun tallennat."
  :save-needs-texts "Täydennä PTV-välilehdeltä tiivistelmä ja kuvaus, tai kytke PTV-integraatio pois."
- :unpublished-languages-title "Osa PTV:n kieliversioista poistuu synkronoinnissa"
- :unpublished-languages-intro "Seuraava synkronointi poistaa PTV:stä nämä kieliversiot:"
- :unpublished-languages-not-enabled "ei otettu käyttöön integraatiossa. Jos haluat säilyttää kieliversion, ota yhteyttä lipasinfo@jyu.fi ennen synkronointia."
- :unpublished-languages-missing-texts "tiivistelmä ja kuvaus puuttuvat Lipaksesta. Lisää ne kielen välilehdelle ennen synkronointia: kirjoita ne itse, käännä suomenkielisistä teksteistä (\"Käännä muille kielille\") tai laadi tekoälyllä (\"Laadi luonnokset tekoälyllä\")."
- :lang-fi "suomi"
- :lang-se "ruotsi"
- :lang-en "englanti"
  :blocker-texts-too-short "Tiivistelmässä ja kuvauksessa pitää olla vähintään 5 merkkiä jokaisella kielellä."
  :text-min-length "vähintään {1} merkkiä"
  :sync-failed-body-ptv-message "PTV hylkäsi tiedot: {1}"

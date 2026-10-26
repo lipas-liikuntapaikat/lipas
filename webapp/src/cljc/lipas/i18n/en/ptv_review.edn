@@ -148,12 +148,12 @@
  :wizard-footer "Your choices take effect when you export the facilities to PTV."
  :export-blocked "Review the changes in PTV before exporting"
  :sync-tab-footer "Your choices take effect when you sync the facility ({1})."
+ :service-footer "Your choices take effect when you sync the service ({1})."
  :export-tab-footer "Your choices take effect when you export the facility to PTV ({1})."
  :site-form-footer "Your choices take effect when you save the facility. Saving syncs the result to PTV."
  :view-mode-footer "Choose the versions by editing the facility. Your choices take effect when you save."
  :renamed-on-sync "Name changes"
  :renamed-on-sync-tooltip "The sync renames the facility in LIPAS. Current name: {1}"
- :filter-changed-in-ptv "Changed in PTV"
  :notice-archived "The service location is archived in PTV."
  :notice-modified "PTV has unpublished changes. Publish or discard them in PTV before syncing."
  :notice-double-link "The service location is also linked to the facility {1}."
@@ -165,4 +165,6 @@
  :open-in-ptv "Open in PTV"
  :retry "Try again"
  :count-open "Not chosen: {1}"
- :help-link "Guide: reviewing the changes made in PTV"}
+ :help-link "Guide: reviewing the changes made in PTV"
+ :field-user-instruction "User instruction"
+ :ptv-changes-kept "Changed in PTV since LIPAS's last export, kept: {1}."}

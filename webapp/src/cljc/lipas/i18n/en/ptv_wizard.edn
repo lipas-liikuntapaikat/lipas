@@ -13,8 +13,6 @@
  :generate-descriptions-helper3
  "Service locations can be created in PTV when they have at least a Finnish description and summary. LIPAS automatically fills in the service classification, keywords and other metadata.",
  :integrate-service-locations "Create service locations from sports sites",
- :service-channel-name-conflict
- "A service location with the name {1} already exists in PTV.",
  :services-to-add "Services to create",
  :export-blocked-invalid
  "Export is blocked. Fix or deselect the following sports sites:",

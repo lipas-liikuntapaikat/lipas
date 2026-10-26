@@ -34,19 +34,27 @@
 
 (rf/reg-fx ::scroll-into-view!
   ;; The element with this DOM id to the top of its scroll container, once
-  ;; the render that may have just shown it has run.
+  ;; the render that may have just shown it has run (timed as ::focus!, so
+  ;; a closing dialog's focus doesn't scroll back to the button it was
+  ;; opened from).
   (fn [id]
-    (js/setTimeout #(some-> (js/document.getElementById id)
-                            (.scrollIntoView #js {:block "start"}))
-                   100)))
+    (js/requestAnimationFrame
+      (fn []
+        (js/setTimeout #(some-> (js/document.getElementById id)
+                                (.scrollIntoView #js {:block "start"}))
+                       50)))))
 
 (rf/reg-fx ::focus!
   ;; Moves the keyboard focus to the element with this DOM id, once the
-  ;; render that may have just shown it (and a scroll) has run.
+  ;; render that may have just shown it (and a scroll) has run: the frame
+  ;; Reagent renders in, then past React's effects, where a closing MUI
+  ;; dialog gives the focus back to the button that opened it.
   (fn [id]
-    (js/setTimeout #(some-> (js/document.getElementById id)
-                            (.focus #js {:preventScroll true}))
-                   150)))
+    (js/requestAnimationFrame
+      (fn []
+        (js/setTimeout #(some-> (js/document.getElementById id)
+                                (.focus #js {:preventScroll true}))
+                       50)))))
 
 (rf/reg-fx ::copy-to-clipboard!
   (fn [text]

@@ -11,9 +11,6 @@
  :sports-sites-count "idrottsanläggningar",
  :sports-site-count-singular "idrottsanläggning",
  :synced-to-ptv "Exporterad till PTV",
- :out-of-date "LIPAS har nyare ändringar än PTV",
- :content-drift "Ändrat i PTV – gå igenom skillnaderna före synkroniseringen",
- :modified-in-ptv "Opublicerade ändringar i PTV – publicera eller ångra ändringarna i PTV innan synkronisering",
  ;; Titles (rendered bold). Used standalone when there's no actionable detail,
  ;; or paired with one of the body strings below for the full message.
  :sync-failed "Synkronisering till PTV misslyckades",
@@ -38,7 +35,6 @@
  :filter-sync-disabled "Synkronisering av"
  :filter-no-longer-matches "Matchar inte längre filtret"
  :filter-not-synced "Inte synkroniserad"
- :filter-out-of-date "Ändrad"
  :filter-ok "Uppdaterad"
  :filter-missing-descriptions "Beskrivningar saknas"
  :search-placeholder "Sök på namn..."
@@ -58,7 +54,6 @@
  :open-in-ptv "Öppna i PTV"
  :open-in-suomi-fi "Öppna i suomi.fi"
  :service-missing-for-type "Typen av idrottsanläggning har ändrats och motsvarande tjänst saknas i PTV."
- :type-changed-may-rebind "Typen av idrottsanläggning har ändrats. Idrottsanläggningen kan komma att kopplas till en annan tjänst i PTV."
  :delete-will-archive "Denna idrottsanläggning har förts till PTV. Borttagning arkiverar även PTV-servicestället."
  :error-summary-too-long "Sammandraget är för långt (högst 150 tecken)."
  :error-description-too-long "Beskrivningen är för lång (högst 5000 tecken)."
@@ -85,13 +80,6 @@
  :step-texts-hint "Skriv dem nedan eller skapa dem med AI."
  :finish-footer "Idrottsanläggningen exporteras till PTV när du sparar."
  :save-needs-texts "Fyll i sammanfattning och beskrivning på PTV-fliken, eller stäng av PTV-integrationen."
- :unpublished-languages-title "En del av språkversionerna i PTV tas bort vid synkroniseringen"
- :unpublished-languages-intro "Nästa synkronisering tar bort de här språkversionerna från PTV:"
- :unpublished-languages-not-enabled "inte i bruk i integrationen. Om du vill behålla språkversionen, kontakta lipasinfo@jyu.fi före synkroniseringen."
- :unpublished-languages-missing-texts "sammandrag och beskrivning saknas i Lipas. Lägg till dem på språkets flik före synkroniseringen: skriv dem själv, översätt från de finska texterna (\"Översätt till andra språk\") eller låt AI skapa dem (\"Generera beskrivningar med artificiell intelligens\")."
- :lang-fi "finska"
- :lang-se "svenska"
- :lang-en "engelska"
  :blocker-texts-too-short "Sammanfattningen och beskrivningen ska ha minst 5 tecken på varje språk."
  :text-min-length "minst {1} tecken"
  :sync-failed-body-ptv-message "PTV avvisade uppgifterna: {1}"

@@ -588,6 +588,8 @@
                           ;; patched by service-id with the keys below.
                           [:mode {:optional true} [:enum "lipas" "native"]]
                           [:service-id {:optional true} [:maybe :string]]
+                          ;; native: its names. lipas: PTV's names, kept
+                          ;; over the sub-category's (:service-name wins for fi)
                           [:name {:optional true} (ptv-schema/localized-string-schema nil)]
                           [:expected-modified {:optional true} [:maybe :string]]
                           [:remove-languages {:optional true} [:vector [:enum "fi" "se" "en"]]]]}
@@ -710,6 +712,15 @@
 
               :else
               (throw e)))))}}]
+
+   ["/actions/fetch-ptv-service-bases"
+    {:post
+     {:require-privilege (ptv-org-read-access? db)
+      :parameters {:body [:map {:closed true} [:org-id :string]]}
+      :handler
+      (fn [req]
+        {:status 200
+         :body (ptv-core/get-ptv-service-bases db (-> req :parameters :body :org-id))})}}]
 
    ["/actions/get-ptv-awaiting-archive"
     {:post

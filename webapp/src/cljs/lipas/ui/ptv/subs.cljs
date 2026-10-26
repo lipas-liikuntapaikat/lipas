@@ -569,6 +569,12 @@
                                (get all-choices lipas-id)))))
            (sort-by :lipas-id)))))
 
+(rf/reg-sub ::service-bases
+  ;; service-id -> Lipas's mirror of the service after its last write
+  :<- [::ptv]
+  (fn [ptv [_ org-id]]
+    (get-in ptv [:org org-id :data :service-bases])))
+
 (rf/reg-sub ::awaiting-archive
   ;; Sites still published in PTV although removed in Lipas (or no longer
   ;; PTV's), waiting for a PTV manager to archive them (D2)

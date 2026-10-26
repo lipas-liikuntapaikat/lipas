@@ -142,7 +142,7 @@
   "What taking PTV's version of `row` does to Lipas, naming where the field
    is edited in the site form (`site-tab`)."
   [tr row site-tab]
-  (let [k (case (:field row)
+  (let [k (case (when-not (:service? row) (:field row))
             :name :ptv.review/name-changes-site
             :marketing-name :ptv.review/marketing-name-changes-site
             :phone :ptv.review/phone-changes-site
@@ -655,9 +655,9 @@
                             (str/lower-case (review-data/field-label tr m))))))]))
 
 (defn- kept-in-ptv-line
-  "What PTV keeps that Lipas has no field for (D8), and a postal address
-   the sync can't send back."
-  [tr {:keys [service-hours? postal-addresses]}]
+  "What PTV keeps that Lipas has no field for (D8), a postal address the
+   sync can't send back, and on a service, PTV's changes the edit keeps."
+  [tr {:keys [service-hours? postal-addresses ptv-changes]}]
   (let [kept (cond-> []
                service-hours? (conj (tr :ptv.review/kept-service-hours))
                (seq (:kept postal-addresses)) (conj (tr :ptv.review/kept-postal-address)))]
@@ -667,7 +667,11 @@
         (tr :ptv.review/kept-in-ptv (str/join ", " kept))])
      (when (seq (:dropped postal-addresses))
        [:> Typography {:variant "body2" :color "warning.dark" :sx body}
-        (tr :ptv.review/postal-address-dropped)])]))
+        (tr :ptv.review/postal-address-dropped)])
+     (when (seq ptv-changes)
+       [:> Typography {:variant "body2" :color "text.secondary" :sx body}
+        (tr :ptv.review/ptv-changes-kept
+            (str/join ", " (map #(str/lower-case (review-data/field-label tr %)) ptv-changes)))])]))
 
 (defn- connection-outcome
   "What a sync does with the connection `row` when the edit holds

@@ -391,8 +391,9 @@
   "Writes a service's texts to PTV and appends the result to the ptv_service
   mirror. `mode` says which kind of service it is, and so how it's written:
 
-  - \"lipas\" (default): created by LIPAS, which maintains its name, texts,
-    service classes, ontology terms and languages. Written by `source-id`:
+  - \"lipas\" (default): created by LIPAS, which maintains its service
+    classes, ontology terms and languages; its names and texts are the
+    client's (PTV's own unless edited in LIPAS). Written by `source-id`:
     created with LIPAS's full body when PTV doesn't know it yet, otherwise
     updated on top of the live service (the one `service-id` names, or the
     ptv_service mirror does when the request doesn't), leaving to PTV what
@@ -430,7 +431,7 @@
   "Fetch the org's service channels from PTV with full entity data.
    Uses the /list/organization endpoint which returns complete channel
    entities (descriptions, sourceId, publishingStatus etc.) needed for
-   drift detection and status warnings."
+   the sync review and status warnings."
   [ptv org-id]
   (ptv/get-org-service-channels ptv org-id))
 
@@ -554,7 +555,7 @@
                             {:blockers [:ptv/texts-too-short]})))
 
         ;; Fetch the stored channel for service-connection diffing below.
-        ;; Drift detection in `sports-site->ptv-input` uses a separately
+        ;; The sync review in `sports-site->ptv-input` uses a separately
         ;; cached channel snapshot, not this fetch.
         ;; A previously-archived channel (publishing-status "Deleted") 404s on
         ;; every PTV read endpoint but is still addressable for a PUT — so a
@@ -628,11 +629,11 @@
                 (ptv/update-service-connections ptv-component org-id service-id #(conj % service-channel-id)))))
         ;; Refetch the channel via GET so the FE caches the canonical
         ;; post-sync shape (the same shape /list/organization returns and
-        ;; that the sync review, `lipas.data.ptv/sync-review`, expects).
+        ;; that the sync review, `lipas.data.ptv-review/sync-review`, expects).
         ;; The PUT response is captured BEFORE the separate
         ;; update-service-connections calls land, so its :services list
-        ;; can be stale on updates. Without refetching, drift detection
-        ;; sees a stale :services list and reports :content-drift instead
+        ;; can be stale on updates. Without refetching, the sync review
+        ;; sees a stale :services list and reports a connection row instead
         ;; of :ok — that's why the green chip didn't appear immediately
         ;; after sync (tester feedback). Tolerate refetch failures
         ;; (transient PTV errors) by falling back to the PUT response.
@@ -751,7 +752,7 @@
       {;; Return the updated :ptv meta for sports-site, to for the app-db
        :ptv new-ptv-data
        ;; Return full PTV response so frontend can update service-channels cache
-       ;; (needed for drift detection and PTV link)
+       ;; (needed for the sync review and PTV link)
        :ptv-resp ptv-resp})))
 
 (comment
@@ -849,6 +850,21 @@
           ;; Failure path also wrote a new revision (with :error captured
           ;; on :ptv). Return the same :event-date so DB and ES match.
           {:ptv (:ptv resp) :event-date (:event-date resp)})))))
+
+(defn get-ptv-service-bases
+  "service-id -> the texts Lipas's mirror (ptv_service) holds for each of
+   the PTV org's services Lipas has written: what PTV returned after
+   Lipas's last write, the base the Palvelut tab's review tells PTV's
+   changes from the user's edits by (ptv-review/service-review)."
+  [db ptv-org-id]
+  (if-let [org (backend-org/get-org-by-ptv-org-id db ptv-org-id)]
+    (into {} (for [{:keys [service-id status document]}
+                   (ptv-service-db/get-current-by-org db (:id org))
+                   :when (and service-id (= "active" status))]
+               [(str service-id)
+                (select-keys document [:name :summary :description :user-instruction
+                                       :languages :last-sync])]))
+    {}))
 
 (defn get-ptv-awaiting-archive
   "The PTV org's sites whose location is still published in PTV although

@@ -98,7 +98,8 @@
     (str (tr (case field
                :name :ptv.review/field-name
                :summary :ptv.review/field-summary
-               :description :ptv.review/field-description))
+               :description :ptv.review/field-description
+               :user-instruction :ptv.review/field-user-instruction))
          " (" (str/upper-case language) ")")))
 
 (defn- municipality-text

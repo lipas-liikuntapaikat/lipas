@@ -6,6 +6,7 @@
   (:require [clojure.set :as set]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [lipas.backend.core :as core]
+            [lipas.backend.db.ptv-service :as ptv-service-db]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.org :as backend-org]
             [lipas.backend.ptv.core :as ptv-core]
@@ -362,6 +363,36 @@
     (testing "a valid patch is written"
       (is (= 200 (status {:phone-number "+358 40 1234567" :location {:postal-office "Helsinki"}})))
       (is (= "+358 40 1234567" (:phone-number (core/get-sports-site (test-db) lipas-id)))))))
+
+(deftest service-bases-test
+  (let [org (seed-org!)
+        admin (tu/gen-admin-user :db-component (test-db))
+        service-id (str (random-uuid))]
+    (ptv-service-db/insert-service-rev!
+      (test-db)
+      {:org-id (:id org)
+       :source-id (str "lipas-" ptv-org-id "-3100")
+       :service-id service-id
+       :status "active"
+       :author-id (:id admin)
+       :event-date "2026-10-01T10:00:00.000Z"
+       :document {:source-id (str "lipas-" ptv-org-id "-3100")
+                  :name {:fi "Uimahallit"}
+                  :summary {:fi "Tiivistelmä"}
+                  :description {:fi "Kuvaus"}
+                  :languages ["fi"]
+                  :last-sync "2026-10-01T10:00:00.000Z"}})
+    (testing "a PTV manager gets the mirror of each service Lipas has written"
+      (let [resp (post* "/api/actions/fetch-ptv-service-bases" {:org-id ptv-org-id}
+                        (jwt/create-token (user-with-role "ptv-manager" own-city)))
+            bases (tu/<-json (:body resp))]
+        (is (= 200 (:status resp)))
+        (is (= {:name {:fi "Uimahallit"} :summary {:fi "Tiivistelmä"} :description {:fi "Kuvaus"}
+                :languages ["fi"] :last-sync "2026-10-01T10:00:00.000Z"}
+               (get bases (keyword service-id))))))
+    (testing "nobody else"
+      (is (= 403 (:status (post* "/api/actions/fetch-ptv-service-bases" {:org-id ptv-org-id}
+                                 (jwt/create-token (user-with-role "ptv-manager" other-city)))))))))
 
 (comment
   (clojure.test/run-tests *ns*))

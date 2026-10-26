@@ -148,12 +148,12 @@
  :wizard-footer "Valinnat tulevat voimaan, kun viet liikuntapaikat PTV:hen."
  :export-blocked "Käy PTV:n muutokset läpi ennen vientiä"
  :sync-tab-footer "Valinnat tulevat voimaan, kun synkronoit liikuntapaikan ({1})."
+ :service-footer "Valinnat tulevat voimaan, kun synkronoit palvelun ({1})."
  :export-tab-footer "Valinnat tulevat voimaan, kun viet liikuntapaikan PTV:hen ({1})."
  :site-form-footer "Valinnat tulevat voimaan, kun tallennat liikuntapaikan. Tallennus synkronoi lopputuloksen PTV:hen."
  :view-mode-footer "Valitse versiot muokkaamalla liikuntapaikkaa. Valinnat tulevat voimaan, kun tallennat."
  :renamed-on-sync "Nimi vaihtuu"
  :renamed-on-sync-tooltip "Synkronointi vaihtaa liikuntapaikan nimen Lipaksessa. Nykyinen nimi: {1}"
- :filter-changed-in-ptv "Muutettu PTV:ssä"
  :notice-archived "Palvelupaikka on arkistoitu PTV:ssä."
  :notice-modified "PTV:ssä on julkaisemattomia muutoksia. Julkaise tai peru ne PTV:ssä ennen synkronointia."
  :notice-double-link "Palvelupaikka on liitetty myös liikuntapaikkaan {1}."
@@ -165,4 +165,6 @@
  :open-in-ptv "Avaa PTV:ssä"
  :retry "Yritä uudelleen"
  :count-open "Valitsematta: {1}"
- :help-link "Ohje: PTV-muutosten läpikäynti"}
+ :help-link "Ohje: PTV-muutosten läpikäynti"
+ :field-user-instruction "Toimintaohje"
+ :ptv-changes-kept "Muutettu PTV:ssä Lipaksen viimeisimmän viennin jälkeen, säilyy: {1}."}

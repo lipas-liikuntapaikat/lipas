@@ -599,6 +599,25 @@
     (testing "a summary alone doesn't publish the language"
       (is (= #{"fi"} (:languages (sut/->ptv-service (assoc-in base [:summary :se] "s-sv"))))))))
 
+(deftest ->ptv-service-names
+  ;; The Palvelut tab's review shows only edited fields as overwriting PTV,
+  ;; so a name changed in PTV is kept unless edited in LIPAS, as the texts are
+  (let [base {:org-id "org-x" :city-codes [895] :sub-category-id 2200 :languages ["fi" "en"]
+              :summary {:fi "s-fi" :en "s-en"} :description {:fi "d-fi" :en "d-en"}}
+        names (fn [m] (into {} (map (juxt :language :value))
+                            (:serviceNames (sut/->ptv-service m))))
+        sub-cat-names (names base)]
+    (testing "without PTV's names, the sub-category's"
+      (is (every? (comp not str/blank?) (vals sub-cat-names)))
+      (is (= #{"fi" "en"} (set (keys sub-cat-names)))))
+    (testing "PTV's names are kept"
+      (is (= {"fi" "PTV:n nimi" "en" (sub-cat-names "en")}
+             (names (assoc base :name {:fi "PTV:n nimi" :en ""})))))
+    (testing "the name edited in LIPAS wins in Finnish"
+      (is (= {"fi" "Uusi nimi" "en" "PTV name"}
+             (names (assoc base :name {:fi "PTV:n nimi" :en "PTV name"}
+                           :service-name "Uusi nimi")))))))
+
 (deftest ->ptv-service-area-codes
   (testing "city-codes < 100 are zero-padded to 3 digits (PTV's expected format)"
     ;; Regression: Eurajoki (51) hit "The code '51' was not found!" because

@@ -229,7 +229,7 @@
 (defn ptv-error-body
   "Public helper for the persistent inline Alert on the sports-site PTV tab.
   Returns the actionable body text using dialog-flow phrasing (the inline
-  Alert is a drift indicator, not tied to the immediate save event).
+  Alert stays on the tab, not tied to the immediate save event).
   Returns nil if there's no specific detail."
   [tr resp]
   (ptv-sync-error-body tr resp dialog-body-keys))
@@ -584,7 +584,8 @@
             [:dispatch [::fetch-ptv-service-channels lipas-org]]
             [:dispatch [::fetch-ptv-service-collections lipas-org]]
             [:dispatch [::fetch-ptv-service-audits lipas-org]]
-            [:dispatch [::fetch-awaiting-archive (get-in lipas-org [:ptv-data :org-id])]]]})))
+            [:dispatch [::fetch-awaiting-archive (get-in lipas-org [:ptv-data :org-id])]]
+            [:dispatch [::fetch-ptv-service-bases (get-in lipas-org [:ptv-data :org-id])]]]})))
 
 (rf/reg-event-fx ::fetch-ptv-org
   (fn [{:keys [db]} [_ lipas-org]]
@@ -839,7 +840,7 @@
     (let [org-id (-get-ptv-org-id db)
           ;; Clearing the single-select autocomplete fires on-change with [nil];
           ;; normalize to [] so "no link" is represented consistently — clean
-          ;; sync payload, and link-removed? (drift detection) actually fires.
+          ;; sync payload, and link-removed? (the sync status) actually fires.
           v (vec (remove str/blank? v))
           new-id (first v)
           sites (get-in db [:ptv :org org-id :data :sports-sites])
@@ -1481,7 +1482,10 @@
                           dissoc (:sourceId resp)))
        :fx (cond-> (into (or (seq extra-fx) [])
                          [[:dispatch [:lipas.ui.events/set-active-notification
-                                      {:message (tr :notifications/save-success) :success? true}]]])
+                                      {:message (tr :notifications/save-success) :success? true}]]
+                          ;; the write is the next review's base, and its choices are spent
+                          [:dispatch [::fetch-ptv-service-bases org-id]]
+                          [:dispatch [::forget-review-choices id]]])
              (and lipas-id new-service-id)
              (conj [:dispatch [:lipas.ui.sports-sites.events/edit-field
                                lipas-id [:ptv :service-ids]
@@ -2053,6 +2057,53 @@
                (assoc-in [:ptv :save-in-progress] false)
                (assoc-in [:ptv :errors :save] resp))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
+;;; The Palvelut tab's review ;;;
+
+(rf/reg-event-fx ::fetch-ptv-service-bases
+  ;; What PTV returned after Lipas's last write of each service (Lipas's
+  ;; mirror): the base of the Palvelut tab's review (ptv-review/service-review).
+  (fn [{:keys [db]} [_ org-id]]
+    (when org-id
+      {:fx [[:http-xhrio
+             {:method :post
+              :headers {:Authorization (str "Token " (-> db :user :login :token))}
+              :uri (str (:backend-url db) "/actions/fetch-ptv-service-bases")
+              :params {:org-id org-id}
+              :format (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success [::fetch-ptv-service-bases-success org-id]
+              :on-failure [::fetch-ptv-service-bases-failure org-id]}]]})))
+
+(rf/reg-event-db ::fetch-ptv-service-bases-success
+  (fn [db [_ org-id resp]]
+    (assoc-in db [:ptv :org org-id :data :service-bases] resp)))
+
+(rf/reg-event-db ::fetch-ptv-service-bases-failure
+  ;; without bases every edit reads as Lipas's: no conflicts can be told
+  (fn [db _] db))
+
+(rf/reg-event-fx ::service-review-take
+  ;; A service's edit (its unsaved texts, at `edit-key`) holding `side`'s
+  ;; version of each of `rows`: PTV's text replaces the edit's, or the
+  ;; user's own edit is kept, which is recorded against PTV's text.
+  (fn [{:keys [db]} [_ org-id edit-key rows side]]
+    (let [path [:ptv :org org-id :data :service-candidates edit-key]
+          db (update-in db (review-data/choices-path edit-key)
+                        (fn [choices]
+                          (reduce (fn [choices row]
+                                    (if (= :lipas side)
+                                      (assoc choices (:key row)
+                                             {:choice :lipas :seen (ptv-review/review-choice-seen row)})
+                                      (dissoc choices (:key row))))
+                                  choices
+                                  rows)))]
+      {:db (if (= :ptv side)
+             (reduce (fn [db {:keys [field locale ptv]}]
+                       (assoc-in db (conj path field locale) ptv))
+                     db
+                     rows)
+             db)})))
 
 ;;; Sites waiting to be archived in PTV (D2) ;;;
 

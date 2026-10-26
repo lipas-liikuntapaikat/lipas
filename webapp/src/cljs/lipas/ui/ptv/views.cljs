@@ -2068,14 +2068,24 @@
 
 (defn service-panel-left
   [{:keys [tr org-id service data ptv-base has-local-edits? org-languages selected-tab edited-name
-           edit-key native? other-system? text-errors versions-to-drop edit-languages name-data]}]
+           edit-key native? other-system? text-errors versions-to-drop edit-languages name-data
+           open-rows]}]
   (r/with-let [confirm-first-save? (r/atom false)]
     (let [service-id (:service-id service)
           source-id (:source-id service)
           display-name (or edited-name (:label service))
           has-lipas-data? (= :lipas (:management service))
           generating? (<== [::subs/generating-service-descriptions? edit-key])
-          sync! #(rf/dispatch [::events/create-ptv-service org-id edit-key data [] []])]
+          write! #(rf/dispatch [::events/create-ptv-service org-id edit-key data [] []])
+          ;; through the review: an edit over a change made in PTV since
+          ;; Lipas's last write is asked about first
+          sync! #(if (seq open-rows)
+                   (==> [:lipas.ui.events/confirm-with
+                         (review-data/overwrite-confirmation
+                           tr {:open open-rows
+                               :on-overwrite write!
+                               :on-review (fn [] (rf/dispatch [::events/show-review edit-key]))})])
+                   (write!))]
       [:> Stack {:spacing 2}
 
      ;; 1. PTV service name. A native service has one per language: the
@@ -2188,13 +2198,6 @@
                  (str (tr :ptv.wizard/translate-to-other-langs) " ("
                       (str/join ", " (map (comp str/upper-case name) (sort other-langs)))
                       ")")]]])]))
-
-     ;; Modified in PTV warning
-       (when (and (not other-system?) (= "Modified" (:publishing-status service)))
-         [:> Alert {:severity "warning" :variant "outlined"
-                    :sx #js {:py 0.5 :px 1}}
-          [:> Typography {:variant "body2"}
-           (tr :ptv/modified-in-ptv)]])
 
      ;; Texts PTV would reject: sync stays disabled until they're fixed
        (when (seq text-errors)
@@ -2423,7 +2426,10 @@
                                  :service-id (:service-id service)
                                  :city-codes (:city-codes service)
                                  :sub-category-id (ptv-data/parse-service-source-id source-id)
-                                 :languages org-languages}
+                                 :languages org-languages
+                                 ;; PTV's names, kept unless edited, as the
+                                 ;; texts are (current-texts)
+                                 :name (:name service)}
                                 current-texts)
                    edited-name (assoc :service-name edited-name)))
           ;; A native's patch, built as the backend builds it
@@ -2464,6 +2470,22 @@
           lipas-managed? (some-> source-id (str/starts-with? "lipas-"))
           modified? (= "Modified" (:publishing-status service))
 
+          ;; The edit against PTV and Lipas's last write: only an edited field
+          ;; can overwrite PTV, and one PTV changed too is a choice to make
+          review (when-not other-system?
+                   (ptv-review/service-review
+                     {:edit (if native?
+                              native-texts
+                              (assoc current-texts :name (cond-> (:name service)
+                                                           edited-name (assoc :fi edited-name))))
+                      :ptv (assoc ptv-texts :name (:name service))
+                      :base (get (<== [::subs/service-bases org-id]) (:service-id service))
+                      :locales (map keyword (or edit-languages org-languages))
+                      :last-sync (:last-sync (get (<== [::subs/service-bases org-id]) (:service-id service)))
+                      :ptv-modified (:service-modified service)}))
+          choices (<== [::subs/review-choices edit-key])
+          open-rows (ptv-review/open-review-rows (:rows review) choices)
+
           ;; Audit state indicator so a pending change request is visible
           ;; in the listing without opening the service (tester finding #3)
           service-audit (<== [::subs/service-audit-data (:service-id service)])
@@ -2497,59 +2519,65 @@
                                  :variant "outlined"
                                  :icon (r/as-element [:> Icon {:fontSize "small"} "lock"])}]]
 
-                      modified?
-                      [:> Tooltip {:title (tr :ptv/modified-in-ptv)}
-                       [:> Chip {:label "PTV"
-                                 :size "small"
-                                 :color "error"
-                                 :variant "outlined"
-                                 :icon (r/as-element [:> WarningIcon {:fontSize "small"}])}]]
-
-                      has-local-edits?
-                      [:> Tooltip {:title (tr :ptv.service/chip-unsaved)}
-                       [:> Chip {:label "PTV"
-                                 :size "small"
-                                 :color "warning"
-                                 :variant "outlined"
-                                 :icon (r/as-element [:> SyncProblem {:fontSize "small"}])}]]
-
-                      lipas-managed?
-                      [:> Tooltip {:title (tr :ptv.service/chip-in-sync (:last-modified-human service))}
-                       [:> Chip {:label "PTV"
-                                 :size "small"
-                                 :color "success"
-                                 :variant "outlined"
-                                 :icon (r/as-element [:> Sync {:fontSize "small"}])}]])]
+                      ;; the same chips as the sites' (ptv-review/sync-statuses)
+                      modified? [status-chip tr {:sync-status :blocked}]
+                      (seq open-rows) [status-chip tr {:sync-status :awaiting-choice}]
+                      has-local-edits? [status-chip tr {:sync-status :ready}]
+                      lipas-managed? [status-chip tr {:sync-status :ok
+                                                      :last-sync (some-> (:service-modified service)
+                                                                         (str "Z"))}])]
       [layouts/expansion-panel
        {:label (:label service)
         :label-icon (when (or sync-chip audit-icon)
                       [:> Stack {:direction "row" :spacing 1 :alignItems "center"}
                        sync-chip
                        audit-icon])}
-       [:> Grid {:container true :spacing 3}
-        [:> Grid {:item true :xs 12 :md 5}
-         [service-panel-left {:tr tr :org-id org-id :service service
-                              :native? native?
-                              :other-system? other-system?
-                              :edit-key edit-key
-                              :edit-languages edit-languages
-                              :name-data name-data
-                              :text-errors text-errors
-                              :versions-to-drop versions-to-drop
-                              :data data :ptv-base ptv-base
-                              :has-local-edits? has-local-edits?
-                              :edited-name edited-name
-                              :org-languages org-languages :selected-tab selected-tab}]]
-        [:> Grid {:item true :xs 12 :md 7}
-         [service-panel-right {:tr tr :source-id source-id :service service
+       [:> Stack {:spacing 2}
+        (when review
+          (let [open? (<== [::subs/review-open? edit-key])]
+            [review/review-panel
+             {:id (review-data/panel-dom-id edit-key)
+              :tr tr
+              :review review
+              :choices choices
+              :open? open?
+              :on-toggle #(==> [::events/set-review-open edit-key (not open?)])
+              :on-take (fn [rows side] (==> [::events/service-review-take org-id edit-key rows side]))
+              :on-reset (fn [_rows] (==> [::events/forget-review-choices edit-key]))
+              :rights {:ptv-manager? true}
+              :org-langs org-languages
+              :notices (when modified?
+                         [{:key :modified
+                           :text (tr :ptv.review/notice-modified)
+                           :actions [{:label (tr :ptv.review/open-in-ptv)
+                                      :href (str ptv-base "/service/" (:service-id service))}]}])
+              :first-open-id (review-data/first-open-dom-id edit-key)
+              :footer (tr :ptv.review/service-footer (tr :ptv.actions/sync-now))}]))
+        [:> Grid {:container true :spacing 3}
+         [:> Grid {:item true :xs 12 :md 5}
+          [service-panel-left {:tr tr :org-id org-id :service service
+                               :open-rows open-rows
                                :native? native?
                                :other-system? other-system?
                                :edit-key edit-key
                                :edit-languages edit-languages
-                               :removals removals
-                               :descriptions descriptions
-                               :org-languages org-languages
-                               :selected-tab selected-tab}]]]])))
+                               :name-data name-data
+                               :text-errors text-errors
+                               :versions-to-drop versions-to-drop
+                               :data data :ptv-base ptv-base
+                               :has-local-edits? has-local-edits?
+                               :edited-name edited-name
+                               :org-languages org-languages :selected-tab selected-tab}]]
+         [:> Grid {:item true :xs 12 :md 7}
+          [service-panel-right {:tr tr :source-id source-id :service service
+                                :native? native?
+                                :other-system? other-system?
+                                :edit-key edit-key
+                                :edit-languages edit-languages
+                                :removals removals
+                                :descriptions descriptions
+                                :org-languages org-languages
+                                :selected-tab selected-tab}]]]]])))
 
 (defn- service-list
   [{:keys [org-id services descriptions]}]

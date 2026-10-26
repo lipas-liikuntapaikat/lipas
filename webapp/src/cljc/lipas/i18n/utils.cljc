@@ -60,7 +60,6 @@
    :ptv.audit
    :ptv.audit.status
    :ptv.double-link
-   :ptv.name-conflict
    :ptv.preview
    :ptv.review
    :ptv.service

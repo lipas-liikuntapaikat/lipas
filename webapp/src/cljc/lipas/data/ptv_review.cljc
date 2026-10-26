@@ -911,6 +911,66 @@
           site
           (filter site-patch-path? (site-patch-paths-of patch))))
 
+;;; Services (the Palvelut tab) ;;;
+
+(def service-review-fields
+  "The texts of a PTV service the review compares, which LIPAS writes:
+   [field kind]."
+  [[:name :short] [:summary :text] [:description :text] [:user-instruction :text]])
+
+(defn service-review
+  "The review of a PTV service in the Palvelut tab. `edit` is its texts
+   with the user's unsaved edits over PTV's ({field {locale text}}), `ptv`
+   PTV's texts now and `base` Lipas's mirror of what PTV returned after
+   Lipas's last write (ptv_service; nil when Lipas hasn't written it), all
+   in that shape; `locales` the languages compared.
+
+   A sync sends the edit, which holds PTV's own text in every field the
+   user hasn't edited, so only an edited field can overwrite PTV. A row is
+   a difference between the edit and PTV: :lipas, the user's edit, or
+   :both when PTV changed the field too since Lipas's last write: a
+   conflict to decide (review-choice-required?). Rows are shaped as a
+   location review's text rows (:service? true), the edit holding Lipas's
+   side (:current :lipas). :ptv-changes lists the fields PTV changed that
+   the edit keeps as PTV has them."
+  [{:keys [edit ptv base locales last-sync ptv-modified]}]
+  (let [norm ptv-data/normalize-ws
+        compared (for [[field kind] service-review-fields
+                       locale locales
+                       :let [l (get-in edit [field locale])
+                             p (get-in ptv [field locale])
+                             b (get-in base [field locale])
+                             language (ptv-data/locale->lang locale)]]
+                   {:field field :kind kind :locale locale :language language
+                    :lipas l :ptv p :base b
+                    :differs? (not= (norm l) (norm p))
+                    :changed-in-ptv? (boolean (and base (not= (norm p) (norm b))))})]
+    {:rows (vec (for [{:keys [field kind locale language lipas ptv base differs? changed-in-ptv?]} compared
+                      :when differs?]
+                  {:key [field language]
+                   :field field
+                   :kind kind
+                   :group :texts
+                   :takeable-by :ptv-manager
+                   :service? true
+                   :language language
+                   :locale locale
+                   :lipas lipas
+                   :ptv ptv
+                   :base base
+                   :origin (if changed-in-ptv? :both :lipas)
+                   :current :lipas}))
+     :matching []
+     :ptv-changes (vec (for [{:keys [field language differs? changed-in-ptv?]} compared
+                             :when (and changed-in-ptv? (not differs?))]
+                         {:field field :language language}))
+     :base? (some? base)
+     :first-link? false
+     :evidence? true
+     :last-sync last-sync
+     :ptv-modified ptv-modified
+     :langs (mapv name locales)}))
+
 ;;; The PTV tool's view of a site ;;;
 
 (def sync-statuses
@@ -961,10 +1021,10 @@
         awaiting-choice? (boolean (seq (open-review-rows (:rows review) (:review-choices site))))
         ;; The edit differs from PTV (a review choice, or texts edited here):
         ;; the next sync has something to send.
-        has-drift? (boolean (or (seq (:rows review))
-                                (and (not= saved site)
-                                     (seq (:rows (sync-review site (:ptv-base site) ptv-channel
-                                                              services langs))))))
+        something-to-send? (boolean (or (seq (:rows review))
+                                        (and (not= saved site)
+                                             (seq (:rows (sync-review site (:ptv-base site) ptv-channel
+                                                                      services langs))))))
         ;; An edit made in the PTV tool but not saved that leaves no difference
         ;; to review, e.g. turning sync back on for a site saved with sync off.
         ;; Without this the site read :ok and its sync was disabled.
@@ -986,9 +1046,9 @@
         ;; successful sync always writes service-channel-ids back, so this
         ;; combination can't arise any other way. (Use str/blank? rather than
         ;; empty?: clearing the autocomplete can leave service-channel-ids as
-        ;; [nil]/[""], not [].) Treat it as out-of-date so the sync button
+        ;; [nil]/[""], not [].) Treat it as ready so the sync button
         ;; re-activates and the backend create-path (channel id nil) builds a
-        ;; fresh PTV service-location. Without this, has-drift? is false (no
+        ;; fresh PTV service-location. Without this, something-to-send? is false (no
         ;; channel left to diff) and event-date still equals last-sync, so
         ;; sync-status would wrongly read :ok and the button would stay
         ;; disabled ("up to date").
@@ -1033,7 +1093,7 @@
                     (= "Modified" (:publishingStatus ptv-channel)) :blocked
                     (-> site :ptv :error) :blocked
                     awaiting-choice? :awaiting-choice
-                    (or link-removed? archived-resync? has-drift? unsaved-edits?
+                    (or link-removed? archived-resync? something-to-send? unsaved-edits?
                         languages-changed?) :ready
                     (= (:event-date site) last-sync) :ok
                     :else :ready)

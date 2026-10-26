@@ -14,8 +14,6 @@
  "Serviceställen kan upprättas i PTV när de har minst en finsk beskrivning och sammanfattning. LIPAS kompletterar serviceklass, nyckelord och andra metadata automatiskt.",
  :integrate-service-locations
  "Skapa serviceställen från idrottsanläggningar.",
- :service-channel-name-conflict
- "Det finns redan ett serviceställe med namnet {1} i PTV.",
  :services-to-add "Service att upprätta",
  :export-blocked-invalid
  "Exporten är blockerad. Korrigera eller avmarkera följande idrottsanläggningar:",

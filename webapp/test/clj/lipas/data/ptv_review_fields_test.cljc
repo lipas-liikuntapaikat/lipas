@@ -392,3 +392,34 @@
                       value (nth (sut/ptv-values phone) (mod pick (count numbers)))
                       taken (sut/apply-review-writes site (sut/review-value-writes phone value))]
                   (= 1 (count (get (sut/location-values (sut/site->location taken langs)) [:phone]))))))
+
+;;; Services (the Palvelut tab) ;;;
+
+(deftest service-review-test
+  (let [ptv {:name {:fi "Uimahallit"} :summary {:fi "PTV:n tiivistelmä"}
+             :description {:fi "Kuvaus"} :user-instruction {:fi "Ohje"}}
+        base (assoc ptv :summary {:fi "Lipaksen viimeksi viemä"})
+        review (fn [edit base] (sut/service-review {:edit edit :ptv ptv :base base :locales [:fi]}))
+        keys-of (fn [r] (into {} (map (juxt :key :origin)) (:rows r)))]
+    (testing "nothing edited: no rows, whatever PTV did"
+      (is (= [] (:rows (review ptv base))))
+      (testing "but PTV's change since Lipas's last write is listed as kept"
+        (is (= [{:field :summary :language "fi"}] (:ptv-changes (review ptv base))))))
+    (testing "an edit of a field PTV didn't change is Lipas's"
+      (is (= {[:description "fi"] :lipas}
+             (keys-of (review (assoc-in ptv [:description :fi] "Uusi kuvaus") base)))))
+    (testing "an edit of a field PTV changed too is a conflict to decide"
+      (let [r (review (assoc-in ptv [:summary :fi] "Oma tiivistelmä") base)
+            row (first (:rows r))]
+        (is (= {[:summary "fi"] :both} (keys-of r)))
+        (is (sut/review-choice-required? row))
+        (is (= :lipas (:current row)) "the edit holds the user's text")
+        (is (empty? (sut/open-review-rows (:rows r) {[:summary "fi"] {:choice :lipas
+                                                                      :seen (sut/review-choice-seen row)}})))))
+    (testing "without a base (Lipas hasn't written the service) every edit is Lipas's"
+      (is (= {[:summary "fi"] :lipas}
+             (keys-of (review (assoc-in ptv [:summary :fi] "Oma tiivistelmä") nil)))))
+    (testing "taking PTV's text leaves no row"
+      (is (= [] (:rows (review (assoc-in ptv [:summary :fi] (get-in ptv [:summary :fi])) base)))))
+    (testing "whitespace PTV collapses is no difference"
+      (is (= [] (:rows (review (assoc-in ptv [:summary :fi] "PTV:n  tiivistelmä ") base)))))))

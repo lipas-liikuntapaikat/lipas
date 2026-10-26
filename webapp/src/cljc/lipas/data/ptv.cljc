@@ -380,12 +380,15 @@
 
      :fundingType "PubliclyFunded" ;; PubliclyFunded | MarketFunded
 
+     ;; The name edited in LIPAS, else the one PTV has (`:name`, so a name
+     ;; changed in PTV is kept like its texts are), else the sub-category's
      :serviceNames (let [custom-name (:service-name m)]
                      (for [[lang locale] (resolve-lang-pairs lipas-languages)]
                        {:type "Name" ; Name | AlternativeName
                         :language lang
                         :value (or (when (and custom-name (= locale :fi))
                                      custom-name)
+                                   (not-empty (get-in m [:name locale]))
                                    (get-in sub-cat [:name locale])
                                    "")}))
 
@@ -737,8 +740,8 @@
              ;; serviceChannelDescriptions. sv/en are declared only when the
              ;; site has their summary and description (`effective-languages`);
              ;; their names fall back to the Finnish name, which is usually a
-             ;; proper noun. PTV-side edits to these fields are not
-             ;; preserved — drift is surfaced separately in the LIPAS UI.
+             ;; proper noun. A change made to these fields in PTV is
+             ;; overwritten unless taken into LIPAS in the sync review.
              :serviceChannelNames (keep identity
                                         (let [fi-name (:name sports-site)
                                               pick (fn [locale]
@@ -1632,7 +1635,7 @@
   "Normalize whitespace for *comparing* PTV/LIPAS free-text values — never for
    storing or pushing them. PTV collapses runs of horizontal whitespace in
    fields on save (e.g. a double space in a Name becomes a single space), which
-   would otherwise read as drift immediately after a sync. Collapses runs of
+   would otherwise read as a change immediately after a sync. Collapses runs of
    spaces/tabs to a single space, normalizes line endings and trims, but keeps
    newlines: paragraph structure is meaningful and PTV preserves it. Returns nil
    for nil/blank input (so a missing value and an all-whitespace value compare
@@ -1800,7 +1803,7 @@
   "Whether the PTV tool's edit of `site` (its :ptv) differs from what was
    saved (its :ptv-saved snapshot) in what a sync sends. Comparing with PTV
    can't tell: an edit that makes the site match a change made in PTV, such
-   as connecting the service someone connected there, leaves no drift, yet
+   as connecting the service someone connected there, leaves no row, yet
    only a sync saves it. Neither can turning sync back on for a site saved
    with sync off. False when there's no snapshot."
   [site]

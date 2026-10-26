@@ -148,12 +148,12 @@
  :wizard-footer "Valen träder i kraft när du för idrottsplatserna till PTV."
  :export-blocked "Gå igenom ändringarna i PTV före överföringen"
  :sync-tab-footer "Valen träder i kraft när du synkroniserar idrottsplatsen ({1})."
+ :service-footer "Valen träder i kraft när du synkroniserar tjänsten ({1})."
  :export-tab-footer "Valen träder i kraft när du för idrottsplatsen till PTV ({1})."
  :site-form-footer "Valen träder i kraft när du sparar idrottsplatsen. Sparandet synkroniserar resultatet till PTV."
  :view-mode-footer "Välj versionerna genom att redigera idrottsplatsen. Valen träder i kraft när du sparar."
  :renamed-on-sync "Namnet byts"
  :renamed-on-sync-tooltip "Synkroniseringen byter idrottsplatsens namn i LIPAS. Nuvarande namn: {1}"
- :filter-changed-in-ptv "Ändrat i PTV"
  :notice-archived "Servicestället är arkiverat i PTV."
  :notice-modified "PTV har opublicerade ändringar. Publicera eller ångra dem i PTV före synkroniseringen."
  :notice-double-link "Servicestället är kopplat också till idrottsplatsen {1}."
@@ -165,4 +165,6 @@
  :open-in-ptv "Öppna i PTV"
  :retry "Försök igen"
  :count-open "Inte valt: {1}"
- :help-link "Anvisning: gå igenom ändringarna i PTV"}
+ :help-link "Anvisning: gå igenom ändringarna i PTV"
+ :field-user-instruction "Anvisning"
+ :ptv-changes-kept "Ändrat i PTV efter den senaste överföringen från LIPAS, behålls: {1}."}
