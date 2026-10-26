@@ -811,8 +811,14 @@
   "\"Synkronoi kaikki valmiit (n)\", and the progress of the run: the sites
    ready to sync, without opening each (D2: editors' saves wait for a PTV
    manager). Sites still waiting for a choice are skipped."
-  [{:keys [tr sites]}]
-  (let [ready (filter #(and (:sync-enabled %) (:valid %) (= :ready (:sync-status %))) sites)
+  [{:keys [tr org-id sites]}]
+  (let [schema-errors (<== [::subs/service-location-schema-errors-by-id org-id])
+        ;; what the row's own sync button asks too: a site it would refuse
+        ;; would stop the run halfway
+        ready (filter #(and (:sync-enabled %) (:valid %) (= :ready (:sync-status %))
+                            (seq (:service-ids %))
+                            (empty? (get schema-errors (:lipas-id %))))
+                      sites)
         awaiting (filter #(and (:sync-enabled %) (= :awaiting-choice (:sync-status %))) sites)
         {:keys [in-progress? processed-count total-count failed skipped-count]}
         (<== [::subs/service-location-creation-progress])]
@@ -916,7 +922,7 @@
 
       [:<>
        [awaiting-archive {:tr tr :org-id org-id}]
-       [sync-all-ready {:tr tr :sites sites}]
+       [sync-all-ready {:tr tr :org-id org-id :sites sites}]
        ;; changes made in PTV waiting for a choice: say how many, and lead to them
        (let [n (count (filter #(and (:sync-enabled %) (= :awaiting-choice (:sync-status %))) sites))]
          (when (pos? n)
