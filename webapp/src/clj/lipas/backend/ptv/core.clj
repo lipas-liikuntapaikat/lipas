@@ -74,12 +74,33 @@
                        nil))))
         service-ids))
 
+(defn- lipas-services-by-id
+  "The org's LIPAS-managed PTV services, services-by-id shaped with their
+   :sourceId, from Lipas's own mirror (ptv_service): what the sync review
+   swaps a site's service for when its type changes
+   (ptv-data/rebound-service-ids). No PTV call."
+  [db ptv-org-id]
+  (if-let [org (backend-org/get-org-by-ptv-org-id db ptv-org-id)]
+    (into {} (for [{:keys [service-id source-id status document]}
+                   (ptv-service-db/get-current-by-org db (:id org))
+                   :when (and service-id (= "active" status))]
+               [(str service-id)
+                {:sourceId source-id
+                 :serviceNames (vec (for [[locale v] (:name document)
+                                          :when (not (str/blank? v))]
+                                      {:type "Name"
+                                       :language (ptv-data/lipas-lang->ptv-lang (name locale))
+                                       :value v}))}]))
+    {}))
+
 (defn get-ptv-site-review
   "What the site form needs to review a synced site against PTV before a
   save syncs it over PTV: what the last sync sent (:base), the linked
-  service location as PTV has it now (:channel, nil if gone), names for the
-  services only Lipas connects it to (:services; the location names its own)
-  and the org's PTV languages. nil for a site not synced to a location."
+  service location as PTV has it now (:channel, nil if gone), services by
+  id (:services): names for those only Lipas connects it to (the location
+  names its own) and the org's LIPAS services, for the swap a type change
+  makes, and the org's PTV languages. nil for a site not synced to a
+  location."
   [db ptv lipas-id]
   (let [site (db/get-sports-site db lipas-id)
         org-id (-> site :ptv :org-id)
@@ -91,7 +112,10 @@
         {:lipas-id lipas-id
          :base (get (get-ptv-sync-bases db [lipas-id]) lipas-id)
          :channel channel
-         :services (service-names-by-id ptv org-id lipas-only)
+         ;; PTV's names over the mirror's, keeping its :sourceId
+         :services (merge-with merge
+                               (lipas-services-by-id db org-id)
+                               (service-names-by-id ptv org-id lipas-only))
          :org-langs (or (:supported-languages (ptv/get-org-ptv-config-with-fallback ptv org-id))
                         ptv-data/fallback-languages)}))))
 
@@ -440,6 +464,55 @@
     (nil? channel) (:source-id stored-ptv)
     :else (:sourceId channel)))
 
+(defn- site->missing-services
+  "Services the site's sub-category still needs in PTV before it can sync;
+  a seq of missing services, empty when the site is satisfied.
+
+  A site is satisfied as soon as it references a service (`:ptv
+  :service-ids` non-empty). That deliberately covers all three kinds of
+  service: LIPAS sub-category-managed (`lipas-{org}-{sub-category}`),
+  adopted (`lipas-{org}-ptv-{id}`), and services the org created in PTV
+  directly (no LIPAS sourceId, so absent from `source-id->service`). The
+  presence of a service-id is the durable signal — we do NOT require a
+  `lipas-{org}-{sub-category}` service to exist.
+
+  History: the old call hard-coded `:service-ids #{}` and so only ever
+  recognized sub-category-managed services. That was correct when the BE
+  auto-created missing services (pre-62fb687a), but once creation moved to
+  the FE and adoption was added the check was never reconciled, wrongly
+  rejecting sites that reference an existing PTV service. The input shape
+  here is the flat one the FE wizard feeds `resolve-missing-services`
+  (sports-site->ptv-input), so FE and BE agree on what 'missing' means."
+  [types source-id->service org-id sports-site]
+  (ptv-data/resolve-missing-services
+    org-id source-id->service
+    [{:service-ids (-> sports-site :ptv :service-ids)
+      :sub-category-id (-> sports-site :type :type-code types :sub-category)
+      :sub-category (-> sports-site :search-meta :type :sub-category :name :fi)}]))
+
+(defn- rebind-on-type-change
+  "`ptv` with its :service-ids swapped to the LIPAS service of the site's
+   new sub-category when its type changed since the last sync
+   (ptv-data/rebound-service-ids). `site` carries `ptv`. Throws when the new
+   sub-category has no service in PTV and the site references none: the
+   PTV tool creates the service first."
+  [ptv-component org-id site ptv]
+  (let [type-code (-> site :type :type-code)
+        previous (-> site :ptv :previous-type-code)]
+    (if (= type-code previous)
+      ptv
+      (let [source-id->service (->> (:itemList (ptv/get-org-services ptv-component org-id))
+                                    (utils/index-by :sourceId))
+            missing (site->missing-services types/all source-id->service org-id site)
+            _ (when (seq missing)
+                (throw (ex-info "Site needs a PTV Service that doesn't exists"
+                                {:blockers [:ptv/missing-service]
+                                 :missing-services missing})))
+            ids (ptv-data/rebound-service-ids source-id->service site)]
+        (log/infof "Site %d type changed %s => %s, service-ids %s => %s"
+                   (:lipas-id site) previous type-code (-> site :ptv :service-ids) ids)
+        (assoc ptv :service-ids ids)))))
+
 (defn upsert-ptv-service-location!*
   [ptv-component {:keys [org-id site ptv archive?] :as _m}]
   (let [id (-> ptv :service-channel-ids first)
@@ -475,6 +548,11 @@
                                    (if (= 404 (-> e ex-data :resp :status))
                                      nil
                                      (throw e)))))
+        ;; A type change swaps the sub-category's service, whichever way the
+        ;; sync was started (rebind-on-type-change).
+        ptv (if archive?
+              ptv
+              (rebind-on-type-change ptv-component org-id (update site :ptv merge ptv) ptv))
         ;; The first sync of a location made in PTV keeps the services it is
         ;; already connected to (ptv-data/link-service-ids); afterwards
         ;; LIPAS's list is the master.
@@ -494,8 +572,15 @@
         ;; with another channel in the org would block the archive.
         status-only-archive? (and archive? id)
         data (when-not status-only-archive?
-               (cond-> (ptv-data/->ptv-service-location org-id gis/wgs84->tm35fin-no-wrap now (core/enrich site))
-                 archive? (assoc :publishingStatus "Deleted")))
+               (as-> (ptv-data/->ptv-service-location org-id gis/wgs84->tm35fin-no-wrap now (core/enrich site)) data
+                 ;; `addresses` replaces the location's whole list, so PTV's
+                 ;; postal addresses, which Lipas has no field for, are sent
+                 ;; back as PTV has them; one PTV's API would reject drops
+                 ;; out (ptv-data/ptv-postal-addresses)
+                 (update data :addresses into
+                         (:kept (ptv-data/ptv-postal-addresses old-service-location (:languages data))))
+                 (cond-> data
+                   archive? (assoc :publishingStatus "Deleted"))))
         ;; Note: Update request doesn't update Service connections!
 
         ptv-resp (cond
@@ -540,6 +625,10 @@
                          (assoc :org-id (or (:org-id ptv)
                                             org-id)
                                 :last-sync now
+                                ;; PTV's own time of this write: a later :modified
+                                ;; is the evidence that someone changed the
+                                ;; location in PTV since (ptv-review/ptv-changed-since-sync?)
+                                :ptv-modified (:modified ptv-resp)
                                 ;; Store the current type-code into ptv data, so this can be
                                 ;; used to comapre if the services need to recalculated on site data update.
                                 :previous-type-code (:type-code (:type site))
@@ -599,23 +688,23 @@
                      vec)})
 
 (defn upsert-ptv-service-location!
-  "Syncs the saved site with `ptv` merged in. `site-names` (the sync
-   review's choice of PTV's names, see ptv-review/review-site-names) are
+  "Syncs the saved site with `ptv` merged in. `site-patch` (the site's own
+   data the sync review took from PTV, see ptv-review/review-site-patch) is
    written into the site first, which needs the right to edit it."
-  [db ptv-component search user {:keys [lipas-id org-id ptv archive? site-names]}]
+  [db ptv-component search user {:keys [lipas-id org-id ptv archive? site-patch]}]
   ;; FIXME: This is called from inside tx in save-sports-site! is that a problem?
   ;; FIXME: Separate version from this fn for use in sync-ptv! which doesn't load the
   ;; sports site from db etc.?
   (jdbc/with-db-transaction [tx db]
     (let [site (db/get-sports-site db lipas-id)
           _ (assert (some? site) (str "Sports site " lipas-id " not found in DB"))
-          _ (when (and (seq site-names)
+          _ (when (and (seq site-patch)
                        (not (roles/check-privilege user (roles/site-roles-context site)
                                                    :site/create-edit)))
-              (throw (ex-info "Changing the site's name needs the right to edit the site"
+              (throw (ex-info "Changing the site's own data needs the right to edit the site"
                               {:type :no-permission :lipas-id lipas-id})))
           site (cond-> site
-                 (seq site-names) (ptv-review/apply-site-names site-names))
+                 (seq site-patch) (ptv-review/apply-site-patch site-patch))
           ;; Reject linking to a service-location another site already owns
           ;; before we touch PTV (a fresh create / unlink has no id and passes).
           _ (assert-no-double-link! tx lipas-id (-> ptv :service-channel-ids first))
@@ -669,32 +758,6 @@
          (or (contains? removal-statuses (:status sports-site))
              (:delete-existing ptv)))))
 
-(defn- site->missing-services
-  "Services the site's sub-category still needs in PTV before it can sync;
-  a seq of missing services, empty when the site is satisfied.
-
-  A site is satisfied as soon as it references a service (`:ptv
-  :service-ids` non-empty). That deliberately covers all three kinds of
-  service: LIPAS sub-category-managed (`lipas-{org}-{sub-category}`),
-  adopted (`lipas-{org}-ptv-{id}`), and services the org created in PTV
-  directly (no LIPAS sourceId, so absent from `source-id->service`). The
-  presence of a service-id is the durable signal — we do NOT require a
-  `lipas-{org}-{sub-category}` service to exist.
-
-  History: the old call hard-coded `:service-ids #{}` and so only ever
-  recognized sub-category-managed services. That was correct when the BE
-  auto-created missing services (pre-62fb687a), but once creation moved to
-  the FE and adoption was added the check was never reconciled, wrongly
-  rejecting sites that reference an existing PTV service. The input shape
-  here is the flat one the FE wizard feeds `resolve-missing-services`
-  (sports-site->ptv-input), so FE and BE agree on what 'missing' means."
-  [types source-id->service org-id sports-site]
-  (ptv-data/resolve-missing-services
-    org-id source-id->service
-    [{:service-ids (-> sports-site :ptv :service-ids)
-      :sub-category-id (-> sports-site :type :type-code types :sub-category)
-      :sub-category (-> sports-site :search-meta :type :sub-category :name :fi)}]))
-
 ;; Used through resolve due to circular dep
 ;; TODO: Check if code can be moved around to avoid this
 ^{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
@@ -718,45 +781,10 @@
                         {:blockers [:ptv/missing-texts]}))
 
         :else
-        (let [type-code (-> sports-site :type :type-code)
-              type-code-changed? (not= type-code (:previous-type-code ptv))
-              ptv (if type-code-changed?
-                    (let [types types/all
-                           ;; Figure out what services are available in PTV for the site organization
-                          services (:itemList (ptv/get-org-services ptv-component org-id))
-                          source-id->service (->> services
-                                                  (utils/index-by :sourceId))
-
-                           ;; Block only sites whose sub-category has NO service
-                           ;; at all. A site that already references a service
-                           ;; (LIPAS-managed, adopted, or created directly in
-                           ;; PTV by the org) is satisfied — see
-                           ;; site->missing-services. The FE is expected to have
-                           ;; created/linked the service first.
-                          missing-services (site->missing-services types source-id->service org-id sports-site)
-
-                          _ (when (seq missing-services)
-                              (throw (ex-info "Site needs a PTV Service that doesn't exists"
-                                              {:missing-services missing-services})))
-
-                           ;; Remove old service-ids from :ptv data and add the new.
-                           ;; Don't touch other service-ids in the data, those could have be added manually in UI or in PTV.
-                           ;; NOTE: OK, PTV updates are likely lost, because our :ptv :service-ids is what the create/update from
-                           ;; Lipas previously returned, so if PTV ServiceLocation was modified after that in PTV, we lose those changes.
-                          old-sports-site (assoc-in sports-site [:type :type-code] (:previous-type-code ptv))
-                          old-service-ids (ptv-data/sports-site->service-ids types source-id->service old-sports-site)
-                          new-service-ids (ptv-data/sports-site->service-ids types source-id->service sports-site)]
-                      (log/infof "Site %d type changed %s => %s, service-ids %s => %s"
-                                 lipas-id (:previous-type-code ptv) type-code
-                                 old-service-ids new-service-ids)
-                      (update ptv :service-ids (fn [ids]
-                                                 (let [x (set ids)
-                                                       x (apply disj x old-service-ids)
-                                                       x (into x new-service-ids)]
-                                                   (vec x)))))
-                    ptv)
-
-              [_ptv-resp new-ptv-data] (upsert-ptv-service-location!* ptv-component
+        ;; A type change swaps the sub-category's service inside
+        ;; upsert-ptv-service-location!* (rebind-on-type-change), as for a
+        ;; sync from the PTV tool.
+        (let [[_ptv-resp new-ptv-data] (upsert-ptv-service-location!* ptv-component
                                                                       {:org-id org-id
                                                                        :ptv ptv
                                                                        :site sports-site
@@ -820,7 +848,9 @@
                                  :publishing-status  (:publishing-status old-ptv)
                                  :previous-type-code (:previous-type-code old-ptv))
                           (dissoc :last-sync)
-                          (cond-> (:last-sync old-ptv) (assoc :last-sync (:last-sync old-ptv))))
+                          (cond-> (:last-sync old-ptv) (assoc :last-sync (:last-sync old-ptv)))
+                          ;; the evidence of a later PTV edit (ptv-review)
+                          (cond-> (:ptv-modified old-ptv) (assoc :ptv-modified (:ptv-modified old-ptv))))
               site (assoc existing
                           :event-date (utils/timestamp)
                           :ptv new-ptv)]

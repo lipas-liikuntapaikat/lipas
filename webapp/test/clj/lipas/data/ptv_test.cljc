@@ -778,7 +778,8 @@
 
     (testing "en texts written: needs a sync, channel cached or not"
       (is (= :out-of-date (status ["fi" "en"] {} with-en)))
-      (is (= :content-drift (status ["fi" "en"] fi-channel with-en))))
+      ;; a language version PTV doesn't have: Lipas adds it, its own change
+      (is (= :out-of-date (status ["fi" "en"] fi-channel with-en))))
 
     (testing "en texts in LIPAS but the org doesn't publish en: nothing to sync"
       (is (= :ok (status ["fi"] {} with-en)))

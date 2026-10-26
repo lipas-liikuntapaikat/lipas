@@ -18,18 +18,28 @@
           :let [{:keys [base channel]} (load-fixture path)
                 langs (-> base :ptv :languages)]]
     (testing path
-      (testing "what the sync sent and what PTV returns project the same"
-        (is (= (sut/location-values (sut/site->location base langs))
-               (sut/location-values channel))))
+      (testing "what the sync sent and what PTV returns project the same, as the review compares them"
+        (let [sent (sut/location-values (sut/site->location base langs))
+              ptv (sut/location-values channel)]
+          (is (= (set (keys sent)) (set (keys ptv))))
+          (is (= [] (for [[k v] sent
+                          :when (not (sut/same-value? (first k) v (get ptv k)))]
+                      [k v (get ptv k)])))))
 
       (testing "the saved site, unchanged since, has nothing to review"
         (is (= [] (:rows (sut/sync-review base base channel {} langs)))))
 
-      (testing "a summary edited in PTV is PTV's change"
-        (let [edited (update channel :serviceChannelDescriptions
-                             (fn [ds] (mapv #(if (and (= "Summary" (:type %)) (= "fi" (:language %)))
-                                               (assoc % :value "Muokattu PTV:ssä")
-                                               %)
-                                            ds)))
-              rows (:rows (sut/sync-review base base edited {} langs))]
-          (is (= [[[:summary "fi"] :ptv]] (mapv (juxt :key :origin) rows))))))))
+      (let [edit-summary (fn [channel]
+                           (update channel :serviceChannelDescriptions
+                                   (fn [ds] (mapv #(if (and (= "Summary" (:type %)) (= "fi" (:language %)))
+                                                     (assoc % :value "Muokattu PTV:ssä")
+                                                     %)
+                                                  ds))))]
+        (testing "a summary edited in PTV, which moved PTV's :modified, is PTV's change"
+          (let [edited (-> channel edit-summary (assoc :modified "2026-10-24T08:00:00.000000"))
+                rows (:rows (sut/sync-review base base edited {} langs))]
+            (is (= [[[:summary "fi"] :ptv]] (mapv (juxt :key :origin) rows)))))
+
+        (testing "without that evidence the difference is Lipas's to send"
+          (let [rows (:rows (sut/sync-review base base (edit-summary channel) {} langs))]
+            (is (= [[[:summary "fi"] :lipas]] (mapv (juxt :key :origin) rows)))))))))

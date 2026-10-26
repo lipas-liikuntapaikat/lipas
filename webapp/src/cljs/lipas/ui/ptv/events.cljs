@@ -1629,10 +1629,10 @@
     (cond-> {:lipas-id lipas-id
              :org-id org-id
              :ptv ptv}
-      ;; PTV's names the review took: the backend writes them into the
-      ;; site, which the sync then sends
-      (get-in db [:ptv :review :site-names lipas-id])
-      (assoc :site-names (get-in db [:ptv :review :site-names lipas-id])))))
+      ;; the site's own data the review took from PTV: the backend writes
+      ;; it into the site, which the sync then sends
+      (get-in db [:ptv :review :site-patch lipas-id])
+      (assoc :site-patch (get-in db [:ptv :review :site-patch lipas-id])))))
 
 (rf/reg-event-fx ::create-ptv-service-location
   (fn [{:keys [db]} [_ lipas-id success-fx failure-fx]]
@@ -1687,7 +1687,7 @@
                                         synced))))
                (update-in [:ptv :review :choices] dissoc lipas-id)
                (update-in [:ptv :review :open] dissoc lipas-id)
-               (update-in [:ptv :review :site-names] dissoc lipas-id))
+               (update-in [:ptv :review :site-patch] dissoc lipas-id))
        :fx (into (or (seq extra-fx) [])
                  [[:dispatch [:lipas.ui.events/set-active-notification
                               {:message (tr :notifications/save-success) :success? true}]]])})))
@@ -1702,7 +1702,7 @@
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :service-locations] false)
                (update-in [:ptv :syncing :service-location] dissoc lipas-id)
-               (update-in [:ptv :review :site-names] dissoc lipas-id)
+               (update-in [:ptv :review :site-patch] dissoc lipas-id)
                (assoc-in [:ptv :errors :service-locations-creation] resp)
                (cond->
                  (and modified? channel-id)
@@ -1802,10 +1802,10 @@
                              :confirm-label (tr :ptv.review/sync-and-overwrite)
                              :on-confirm #(rf/dispatch [::sync-with-review lipas-id rows true])
                              :on-review #(rf/dispatch [::show-review lipas-id])})]]]}
-        ;; The sync sends the saved site's names: PTV's names taken in the
-        ;; review travel with it for the backend to write.
-        {:db (assoc-in db [:ptv :review :site-names lipas-id]
-                       (ptv-review/review-site-names (:review-saved site) site))
+        ;; The sync sends the saved site: what the review took from PTV
+        ;; into the site's own data travels with it for the backend to write.
+        {:db (assoc-in db [:ptv :review :site-patch lipas-id]
+                       (ptv-review/review-site-patch (:review-saved site) site))
          :fx [[:dispatch [::create-ptv-service-location lipas-id [] []]]]}))))
 
 ;;; Explicit archive (publishingStatus "Deleted") ;;;
@@ -1885,14 +1885,14 @@
         valid? (m/validator ptv-schema/ptv-meta)]
     (comp valid? decode)))
 
-(defn- with-review-site-names
-  "`db` with the names the sync of each of `lipas-ids` writes back to the
-   site, from the choices made in its review."
+(defn- with-review-site-patches
+  "`db` with what the sync of each of `lipas-ids` writes into the site's
+   own data, from the choices made in its review."
   [db org-id lipas-ids]
   (reduce (fn [db lipas-id]
             (let [site (get-in db [:ptv :org org-id :data :sports-sites lipas-id])]
-              (assoc-in db [:ptv :review :site-names lipas-id]
-                        (ptv-review/review-site-names (:review-saved site) site))))
+              (assoc-in db [:ptv :review :site-patch lipas-id]
+                        (ptv-review/review-site-patch (:review-saved site) site))))
           db
           lipas-ids))
 
@@ -1908,7 +1908,7 @@
                                                   :to-save))
                                               sports-sites)
           ids (map :lipas-id to-sync)
-          db (with-review-site-names db org-id ids)
+          db (with-review-site-patches db org-id ids)
           ;; Only sites with something persistable: an untouched site (no
           ;; texts yet) or one with over-long texts would fail the backend's
           ;; ptv-meta validation and take the whole meta save down with it.
@@ -1947,7 +1947,7 @@
           remaining (distinct (cons (:lipas-id failed)
                                     (remove (set processed-ids) ids)))]
       {:db (-> db
-               (with-review-site-names org-id remaining)
+               (with-review-site-patches org-id remaining)
                (update-in [:ptv :service-locations-creation] merge
                           {:halt? false :in-progress? true :failed nil}))
        :fx [[:dispatch [::create-all-ptv-service-locations* org-id remaining]]]})))

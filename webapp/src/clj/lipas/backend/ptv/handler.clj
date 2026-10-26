@@ -6,6 +6,7 @@
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.backend.rate-limit :as rate-limit]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-review :as ptv-review]
             [lipas.roles :as roles]
             [lipas.schema.ptv :as lipas-ptv-schema]
             [lipas.schema.sports-sites :as sports-sites-schema]
@@ -662,8 +663,16 @@
       :handler
       (fn [req]
         (try
-          {:status 200
-           :body (ptv-core/upsert-ptv-service-location! db ptv search (:identity req) (-> req :parameters :body))}
+          (if-let [unknown (seq (remove ptv-review/site-patch-path?
+                                        (ptv-review/site-patch-paths-of
+                                          (get-in req [:body-params :site-patch]))))]
+            ;; Coercion strips what the closed :site-patch doesn't know;
+            ;; a patch of anything but the site editor's fields is a bug
+            ;; in the caller, said rather than dropped.
+            {:status 400
+             :body {:type :site-patch-path :paths (vec unknown)}}
+            {:status 200
+             :body (ptv-core/upsert-ptv-service-location! db ptv search (:identity req) (-> req :parameters :body))})
           (catch clojure.lang.ExceptionInfo e
             (cond
               ;; Taking PTV's name for the site without the right to edit it

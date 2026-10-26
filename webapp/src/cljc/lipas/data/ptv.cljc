@@ -693,11 +693,26 @@
                        (subs head 0 cut)
                        head)))))))
 
+(defn site-wgs84-point
+  "The point a sync sends for `site`, WGS84 [lon lat]: its search-meta
+   point when enriched, else the first coordinate of its first geometry,
+   which is what enrich derives it from. nil without either."
+  [site]
+  (let [coords (or (-> site :search-meta :location :wgs84-point)
+                   (let [geom (-> site :location :geometries :features first :geometry)]
+                     (case (:type geom)
+                       "Point" (:coordinates geom)
+                       "LineString" (first (:coordinates geom))
+                       "Polygon" (ffirst (:coordinates geom))
+                       nil)))]
+    (when (and (sequential? coords) (number? (first coords)) (number? (second coords)))
+      (vec (take 2 coords)))))
+
 (defn ->ptv-service-location
   [org-id
    coord-transform-fn
    now
-   {:keys [status ptv lipas-id location search-meta] :as sports-site}]
+   {:keys [status ptv lipas-id location] :as sports-site}]
   (let [lipas-languages (effective-languages sports-site (get ptv :languages default-langs))
         ;; PTV language codes for the :languages field on the payload
         languages (->> lipas-languages (map lipas-lang->ptv-lang) (remove nil?) set)
@@ -763,7 +778,7 @@
                           :subType "Single" ; | Single | Street | PostOfficeBox | Abroad | Other.
                           :country "FI"
                           :streetAddress
-                          (let [[lon lat] (-> search-meta :location :wgs84-point coord-transform-fn)
+                          (let [[lon lat] (some-> (site-wgs84-point sports-site) coord-transform-fn)
                                 street-value (parse-address (:address location))
                                 postal-code (parse-postal-code (:postal-code location))]
                             {:municipality (-> location
@@ -1683,6 +1698,98 @@
       (into ids (remove (set ids)) (channel-service-ids channel))
       ids)))
 
+(defn- language-items
+  "`items` ({:value :language}) in `languages` (PTV codes), blank ones
+   dropped."
+  [items languages]
+  (vec (for [{:keys [value language]} items
+             :when (and (contains? languages language) (not (str/blank? value)))]
+         {:value value :language language})))
+
+(defn- address-municipality
+  "A GET address's municipality (an object) as a PUT takes it (the code)."
+  [m]
+  (if (map? m) (:code m) m))
+
+(defn postal-address->input
+  "PTV's postal address `address` (GET shape) as a sync sends it back, kept
+   to the payload's `languages` (PTV codes): a localized entry in a
+   language the location doesn't have makes PTV reject the whole write. nil
+   for an address PTV's API rejects, so it can't be sent back: a street
+   address with neither a street number nor coordinates, a PO box without a
+   box or a postal code, or another sub-type."
+  [languages {:keys [subType streetAddress postOfficeBoxAddress]}]
+  (case subType
+    "PostOfficeBox"
+    (let [{:keys [postOfficeBox postalCode municipality additionalInformation]} postOfficeBoxAddress
+          box (language-items postOfficeBox languages)
+          info (language-items additionalInformation languages)
+          municipality (address-municipality municipality)]
+      (when (and (seq box) (not (str/blank? postalCode)))
+        {:type "Postal"
+         :subType "PostOfficeBox"
+         :country "FI"
+         :postOfficeBoxAddress (cond-> {:postOfficeBox box :postalCode postalCode}
+                                 (not (str/blank? municipality)) (assoc :municipality municipality)
+                                 (seq info) (assoc :additionalInformation info))}))
+
+    ("Street" "Single")
+    (let [{:keys [street streetNumber postalCode municipality latitude longitude
+                  additionalInformation]} streetAddress
+          streets (language-items street languages)
+          info (language-items additionalInformation languages)
+          number (when-not (str/blank? streetNumber) streetNumber)
+          coords? (every? #(and (some? %) (not (str/blank? (str %)))) [latitude longitude])
+          municipality (address-municipality municipality)]
+      (when (and (seq streets) (not (str/blank? postalCode)) (or number coords?))
+        {:type "Postal"
+         :subType "Street"
+         :country "FI"
+         :streetAddress (cond-> {:street streets :postalCode postalCode}
+                          number (assoc :streetNumber number)
+                          coords? (assoc :latitude (str latitude) :longitude (str longitude))
+                          (not (str/blank? municipality)) (assoc :municipality municipality)
+                          (seq info) (assoc :additionalInformation info))}))
+
+    nil))
+
+(defn ptv-postal-addresses
+  "The postal addresses of the PTV location `channel` (GET shape), which
+   Lipas has no field for, split by what a sync to `languages` (PTV codes,
+   the payload's) does with them: :kept are sent back as the PUT takes them
+   (postal-address->input), so the location keeps them; :dropped are those
+   PTV's API rejects, which the sync therefore removes."
+  [channel languages]
+  (let [languages (set languages)
+        postal (filter #(= "Postal" (:type %)) (:addresses channel))
+        converted (map (fn [a] [a (postal-address->input languages a)]) postal)]
+    {:kept (into [] (keep second) converted)
+     :dropped (into [] (keep (fn [[a input]] (when-not input a))) converted)}))
+
+(defn sports-site->service-ids [types source-id->service sports-site]
+  (let [sub-cat-id (-> sports-site :type :type-code types :sub-category)
+        org-id (-> sports-site :ptv :org-id)
+        source-id (str "lipas-" org-id "-" sub-cat-id)]
+    (when-let [service (get source-id->service source-id)]
+      #{(:id service)})))
+
+(defn rebound-service-ids
+  "The services a sync connects `site` to after its type changed since the
+   last sync ([:ptv :previous-type-code]): the LIPAS service of its old
+   sub-category swapped for that of the new one. `source-id->service`
+   indexes the org's services by sourceId. Connections made otherwise, in
+   Lipas or in PTV, stay. The site's own list while the type is unchanged."
+  [source-id->service site]
+  (let [ptv (:ptv site)
+        ids (vec (:service-ids ptv))]
+    (if (= (-> site :type :type-code) (:previous-type-code ptv))
+      ids
+      (let [old-ids (set (sports-site->service-ids types/all source-id->service
+                                                   (assoc-in site [:type :type-code]
+                                                             (:previous-type-code ptv))))
+            new-ids (sports-site->service-ids types/all source-id->service site)]
+        (vec (distinct (concat (remove old-ids ids) new-ids)))))))
+
 (defn unpublished-ptv-languages
   "Languages the linked PTV service location has texts in that the next sync
    won't publish — and so will remove, since a service location sync replaces
@@ -1735,13 +1842,6 @@
           (not= (ids edit :service-channel-ids) (ids saved :service-channel-ids))
           (not (texts-match? edit saved [:summary :description]))))
     false))
-
-(defn sports-site->service-ids [types source-id->service sports-site]
-  (let [sub-cat-id (-> sports-site :type :type-code types :sub-category)
-        org-id (-> sports-site :ptv :org-id)
-        source-id (str "lipas-" org-id "-" sub-cat-id)]
-    (when-let [service (get source-id->service source-id)]
-      #{(:id service)})))
 
 (defn is-sent-to-ptv?
   "Check if the :ptv data shows that the site has been sent to PTV previously"
@@ -1874,7 +1974,7 @@
   revision — so a browser holding an outdated copy of the site can't roll them
   back. (Seen in prod: a site archived by one save was marked incorrect-data
   seconds later with its pre-archive :ptv, leaving LIPAS saying Published.)"
-  [:publishing-status :last-sync :source-id :service-channel-ids
+  [:publishing-status :last-sync :ptv-modified :source-id :service-channel-ids
    :previous-type-code :error])
 
 (def user-controlled-ptv-keys

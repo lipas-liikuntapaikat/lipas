@@ -2,6 +2,7 @@
   "Schema definitions for PTV (Palvelutietovaranto) integration in sports sites."
   (:require [lipas.data.ptv :as ptv-data]
             [lipas.schema.sports-sites :as sports-sites-schema]
+            [lipas.schema.sports-sites.location :as location-schema]
             [malli.core :as m]))
 
 (defn localized-string-schema
@@ -114,6 +115,28 @@
 
      [:audit {:optional true} ptv-audit]]))
 
+(def site-patch
+  "The site's own data a PTV sync writes first, as the sync review took it
+   from PTV (lipas.data.ptv-review/site-patch-paths, which this must
+   match)."
+  (m/schema
+    [:map {:closed true}
+     [:name {:optional true} #'sports-sites-schema/name]
+     [:name-localized {:optional true}
+      [:map {:closed true}
+       [:se {:optional true} [:maybe [:string {:min 2 :max 100}]]]
+       [:en {:optional true} [:maybe [:string {:min 2 :max 100}]]]]]
+     [:marketing-name {:optional true} [:maybe #'sports-sites-schema/marketing-name]]
+     [:phone-number {:optional true} [:maybe #'sports-sites-schema/phone-number]]
+     [:email {:optional true} [:maybe #'sports-sites-schema/email]]
+     [:www {:optional true} [:maybe #'sports-sites-schema/www]]
+     [:reservations-link {:optional true} [:maybe #'sports-sites-schema/reservations-link]]
+     [:location {:optional true}
+      [:map {:closed true}
+       [:address {:optional true} #'location-schema/address]
+       [:postal-code {:optional true} #'location-schema/postal-code]
+       [:postal-office {:optional true} [:maybe #'location-schema/postal-office]]]]]))
+
 (def create-ptv-service-location
   "Schema for creating PTV service locations.
    `:archive?` requests an explicit archive (publishingStatus \"Deleted\")
@@ -126,14 +149,8 @@
      [:lipas-id #'sports-sites-schema/lipas-id]
      [:archive? {:optional true} :boolean]
      [:ptv ptv-meta]
-     ;; The site's own names, as the sync review chose them
-     ;; (lipas.data.ptv/review-site-names). nil removes a localized or
-     ;; marketing name. Needs the right to edit the site.
-     [:site-names {:optional true}
-      [:map {:closed true}
-       [:name {:optional true} #'sports-sites-schema/name]
-       [:name-localized {:optional true}
-        [:map {:closed true}
-         [:se {:optional true} [:maybe [:string {:max 100}]]]
-         [:en {:optional true} [:maybe [:string {:max 100}]]]]]
-       [:marketing-name {:optional true} [:maybe [:string {:max 100}]]]]]]))
+     ;; The site's own data as the sync review took it from PTV
+     ;; (lipas.data.ptv-review/review-site-patch): the fields a site editor
+     ;; may take, validated as a site save validates them; nil removes an
+     ;; optional value. Needs the right to edit the site.
+     [:site-patch {:optional true} site-patch]]))

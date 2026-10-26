@@ -51,8 +51,11 @@
       (is (false? (:base? review)))
       (is (every? #(= :unknown (:origin %)) (:rows review))))
 
-    (testing "a language Lipas doesn't publish (no sv texts) has no text rows"
-      (is (not-any? #(= "sv" (:language %)) (:rows review))))
+    (testing "a language Lipas doesn't publish (no sv texts) has no text rows: the sync removes it"
+      (is (not-any? #(and (= "sv" (:language %)) (not= :languages (:field %))) (:rows review)))
+      (is (= {:field :languages :kind :languages :locale :se}
+             (select-keys (row review [:languages "sv"]) [:field :kind :locale])))
+      (is (not (sut/review-choice-required? (row review [:languages "sv"]))) "information only"))
 
     (let [review (sut/sync-review (-> site
                                       (assoc-in [:ptv :summary :se] "summary-sv")
@@ -285,28 +288,51 @@
                                         (dissoc :ptv-base)
                                         (assoc-in [:ptv :summary :fi] "Lipaksen teksti"))))))))
 
-(deftest review-site-names-test
+(deftest review-site-patch-test
   (let [saved (sut/->review-base (assoc synced-site :marketing-name "Vanha markkinointinimi"
-                                        :name-localized {:se "Hallen"}))]
-    (testing "no name changed, no names"
-      (is (nil? (sut/review-site-names saved (assoc synced-site
+                                        :name-localized {:se "Hallen"}
+                                        :phone-number "08 123 4567"
+                                        :location {:address "Katu 1" :postal-code "00100"
+                                                   :city {:city-code 91}}))]
+    (testing "nothing changed, no patch"
+      (is (nil? (sut/review-site-patch saved (assoc synced-site
                                                     :marketing-name "Vanha markkinointinimi"
-                                                    :name-localized {:se "Hallen"})))))
+                                                    :name-localized {:se "Hallen"}
+                                                    :phone-number "08 123 4567"
+                                                    :location {:address "Katu 1" :postal-code "00100"
+                                                               :city {:city-code 91}})))))
 
-    (testing "the names the edit changes, shaped like the site; nil removes one"
-      (is (= {:name "Uusi halli" :marketing-name "Halli X" :name-localized {:se nil}}
-             (sut/review-site-names saved (assoc synced-site
+    (testing "what the edit changes, shaped like the site; nil removes a value"
+      (is (= {:name "Uusi halli" :marketing-name "Halli X" :name-localized {:se nil}
+              :phone-number nil :location {:address "Katu 2" :postal-office "Kunta"}}
+             (sut/review-site-patch saved (assoc synced-site
                                                  :name "Uusi halli"
-                                                 :marketing-name "Halli X")))))
+                                                 :marketing-name "Halli X"
+                                                 :location {:address "Katu 2" :postal-code "00100"
+                                                            :postal-office "Kunta"
+                                                            :city {:city-code 91}})))))
 
-    (testing "written into the site; nil removes a name"
-      (is (= {:name "Uusi halli" :name-localized {:en "Hall"}}
-             (select-keys (sut/apply-site-names (assoc synced-site :marketing-name "Vanha"
-                                                       :name-localized {:se "Hallen" :en "Hall"})
+    (testing "written into the site; nil removes an optional value, never a required one"
+      (is (= {:name "Uusi halli" :name-localized {:en "Hall"} :email "a@b.fi"
+              :location {:address "Katu 1" :postal-code "00200" :city {:city-code 91}}}
+             (select-keys (sut/apply-site-patch (assoc synced-site
+                                                       :marketing-name "Vanha"
+                                                       :name-localized {:se "Hallen" :en "Hall"}
+                                                       :location {:address "Katu 1" :postal-code "00100"
+                                                                  :postal-office "Kunta"
+                                                                  :city {:city-code 91}})
                                                 {:name "Uusi halli"
                                                  :name-localized {:se nil}
-                                                 :marketing-name nil})
-                          [:name :name-localized :marketing-name]))))
+                                                 :marketing-name nil
+                                                 :email "a@b.fi"
+                                                 :location {:address nil :postal-code "00200"
+                                                            :postal-office nil}})
+                          [:name :name-localized :marketing-name :email :location]))))
+
+    (testing "only the fields a site editor may take are written"
+      (is (= synced-site (sut/apply-site-patch synced-site {:status "incorrect-data"
+                                                            :location {:city {:city-code 5}}
+                                                            :ptv {:summary {:fi "x"}}}))))
 
     (testing "the review lists every connected service on both sides"
       (let [review (sut/sync-review synced-site (sut/->review-base synced-site)
@@ -354,17 +380,20 @@
                                   (set-ptv-text "Summary" "fi" p)
                                   (assoc :services (vec (for [id (sort ptv-ids)] {:service {:id id}}))))
                       site (mk l lipas-ids)
-                      rows (:rows (sut/sync-review site base channel services ["fi"]))
+                      ;; information rows (here: the en version PTV has and
+                      ;; a fi-only sync removes) have nothing to take
+                      decidable #(remove (comp sut/info-kinds :kind) %)
+                      rows (decidable (:rows (sut/sync-review site base channel services ["fi"])))
                       taken (reduce (fn [draft r]
                                       (sut/apply-review-writes draft (sut/review-writes draft r :ptv)))
                                     site
                                     rows)]
-                  (and (empty? (:rows (sut/sync-review taken base channel services ["fi"])))
+                  (and (empty? (decidable (:rows (sut/sync-review taken base channel services ["fi"]))))
                        ;; and every row of the saved site's review now reads as PTV's
                        (every? #(= :ptv (:current %))
-                               (:rows (sut/annotate-review
-                                        (sut/sync-review site base channel services ["fi"])
-                                        taken)))))))
+                               (decidable (:rows (sut/annotate-review
+                                                   (sut/sync-review site base channel services ["fi"])
+                                                   taken))))))))
 
 (defspec keeping-lipas-restores-the-saved-site 200
   (prop/for-all [b text-gen

@@ -60,7 +60,8 @@
                                       :features [{:type "Feature"
                                                   :geometry {:type "Point"
                                                              :coordinates [24.9384 60.1695]}}]}}
-              :ptv {:org-id "test-ptv-org"
+              :ptv {:previous-type-code 1210
+                    :org-id "test-ptv-org"
                     :summary {:fi "Tiivistelmä"}
                     :description {:fi "Kuvaus"}}}]
     (core/upsert-sports-site!* (test-db) user site)
@@ -452,7 +453,8 @@
                                                   :geometry {:type "Point"
                                                              :coordinates [25.0 65.0]}}]}}
               :search-meta {:location {:wgs84-point [25.0 65.0]}}
-              :ptv {:org-id "org-x"
+              :ptv {:previous-type-code 1210
+                    :org-id "org-x"
                     :source-id "lipas-org-x-12345-2026-04-26T18-12-24.376411Z"
                     :service-channel-ids [channel-id]
                     :service-ids [new-service-id]
@@ -522,7 +524,8 @@
                                                   :geometry {:type "Point"
                                                              :coordinates [25.0 65.0]}}]}}
               :search-meta {:location {:wgs84-point [25.0 65.0]}}
-              :ptv {:org-id "org-x"
+              :ptv {:previous-type-code 1210
+                    :org-id "org-x"
                     :source-id "lipas-org-x-12345-2026-04-26T18-12-24.376411Z"
                     :service-channel-ids ["channel-uuid"]
                     :service-ids ["service-new"]
@@ -570,6 +573,7 @@
                                                                :coordinates [26.4 64.7]}}]}}
                 :search-meta {:location {:wgs84-point [26.4 64.7]}}
                 :ptv (merge {:org-id "org-x"
+                             :previous-type-code 1530
                              :service-channel-ids ["chan-1"]
                              :service-ids ["service-ice"]
                              :sync-enabled true
@@ -621,7 +625,9 @@
 ;;; Archiving behaviour ;;;
 
 (defn- sent-ptv [extra]
+  ;; the sites using this are of type 1210, which their services were bound for
   (merge {:org-id "org-x" :source-id "src-1" :service-channel-ids ["chan-1"]
+          :previous-type-code 1210
           :publishing-status "Published" :service-ids [] :sync-enabled true
           :languages ["fi"] :summary {:fi "summary"} :description {:fi "description"}}
          extra))
@@ -680,7 +686,7 @@
           "blanked texts do not archive a published site"))
     (testing "Never-published site is never archived"
       (is (false? (ptv-core/to-archive?
-                    {:status "out-of-service-permanently" :ptv {}} {}))))))
+                    {:status "out-of-service-permanently" :ptv {:previous-type-code 1210}} {}))))))
 
 (deftest archive-preserves-ptv-link-test
   (let [channel-id "chan-1"
