@@ -44,6 +44,7 @@
             ["@mui/material/TableContainer$default" :as TableContainer]
             ["@mui/material/TableHead$default" :as TableHead]
             ["@mui/material/TableRow$default" :as TableRow]
+            ["@mui/material/TableSortLabel$default" :as TableSortLabel]
             ["@mui/material/Tabs$default" :as Tabs]
             ["@mui/material/Toolbar$default" :as Toolbar]
             ["@mui/material/Tooltip$default" :as Tooltip]
@@ -841,8 +842,64 @@
         [export-halted-alert {:tr tr :sports-sites sites :failed failed
                               :skipped-count skipped-count}]])]))
 
+(def ^:private name-collator (js/Intl.Collator. "fi" #js {:sensitivity "base" :numeric true}))
+
+(defn- audit-rank
+  "Most critical first: changes requested, approved with a remark to read,
+   approved, no verdict on the current text."
+  [{:keys [audit-status]}]
+  (case audit-status
+    :changes-requested 1
+    :approved-with-feedback 2
+    :approved 3
+    :none 4
+    5))
+
+(defn- integration-rank
+  "Most critical first (ptv-review/sync-statuses): blocked (red), awaiting
+   a choice (orange), ready to sync, up to date, not yet synced,
+   integration off."
+  [{:keys [sync-enabled sync-status]}]
+  (if-not sync-enabled
+    6
+    (case sync-status
+      :blocked 1
+      :awaiting-choice 2
+      :ready 3
+      :ok 4
+      :not-synced 5
+      6)))
+
+(defn- sort-sites
+  "Default order (no column chosen) puts the sites needing attention first:
+   audit priority, then type. A chosen column sorts on it — text columns
+   alphabetically, status columns most critical first — with the name
+   (always A→Z) as tie-breaker."
+  [sites {:keys [col dir]}]
+  (if-not col
+    (sort-by (fn [site]
+               [(case (:audit-status site)
+                  :changes-requested 1 ; Most critical
+                  :none 3 ; No verdict on the current text
+                  (:approved :approved-with-feedback) 4 ; All good
+                  5) ; Default/unknown
+                (:type site)])
+             sites)
+    (let [sign (if (= dir :desc) -1 1)
+          cmp-col (case col
+                    :audit #(compare (audit-rank %1) (audit-rank %2))
+                    :event-data #(compare (integration-rank %1) (integration-rank %2))
+                    #(.compare name-collator (str (col %1)) (str (col %2))))]
+      (sort (fn [a b]
+              (let [c (* sign (cmp-col a b))]
+                (if (zero? c)
+                  (.compare name-collator (str (:name a)) (str (:name b)))
+                  c)))
+            sites))))
+
 (defn table []
   (r/with-let [expanded-rows (r/atom {})
+               sort-state (r/atom {:col nil :dir :asc})
                search-text (r/atom "")
                status-filter (r/atom :all)
                filter-expanded? (r/atom true)]
@@ -909,13 +966,13 @@
                        {:value sync-all-enabled?
                         :on-change #(==> [::events/toggle-sync-all %2])}]}
                    #_{:key :auto-sync :label "Vie automaattisesti"}
-                   {:key :event-data :label (tr :ptv/integration) :sx {:textAlign "center"}}
-                   {:key :audit :label (tr :ptv.audit/tab-label) :sx {:textAlign "center"}}
+                   {:key :event-data :label (tr :ptv/integration) :sx {:textAlign "center"} :sortable? true}
+                   {:key :audit :label (tr :ptv.audit/tab-label) :sx {:textAlign "center"} :sortable? true}
                    #_{:key :last-sync :label "Viety viimeksi"}
-                   {:key :name :label (tr :general/name)}
-                   {:key :type :label (tr :general/type)}
+                   {:key :name :label (tr :general/name) :sortable? true}
+                   {:key :type :label (tr :general/type) :sortable? true}
                    ;;{:key :admin :label (tr :lipas.sports-site/admin)}
-                   {:key :owner :label (tr :lipas.sports-site/owner)}
+                   {:key :owner :label (tr :lipas.sports-site/owner) :sortable? true}
                    #_{:key :service :label "Palvelu"}
                    #_{:key :service-channel :label (tr :ptv/service-channel)}
                    #_{:key :service-channel-summary :label "Tiivistelmä"}
@@ -957,25 +1014,27 @@
            [:> TableHead
             [:> TableRow
              (doall
-               (for [{:keys [key label action-component padding sx]} headers]
-                 [:> TableCell {:key (name key) :padding padding :sx (clj->js sx)}
+               (for [{:keys [key label action-component padding sx sortable?]} headers
+                     :let [active? (= key (:col @sort-state))]]
+                 [:> TableCell {:key (name key) :padding padding :sx (clj->js sx)
+                                :sortDirection (if active? (name (:dir @sort-state)) false)}
                   action-component
-                  label]))]]
+                  (if sortable?
+                    [:> TableSortLabel
+                     {:active active?
+                      :direction (if active? (name (:dir @sort-state)) "asc")
+                      :onClick #(swap! sort-state
+                                       (fn [{:keys [col dir]}]
+                                         (if (= col key)
+                                           {:col key :dir (if (= dir :asc) :desc :asc)}
+                                           {:col key :dir :asc})))}
+                     label]
+                    label)]))]]
 
           ;; Body
            [:> TableBody
             (doall
-              (for [{:keys [lipas-id] :as site}
-                  ;; Sort by audit priority first, then by type
-                    (sort-by (fn [site]
-                               (let [audit-priority (case (:audit-status site)
-                                                      :changes-requested 1 ; Most critical
-                                                      :none 3 ; No verdict on the current text
-                                                      :approved 4 ; All good
-                                                      :approved-with-feedback 4 ; All good, with a remark
-                                                      5)] ; Default/unknown
-                                 [audit-priority (:type site)]))
-                             shown)]
+              (for [{:keys [lipas-id] :as site} (sort-sites shown @sort-state)]
 
                 [:<> {:key lipas-id}
 
