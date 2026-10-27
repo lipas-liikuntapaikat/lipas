@@ -4,20 +4,18 @@
  :keywords "Nyckelord",
  :loading-from-ptv "Hämtar information från PTV...",
  :service "Service",
- :service-channel "Servicepunkt",
- :service-channels "Servicepunkt",
+ :service-channel "Serviceställe",
+ :service-channels "Servicekanaler kopplade till tjänsten i PTV",
  :services "Service",
  :sports-sites "Idrottsanläggningar",
  :sports-sites-count "idrottsanläggningar",
  :sports-site-count-singular "idrottsanläggning",
  :synced-to-ptv "Exporterad till PTV",
- :out-of-date "LIPAS har nyare ändringar än PTV",
- :content-drift "PTV-innehållet skiljer sig från LIPAS",
- :modified-in-ptv "Opublicerade ändringar i PTV – publicera eller ångra ändringarna i PTV innan synkronisering",
  ;; Titles (rendered bold). Used standalone when there's no actionable detail,
  ;; or paired with one of the body strings below for the full message.
  :sync-failed "Synkronisering till PTV misslyckades",
  :saved-but-sync-failed "Idrottsanläggningen sparades, men PTV-synkroniseringen misslyckades",
+ :saving-and-syncing "Sparar och synkroniserar till PTV… Det kan ta en stund."
  ;; Bodies for the dialog-driven sync flows.
  :sync-failed-body-ptv-modified "PTV har opublicerade ändringar. Publicera eller ångra ändringarna i PTV och försök igen.",
  :sync-failed-body-invalid-postal-code "Postnumret '{1}' godkänns inte av PTV (finns inte i Postis register). Uppdatera idrottsanläggningens postnummer (t.ex. via 'Hitta adress automatiskt' under grunduppgifterna), spara och försök synkronisera igen.",
@@ -37,7 +35,6 @@
  :filter-sync-disabled "Synkronisering av"
  :filter-no-longer-matches "Matchar inte längre filtret"
  :filter-not-synced "Inte synkroniserad"
- :filter-out-of-date "Ändrad"
  :filter-ok "Uppdaterad"
  :filter-missing-descriptions "Beskrivningar saknas"
  :search-placeholder "Sök på namn..."
@@ -50,14 +47,13 @@
  :integration-enabled "PTV-integrationen är aktiv"
  :integration-enabled-sync-off "PTV-integrationen är aktiv, men synkroniseringen av idrottsanläggningen till PTV är avstängd."
  :will-be-archived-on-save "Idrottsanläggningen arkiveras från PTV när du sparar"
- :will-be-archived-type-changed "Idrottsanläggningen har tidigare exporterats till PTV, men uppgifterna har ändrats så att de inte längre exporteras. PTV-servicepunkten arkiveras när du sparar."
- :new-service-location-will-be-created "Idrottsanläggningen har inte tidigare exporterats till PTV. En ny servicepunkt skapas när du sparar."
+ :will-be-archived-type-changed "Idrottsanläggningen har tidigare exporterats till PTV, men uppgifterna har ändrats så att de inte längre exporteras. PTV-servicestället arkiveras när du sparar."
+ :new-service-location-will-be-created "Idrottsanläggningen har inte tidigare exporterats till PTV. Ett nytt serviceställe skapas när du sparar."
  :data-incomplete "PTV-uppgifterna är ofullständiga. Fyll i de uppgifter som saknas så exporteras idrottsanläggningen till PTV när du sparar."
  :integration-error "Fel i PTV-integrationen, de senaste uppgifterna har inte exporterats till PTV."
  :open-in-ptv "Öppna i PTV"
  :open-in-suomi-fi "Öppna i suomi.fi"
  :service-missing-for-type "Typen av idrottsanläggning har ändrats och motsvarande tjänst saknas i PTV."
- :type-changed-may-rebind "Typen av idrottsanläggning har ändrats. Idrottsanläggningen kan komma att kopplas till en annan tjänst i PTV."
  :delete-will-archive "Denna idrottsanläggning har förts till PTV. Borttagning arkiverar även PTV-servicestället."
  :error-summary-too-long "Sammandraget är för långt (högst 150 tecken)."
  :error-description-too-long "Beskrivningen är för lång (högst 5000 tecken)."
@@ -84,10 +80,31 @@
  :step-texts-hint "Skriv dem nedan eller skapa dem med AI."
  :finish-footer "Idrottsanläggningen exporteras till PTV när du sparar."
  :save-needs-texts "Fyll i sammanfattning och beskrivning på PTV-fliken, eller stäng av PTV-integrationen."
- :unpublished-languages-title "En del av språkversionerna i PTV tas bort vid synkroniseringen"
- :unpublished-languages-intro "Nästa synkronisering tar bort de här språkversionerna från PTV:"
- :unpublished-languages-not-enabled "inte i bruk i integrationen. Om du vill behålla språkversionen, kontakta lipasinfo@jyu.fi före synkroniseringen."
- :unpublished-languages-missing-texts "sammandrag och beskrivning saknas i Lipas. Lägg till dem på språkets flik före synkroniseringen: skriv dem själv, översätt från de finska texterna (\"Översätt till andra språk\") eller låt AI skapa dem (\"Generera beskrivningar med artificiell intelligens\")."
- :lang-fi "finska"
- :lang-se "svenska"
- :lang-en "engelska"}
+ :blocker-texts-too-short "Sammanfattningen och beskrivningen ska ha minst 5 tecken på varje språk."
+ :text-min-length "minst {1} tecken"
+ :sync-failed-body-ptv-message "PTV avvisade uppgifterna: {1}"
+ :filter-awaiting-choice "Väntar på val"
+ :filter-ready "Klar att synkroniseras"
+ :filter-blocked "Blockerad"
+ :status-awaiting-choice "I PTV har gjorts ändringar som väntar på ett val före synkroniseringen"
+ :status-ready "LIPAS har ändringar som synkroniseringen för till PTV"
+ :status-blocked "Synkroniseringen går inte igenom: PTV har ett opublicerat utkast, eller den förra synkroniseringen misslyckades"
+ :awaiting-choice-banner "{1} idrottsplatser har ändringar i PTV som väntar på ett val."
+ :show-awaiting-choice "Visa dem"
+ :will-be-republished "Servicestället är arkiverat i PTV. Sparandet publicerar samma serviceställe igen."
+ :delete-waits-for-archive "Idrottsplatsen har förts till PTV. Servicestället arkiveras i PTV när kommunens PTV-ansvariga godkänner det."
+ :sync-failed-body-changed-since-review "Uppgifterna i PTV har ändrats efter att du öppnade vyn. Kontrollera ändringarna och synkronisera på nytt."
+ :saved-but-sync-failed-body-changed-since-review "Idrottsplatsen sparades men synkroniserades inte, eftersom uppgifterna i PTV har ändrats efter att du öppnade den. Gå igenom ändringarna på PTV-fliken och spara på nytt."
+ :sync-failed-body-not-reviewed "PTV har ändringar som ingen har gått igenom. Gå igenom dem och synkronisera på nytt."
+ :saved-but-sync-failed-body-not-reviewed "Idrottsplatsen sparades men synkroniserades inte, eftersom PTV har ändringar som ingen har gått igenom. Gå igenom dem i PTV-verktyget eller på idrottsplatsens PTV-flik och synkronisera."
+ :sync-failed-body-ptv-down "PTV svarade inte. Om ett ofärdigt utkast blev kvar i PTV, publicera eller ångra det i PTV före nästa synkronisering."
+ :awaiting-archive-title "Väntar på arkivering ({1})"
+ :awaiting-archive-removed "Idrottsplatsen är märkt som borttagen i LIPAS ({1}, {2}). Servicestället syns fortfarande i PTV."
+ :awaiting-archive-not-candidate "Idrottsplatsen hör inte längre till PTV (ägaren eller typen har ändrats). Servicestället syns fortfarande i PTV."
+ :archive-in-ptv-now "Arkivera i PTV"
+ :open-site "Öppna idrottsplatsen"
+ :sync-all-ready "Synkronisera alla klara ({1})"
+ :sync-all-ready-title "Synkronisera {1} idrottsplatser?"
+ :sync-all-ready-intro "Synkroniseringen för ändringarna i {1} idrottsplatser till PTV."
+ :sync-all-ready-skipped "Dessa idrottsplatser väntar på ett val och hoppas över:"
+ :sync-all-ready-confirm "Synkronisera"}

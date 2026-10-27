@@ -4,9 +4,11 @@
             [ajax.core :as ajax]
             [goog.string :as gstring]
             [goog.string.format]
+            [lipas.data.ptv-review :as ptv-sync]
             [lipas.gpx :as gpx]
             [lipas.ui.map.hooks :as hooks]
             [lipas.ui.map.utils :as map-utils]
+            [lipas.ui.ptv.review-data :as ptv-review]
             [lipas.ui.utils :refer [==>] :as utils]
             [re-frame.core :as rf]))
 
@@ -418,6 +420,8 @@
        [[:lipas.ui.sports-sites.events/edit-site lipas-id]
        ;;[::zoom-to-site lipas-id]
         [::clear-undo-redo]
+        ;; a save syncs a site with PTV sync on: review PTV's changes first
+        [::fetch-ptv-site-review lipas-id]
         [::start-editing lipas-id sub-mode geom-type]
        ;; Also jump to activities/floorball tab if user doesn't have permission to
        ;; edit the basic site data.
@@ -435,11 +439,14 @@
                    (not= 3 (:selected-sports-site-tab (:map db))))
           [::select-sports-site-tab 3])]})))
 
-(defn- on-success-default [{:keys [lipas-id]} & [result]]
+(defn- on-success-default [{:keys [lipas-id synced?]} & [result]]
   (cond-> [[::stop-editing]
+           [::clear-ptv-site-review lipas-id]
            [:lipas.ui.search.events/submit-search]
            [:lipas.ui.map.events/show-sports-site lipas-id]]
-    (some-> result :ptv :error)
+    ;; only after a save that synced: an editor's save (D2) carries the
+    ;; error of an earlier sync, which isn't theirs to hear about
+    (and synced? (some-> result :ptv :error))
     ;; The handler lives in the lazy :ptv module; load it on this (rare)
     ;; error path so the warning toast is never silently dropped.
     (conj [:lipas.ui.lazy/load-then :ptv
@@ -449,16 +456,106 @@
   [[:lipas.ui.map.events/show-sports-site lipas-id]])
 
 (rf/reg-event-fx ::save-edits
-  (fn [_ [_ lipas-id]]
-    (let [on-success (partial on-success-default {:lipas-id lipas-id})
-          on-failure (partial on-failure-default {:lipas-id lipas-id})]
-      {:dispatch-n
-      ;; We "unselect" sports-site while saving to make the
-      ;; map "forget" and focus on updated entries once they're saved.
-      ;; Some more elegant solution could be possibly implemented in
-      ;; the future.
-       [[:lipas.ui.map.events/show-sports-site nil]
-        [:lipas.ui.sports-sites.events/save-edits lipas-id on-success on-failure]]})))
+  ;; A PTV manager's save of a site with PTV sync on syncs it over PTV:
+  ;; while a change made in PTV has no choice in the PTV tab's review, ask
+  ;; first. `overwrite-ptv?` is the user's answer: those keep Lipas's
+  ;; value. Anyone else's save stays in Lipas (D2): no review, no question.
+  (fn [{:keys [db]} [_ lipas-id overwrite-ptv?]]
+    (let [tr (:translator db)
+          editing (get-in db [:sports-sites lipas-id :editing])
+          ;; the form closes at once, but a save that writes to PTV takes
+          ;; PTV's time: say so until the save's own notification replaces
+          ;; this (sports-sites.events/save-success, save-failure)
+          syncs? (ptv-review/save-syncs? (ptv-review/app-user db) editing)
+          on-success (partial on-success-default {:lipas-id lipas-id :synced? syncs?})
+          on-failure (partial on-failure-default {:lipas-id lipas-id})
+          fetched (get-in db (ptv-review/site-path lipas-id))
+          review (when syncs?
+                   (ptv-review/site-form-review fetched
+                                                (get-in db [:sports-sites lipas-id :history
+                                                            (get-in db [:sports-sites lipas-id :latest])])
+                                                editing))
+          choices (get-in db (ptv-review/choices-path lipas-id))
+          open (ptv-sync/open-review-rows (:rows review) choices)
+          ;; what the review was made against: the backend refuses the sync
+          ;; over a change made in PTV since, and saves Lipas only
+          reviewed (when syncs? (ptv-review/reviewed (:channel fetched)))]
+      (if (and (seq open) (not overwrite-ptv?))
+        {:dispatch [:lipas.ui.events/confirm-with
+                    (ptv-review/overwrite-confirmation
+                      tr
+                      {:open open
+                       :languages (ptv-review/language-removals (:rows review))
+                       :on-overwrite #(==> [::save-edits lipas-id true])
+                       :on-review #(==> [::open-ptv-review lipas-id])})]}
+        ;; the edit holds the decisions
+        {:db (cond-> db
+               reviewed (assoc-in [:sports-sites lipas-id :editing :reviewed] reviewed))
+         :dispatch-n
+         ;; We "unselect" sports-site while saving to make the
+         ;; map "forget" and focus on updated entries once they're saved.
+         ;; Some more elegant solution could be possibly implemented in
+         ;; the future.
+         [[:lipas.ui.map.events/show-sports-site nil]
+          (when syncs?
+            [:lipas.ui.events/set-active-notification
+             {:message (tr :ptv/saving-and-syncing)
+              :severity :info
+              :sticky? true
+              :progress? true}])
+          [:lipas.ui.sports-sites.events/save-edits lipas-id on-success on-failure]]}))))
+
+(rf/reg-event-fx ::fetch-ptv-site-review
+  ;; What the site form reviews a site against PTV with
+  ;; (lipas.ui.ptv.review-data/site-form-review). Only a site synced to a
+  ;; location has anything to review, and only a PTV manager's save syncs
+  ;; it (D2).
+  (fn [{:keys [db]} [_ lipas-id]]
+    (let [latest (get-in db [:sports-sites lipas-id :history
+                             (get-in db [:sports-sites lipas-id :latest])])
+          token (-> db :user :login :token)]
+      (when (and token
+                 (ptv-review/ptv-manager-for? (ptv-review/app-user db) latest)
+                 (-> latest :ptv :last-sync)
+                 (-> latest :ptv :service-channel-ids first))
+        {:http-xhrio
+         {:method :post
+          :headers {:Authorization (str "Token " token)}
+          :uri (str (:backend-url db) "/actions/fetch-ptv-site-review")
+          :params {:lipas-id lipas-id}
+          :format (ajax/transit-request-format)
+          :response-format (ajax/transit-response-format)
+          :on-success [::fetch-ptv-site-review-success lipas-id]
+          :on-failure [::fetch-ptv-site-review-failure lipas-id]}}))))
+
+(rf/reg-event-db ::fetch-ptv-site-review-success
+  (fn [db [_ lipas-id resp]]
+    (assoc-in db (ptv-review/site-path lipas-id) resp)))
+
+(rf/reg-event-db ::fetch-ptv-site-review-failure
+  ;; Without the review the save syncs as it always has.
+  (fn [db [_ lipas-id _resp]]
+    (update-in db [:ptv :review :site] dissoc lipas-id)))
+
+(rf/reg-event-fx ::open-ptv-review
+  ;; The site form's PTV tab with the review open and in sight.
+  (fn [{:keys [db]} [_ lipas-id]]
+    {:db (-> db
+             (assoc-in [:map :selected-sports-site-tab] 6)
+             (assoc-in (ptv-review/open-path lipas-id) true))
+     :fx [[:lipas.ui.effects/scroll-into-view! (ptv-review/panel-dom-id lipas-id)]
+          [:lipas.ui.effects/focus! (ptv-review/first-open-dom-id lipas-id)]]}))
+
+(rf/reg-event-db ::clear-ptv-site-review
+  ;; After a save: it synced, so the review's base and choices are spent.
+  ;; After a cancel: the choices went with the edit.
+  (fn [db [_ lipas-id]]
+    (update-in db [:ptv :review] (fn [review]
+                                   (-> review
+                                       (update :site dissoc lipas-id)
+                                       (update :choices dissoc lipas-id)
+                                       (update :undo dissoc lipas-id)
+                                       (update :open dissoc lipas-id))))))
 
 (rf/reg-event-fx ::delete-site
   (fn [_]
@@ -491,6 +588,8 @@
         (tr :confirm/discard-changes?)
         (fn []
           (==> [:lipas.ui.sports-sites.events/discard-edits lipas-id])
+          ;; the PTV choices were part of the edit
+          (==> [::clear-ptv-site-review lipas-id])
           (==> [::stop-editing])
           (==> [:lipas.ui.search.events/submit-search]))]})))
 

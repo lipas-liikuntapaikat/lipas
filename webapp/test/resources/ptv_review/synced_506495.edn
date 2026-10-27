@@ -1,0 +1,164 @@
+{:note
+ "Recorded 2026-10-23 from the PTV test env (Utajärvi): the revision the last sync wrote (->review-base) and the location as PTV returns it afterwards, unchanged in PTV since.",
+ :base
+ {:name "Utajärven koulun piha-alue",
+  :email "asiointipiste@utajarvi.fi",
+  :phone-number "+358858755700",
+  :www "https://www.utajarvi.fi",
+  :location
+  {:address "Laitilantie 8",
+   :postal-code "91600",
+   :postal-office "Utajärvi",
+   :city {:city-code 889}},
+  :lipas-id 506495,
+  :ptv
+  {:summary
+   {:fi
+    "Utajärven koulun piha-alue on avoin lähiliikuntapaikka koulun pihalla."},
+   :description
+   {:fi
+    "Piha-alueella on pelikenttä, kiipeilytelineitä ja koripallokorit. Alue on koulupäivien aikana koulun käytössä."},
+   :service-ids ["d084ad7e-8700-4343-beea-5b5f788bb808"],
+   :service-channel-ids ["9c470eff-44b6-4b23-8c99-bbd54f7bd786"],
+   :languages ["fi"],
+   :last-sync "2026-10-21T14:49:51.747140Z"}},
+ :channel
+ {:addresses
+  [{:type "Location",
+    :subType "Single",
+    :postOfficeBoxAddress nil,
+    :streetAddress
+    {:municipality
+     {:code "889",
+      :name
+      [{:value "Utajärvi", :language "sv"}
+       {:value "Utajärvi", :language "en"}
+       {:value "Utajärvi", :language "fi"}]},
+     :longitude "472194.9736318209",
+     :streetNumber nil,
+     :street
+     [{:value "Laitilantie 8", :language "fi"}
+      {:value "Laitilantie 8", :language "sv"}
+      {:value "Laitilantie 8", :language "en"}
+      {:value "Laitilantie 8", :language "se"}
+      {:value "Laitilantie 8", :language "smn"}
+      {:value "Laitilantie 8", :language "sms"}],
+     :postOffice
+     [{:value "UTAJÄRVI", :language "se"}
+      {:value "UTAJÄRVI", :language "smn"}
+      {:value "UTAJÄRVI", :language "sv"}
+      {:value "UTAJÄRVI", :language "sms"}
+      {:value "UTAJÄRVI", :language "en"}
+      {:value "UTAJÄRVI", :language "fi"}],
+     :postalCode "91600",
+     :additionalInformation [],
+     :latitude "7182045.918286202",
+     :coordinateState "EnteredByUser"},
+    :otherAddress nil,
+    :locationAbroad nil,
+    :entrances [],
+    :country "FI"}],
+  :serviceHours [],
+  :serviceCollections [],
+  :serviceChannelType "ServiceLocation",
+  :ontologyTerms
+  [{:name
+    [{:value "idrottsparker", :language "sv"}
+     {:value "sports parks", :language "en"}
+     {:value "liikuntapuistot (ulkoliikuntapaikat)", :language "fi"}],
+    :code nil,
+    :ontologyType "JUPO",
+    :uri "http://www.yso.fi/onto/koko/p69291",
+    :parentId nil,
+    :parentUri "http://www.yso.fi/onto/koko/p67276"}
+   {:name
+    [{:value "idrottsplatser", :language "sv"}
+     {:value "sports grounds and physical exercise facilities",
+      :language "en"}
+     {:value "liikuntapaikat", :language "fi"}],
+    :code nil,
+    :ontologyType "JUPO",
+    :uri "http://www.yso.fi/onto/koko/p10416",
+    :parentId nil,
+    :parentUri "http://www.yso.fi/onto/koko/p11148"}
+   {:name
+    [{:value "motionsställen utomhus", :language "sv"}
+     {:value "outdoor sports areas", :language "en"}
+     {:value "ulkoliikuntapaikat", :language "fi"}],
+    :code nil,
+    :ontologyType "JUPO",
+    :uri "http://www.yso.fi/onto/koko/p67276",
+    :parentId nil,
+    :parentUri "http://www.yso.fi/onto/koko/p10416"}
+   {:name
+    [{:value nil, :language "sv"}
+     {:value nil, :language "en"}
+     {:value "liikuntapuistot (liikunta-alueet, puistot)",
+      :language "fi"}],
+    :code nil,
+    :ontologyType "KOKO",
+    :uri "http://www.yso.fi/onto/koko/p84486",
+    :parentId nil,
+    :parentUri
+    "http://www.yso.fi/onto/koko/p7808;http://www.yso.fi/onto/koko/p34333"}],
+  :serviceChannelDescriptions
+  [{:language "fi",
+    :value
+    "Utajärven koulun piha-alue on avoin lähiliikuntapaikka koulun pihalla.",
+    :type "Summary"}
+   {:language "fi",
+    :value
+    "Piha-alueella on pelikenttä, kiipeilytelineitä ja koripallokorit. Alue on koulupäivien aikana koulun käytössä.",
+    :type "Description"}],
+  :phoneNumbers
+  [{:type "Phone",
+    :additionalInformation nil,
+    :serviceChargeType "Chargeable",
+    :chargeDescription nil,
+    :prefixNumber "+358",
+    :isFinnishServiceNumber false,
+    :number "858755700",
+    :language "fi"}],
+  :webPages
+  [{:url "https://www.utajarvi.fi",
+    :value "Liikuntapaikan verkko-osoite",
+    :language "fi"}],
+  :publishingStatus "Published",
+  :modified "2026-10-21T14:49:52.534749",
+  :organizationId "3d1759a2-e47a-4947-9a31-cab1c1e2512b",
+  :oid nil,
+  :serviceChannelNames
+  [{:language "fi",
+    :value "Utajärven koulun piha-alue",
+    :type "Name"}],
+  :id "9c470eff-44b6-4b23-8c99-bbd54f7bd786",
+  :sourceId "lipas-3d1759a2-e47a-4947-9a31-cab1c1e2512b-506495",
+  :displayNameType
+  [{:type "Name", :language "sv"}
+   {:type "Name", :language "en"}
+   {:type "Name", :language "fi"}],
+  :emails [{:value "asiointipiste@utajarvi.fi", :language "fi"}],
+  :languages ["fi"],
+  :responsibleSoteOrganization nil,
+  :areas
+  [{:type "Municipality",
+    :code nil,
+    :name nil,
+    :municipalities
+    [{:code "889",
+      :name
+      [{:value "Utajärvi", :language "sv"}
+       {:value "Utajärvi", :language "en"}
+       {:value "Utajärvi", :language "fi"}]}]}],
+  :services
+  [{:service
+    {:id "d084ad7e-8700-4343-beea-5b5f788bb808",
+     :name "Lähiliikunta ja liikuntapuistot"},
+    :serviceChargeType nil,
+    :description [],
+    :extraTypes [],
+    :serviceHours [],
+    :contactDetails nil,
+    :digitalAuthorizations [],
+    :modified "2024-09-03T11:43:00.447058"}],
+  :areaType "LimitedType"}}

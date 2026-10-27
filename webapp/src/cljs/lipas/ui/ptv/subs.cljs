@@ -1,6 +1,7 @@
 (ns lipas.ui.ptv.subs
   (:require [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-review :as ptv-review]
             [lipas.data.types :as types]
             [lipas.roles :as roles]
             [lipas.schema.sports-sites.ptv :as ptv-schema]
@@ -216,6 +217,22 @@
         {:label service-name
          :service-id id
          :source-id (:sourceId service)
+         ;; :lipas (created by LIPAS, its master), :native (made in PTV,
+         ;; texts patched by LIPAS) or :other-system (read-only)
+         :management (ptv-data/service-management (:sourceId service))
+         :name (ptv-data/service-names service)
+         ;; LIPAS locales of the language versions LIPAS can edit, and the
+         ;; PTV codes of those it doesn't model (left as they are)
+         :language-versions (into [] (keep ptv-data/lang->locale)
+                                  (ptv-data/service-language-versions service))
+         :ptv-only-languages (into [] (remove ptv-data/lang->locale)
+                                   (ptv-data/service-language-versions service))
+         ;; What a sync builds its body on (a native's patch, a LIPAS-created
+         ;; service's carried-over entries), here so the panel can check
+         ;; the body before sending it
+         :ptv-entries (select-keys service [:serviceNames :serviceDescriptions :requirements
+                                            :publishingStatus :generalDescriptionId
+                                            :targetGroups :ontologyTerms :serviceClasses])
          :publishing-status (:publishingStatus service)
          :last-modified (:modified service)
          :last-modified-human (utils/->human-date-time-at-user-tz (:modified service))
@@ -245,17 +262,39 @@
 (rf/reg-sub ::services-filter
   :<- [::ptv]
   (fn [ptv _]
-    (get ptv :services-filter "lipas-managed")))
+    (get ptv :services-filter "sports")))
 
-(rf/reg-sub ::services-filtered
+(rf/reg-sub ::linked-service-ids
+  ;; Ids of the services the org's LIPAS sites are linked to
+  :<- [::ptv]
+  (fn [ptv [_ org-id]]
+    (into #{} (mapcat #(get-in % [:ptv :service-ids]))
+          (vals (get-in ptv [:org org-id :data :sports-sites])))))
+
+(rf/reg-sub ::service-sections
+  ;; The Palvelut tab's two sections: services created in LIPAS, and those
+  ;; made in PTV (or by another system). The PTV section shows by default
+  ;; only the services that concern LIPAS: linked to a LIPAS site, or
+  ;; written by LIPAS. The org's other PTV services (libraries, health care,
+  ;; ...) show with the "all" filter; :ptv-hidden-count says how many, and
+  ;; :ptv-total how many PTV services the org has in all (the heading).
   (fn [[_ org-id]]
     [(rf/subscribe [::services org-id])
-     (rf/subscribe [::services-filter])])
-  (fn [[services filter'] _]
-    (sort-by :label
-             (case filter'
-               "lipas-managed" (filter (fn [m] (some-> m :source-id (str/starts-with? "lipas-"))) services)
-               services))))
+     (rf/subscribe [::services-filter])
+     (rf/subscribe [::linked-service-ids org-id])])
+  (fn [[services filter' linked-ids] _]
+    (let [{lipas :lipas others nil} (group-by #(when (= :lipas (:management %)) :lipas) services)
+          concerns-lipas? (fn [m] (or (some? (:source-id m))
+                                      (contains? linked-ids (:service-id m))))
+          relevant (filter #(and (= :native (:management %)) (concerns-lipas? %)) others)
+          relevant (concat relevant
+                           (filter #(and (= :other-system (:management %))
+                                         (contains? linked-ids (:service-id %)))
+                                   others))]
+      {:lipas (sort-by :label lipas)
+       :ptv (sort-by :label (if (= "all" filter') others relevant))
+       :ptv-hidden-count (- (count others) (count relevant))
+       :ptv-total (count others)})))
 
 (rf/reg-sub ::service-mappings
   :<- [::ptv]
@@ -337,14 +376,22 @@
   coerces against. Returns a distinct vector of localization keys (from the
   schema's :error/message props) — empty when the payload is valid. Only
   keyword messages are surfaced; structural errors (missing required keys)
-  are left to the business-level sync hints."
+  are left to the business-level sync hints. A text under PTV's minimum
+  length in a language the sync publishes, which the schema doesn't check
+  (a short draft may be saved), gives :ptv/blocker-texts-too-short; only
+  once the Finnish texts are there, which the missing-texts hint asks for
+  first."
   [db lipas-id]
-  (->> (some-> (explain-service-location (events/service-location-payload db lipas-id))
-               :errors)
-       (map me/error-message)
-       (filter keyword?)
-       distinct
-       vec))
+  (let [payload (events/service-location-payload db lipas-id)]
+    (cond-> (->> (some-> (explain-service-location payload) :errors)
+                 (map me/error-message)
+                 (filter keyword?)
+                 distinct
+                 vec)
+      (and (ptv-data/ptv-ready? payload)
+           (seq (ptv-data/service-location-short-texts payload
+                                                       (get-in payload [:ptv :languages]))))
+      (conj :ptv/blocker-texts-too-short))))
 
 (rf/reg-sub ::service-location-schema-errors
   ;; Used to disable the sync button and explain why in its tooltip.
@@ -388,10 +435,21 @@
                       (assoc :description description)
                       (assoc :summary summary)
                       (assoc :user-instruction user-instruction)
+                      ;; ...and no text PTV would reject in the body the
+                      ;; export sends (a short English summary, say), which
+                      ;; would otherwise halt the whole batch
                       (assoc :valid (boolean (and
                                                (some-> description :fi count (> 5))
                                                (some-> summary :fi count (> 5))
-                                               (some-> user-instruction :fi count (> 5)))))
+                                               (some-> user-instruction :fi count (> 5))
+                                               (empty? (ptv-data/lipas-service-text-errors
+                                                         {:source-id source-id
+                                                          :sub-category-id (:sub-category-id m)
+                                                          :languages languages
+                                                          :summary summary
+                                                          :description description
+                                                          :user-instruction user-instruction}
+                                                         nil)))))
                       (cond->
                         mapping (assoc :service-id (:service-id mapping)
                                        :linked? true)))))))))
@@ -450,26 +508,123 @@
   (fn [idx _]
     (->> idx vals (filter #(> (count %) 1)) (apply concat) set)))
 
+(rf/reg-sub ::sync-bases
+  ;; lipas-id -> what the site's last sync sent (::fetch-ptv-sync-bases)
+  :<- [::ptv]
+  (fn [ptv [_ org-id]]
+    (get-in ptv [:org org-id :data :sync-bases])))
+
+(rf/reg-sub ::org-sports-sites
+  ;; lipas-id -> the org's cached site, as fetched (no audit joined)
+  :<- [::ptv]
+  (fn [ptv [_ org-id]]
+    (get-in ptv [:org org-id :data :sports-sites])))
+
+(defonce ^:private ptv-input-cache
+  ;; lipas-id -> {:args [...] :result ptv-input}: the PTV tool's row for a
+  ;; site (sports-site->ptv-input, which runs the sync review), reused while
+  ;; its inputs are the very same values. re-frame keeps unchanged app-db
+  ;; values identical, so an edit to one site, or a change elsewhere under
+  ;; :ptv, recomputes only what changed instead of every site of the org.
+  (atom {}))
+
+(defn- ptv-input
+  [ctx service-channels services site audit base choices]
+  (let [args [service-channels services site audit base choices]
+        hit (get @ptv-input-cache (:lipas-id site))]
+    (if (and hit
+             (= ctx (:ctx hit))
+             (every? true? (map identical? args (:args hit))))
+      (:result hit)
+      (let [result (ptv-review/sports-site->ptv-input
+                     ctx service-channels services
+                     (cond-> (assoc site :ptv-base base :review-choices choices)
+                       audit (assoc-in [:ptv :audit] audit)))]
+        (swap! ptv-input-cache assoc (:lipas-id site) {:ctx ctx :args args :result result})
+        result))))
+
 (rf/reg-sub ::sports-sites
   (fn [[_ org-id]]
-    [(rf/subscribe [::sites-with-audit org-id])
+    [(rf/subscribe [::org-sports-sites org-id])
+     (rf/subscribe [::site-audits org-id])
      (rf/subscribe [::services-by-id org-id])
      (rf/subscribe [::service-channels-by-id org-id])
      (rf/subscribe [::default-settings org-id])
      (rf/subscribe [:lipas.ui.sports-sites.subs/all-types])
-     (rf/subscribe [::selected-org])])
-  (fn [[sites services service-channels org-defaults types selected-org] [_ org-id]]
-    (let [org-langs (get-in selected-org [:ptv-data :supported-languages] ptv-data/fallback-languages)]
-      (->> sites
+     (rf/subscribe [::selected-org])
+     (rf/subscribe [::sync-bases org-id])
+     (rf/subscribe [::all-review-choices])])
+  (fn [[sites audits services service-channels org-defaults types selected-org sync-bases
+        all-choices] [_ org-id]]
+    (let [ctx {:org-id org-id
+               :types types
+               :org-defaults org-defaults
+               :org-langs (get-in selected-org [:ptv-data :supported-languages]
+                                  ptv-data/fallback-languages)}]
+      (->> (vals sites)
            (map (fn [site]
-                  (ptv-data/sports-site->ptv-input {:org-id org-id
-                                                    :types types
-                                                    :org-defaults org-defaults
-                                                    :org-langs org-langs}
-                                                   service-channels
-                                                   services
-                                                   site)))
+                  (let [lipas-id (:lipas-id site)]
+                    (ptv-input ctx service-channels services site
+                               (get audits lipas-id) (get sync-bases lipas-id)
+                               (get all-choices lipas-id)))))
            (sort-by :lipas-id)))))
+
+(rf/reg-sub ::service-bases
+  ;; service-id -> Lipas's mirror of the service after its last write
+  :<- [::ptv]
+  (fn [ptv [_ org-id]]
+    (get-in ptv [:org org-id :data :service-bases])))
+
+(rf/reg-sub ::awaiting-archive
+  ;; Sites still published in PTV although removed in Lipas (or no longer
+  ;; PTV's), waiting for a PTV manager to archive them (D2)
+  :<- [::ptv]
+  (fn [ptv [_ org-id]]
+    (get-in ptv [:org org-id :data :awaiting-archive])))
+
+(rf/reg-sub ::unreachable-channels
+  ;; ids of the service locations whose refetch failed (not as archived):
+  ;; their review is on the data the dialog opened with
+  :<- [::ptv]
+  (fn [ptv _]
+    (get ptv :unreachable-channels #{})))
+
+(rf/reg-sub ::review-choices
+  :<- [::ptv]
+  (fn [ptv [_ lipas-id]]
+    (get-in ptv [:review :choices lipas-id])))
+
+(rf/reg-sub ::review-written?
+  ;; Whether the choices made in a review (a site's, or a service's by its
+  ;; edit key) wrote into the edit: something "Kumoa valinnat" takes back
+  :<- [::ptv]
+  (fn [ptv [_ id]]
+    (boolean (seq (get-in ptv [:review :undo id])))))
+
+(rf/reg-sub ::editable-site-ids
+  ;; lipas-ids of the org's sites the user may edit as such, not just their
+  ;; PTV data: taking PTV's name for a site renames it in Lipas.
+  (fn [_]
+    [(rf/subscribe [:lipas.ui.user.subs/user-data])
+     (rf/subscribe [::ptv])])
+  (fn [[user ptv] [_ org-id]]
+    (into #{}
+          (keep (fn [[lipas-id site]]
+                  (when (roles/check-privilege user (roles/site-roles-context site)
+                                               :site/create-edit)
+                    lipas-id)))
+          (get-in ptv [:org org-id :data :sports-sites]))))
+
+(rf/reg-sub ::all-review-choices
+  ;; lipas-id -> the choices made in the site's review
+  :<- [::ptv]
+  (fn [ptv _]
+    (get-in ptv [:review :choices])))
+
+(rf/reg-sub ::review-open?
+  :<- [::ptv]
+  (fn [ptv [_ lipas-id]]
+    (boolean (get-in ptv [:review :open lipas-id]))))
 
 (rf/reg-sub ::sports-sites-wizard
   ;; Sports sites filtered by the wizard step 1 sub-category selection.
@@ -601,11 +756,15 @@
 
 (rf/reg-sub ::service-location-creation-progress
   :<- [::service-locations-creation]
-  (fn [{:keys [processed-ids size halt? in-progress?]} _]
+  (fn [{:keys [processed-ids size halt? in-progress? failed]} _]
     (let [processed-count (count processed-ids)]
       {:processed-lipas-ids (set processed-ids)
        :in-progress? in-progress?
        :halt? halt?
+       ;; {:lipas-id :error} of the site a halted export stopped at, and
+       ;; how many after it weren't tried
+       :failed failed
+       :skipped-count (when failed (max 0 (- size processed-count 1)))
        :total-count size
        :processed-count processed-count
        :processed-percent (if (pos? size)
@@ -670,7 +829,7 @@
 (rf/reg-sub ::sites-with-audit
   ;; The org's cached sites joined with their stored audit as [:ptv :audit],
   ;; the shape the cljc audit fns read (site-audit-fields,
-  ;; determine-audit-status, sports-site->ptv-input).
+  ;; determine-audit-status). ::sports-sites joins it per site itself.
   (fn [[_ org-id]]
     [(rf/subscribe [::ptv])
      (rf/subscribe [::site-audits org-id])])
@@ -1085,3 +1244,14 @@
   :<- [::audit]
   (fn [audit _]
     (:service-notification-sent? audit)))
+
+;;; Services made in PTV ;;;
+
+(rf/reg-sub ::service-linked-site-count
+  ;; How many of the org's LIPAS sites link to the service.
+  :<- [::ptv]
+  (fn [ptv [_ org-id service-id]]
+    (->> (get-in ptv [:org org-id :data :sports-sites])
+         vals
+         (filter #(some #{service-id} (get-in % [:ptv :service-ids])))
+         count)))

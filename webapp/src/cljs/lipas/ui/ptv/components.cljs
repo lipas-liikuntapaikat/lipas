@@ -25,7 +25,6 @@
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.mui :as mui]
             [lipas.ui.ptv.controls :as controls]
-            [lipas.ui.ptv.diff :as ptv-diff]
             [lipas.ui.ptv.events :as events]
             [lipas.ui.ptv.subs :as subs]
             [re-frame.core :as rf]
@@ -76,36 +75,6 @@
          feedback
          (tr :ptv.audit/changes-requested-no-feedback))])))
 
-(defn unpublished-languages-alert
-  "Warns that the linked PTV service location has texts in languages the next
-   sync won't publish, and so will remove. `unpublished` is the result of
-   `ptv-data/unpublished-ptv-languages`; renders nothing when it is nil.
-   Organisations can't enable languages themselves, hence the contact address
-   in the :not-enabled message."
-  [{:keys [tr unpublished]}]
-  (when unpublished
-    (let [{:keys [not-enabled missing-texts]} unpublished
-          lang-name (fn [lang]
-                      (case lang
-                        "fi" (tr :ptv/lang-fi)
-                        "se" (tr :ptv/lang-se)
-                        "en" (tr :ptv/lang-en)
-                        ;; already an upper-cased PTV code
-                        lang))
-          row (fn [langs explanation]
-                [:> Typography {:component "li" :variant "body2" :sx #js {:mt 0.5 :fontWeight 400}}
-                 [:b (str/capitalize (str/join ", " (map lang-name langs)))]
-                 " – " explanation])]
-      [:> Alert {:severity "warning" :variant "outlined"}
-       [:> AlertTitle (tr :ptv/unpublished-languages-title)]
-       [:> Typography {:variant "body2" :sx #js {:fontWeight 400}}
-        (tr :ptv/unpublished-languages-intro)]
-       [:> Typography {:component "ul" :sx #js {:m 0 :mt 0.5 :pl 2.5}}
-        (when (seq not-enabled)
-          (row not-enabled (tr :ptv/unpublished-languages-not-enabled)))
-        (when (seq missing-texts)
-          (row missing-texts (tr :ptv/unpublished-languages-missing-texts)))]])))
-
 (defn ptv-link-field
   "Shows PTV items as links with an edit button to switch to selector mode.
    When an item has no :url, renders as plain text instead of a link.
@@ -134,139 +103,6 @@
                    :sx #js {:textTransform "none" :alignSelf "flex-start" :p 0}
                    :on-click on-cancel}
         (tr :actions/cancel)])]))
-
-(defn- drift-field-label
-  [tr {:keys [field type language]}]
-  (let [field-label (case field
-                      :name (tr :ptv.drift/field-name)
-                      :marketing-name (tr :ptv.drift/field-marketing-name)
-                      :summary (tr :ptv.drift/field-summary)
-                      :description (tr :ptv.drift/field-description)
-                      :services (tr :ptv.drift/field-services)
-                      (str field))]
-    (cond
-      (= field :services) field-label
-      (= type "AlternativeName") field-label
-      language (str field-label " (" (str/upper-case language) ")")
-      :else field-label)))
-
-(defn- drift-cell
-  [tr value]
-  (if (or (nil? value) (and (string? value) (str/blank? value)))
-    [:> Typography {:variant "body2" :sx #js {:color "text.disabled" :fontStyle "italic"}}
-     (tr :ptv.drift/empty)]
-    [:> Typography {:variant "body2" :sx #js {:whiteSpace "pre-wrap"}} value]))
-
-(def ^:private diff-styles
-  {;; LIPAS column: highlight tokens present only in LIPAS — these are
-   ;; what's about to be pushed into PTV. Green underline.
-   :lipas {:background "#e6f4ea"
-           :font-weight 500
-           :text-decoration "underline"
-           :text-decoration-color "#137333"}
-   ;; PTV column: highlight tokens present only in PTV — these are what
-   ;; will be erased on the next sync. Red strikethrough.
-   :ptv {:background "#fce8e6"
-         :text-decoration "line-through"
-         :text-decoration-color "#c5221f"}})
-
-(defn- diffed-cell
-  "Render one column of a side-by-side word diff. `ops` is the result
-   of `(ptv-diff/diff lipas-text ptv-text)` already coalesced. `side` is
-   :lipas or :ptv and determines which ops are skipped (the other side's
-   additions) and which are highlighted (this side's additions)."
-  [tr ops side]
-  (let [skip-op (case side :lipas :added :ptv :removed)
-        highlight-op (case side :lipas :removed :ptv :added)
-        highlight-style (clj->js (get diff-styles side))
-        any-content? (some (fn [[op _]] (or (= op :equal) (= op highlight-op))) ops)]
-    (if any-content?
-      [:> Typography {:variant "body2" :sx #js {:whiteSpace "pre-wrap"}}
-       (into [:<>]
-             (for [[i [op v]] (map-indexed vector ops)
-                   :when (not= op skip-op)]
-               (if (= op highlight-op)
-                 ^{:key i} [:span {:style highlight-style} v]
-                 ^{:key i} [:span v])))]
-      [:> Typography {:variant "body2" :sx #js {:color "text.disabled" :fontStyle "italic"}}
-       (tr :ptv.drift/empty)])))
-
-(def ^:private text-fields
-  "Drift fields where word-level diff highlighting helps readability."
-  #{:name :marketing-name :summary :description})
-
-(defn- service-names
-  [entries]
-  (str/join ", " (map (fn [{:keys [id name]}] (or name id)) entries)))
-
-(defn- drift-services-cell
-  [tr entries]
-  (if (seq entries)
-    [:> Typography {:variant "body2"}
-     (service-names entries)]
-    [:> Typography {:variant "body2" :sx #js {:color "text.disabled" :fontStyle "italic"}}
-     (tr :ptv.drift/empty)]))
-
-(r/defc drift-panel
-  "Renders a per-field diff between the LIPAS-side value (what will be
-   pushed on the next sync) and the PTV-side value (what the kunta is
-   currently seeing in PTV). Only shown when the site has drift."
-  [{:keys [drift-fields tr]}]
-  (when (seq drift-fields)
-    [:> Alert {:severity "warning"
-               :icon false
-               :sx #js {:my 2}}
-     [:> AlertTitle (tr :ptv.drift/title)]
-     [:> Typography {:variant "body2" :sx #js {:mb 1}}
-      (tr :ptv.drift/warning)]
-     [:> Typography {:variant "body2" :sx #js {:mb 2}}
-      (tr :ptv.drift/instruction)]
-     [:> Table {:size "small" :sx #js {:bgcolor "background.paper"}}
-      [:> TableHead
-       [:> TableRow
-        [:> TableCell {:sx #js {:fontWeight 600}} (tr :ptv.drift/field-header)]
-        [:> TableCell {:sx #js {:fontWeight 600}} (tr :ptv.drift/lipas-header)]
-        [:> TableCell {:sx #js {:fontWeight 600}} (tr :ptv.drift/ptv-header)]]]
-      [:> TableBody
-       (for [{:keys [field lipas ptv added removed] :as entry}
-             (sort-by (juxt :field :language) drift-fields)]
-         ^{:key (str field "-" (:language entry) "-" (:type entry))}
-         [:> TableRow
-          [:> TableCell {:sx #js {:verticalAlign "top"}}
-           [:> Typography {:variant "body2" :sx #js {:fontWeight 500}}
-            (drift-field-label tr entry)]]
-          (cond
-            (= field :services)
-            [:<>
-             [:> TableCell {:sx #js {:verticalAlign "top"}}
-              [:> Typography {:variant "caption" :sx #js {:color "text.secondary" :display "block"}}
-               (tr :ptv.drift/services-lipas-has)]
-              [drift-services-cell tr lipas]
-              (when (seq removed)
-                [:> Typography {:variant "caption" :sx #js {:color "warning.dark" :display "block" :mt 1}}
-                 (tr :ptv.drift/services-will-be-linked (service-names removed))])]
-             [:> TableCell {:sx #js {:verticalAlign "top"}}
-              [:> Typography {:variant "caption" :sx #js {:color "text.secondary" :display "block"}}
-               (tr :ptv.drift/services-ptv-has)]
-              [drift-services-cell tr ptv]
-              (when (seq added)
-                [:> Typography {:variant "caption" :sx #js {:color "warning.dark" :display "block" :mt 1}}
-                 (tr :ptv.drift/services-will-be-removed (service-names added))])]]
-
-            (contains? text-fields field)
-            (let [ops (ptv-diff/coalesce (ptv-diff/diff lipas ptv))]
-              [:<>
-               [:> TableCell {:sx #js {:verticalAlign "top" :width "40%"}}
-                [diffed-cell tr ops :lipas]]
-               [:> TableCell {:sx #js {:verticalAlign "top" :width "40%"}}
-                [diffed-cell tr ops :ptv]]])
-
-            :else
-            [:<>
-             [:> TableCell {:sx #js {:verticalAlign "top" :width "40%"}}
-              [drift-cell tr lipas]]
-             [:> TableCell {:sx #js {:verticalAlign "top" :width "40%"}}
-              [drift-cell tr ptv]]])])]]]))
 
 (r/defc service-location-preview
   "Preview component showing how a sports site will appear in PTV as a service location"
@@ -464,10 +300,17 @@
           desc (when @source-id (get descriptions @source-id))
           generating? @(rf/subscribe [::subs/generating-service-descriptions? @source-id])
           syncing? (when @source-id @(rf/subscribe [::subs/syncing-service? @source-id]))
+          data (merge {:org-id org-id
+                       :source-id @source-id
+                       :sub-category-id (some-> @source-id ptv-data/parse-service-source-id)
+                       :languages org-languages}
+                      desc)
           valid? (and @source-id
                       (some-> desc :summary :fi count (> 5))
                       (some-> desc :description :fi count (> 5))
-                      (some-> desc :user-instruction :fi count (> 5)))]
+                      (some-> desc :user-instruction :fi count (> 5))
+                      ;; nor any text PTV would reject in what the export sends
+                      (empty? (ptv-data/lipas-service-text-errors data nil)))]
       [:> Stack {:spacing 2}
        [:> Typography {:variant "subtitle1" :fontWeight "medium"}
         (tr :ptv.service/create-new)]
@@ -553,14 +396,9 @@
                             (if syncing?
                               [:> CircularProgress {:size 16 :color "inherit"}]
                               [:> Icon "ios_share"]))
-               :on-click #(let [data (merge {:org-id org-id
-                                             :source-id @source-id
-                                             :sub-category-id (ptv-data/parse-service-source-id @source-id)
-                                             :languages org-languages}
-                                            desc)]
-                            (rf/dispatch [::events/create-ptv-service
-                                          org-id @source-id data [] [] lipas-id])
-                            (on-cancel))}
+               :on-click #(do (rf/dispatch [::events/create-ptv-service
+                                            org-id @source-id data [] [] lipas-id])
+                              (on-cancel))}
               (tr :ptv.wizard/export-services-to-ptv)]])
 
           [:> Button
@@ -584,8 +422,8 @@
                 :fullWidth true
                 :multiline true :variant "outlined" :label (tr :ptv/summary) :value v
                 :inputProps #js {:maxLength ptv-data/max-summary-length}
-                :helperText (str (count v) "/" ptv-data/max-summary-length)
-                :error (> (count v) ptv-data/max-summary-length)}])
+                :helperText (controls/text-length-hint tr v ptv-data/max-summary-length)
+                :error (controls/text-length-error? v ptv-data/max-summary-length)}])
 
             (let [v (or (get-in desc [:description @selected-tab]) "")]
               [text-fields/text-field
@@ -593,8 +431,8 @@
                 :fullWidth true
                 :variant "outlined" :rows 7 :multiline true :label (tr :ptv/description) :value v
                 :inputProps #js {:maxLength ptv-data/max-description-length}
-                :helperText (str (count v) "/" ptv-data/max-description-length)
-                :error (> (count v) ptv-data/max-description-length)}])
+                :helperText (controls/text-length-hint tr v ptv-data/max-description-length)
+                :error (controls/text-length-error? v ptv-data/max-description-length)}])
 
             (let [v (or (get-in desc [:user-instruction @selected-tab]) "")]
               [text-fields/text-field
@@ -602,51 +440,17 @@
                 :fullWidth true
                 :variant "outlined" :rows 5 :multiline true :label (tr :ptv/user-instruction) :value v
                 :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
-                :helperText (str (count v) "/" ptv-data/max-user-instruction-length)
-                :error (> (count v) ptv-data/max-user-instruction-length)}])]])]])))
-
-(defn add-service-link-form
-  "Form for linking (adopting) an existing PTV service into LIPAS management.
-   Props:
-   - :org-id (required)
-   - :on-cancel (required)
-   - :lipas-id (optional) — when set, the linked service-id is auto-added to
-     that site's :ptv :service-ids on success."
-  [{:keys [org-id on-cancel lipas-id]}]
-  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
-        all-services @(rf/subscribe [::subs/services org-id])
-        non-lipas-services (remove #(some-> (:source-id %) (str/starts-with? "lipas-")) all-services)
-        org-languages @(rf/subscribe [::subs/org-languages org-id])]
-    [:> Stack {:spacing 2}
-     [:> Typography {:variant "subtitle1" :fontWeight "medium"}
-      (tr :ptv.service/link-existing)]
-     [controls/services-selector
-      {:options non-lipas-services
-       :multiple false
-       :value nil
-       :value-fn :service-id
-       :on-change (fn [service-id]
-                    (when service-id
-                      (let [service (some #(when (= (:service-id %) service-id) %) all-services)
-                            data (merge {:org-id org-id
-                                         :service-id service-id
-                                         :languages org-languages}
-                                        (select-keys service [:summary :description :user-instruction]))]
-                        (rf/dispatch [::events/create-ptv-service org-id nil data [] [] lipas-id])
-                        (on-cancel))))
-       :label (tr :ptv.service/select-service)}]
-     [:> Button
-      {:size "small" :variant "text" :sx #js {:textTransform "none"}
-       :on-click on-cancel}
-      (tr :actions/cancel)]]))
+                :helperText (controls/text-length-hint tr v ptv-data/max-user-instruction-length)
+                :error (controls/text-length-error? v ptv-data/max-user-instruction-length)}])]])]])))
 
 (defn add-service-panel
-  "Two-button entry point for adding a PTV service. Default state shows
-   \"Create new\" / \"Link existing\"; click switches to the corresponding form.
+  "Entry point for adding a PTV service: \"Create new\" switches to the
+   creation form. (A service already in PTV isn't added here: sites link to
+   it as is, and its panel offers to capture it.)
    Props:
    - :org-id (required)
    - :locked-sub-category-id (optional) — passed to add-service-create-form
-   - :lipas-id (optional) — passed to both forms for auto-attach"
+   - :lipas-id (optional) — passed to the form for auto-attach"
   [{:keys [org-id locked-sub-category-id lipas-id]}]
   (r/with-let [mode (r/atom nil)]
     (let [tr @(rf/subscribe [:lipas.ui.subs/translator])]
@@ -656,23 +460,9 @@
                                            :locked-sub-category-id locked-sub-category-id
                                            :lipas-id lipas-id
                                            :on-cancel #(reset! mode nil)}]
-         :link   [add-service-link-form {:org-id org-id
-                                         :lipas-id lipas-id
-                                         :on-cancel #(reset! mode nil)}]
          [:> Stack {:direction "row" :spacing 1}
           [:> Button
            {:variant "outlined" :size "small" :sx #js {:textTransform "none"}
             :startIcon (r/as-element [:> Icon "add"])
             :on-click #(reset! mode :create)}
-           (tr :ptv.service/create-new)]
-          ;; HIDDEN: "Liitä olemassa oleva PTV-palvelu" entry point is
-          ;; reader-discarded (`#_`) until the adoption flow is verified
-          ;; on fix/ptv-adopt-preserve-target-groups. Restore by removing
-          ;; the `#_` below. The :link case in the case-form above is
-          ;; unreachable while this is hidden but is intentionally kept
-          ;; so add-service-link-form remains wired up for restoration.
-          #_[:> Button
-             {:variant "outlined" :size "small" :sx #js {:textTransform "none"}
-              :startIcon (r/as-element [:> Icon "link"])
-              :on-click #(reset! mode :link)}
-             (tr :ptv.service/link-existing)]])])))
+           (tr :ptv.service/create-new)]])])))

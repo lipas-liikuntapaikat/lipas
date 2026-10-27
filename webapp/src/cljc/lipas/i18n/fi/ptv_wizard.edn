@@ -13,8 +13,6 @@
  :generate-descriptions-helper3
  "Palvelupaikat voidaan perustaa PTV:hen kun niissä on vähintään suomenkielinen kuvaus ja tiivistelmä. LIPAS täydentää palveluluokituksen, asiasanat ja muut metatiedot automaattisesti.",
  :integrate-service-locations "Luo liikuntapaikoista palvelupaikat",
- :service-channel-name-conflict
- "PTV:ssä on jo olemassa palvelupaikka nimellä {1}.",
  :services-to-add "Perustettavat palvelut",
  :export-blocked-invalid
  "Vienti on estetty. Korjaa tai poista valinta seuraavilta liikuntapaikoilta:",
@@ -48,6 +46,14 @@
  :export-halted "Vienti keskeytyi",
  :export-complete "Vienti valmis",
  :export-result "{1}/{2} liikuntapaikkaa viety PTV:hen.",
+ :export-failed-site "Liikuntapaikan {1} vienti PTV:hen epäonnistui.",
+ :export-skipped "Vienti pysähtyi siihen, joten {1} liikuntapaikkaa jäi viemättä.",
+ :export-skipped-one "Vienti pysähtyi siihen, joten yksi liikuntapaikka jäi viemättä.",
+ :export-resume-hint
+ "Jatka vientiä, kun syy on korjattu. Jos PTV ei vastannut, yritä hetken päästä uudelleen. Jos ongelma toistuu, ota yhteyttä Lipaksen tukeen (lipasinfo@jyu.fi).",
+ :export-resume "Jatka vientiä",
  :start-new-export "Aloita uusi vienti",
  :go-to-sports-sites-tab "Siirry Liikuntapaikat-välilehdelle",
- :go-to-services-tab "Siirry Palvelut-välilehdelle"}
+ :go-to-services-tab "Siirry Palvelut-välilehdelle"
+ :linked-services "Liitetty olemassa oleviin PTV-palveluihin"
+ :link-existing-helper "Tyyppiluokan liikuntapaikat liitetään valittuun palveluun, eikä uutta palvelua luoda. Palvelun tekstejä voi päivittää myöhemmin Palvelut-välilehdellä."}
