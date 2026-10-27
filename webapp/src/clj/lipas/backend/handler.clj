@@ -634,7 +634,7 @@
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
                                [:statuses {:optional true}
-                                [:vector (into [:enum] site-notes/all-statuses)]]]}
+                                [:vector (into [:enum] site-notes/listed-statuses)]]]}
            :handler (fn [req]
                       (let [{:keys [org-id statuses]} (-> req :parameters :body)]
                         {:status 200
@@ -795,8 +795,9 @@
                       {:status 200 :body {}})}}]
 
       ;; --- Site notes: any member of an org-management org may write a note
-      ;; on a site the org owns, and archive/restore its notes. Notes
-      ;; are append-only; status changes are logged, never overwritten. ---
+      ;; on a site the org owns, archive/restore its notes, and delete archived
+      ;; ones. Notes are append-only; status changes are logged, never
+      ;; overwritten, and a deleted note stays in the database. ---
         ["/actions/create-site-note"
          {:post
           {:no-doc true

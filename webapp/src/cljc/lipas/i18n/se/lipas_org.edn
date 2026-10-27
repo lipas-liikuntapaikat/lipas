@@ -32,6 +32,8 @@
  :notes-archived "Arkiverade"
  :notes-author "Skribent"
  :notes-date "Datum"
+ :notes-delete "Ta bort"
+ :notes-delete-confirm "Ta bort anteckningen? Det går inte att ångra."
  :notes-empty "Inga anteckningar."
  :notes-hide-archived "Dölj arkiverade"
  :notes-note "Anteckning"
