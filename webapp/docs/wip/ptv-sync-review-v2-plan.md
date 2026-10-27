@@ -1,8 +1,15 @@
 # PTV sync review v2: one review for every overwrite
 
-Status: design and plan, 2026-10-23. Builds on phases 1–4 of
-[`ptv-drift-review-plan.md`](ptv-drift-review-plan.md) (PR #272, branch
-`feat/ptv-drift-review`), which stays the record of what is built today.
+Status: **built 2026-10-26** (phases 1–6), branch `feat/ptv-drift-review`
+(PR #272), which also carries #266. Designed 2026-10-23 on top of phases 1–4
+of [`ptv-drift-review-plan.md`](ptv-drift-review-plan.md). Each phase below
+ends with what was built and where it differs from the plan; the
+integration as it now works is described in
+[`../integration-ptv-architecture.md`](../integration-ptv-architecture.md).
+Browser scenarios and their results:
+[`ptv-sync-review-v2-browser-scenarios.md`](ptv-sync-review-v2-browser-scenarios.md).
+Still open: the release-build check, publishing the help article, the
+session with a municipal user (phase 4), and the rollout steps.
 
 ## Goal
 
@@ -801,7 +808,7 @@ read API):**
 - **Moved to phase 3:** the type-change service re-bind. It needs the org's
   PTV services, which the site form doesn't load, so it isn't a refactor.
 
-### Phase 2: base for every field, and evidence (S–M)
+### Phase 2: base for every field, and evidence (built 2026-10-26)
 
 - The base already carries names, contacts and address (phase 1). What's
   missing is the point: `get-ptv-sync-bases` adds it, derived server-side
@@ -814,7 +821,15 @@ read API):**
   Test: the review and save paths with a `:ptv` that lacks the key.
 - Deploy: no migration, no reindex.
 
-### Phase 3: new rows and write-back (L)
+**As built** (commit 02e5bb09f, with phase 3's data and backend): as
+planned. The base's point comes from `enrich`; every sync stores
+`[:ptv :ptv-modified]`, PTV's `:modified` right after the write. A value
+counts as changed in PTV only when PTV's `:modified` differs from it (sites
+synced before: `:last-sync` + 2 min), so a change in how Lipas derives the
+payload (http→https, #269's booking link) reads as Lipas's. Connections need
+no evidence: connecting from the service side doesn't move `:modified`.
+
+### Phase 3: new rows and write-back (built 2026-10-26)
 
 **Type-change service re-bind (moved here from phase 1):** move the re-bind
 in `sync-ptv!` (`core.clj` ~757) to cljc, so the review shows the
@@ -865,7 +880,34 @@ must return them.
   - s14 SV version added in PTV;
   - s15 first link to a bilingual location.
 
-### Phase 4: panel UX and consolidation (M–L)
+**As built** (02e5bb09f data and backend, cd81d2b21 UI):
+
+- All 13 kinds of payload data are reviewed. Phone, email and both web
+  pages are one-slot rows; PTV's other web pages can be taken into a slot.
+  Pages match by Lipas's names in any language, else by URL; emails and
+  street names compare case-insensitively, with PTV's split street number
+  joined.
+- Municipality and point are information (D4). The point only shows beyond
+  50 m, computed with a new cljc TM35FIN projection (`lipas.tm35fin`, within
+  1 mm of proj4 over Finland).
+- The type-change swap moved from `sync-ptv!` to cljc
+  (`ptv-data/rebound-service-ids`) and runs in the shared upsert, so the PTV
+  tool's sync swaps too and the review shows it. A missing service for the
+  new sub-category is the `:ptv/missing-service` blocker (409). The site
+  form's review fetch returns the org's LIPAS services from the
+  `ptv_service` mirror.
+- `:site-patch` takes the paths in `site-patch-paths`, validated with the
+  site's own field schemas; anything else is a 400, and required fields are
+  never removed.
+- Postal addresses as planned (D8). Scenarios s10–s16 are in
+  `dev/user/ptv_drift_scenarios.clj` (s16 is the postal address).
+- **Fixed after the build:** a one-slot row where PTV kept Lipas's value and
+  added another counted as decided, because the edit held one of PTV's
+  values. A sync would have dropped PTV's addition without asking. The saved
+  value now leaves the row undecided; taking Lipas's own value from PTV's
+  list records "Pidä Lipaksen versio" (`ptv-review/lipas-value?`).
+
+### Phase 4: panel UX and consolidation (built 2026-10-26)
 
 - Bar texts, ① state notices, grouped ② with progress and collapsed decided
   rows, ③ Lipas changes, the new gate dialog, the status chips, the tab banner
@@ -878,7 +920,24 @@ must return them.
 - Before merging, a session with one real municipal user (lipas-dev,
   Utajärvi) watching them use it.
 
-### Phase 5: role split and stale-review check (S–M)
+**As built** (cd81d2b21), as planned, with these differences:
+
+- Moving the focus or scrolling to the panel from the gate dialog runs a
+  frame plus 50 ms later (`::focus!`, `::scroll-into-view!`). The closing
+  MUI dialog gives the focus back to the button that opened it in React's
+  effect cleanup, which undid both.
+- A sync of PTV's unpublished draft fails ("You cannot update entity with
+  status Modified"). PTV's listing and a GET show only the published
+  version. **Fixed after the build:** opening a row refetches its location
+  and asks PTV's `/active/` endpoint too, as does the site form's review
+  fetch (`ptv-core/with-draft-status`). So the row reads "Estetty" with
+  "Avaa PTV:ssä" before a sync is tried. Until the row is opened, the table
+  still shows the site's other status.
+- The help article is written in `ptv-sync-review-help-articles.md`, to be
+  published through the help CMS. The panel links to its slug.
+- The municipal-user session hasn't happened yet.
+
+### Phase 5: role split and stale-review check (built 2026-10-26)
 
 - `save-sports-site!` syncs or archives only for users with `:ptv/manage`
   for the site's municipality (D2).
@@ -899,7 +958,13 @@ must return them.
     the sync (form);
   - a missing `:reviewed` keeps today's behaviour.
 
-### Phase 6: Palvelut tab (after #266, L)
+**As built** (56b20205b), as planned. The site form asks before
+overwriting, and says "Tallennetaan ja synkronoidaan…", only for a PTV
+manager's save. The delete dialog tells an editor that the location is
+archived once the PTV manager approves. Sync-failure toasts gained texts
+for the stale review, 403, a 409 double link and a PTV 5xx.
+
+### Phase 6: Palvelut tab (built 2026-10-26)
 
 - The same panel in a service mode. The base is the latest `ptv_service`
   revision (as planned). The registry gets service fields: names, summary,
@@ -907,21 +972,150 @@ must return them.
 - The tab's "out-of-date" chip currently means "unsent local edits". Align it
   with the new chip set.
 
+**As built** (uncommitted at the time of writing):
+
+- `ptv-review/service-review` compares the edit, PTV now and the base (the
+  latest `ptv_service` revision, `get-ptv-service-bases`,
+  `/actions/fetch-ptv-service-bases`). A sync sends the edit, which holds
+  PTV's own text in every field the user hasn't edited. So only an edited
+  field can overwrite PTV: a row is the user's edit (`:lipas`), or `:both`
+  when PTV changed that field too since Lipas's last write, which is a
+  choice. Fields PTV changed that the user didn't edit are kept
+  (`:ptv-changes`).
+- **Names follow the texts (a new decision):** a Lipas-created service's
+  sync used to send the sub-category's names, overwriting a rename made in
+  PTV without the review showing it. Now `->ptv-service` sends the name
+  edited in Lipas, else PTV's own, else the sub-category's.
+- Chips are the sites' set: "Estetty" (draft in PTV), "Odottaa valintaa",
+  "Valmis synkronoitavaksi", "Ajan tasalla". The old PTV chips (red,
+  amber "Tallentamattomia muutoksia", green) and the separate draft alert
+  went; the draft is the panel's ① notice. Their i18n keys and the other
+  keys left unused by phases 4–6 were removed (`ptv_name-conflict.edn`
+  entirely).
+- The panel's footer is "Valinnat tulevat voimaan, kun synkronoit palvelun
+  (Synkronoi nyt)."; "Synkronoi nyt" goes through the same gate dialog.
+- The service info texts say that Lipas maintains service classes and
+  keywords, that names and texts can also be edited in PTV, and that only
+  Lipas's edits are sent.
+- Tests: `service-review-test` (cljc), `service-bases-test` (backend),
+  `->ptv-service-names` (names rule).
+
+### Independent review (2026-10-26)
+
+A review of the five commits, by an agent that hadn't seen the build, found
+five gaps where a change made in PTV could still be overwritten unseen. All
+fixed:
+
+1. **A decision outlived PTV's next change.** Only "keep Lipas's" recorded
+   the PTV value it was made against; a taken PTV value or an own edit
+   counted as decided whatever PTV did next, also after a 409 refetch. Now
+   every choice holds only against PTV's current value and while the edit
+   holds what was chosen (`review-choice`), and a taken PTV value that PTV
+   has since changed reads as undecided.
+2. **Saves that sync without a review.** The search table's quick edit, the
+   delete dialog's status change, resurrect, a site-form save whose review
+   fetch failed and older tabs sent no `:reviewed`, and the backend skipped
+   the check. The server now runs the review itself for such a sync and
+   refuses it while a row needs a decision (`check-nothing-unreviewed!`,
+   `:ptv-not-reviewed`); otherwise it syncs as before. The refusal names its
+   revision (`:at`), so the UI warns after this save only. Verified on the
+   test env (s10: Lipas saved, PTV's phone kept).
+3. **Text written into the edit by something else counted as decided** (AI
+   generation in the wizard or the form). An own value now counts only once
+   confirmed: "Vie muokattu versio PTV:hen" (`edited-choice`, for the exact
+   value and PTV's value of the time). One more click where the user writes
+   their own text over a change made in PTV.
+4. **The address's other-language streets and additional information, and
+   the phone's information and charge** were deleted by every sync, unseen.
+   They are now kept, as postal addresses are (D8), while they belong to
+   what Lipas sends (`with-ptv-extras`). Verified on the test env: the old
+   payload deleted them, the new one keeps them.
+5. **Lipas-created services had no stale check.** They now send
+   `:expected-modified` like native ones (`:changed-in-ptv`).
+
+Also: taking one of PTV's other web pages into a web-page slot now reads as
+PTV's version of that slot, and the gate dialog names the value a sync sends
+for an edited row.
+
+Found in the browser afterwards (cdbc68868): the site form checked PTV
+rights against the app-db's `:user`, not its `:login`, so no one counted as
+a PTV manager there. The review was never fetched, the PTV tab showed no
+panel, and the save asked nothing and sent no `:reviewed`; the server's
+check then refused the sync (s10). The same check kept the map view's
+fetch for a viewed site (`ptv-review-fetcher`) from running, so the
+read-only panel was missing too. Fixed.
+
+### Second review: code only the browser runs (2026-10-26)
+
+The rights bug above went unseen because no test runs ClojureScript and the
+browser pass hadn't reached the site form. Two more reviews, one of the
+front end's contracts with the backend and one of its own wiring, plus
+event-level runs in the browser (re-frame events, app-db and HTTP, checked
+against the DB and PTV), found and fixed:
+
+- **A cancelled edit kept its PTV choices** (4ce2c4f3c): the next edit
+  read a "keep Lipas" row as decided and the save overwrote PTV unasked.
+- **An archived location's refetch was a 500** (d41b3ce9d): the PTV tool
+  said "PTV couldn't be reached" with a retry that could never succeed.
+- **`:reviewed :service-ids []` was dropped** by the save's `clean`
+  (926d1d905), so a connection made in PTV to a location without any was
+  not compared.
+- **An archive could write review choices into the site** (b9ae9dc1d): a
+  halted batch left its patches, and the archive reused the sync payload.
+- **Language rows** (c36549a27): "Ota PTV:n tekstit" never showed (no
+  `:takeable-by`), and the edit was annotated in the saved site's
+  languages, so taken texts still read as a removal in the bar and dialog.
+  `annotate-review` now takes the languages the edit publishes.
+- **"Synkronoi kaikki valmiit"** (b232f110c) took sites the row's own
+  button refuses (no service, texts PTV rejects); one refusal stopped the
+  run.
+- **The PTV tab hid** when an edit took a synced site out of PTV's scope
+  (8dc3c3c2f), though the save still syncs and its dialog leads there.
+- **A kept service text** (206160f05) held through later edits or AI
+  generation; it now holds for the text kept, as a site row's own value.
+- **Scroll and focus to the panel** (5746e30e1) now wait for the lazy
+  module to render it.
+- **A site open in the map** (1ce13e21b) is reloaded after the PTV tool
+  syncs or archives it, so an edit doesn't start from, and revert to, the
+  revision before.
+
+Checked and not a bug: PTV's PUT response for a service carries the same
+`modified` as the next GET (two saves in a row on Utajärvi went through).
+Changed with the user (2026-10-27): "Kumoa valinnat" did put every
+reviewed field back to the saved version, also text the user typed. It now
+does what it says: the choices are forgotten, and what they wrote into the
+edit is taken back to what it held before the first choice
+(`record-review-writes`, `undo-review-writes`, at `[:ptv :review :undo id]`,
+spent with the choices). A field the user typed into after the choice keeps
+their text. The same for services in the Palvelut tab, which only forgot
+the choices before.
+
+### Visual pass (2026-10-27)
+
+Clicking and typing in a visible tab (results in the scenarios doc) found
+four more, fixed in 2c125cc8c: the focus dropped to the page when a row
+collapsed or opened or "Kumoa valinnat" went; a language version kept with
+PTV's texts still read as removed, and the bar counted it as a change;
+"Kumoa valinnat" showed for PTV's connections a first link keeps, which it
+can't undo (it now follows `[:ptv :review :undo id]`, sub
+`::review-written?`); and a deref inside a lazy seq in the panel.
+
 ### Rollout
 
 1. Deploy: app only. No migration, no reindex. `[:ptv :ptv-modified]` is
    optional and appears on each site's next sync.
-2. Before deploying: a read-only dry run of `sync-review` over all orgs
-   (`dev/user/ptv_review_measure.clj`), counting rows needing a choice per
-   org. Municipalities with many rows get a heads-up through the usual tester
-   channel.
+2. Before deploying: a read-only dry run over all orgs,
+   `(user.ptv-review-measure/review-dry-run!)` in
+   `dev/user/ptv_review_measure.clj`. It runs the review that ships
+   (`sports-site->ptv-input`) and returns, per org, sites by status
+   (awaiting choice first) and the open rows by field. Municipalities with
+   many sites waiting for a choice get a heads-up through the usual tester
+   channel. Checked locally on Utajärvi: it matches the PTV tool's chips.
 3. Tell the municipalities that editors' saves no longer reach PTV by
    themselves (D2).
-4. Update `docs/integration-ptv-architecture.md`:
-   - remove "What is *not* reviewed";
-   - update the sync states table;
-   - describe who syncs, the stale-review check, and which PTV data Lipas
-     keeps (opening hours, postal addresses).
+4. ~~Update `docs/integration-ptv-architecture.md`~~ (done 2026-10-26).
+5. Publish the help article and the two edits in
+   `ptv-sync-review-help-articles.md` through the help CMS.
 
 ## Tests (beyond each phase's list)
 
@@ -949,7 +1143,7 @@ PTV rights, which no earlier pass covered.
 
 ## Decisions
 
-| # | Decision | Status (2026-10-23) |
+| # | Decision | Status (decided 2026-10-23, built 2026-10-26) |
 |---|---|---|
 | D1 | Separate snapshot table for the last sync | **No table.** The sync's revision is the base. PTV's `:modified`, compared with one new server-owned key `[:ptv :ptv-modified]`, is the evidence that PTV changed. Revisit only if phase 0 finds false "Muutettu PTV:ssä" rows on sites edited in PTV |
 | D2 | Editors without PTV rights | **Nothing they do reaches PTV**, archiving included. A removed site waits in the PTV tool for a PTV manager to archive it |
@@ -959,8 +1153,12 @@ PTV rights, which no earlier pass covered.
 | D6 | Language versions PTV has and Lipas won't publish | **Verified: Lipas removes them.** Information, not a choice: what is removed (texts shown, copyable), that the language is enabled through Lipas support, and that otherwise it will be gone. Named in the bar |
 | D7 | Bar wording and severities | **As proposed** (state-specific sentence, one count, no red) |
 | D8 | PTV's postal address, which Lipas has no field for and every sync deletes today | **Keep it: the integration doesn't touch what Lipas doesn't have.** The sync re-sends PTV's postal addresses from the pre-sync GET (see "Postal addresses" in phase 3) |
+| D9 | A Lipas-created service's names (phase 6) | **Kept as PTV has them unless edited in Lipas**, as its texts are. Before, every sync sent the sub-category's names |
 
-## Appendix: code anchors (branch, 2026-10-23)
+## Appendix: code anchors (branch, 2026-10-23, before the build)
+
+Line numbers have moved since; the review code now lives in
+`cljc/lipas/data/ptv_review.cljc`.
 
 | What | Where (under `webapp/src`) |
 |---|---|

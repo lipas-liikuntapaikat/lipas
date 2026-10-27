@@ -15,18 +15,23 @@ site in Lipas and the location in PTV. Plan:
     PTV location and the review rows left.
   - PTV's own UI is the second check where a scenario says so.
 - **Reset:**
-  - `(user.ptv-drift-scenarios/run-all!)` recreates scenarios s1–s9.
-  - s10 onwards are added in phase 3.
-- **Slow PTV:** writes take ~140 s on PTV's side since 2026-10-22. Wait for
-  the sync to finish before checking.
-- **Known blocker:** test site 615340 (s1) has an unpublished draft in PTV.
-  Publish or discard it in the PTV test UI before using s1.
+  - `(user.ptv-drift-scenarios/run-all!)` recreates scenarios s1–s16;
+    `(run-all! [#'user.ptv-drift-scenarios/s10-phone!])` just one.
+  - `(user.ptv-drift-scenarios/report)` lists each scenario site's review
+    rows, as the PTV tool computes them.
+- **PTV speed:** writes take a few seconds again (they took ~140 s from
+  2026-10-22 until the MML fix of 2026-10-26). The test env has short
+  outages (502/503); `run-all!` reports them per scenario.
+- **Known blocker:** test sites 615340 (s1) and 89913 (s2) have unpublished
+  drafts in PTV, left by failed writes during the slow period. Their rows
+  read "Estetty" once opened (F2). Publish or discard the drafts in the PTV
+  test UI before using s1 or s2.
 - **Users:**
   - **PTV manager**: admin, or a user with the `ptv-manager` role for
     Utajärvi (889).
   - **Editor**: may edit Utajärvi's sites but has no PTV rights.
-- **Phase:** each scenario names the phase it needs. Phases 1–4 of #272 and
-  phase 1 of v2 are built. Run the rest as their phases land.
+- **Phase:** each scenario names the phase that built it. Phases 1–6 of v2
+  are built (2026-10-26).
 
 ## Demo sites
 
@@ -41,27 +46,31 @@ site in Lipas and the location in PTV. Plan:
 | s7 | 600093 Kirkonkylän uimaranta | English added in Lipas |
 | s8 | 506497 Hyvinvointitalon lähiliikuntapaikka | not linked; links to a PTV-made location |
 | s9 | 79800 Nuoriso- ja liikuntatalon liikuntasali | all of the above at once |
-| s10 | (phase 3) | phone changed in PTV |
-| s11 | (phase 3) | a second phone and an extra web page added in PTV |
-| s12 | (phase 3) | visiting address changed in PTV, re-geocoded |
-| s13 | (phase 3) | map point moved in PTV over 50 m |
-| s14 | (phase 3) | Swedish version added in PTV (the org has fi+en) |
-| s15 | (phase 3) | first link to a bilingual PTV-made location |
-| s16 | (phase 3) | postal address added in PTV |
+| s10 | 506493 Utajärven frisbeegolfrata | phone changed in PTV |
+| s11 | 514575 Valkeisjärven uimapaikka | a second phone and an extra web page added in PTV |
+| s12 | 600121 Hyvinvointitalon ulkokuntoilupaikka | visiting address changed in PTV |
+| s13 | 605450 Utajärven urheilukentän ulkokuntoilupaikka | map point moved in PTV, about 200 m north |
+| s14 | 606904 Utajärven kuntoportaat | Swedish version added in PTV (the org has fi+en) |
+| s15 | 527789 Utajärven skeittipuisto | not linked; a PTV location of the same name has fi+en texts |
+| s16 | 526137 Keisarintien päiväkodin leikkikenttä | postal address (PL 1, 91601) added in PTV; fi summary changed in Lipas |
+
+s12–s14 and s16 export the site to a new location first if it has none.
+620077 "Lipas linkitystesti sali" is a removed site still published in PTV:
+it waits under "Odottaa arkistointia" (E3).
 
 ---
 
 ## A. Finding the sites that need attention (PTV tool, Liikuntapaikat tab)
 
-**A1. Which sites have changes in PTV** (built)
+**A1. Which sites have changes in PTV** (phase 4)
 1. As a PTV manager, open the map, then PTV, choose "Utajärven kunta", then the
    Liikuntapaikat tab.
-2. Click the "Muutettu PTV:ssä" filter chip.
+2. Click the "Odottaa valintaa" filter chip.
 
 Expect:
-- Exactly the sites with PTV-side changes are listed: s2, s4, s5, s6, s9.
-- Each row shows the red PTV chip.
-- The count on the chip matches the list.
+- Exactly the sites with PTV-side changes to decide are listed: s4, s5, s6,
+  s9, s10, s11, s12 (and s2 once its draft is cleared).
+- Each row shows the amber "Odottaa valintaa" chip.
 
 **A2. Banner over the table** (phase 4)
 
@@ -74,12 +83,15 @@ With the sites of A1 present:
 
 | Site | Chip |
 |---|---|
-| s1 | "Ajan tasalla" (green) |
-| s3, s7 | "Valmis synkronoitavaksi" (blue) |
-| s2, s4, s5, s6, s9 | "Odottaa valintaa" (amber) |
-| a site with a sync error or a link blocker | "Estetty" (red) |
+| s1 (draft cleared) | "Ajan tasalla" (green) |
+| s3, s7, s13, s14, s16 | "Valmis synkronoitavaksi" (blue): nothing to decide; a point (D4) or a language removal (D6) is information |
+| s4, s5, s6, s9, s10, s11, s12 | "Odottaa valintaa" (amber) |
+| s1, s2 while their drafts are stuck, once opened; a site whose last sync failed | "Estetty" (red) |
+| s8, s15 | not linked, integration off: the faded "PTV" chip |
 
-Also: after every choice in s2 is made, its chip turns blue without a sync.
+Also: after every choice in s4 is made, its chip turns blue without a sync.
+"Synkronoi kaikki valmiit (n)" counts the blue sites whose texts are
+complete and whose sync is on.
 
 **A4. Opening a row is fresh** (phase 4)
 1. With the dialog open, change s3's description in PTV's own UI.
@@ -184,8 +196,8 @@ Sync. Verify: PTV has English.
 1. Open s9.
 2. Click "Ota kaikki PTV:n muutokset". Expect every PTV-side row taken, the
    name included.
-3. Click "Kumoa valinnat". Expect everything back as saved and the choices
-   open again.
+3. Click "Kumoa valinnat". Expect what the choices wrote taken back (here
+   everything as saved) and the choices open again.
 4. Click "Pidä Lipaksen versio kaikissa". Expect no open choices left.
 5. Phase 4 adds:
    - the counter "k / n valittu" moves with each choice;
@@ -279,8 +291,15 @@ Save. Verify: Lipas and PTV agree.
 
 **D5. Undo choices in the form** (built)
 
-After D3's choice, "Kumoa valinnat". Expect: the edit is back to the saved
-texts and the form fields follow.
+After D3's choice, "Kumoa valinnat". Expect: the edit is back to what it
+held before the choice, and the form fields follow.
+
+**D5b. Undo keeps what the user wrote**
+1. In s10's form, type your own phone number in Perustiedot, then take
+   PTV's number on the PTV tab, then "Kumoa valinnat". Expect your number
+   back, the row open.
+2. Take PTV's number again, then type over it in Perustiedot, then "Kumoa
+   valinnat". Expect your typing kept, only the choice forgotten.
 
 **D6. Cancel editing** (built)
 
@@ -325,6 +344,19 @@ Verify:
 - As a PTV manager, s3 shows "Valmis synkronoitavaksi" in the tool, with
   the phone under "Päivittyy PTV:hen".
 
+**E1b. A PTV manager's quick edit over an undecided PTV change**
+1. As a PTV manager, change s10's email in the search table's quick edit and
+   save.
+
+Expect: the toast "Liikuntapaikka tallennettiin, mutta sitä ei
+synkronoitu, koska PTV:ssä on muutoksia, joita ei ole käyty läpi…".
+
+Verify:
+- Lipas has the new email; PTV still has its own phone.
+- In the PTV tool, s10 reads "Estetty" and shows the phone row.
+
+The same quick edit on s3 (nothing to decide in PTV) syncs as before.
+
 **E2. Removing a site doesn't archive it in PTV**
 1. As an editor, set a synced site's status to "Poistettu pysyvästi
    käytöstä" (or delete it) and save.
@@ -368,15 +400,19 @@ again, with no duplicate.
 
 **F2. Unpublished draft in PTV** (phase 4)
 
-Edit s1 in PTV's UI and save without publishing (or use 615340 while it's
-stuck). Expect:
+Edit s1 in PTV's UI and save without publishing (or use 615340 or 89913
+while they're stuck). The table can't tell yet: PTV's listing shows the
+published version, and only its `/active/` endpoint shows the draft. Open
+the row (the refetch asks `/active/`). Expect:
+- the chip turns "Estetty";
 - "PTV:ssä on julkaisemattomia muutoksia. Julkaise tai peru ne PTV:ssä
   ennen synkronointia." with "Avaa PTV:ssä";
 - the sync is blocked.
 
-The same is shown in the site form. A sync attempt that hits "You cannot
-update entity with status Modified" shows this notice, not "Synkronointi
-epäonnistui".
+The same is shown in the site form, whose review fetch asks `/active/` too.
+A sync attempt that hits "You cannot update entity with status Modified"
+(e.g. from "Synkronoi kaikki valmiit" before the row was opened) shows this
+notice, not "Synkronointi epäonnistui", and the chip turns "Estetty".
 
 **F3. Double link** (phase 4)
 
@@ -416,11 +452,24 @@ Take PTV's. Verify: Lipas's `:phone-number` holds PTV's number, formatted
 
 **G2. Second phone and extra web page in PTV** (s11)
 
-Expect:
+PTV kept Lipas's number and added another. Expect:
+- the row needs a choice, although PTV still has Lipas's number (a sync
+  would remove the other one);
 - the PTV card lists both numbers, each with "Ota tämä";
-- the Lipas card says "PTV:n muut numerot poistuvat".
+- the Lipas card says "PTV:n muut arvot poistuvat.";
+- "Ota tämä" on Lipas's own number is the same as "Pidä Lipaksen versio":
+  both buttons show as chosen.
 
-Keep Lipas's. Verify: PTV has one number. Repeat for the extra web page.
+Keep Lipas's. Verify: PTV has one number. Repeat for the extra web page
+("Muut verkkosivut"), which can also be taken as the web page or the
+booking link.
+
+**G2b. What a sync keeps of the address and phone**
+
+In PTV's UI add an extra text ("2. krs.") to s16's visiting address, and
+information and "Maksuton" to its phone. Sync from Lipas. Verify in PTV:
+both are still there (verified from the REPL on 2026-10-26; the old payload
+deleted them).
 
 **G3. Web pages without names are not a difference**
 
@@ -435,7 +484,8 @@ Expect the row "Käyntiosoite":
 
 Take it. Verify: Lipas has the address, postal code and postal office.
 
-**G5. Swedish street name and extra text** (s15)
+**G5. Swedish street name and extra text** (no scenario; set up in PTV's
+UI)
 
 The address row says that the Swedish street name and the extra text ("1.
 krs.") are replaced by the sync.
@@ -443,9 +493,11 @@ krs.") are replaced by the sync.
 **G6. Map point moved** (s13)
 
 Expect:
-- the information line "PTV:n koordinaatit ({n} m päässä) korvautuvat
-  Lipaksen sijainnilla";
-- no choice and no take button.
+- the information line "PTV:n koordinaatit (about 200 m päässä)
+  korvautuvat Lipaksen sijainnilla.";
+- "Sijaintia ei voi kopioida PTV:stä. Jos PTV:n sijainti on oikea, siirrä
+  liikuntapaikkaa kartalla.";
+- no choice and no take button; the chip stays "Valmis synkronoitavaksi".
 
 Sync. Verify: PTV's point is back at Lipas's location.
 
@@ -461,11 +513,12 @@ taken.
 **G9. Language PTV has, the org hasn't enabled** (s14)
 
 Expect:
-- the row "Ruotsi (SV) — Poistuu PTV:stä", listing what goes;
-- "Näytä poistuvat tekstit", each text with "Kopioi";
-- "pyydä Lipaksen tukea ottamaan ruotsi käyttöön (lipasinfo@jyu.fi)";
-- the bar ends with "… ja poistaa ruotsinkielisen kieliversion";
-- no choice needed.
+- the row "Synkronointi poistaa PTV:stä ruotsinkielisen kieliversion: nimen,
+  tiivistelmän ja kuvauksen.", with the texts that go;
+- each text with "Kopioi";
+- the hint to ask Lipas support to enable the language (lipasinfo@jyu.fi);
+- the bar adds "Lisäksi synkronointi poistaa ruotsinkielisen kieliversion.";
+- no choice needed; the chip stays "Valmis synkronoitavaksi".
 
 "Kopioi" puts the text on the clipboard. Sync. Verify: PTV has fi+en only.
 
@@ -476,9 +529,11 @@ Take them. Verify: Lipas has the sv texts and PTV keeps sv.
 
 **G11. Postal address is kept** (s16)
 
-Add a postal address in PTV's UI. Expect:
-- no row;
-- the panel line "Säilyvät PTV:ssä: aukioloajat, postiosoite".
+s16 added a PO box (PL 1, 91601) in PTV, and Lipas changed the summary.
+Expect:
+- no postal-address row; the summary under "Päivittyy PTV:hen Lipaksesta";
+- the panel line "Säilyvät PTV:ssä: aukioloajat, postiosoite." (or just
+  "postiosoite" without opening hours).
 
 Sync. Verify in PTV's UI: the postal address is unchanged.
 
@@ -524,10 +579,14 @@ Use one bulk button, then export. Verify:
 
 **H3. Bilingual PTV-made location** (phase 3, s15)
 
-On the first link, expect:
-- the address row (G5);
-- the language row for sv if the org lacks sv (G9);
-- the postal address kept (G11).
+s15's site has no English texts; the PTV location of the same name has
+fi+en. In the Liikuntapaikat tab the row offers "Liitä tähän
+palvelupaikkaan" (F4); in the wizard, pick the location under "Löytyykö
+palvelupaikka jo PTV:stä?". On the first link, expect:
+- the fi texts as "Eroaa" rows, with no origin;
+- the English texts as a language row: the sync would remove the English
+  version unless English texts are written or taken (G10);
+- the postal address kept, if the location has one (G11).
 
 **H4. No "Lataa tekstit PTV:stä"** (built in the wizard; phase 4 in the tab)
 
@@ -569,6 +628,21 @@ Expect:
 - the toast says PTV wasn't updated because it changed meanwhile;
 - the site shows the stored error until reviewed and synced.
 
+**I2b. A decision against an older PTV value doesn't count**
+1. Open s4 in the tool; take PTV's summary (the row collapses as decided).
+2. In PTV's UI change the summary again; reopen the row (it refetches).
+
+Expect: the row is open again, with PTV's new text; "Synkronoi nyt" asks
+first.
+
+**I2c. An own text needs confirming**
+1. In s4's site form, write a text of your own into the summary.
+
+Expect: the row stays open with "Lomakkeessa on muokattu teksti" and "Vie
+muokattu versio PTV:hen"; the gate dialog lists "Tiivistelmä (FI)" (a
+text shows only its field name; a short value shows both sides). After confirming, the row collapses ("viedään PTV:hen muokattuna").
+Typing more opens it again. AI generation over the summary does the same.
+
 **I3. A connection made in PTV after opening**
 
 As I1, but connect a service to the location from the service side in PTV.
@@ -589,11 +663,50 @@ palvelupaikasta."
 
 ## K. Palvelut tab (phase 6, after #266)
 
-**K1. A Lipas-created service changed in PTV**
+The base is Lipas's mirror of the service after its last write
+(`ptv_service`). A sync sends the edit, which holds PTV's own text in every
+field the user hasn't edited, so only an edited field can overwrite PTV.
 
-Edit a Lipas-created service's description in PTV's UI. Expect the same panel
-on the service, with "Muutettu PTV:ssä" and Keep/Take. Sync. Verify: PTV and
-Lipas agree.
+**K1. A service with nothing edited**
+
+Open a Lipas-created service (e.g. "Jäähallit"). Expect the chip "Ajan
+tasalla" and no panel, even if PTV changed its texts: those are kept.
+
+**K2. An edit**
+
+Edit the summary. Expect the chip "Valmis synkronoitavaksi", and the panel
+with the summary under "Päivittyy PTV:hen Lipaksesta" and the footer
+"Valinnat tulevat voimaan, kun synkronoit palvelun (Synkronoi nyt)."
+
+**K3. An edit over a change made in PTV**
+
+Change the summary in PTV's UI, then edit it in Lipas. Expect:
+- the chip "Odottaa valintaa", the row "Muutettu molemmissa";
+- "Synkronoi nyt" asks first; "Käy muutokset läpi" scrolls to the panel and
+  focuses the row;
+- "Ota PTV:n versio" puts PTV's text back in the edit (chip "Ajan
+  tasalla"); "Pidä Lipaksen versio" decides the row ("Valinnat tehty",
+  chip "Valmis synkronoitavaksi").
+
+**K4. A name changed in PTV**
+
+Rename a Lipas-created service in PTV's UI, then sync another edit of it.
+Verify: PTV keeps the new name; only a name edited in Lipas is sent.
+
+**K4b. A service changed in PTV after the tool loaded it**
+
+With the Palvelut tab open, change a Lipas-created service's summary in PTV's
+UI, then edit and sync its description in Lipas. Expect the refusal ("muutettu
+PTV:ssä"), the services reloaded, and the summary shown as PTV's. Verify: PTV
+kept its summary.
+
+**K5. Native and other-system services**
+
+A PTV-made service the org has taken into Lipas ("Lipas capture -testi C")
+shows the same chips; another system's service is read-only, with no panel.
+A service with a draft in PTV reads "Estetty" with "Avaa PTV:ssä" once a
+sync has hit the draft (services aren't refetched on opening, unlike
+locations in F2).
 
 ---
 
@@ -628,3 +741,85 @@ No errors or warnings in the browser console during any scenario.
 
 Editing one site's text in a large org stays instant: the other sites aren't
 recomputed (phase 1 cache).
+
+---
+
+## Results: event-level run (2026-10-26)
+
+Run in a Chrome tab the OS had hidden, so nothing painted: each step
+dispatched the app's own re-frame events (as the buttons do), and checked
+app-db, the HTTP requests, the DB and PTV (Utajärvi, test env). What this
+covers is everything but the rendering: card layout, focus, scrolling and
+colours are still to be looked at.
+
+| Scenario | Site | Result |
+|---|---|---|
+| D1 fetch on edit, badge count | s10 | pass (after cdbc68868: the rights check had blocked it) |
+| D2 save with an open row | s10 | pass: dialog title, "Käy muutokset läpi" primary, nothing saved; it opens the PTV tab with the panel open |
+| D4 take PTV's phone | s10 | pass: Perustiedot phone is PTV's; Lipas and PTV agree after the save |
+| D3, D8 decided save | s10 | pass: no question, `:reviewed` sent, "Tallennetaan ja synkronoidaan…" until "Tallennus onnistui" |
+| D5 undo | s4 | pass: saved text back, choice dropped |
+| D6 cancel | s10 | **failed, fixed** (4ce2c4f3c): a "keep Lipas" choice survived the cancel |
+| I2 PTV changed after the form opened | s10 | pass: Lipas saved, sync refused (`ptv-changed-since-review`), toast, PTV kept its number |
+| I2c own text | s4 | pass: open until "Vie muokattu versio PTV:hen", more typing reopens, PTV has the text after the save |
+| Editor without PTV rights (dev override, FE only) | s10 | pass: no PTV tab, no fetch, a save that wouldn't sync |
+| Tool sync while the site is open in the map | s10 | **failed, fixed** (1ce13e21b): the map kept the pre-sync revision |
+| D5b undo keeps what the user wrote | s10 | pass, after the change below: typed number back after undo; typing after the choice kept |
+
+Display note: phones show in the comparison form ("+358 858755700") on the
+cards and in the dialog, not as typed in Lipas ("08 5875 5700").
+
+## Results: visual run (2026-10-27)
+
+Clicked and typed in a visible tab, mostly at 1312×645 (page zoom 0.75 for
+the screenshots), against the same Utajärvi test data. Nothing was synced
+or exported: the writes were covered by the event-level run.
+
+| Scenario | Site | Result |
+|---|---|---|
+| A1 chips, banner, "Synkronoi kaikki valmiit (6)" | all | pass |
+| B tool row: cards, captions, bulk, footer | s9 | pass |
+| C gate from "Synkronoi nyt", "Käy muutokset läpi" | s9 | pass: scrolls to the panel, focus on the first open row's first button |
+| D1 dot on the PTV tab, edit mode | s9 | pass |
+| D2 gate from Perustiedot on a fresh load (review code not loaded yet) | s9 | pass: the PTV tab opens with the panel expanded and the focus on "Pidä Lipaksen versio: Nimi (FI)" |
+| D3 take PTV's name | s9 | pass: Perustiedot holds PTV's name |
+| D4 phone row | s10 | pass: caption "Muuttaa myös Lipaksen puhelinnumeron (Perustiedot)", one-number note, "Valitse vielä" |
+| D5 undo in the form | s9 | pass: name back, 0/3 chosen |
+| D6 cancel, reopen | s9 | pass: no choices |
+| D9 view mode | s9 | pass: dot, read-only rows, no choice/bulk/outcome lines, view-mode footer |
+| F2 draft in PTV | s1, s2 | pass: "Estetty" once opened, the notice and "Avaa PTV:ssä", "Synkronoi nyt" disabled |
+| G10 language version PTV has | s17 | **failed, fixed**: see below |
+| H1 first link in the wizard | s8 | pass: "Eroaa" rows, "(ei arvoa)" for Lipas, PTV's connections kept below; **"Kumoa valinnat" showed with nothing to undo, fixed** |
+| H2 export waits for choices | 15 sites | pass: export disabled, the alert lists each site's open rows, bulk buttons |
+| K1, K2, K5 Palvelut | Jäähallit | pass: "Ajan tasalla"; an edit shows "Valmis synkronoitavaksi" and the panel; undoing the typing goes back |
+| L1 at ~400 px | s8, s9 | pass in the wizard and the site form. The Liikuntapaikat tab's table scrolls sideways and its header (filter, chips, banner) fills a phone screen: the tool's layout, not the review's |
+| L2 keyboard | s9, s8, s17 | **failed, fixed**: see below |
+| L4 sv, en | s9, s17 | pass, no missing keys |
+| L5 console | s9 | **a warning, fixed**: "Reactive deref not supported in lazy seq" from the review panel |
+
+Fixed after the run:
+- **Focus** dropped to the page when a choice collapsed its row, when
+  [Muuta] opened it, and when "Kumoa valinnat" went with the choices. It
+  now goes to the row's [Muuta], the row's first button, and the first row
+  to choose again (or the first choice) respectively.
+- **A language version kept with PTV's texts** still read "Poistuu
+  PTV:stä" and "Synkronointi poistaa…", and the bar counted the language
+  as a change ("päivittää PTV:hen 1 tietoa. Lisäksi … poistaa …", then "0
+  tietoa" once taken). Now: "Synkronointi poistaa PTV:stä englanninkielisen
+  kieliversion."; taken, the chip "Säilyy", "Englanninkielinen kieliversio
+  säilyy PTV:ssä, ja sen tekstit kopioidaan Lipakseen.", the bar "Valinnat
+  tehty. PTV:n versiot otetaan Lipakseen." and the outcome line "Kopioidaan
+  Lipakseen: Englanti (EN)".
+- **"Kumoa valinnat"** showed whenever the edit held one of PTV's versions,
+  also the connections a first link keeps, which it can't undo. It shows
+  now for a choice or a write a choice made.
+- **The review panel** read its expanded rows inside a lazy seq, so a
+  [Muuta] could miss a re-render.
+
+Not changed: the clipped tab labels in the site form ("PERUSTIEDO",
+"STEETTÖMYY…") at this panel width are older than this work.
+
+Tooling note: Chrome reports a tab of a window that isn't in front as
+hidden and pauses its animation frames, which stalls Reagent's renders.
+For a run in such a tab, point Reagent's scheduler at a MessageChannel
+first (`reagent.impl.batching.next_tick`), or keep the window in front.

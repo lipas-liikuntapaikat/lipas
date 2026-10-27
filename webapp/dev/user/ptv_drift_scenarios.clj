@@ -1,6 +1,7 @@
 ;; PTV sync review demo scenarios for Utajärvi (local DB <-> PTV test env).
 ;; (load-file "dev/user/ptv_drift_scenarios.clj")
 ;; (user.ptv-drift-scenarios/run-all!)   ; (re)creates every scenario
+;; (user.ptv-drift-scenarios/run-all! [#'user.ptv-drift-scenarios/s10-phone!])
 ;; (user.ptv-drift-scenarios/report)     ; each site's review rows
 ;; Re-runnable: every run first syncs each scenario site to PTV (Lipas is the
 ;; master), then applies the scenario's PTV-side and Lipas-side changes.
@@ -47,9 +48,19 @@
        (filter #(some-> (:sourceId %) (str/includes? (str "-" lipas-id))))
        first))
 
-(defn- sync! [lipas-id ptv-map]
-  (ptv-core/upsert-ptv-service-location! (dbc) (ptv) (search) (admin)
-                                         {:lipas-id lipas-id :org-id org :ptv ptv-map}))
+(defn- sync!
+  "Syncs as the PTV tool does after a review that keeps Lipas's version of
+   everything (:reviewed): the scenarios reset PTV to Lipas, over whatever
+   an earlier run changed there."
+  [lipas-id ptv-map]
+  (let [ch-id (or (first (:service-channel-ids ptv-map))
+                  (-> (db/get-sports-site (dbc) lipas-id) :ptv :service-channel-ids first))
+        ch (when ch-id (ptvi/get-org-service-channel (ptv) org ch-id))]
+    (ptv-core/upsert-ptv-service-location!
+      (dbc) (ptv) (search) (admin)
+      (cond-> {:lipas-id lipas-id :org-id org :ptv ptv-map}
+        ch (assoc :reviewed {:modified (:modified ch)
+                             :service-ids (vec (ptv-data/channel-service-ids ch))})))))
 
 (defn- save-site!
   "A Lipas revision written without a sync (as when an edit's sync failed),
@@ -61,14 +72,17 @@
 
 (defn- ptv-edit!
   "What an edit in PTV's own UI does: PUT the location as `f` changes the
-   synced site, under the location's own sourceId."
-  [lipas-id f]
-  (let [site (db/get-sports-site (dbc) lipas-id)
-        ch-id (-> site :ptv :service-channel-ids first)
-        edited (f site)
-        body (ptv-data/->ptv-service-location org gis/wgs84->tm35fin-no-wrap (utils/timestamp)
-                                              (core/enrich edited))]
-    (ptvi/update-service-location (ptv) ch-id body)))
+   synced site, under the location's own sourceId. `body-f` changes the PUT
+   body for what Lipas's payload can't say (a second phone, a postal
+   address)."
+  ([lipas-id f] (ptv-edit! lipas-id f identity))
+  ([lipas-id f body-f]
+   (let [site (db/get-sports-site (dbc) lipas-id)
+         ch-id (-> site :ptv :service-channel-ids first)
+         edited (f site)
+         body (ptv-data/->ptv-service-location org gis/wgs84->tm35fin-no-wrap (utils/timestamp)
+                                               (core/enrich edited))]
+     (ptvi/update-service-location (ptv) ch-id (body-f body)))))
 
 (defn- connect! [lipas-id service-k]
   (let [ch-id (-> (db/get-sports-site (dbc) lipas-id) :ptv :service-channel-ids first)]
@@ -85,13 +99,14 @@
   "Link `lipas-id` to its PTV location and sync it with these texts and
    services. Twice: the first sync of a location keeps its PTV connections,
    the second makes Lipas's list the master."
-  [lipas-id {:keys [name summary description services en]}]
+  [lipas-id {:keys [name summary description services en site-fields]}]
   (let [ch (channel-by-lipas-id lipas-id)
         _ (assert ch (str "no PTV location for " lipas-id))
         site (db/get-sports-site (dbc) lipas-id)]
     (save-site! (cond-> (-> site
                             (assoc :name (or name (:name site)))
-                            (dissoc :marketing-name))
+                            (dissoc :marketing-name)
+                            (merge site-fields))
                   (:ptv site) (update :ptv dissoc :summary :description)
                   en (assoc-in [:name-localized :en] (:name en))
                   (and (not en) (:name-localized site)) (update :name-localized dissoc :en)))
@@ -104,6 +119,23 @@
       (sync! lipas-id ptv-map)
       (sync! lipas-id ptv-map))
     (:id ch)))
+
+(defn- fresh!
+  "in-sync! for a site that has no PTV location yet: the first run exports
+   it as a new one (later runs find it by its sourceId)."
+  [lipas-id {:keys [summary description services] :as opts}]
+  (when-not (channel-by-lipas-id lipas-id)
+    (sync! lipas-id {:org-id org
+                     :sync-enabled true
+                     :service-ids (mapv svc services)
+                     :summary {:fi summary}
+                     :description {:fi description}}))
+  (in-sync! lipas-id opts))
+
+(defn- add-phone [body phone]
+  (let [{:keys [prefix number]} (ptv-data/parse-phone-number phone)]
+    (update body :phoneNumbers (fnil conj [])
+            {:number number :prefixNumber prefix :isFinnishServiceNumber false :language "fi"})))
 
 ;;; Scenarios ;;;
 
@@ -216,13 +248,128 @@
                         (assoc-in [:ptv :summary :fi] "Nuoriso- ja liikuntatalon liikuntasali on monitoimisali palloiluun, ryhmäliikuntaan ja tapahtumiin.")
                         (assoc-in [:ptv :description :fi] "Liikuntasali sijaitsee nuoriso- ja liikuntatalossa. Salissa voi pelata sählyä, lentopalloa ja koripalloa. Salin voi vuokrata myös tapahtumiin."))))
 
-(def all [#'s1-in-sync! #'s2-ptv-texts! #'s3-lipas-texts! #'s4-conflict! #'s5-connections!
-          #'s6-names! #'s7-new-language! #'s8-first-link! #'s9-everything!])
+(defn s10-phone! []
+  ;; Yhteystiedot: the phone number changed in PTV.
+  (in-sync! 506493
+            {:name "Utajärven frisbeegolfrata"
+             :summary "Utajärven frisbeegolfrata on yhdeksänväyläinen rata keskustan tuntumassa."
+             :description "Frisbeegolfrata kulkee metsäisessä maastossa urheilukentän takana. Radalla on yhdeksän väylää ja opastaulu. Rata on vapaasti käytettävissä lumettomana aikana."
+             :services [:lahiliikunta]
+             :site-fields {:phone-number "08 5875 5700"}})
+  (ptv-edit! 506493 #(assoc % :phone-number "040 123 4567")))
 
-(defn run-all! []
-  (vec (for [s all]
-         (try [(:name (meta s)) :ok (s)]
-              (catch Exception e [(:name (meta s)) :failed (ex-message e) (some-> e ex-data :resp :body)])))))
+(defn s11-second-phone-and-page! []
+  ;; Yksi paikka Lipaksessa: PTV has a second phone and an extra web page.
+  (in-sync! 514575
+            {:name "Valkeisjärven uimapaikka"
+             :summary "Valkeisjärven uimapaikka on luonnonrannalla sijaitseva uimapaikka Puolangantien varrella."
+             :description "Uimapaikalla on laituri ja pukukoppi. Rannalla ei ole valvontaa. Uimapaikalle pääsee autolla Puolangantieltä, ja tien varressa on pieni pysäköintialue."
+             :services [:uimarannat]
+             :site-fields {:phone-number "08 5875 5700"
+                           :www "https://www.utajarvi.fi/uimarannat"}})
+  (ptv-edit! 514575 identity
+             #(-> %
+                  (add-phone "040 765 4321")
+                  (update :webPages (fnil conj [])
+                          {:url "https://www.utajarvi.fi/liikunta" :value "Liikuntapalvelut"
+                           :language "fi" :orderNumber 2}))))
+
+(defn s12-address! []
+  ;; Osoite: the visiting address changed in PTV.
+  (fresh! 600121
+          {:name "Hyvinvointitalon ulkokuntoilupaikka"
+           :summary "Hyvinvointitalon ulkokuntoilupaikalla on kuntoilulaitteita kaikenikäisille."
+           :description "Ulkokuntoilupaikka sijaitsee hyvinvointitalon pihalla. Laitteilla voi harjoitella lihaskuntoa ja tasapainoa. Paikka on vapaasti käytettävissä ympäri vuoden."
+           :services [:lahiliikunta]})
+  (ptv-edit! 600121 #(assoc-in % [:location :address] "Kirkkotie 21")))
+
+(defn s13-point! []
+  ;; Sijainti: PTV's point is about 200 m north of Lipas's (information only).
+  (fresh! 605450
+          {:name "Utajärven urheilukentän ulkokuntoilupaikka"
+           :summary "Urheilukentän ulkokuntoilupaikalla on kuntoilulaitteita urheilukentän laidalla."
+           :description "Ulkokuntoilupaikka sijaitsee urheilukentän laidalla koulukeskuksen vieressä. Laitteilla voi harjoitella lihaskuntoa. Paikka on vapaasti käytettävissä ympäri vuoden."
+           :services [:lahiliikunta]})
+  (ptv-edit! 605450 #(update-in % [:location :geometries :features 0 :geometry :coordinates 1]
+                                + 0.0018)))
+
+(defn s14-sv-added! []
+  ;; Kieliversio: PTV added a Swedish version, which Utajärvi doesn't publish.
+  (fresh! 606904
+          {:name "Utajärven kuntoportaat"
+           :summary "Utajärven kuntoportaat ovat uimarannan rinteessä olevat ulkoportaat kuntoiluun."
+           :description "Kuntoportaat nousevat uimarannalta harjun päälle. Portaissa on noin 150 askelmaa ja välitasanteita. Portaat ovat valaistut ja käytettävissä ympäri vuoden."
+           :services [:lahiliikunta]})
+  (ptv-edit! 606904 #(-> %
+                         (assoc-in [:name-localized :se] "Utajärvi motionstrappor")
+                         (assoc-in [:ptv :languages] ["fi" "se"])
+                         (assoc-in [:ptv :summary :se] "Utajärvi motionstrappor är en utomhustrappa för motion i sluttningen vid badstranden.")
+                         (assoc-in [:ptv :description :se] "Trappan går från badstranden upp till åsen. Den har cirka 150 trappsteg och vilplan. Trappan är belyst och kan användas året runt."))))
+
+(defn s15-first-link-bilingual! []
+  ;; Ensimmäinen linkitys, kaksikielinen: the site isn't synced; its PTV
+  ;; location has Finnish and English texts. Linked by the user in the UI.
+  (let [site (db/get-sports-site (dbc) 527789)
+        ch (channel-by-lipas-id 527789)
+        body (ptv-data/->ptv-service-location
+               org gis/wgs84->tm35fin-no-wrap (utils/timestamp)
+               (core/enrich (-> site
+                                (assoc-in [:name-localized :en] "Utajärvi skatepark")
+                                (assoc :ptv (cond-> {:org-id org
+                                                     :languages ["fi" "en"]
+                                                     :service-ids [(svc :lahiliikunta)]
+                                                     :summary {:fi "Utajärven skeittipuisto on betonipohjainen skeittipaikka keskustassa."
+                                                               :en "The Utajärvi skatepark is a concrete skate park in the town centre."}
+                                                     :description {:fi "Skeittipuistossa on ramppeja, reilejä ja boksi. Puisto sopii rullalaudoille, potkulaudoille ja BMX-pyörille. Alue on valaistu."
+                                                                   :en "The skatepark has ramps, rails and a box. It suits skateboards, scooters and BMX bikes. The area is lit."}}
+                                              ch (assoc :source-id (:sourceId ch)))))))]
+    (save-site! (dissoc site :ptv))
+    (:id (if ch
+           (ptvi/update-service-location (ptv) (:id ch) body)
+           (ptvi/create-service-location (ptv) body)))))
+
+(defn s16-postal-address! []
+  ;; Postiosoite: PTV has a postal address, which Lipas has no field for; a
+  ;; sync must keep it. Lipas changed the summary, so the site needs a sync.
+  (fresh! 526137
+          {:name "Keisarintien päiväkodin leikkikenttä"
+           :summary "Keisarintien päiväkodin leikkikenttä on avoin leikkipaikka päiväkodin pihalla."
+           :description "Leikkikentällä on keinuja, liukumäki ja hiekkalaatikko. Päiväkodin aukioloaikoina kenttä on päiväkodin käytössä, muulloin kaikkien käytettävissä."
+           :services [:lahiliikunta]})
+  (ptv-edit! 526137 identity
+             #(update % :addresses conj
+                      {:type "Postal" :subType "PostOfficeBox" :country "FI"
+                       :postOfficeBoxAddress {:postOfficeBox [{:value "PL 1" :language "fi"}]
+                                              :postalCode "91601"
+                                              :municipality "889"}}))
+  (set-site! 526137 #(assoc-in % [:ptv :summary :fi] "Keisarintien päiväkodin leikkikenttä on avoin leikkipaikka päiväkodin pihalla Utajärven keskustassa.")))
+
+(defn s17-en-added-in-ptv! []
+  ;; Kieliversio: PTV added an English version, which Utajärvi publishes
+  ;; but the site has no English texts for: "Ota PTV:n tekstit" keeps it.
+  (in-sync! 80247
+            {:name "Kylätalo Katajiston liikuntasali"
+             :summary "Katajiston kylätalon liikuntasali on pieni sali kyläläisten liikuntaan."
+             :description "Liikuntasali sijaitsee Katajiston kylätalossa. Salissa voi pelata sulkapalloa ja pöytätennistä sekä harrastaa ryhmäliikuntaa. Vuorot varataan kylätoimikunnalta."
+             :services [:liikuntasalit]})
+  (ptv-edit! 80247 #(-> %
+                        (assoc-in [:name-localized :en] "Katajisto village hall gym")
+                        (assoc-in [:ptv :languages] ["fi" "en"])
+                        (assoc-in [:ptv :summary :en] "The gym of Katajisto village hall is a small hall for the villagers' exercise.")
+                        (assoc-in [:ptv :description :en] "The gym is in Katajisto village hall. You can play badminton and table tennis and take part in group exercise. Book a turn from the village committee."))))
+
+(def all [#'s1-in-sync! #'s2-ptv-texts! #'s3-lipas-texts! #'s4-conflict! #'s5-connections!
+          #'s6-names! #'s7-new-language! #'s8-first-link! #'s9-everything!
+          #'s10-phone! #'s11-second-phone-and-page! #'s12-address! #'s13-point!
+          #'s14-sv-added! #'s15-first-link-bilingual! #'s16-postal-address!
+          #'s17-en-added-in-ptv!])
+
+(defn run-all!
+  ([] (run-all! all))
+  ([scenarios]
+   (vec (for [s scenarios]
+          (try [(:name (meta s)) :ok (s)]
+               (catch Exception e [(:name (meta s)) :failed (ex-message e) (some-> e ex-data :resp :body)]))))))
 
 (defn- channel-texts [ch]
   (let [by-lang (fn [k type-k]
@@ -236,7 +383,17 @@
      :description (by-lang :serviceChannelDescriptions "Description")
      :services (->> (:services ch)
                     (map #(-> % :service :id))
-                    sort vec)}))
+                    sort vec)
+     :languages (:languages ch)
+     :phones (mapv (juxt :prefixNumber :number) (:phoneNumbers ch))
+     :emails (mapv :value (:emails ch))
+     :web-pages (mapv (juxt :language :url) (:webPages ch))
+     :addresses (mapv (fn [{:keys [type subType streetAddress postOfficeBoxAddress]}]
+                        [type subType
+                         (or (some-> streetAddress :street first :value)
+                             (some-> postOfficeBoxAddress :postOfficeBox first :value))
+                         (or (:postalCode streetAddress) (:postalCode postOfficeBoxAddress))])
+                      (:addresses ch))}))
 
 (defn state
   "Where `lipas-id` stands after a sync: the saved site, its PTV location and
@@ -261,7 +418,8 @@
 (defn report
   "Each scenario site's review, as the PTV tool computes it."
   []
-  (let [ids [615340 89913 506495 509023 507128 523482 600093 506497 79800]
+  (let [ids [615340 89913 506495 509023 507128 523482 600093 506497 79800
+             506493 514575 600121 605450 606904 527789 526137 80247]
         bases (ptv-core/get-ptv-sync-bases (dbc) ids)
         langs ["fi" "en"]]
     (vec (for [id ids

@@ -44,8 +44,9 @@ PTV-välilehdellä.
   verkkosivu, varauslinkki ja käyntiosoite. Jos PTV:ssä on useampia, valitse
   niistä yksi; muut poistuvat PTV:stä.
 - *Pidä liitos* / *Poista liitos* liitetyille palveluille.
-- Tekstiä voi myös muokata lomakkeessa: muokattu teksti viedään PTV:hen
-  sellaisenaan.
+- Tekstiä tai arvoa voi myös muokata lomakkeessa. Kun sitä on muutettu myös
+  PTV:ssä, vahvista oma versiosi painikkeella *Vie muokattu versio PTV:hen*.
+  Jos PTV:n tieto muuttuu vielä tämän jälkeen, Lipas kysyy uudelleen.
 
 Valinnat tulevat voimaan, kun synkronoit (tai liikuntapaikan lomakkeella
 tallennat). Jos yrität synkronoida ennen kuin olet valinnut, Lipas kysyy
@@ -64,12 +65,28 @@ synkronoi Lipaksen tiedoilla.
 - *Aukioloajat ja postiosoite* säilyvät PTV:ssä, koska Lipaksessa ei ole
   niille kenttiä. Postiosoite, jota PTV ei hyväksy rajapinnan kautta,
   poistuu, ja näkymä kertoo siitä; korjaa se PTV:ssä.
+- *Käyntiosoitteen lisätieto ja muunkieliset kadunnimet* sekä
+  *puhelinnumeron lisätieto ja maksullisuus* säilyvät PTV:ssä, kun osoite ja
+  numero ovat samat kuin Lipaksessa. Jos osoite tai numero vaihtuu
+  Lipaksessa, ne poistuvat vanhan mukana.
+
+**Palvelut**
+
+PTV-työkalun Palvelut-välilehdellä sama näkymä koskee Lipaksessa luotuja
+palveluja. Synkronointi vie PTV:hen vain Lipaksessa muokatut nimet ja
+tekstit; PTV:ssä muutetut säilyvät. Jos samaa tekstiä on muutettu sekä
+Lipaksessa että PTV:ssä edellisen synkronoinnin jälkeen, valitse, kumpi jää
+voimaan. Palveluluokat ja asiasanat tulevat aina Lipaksesta.
 
 **Kuka synkronoi**
 
 Vain PTV-vastaava (PTV-oikeudet kunnalle) synkronoi PTV:hen. Kun muu
 käyttäjä tallentaa liikuntapaikan, muutos jää Lipakseen, ja liikuntapaikka
-näkyy PTV-työkalussa tilassa *Valmis synkronoitavaksi*. Poistettu
+näkyy PTV-työkalussa tilassa *Valmis synkronoitavaksi*. Kun PTV-vastaava
+tallentaa liikuntapaikan muualla kuin PTV-välilehdellä (esimerkiksi
+hakutulosten pikamuokkauksella), tallennus synkronoidaan vain, jos PTV:ssä ei
+ole läpikäymättömiä muutoksia; muuten se jää Lipakseen, ja Lipas kertoo
+siitä. Poistettu
 liikuntapaikka näkyy tilassa *Odottaa arkistointia*, kunnes PTV-vastaava
 arkistoi sen PTV:ssä.
 

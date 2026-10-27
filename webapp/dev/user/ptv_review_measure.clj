@@ -1,4 +1,5 @@
-;; READ-ONLY phase 0 measurement for the PTV sync review v2 plan.
+;; READ-ONLY phase 0 measurement for the PTV sync review v2 plan, and the
+;; rollout dry run (review-dry-run! below) with the review that ships.
 ;; Defines helpers in a scratch ns; reads the DB (SELECTs only) and PTV
 ;; (list/organization GETs only). Writes nothing anywhere, no spit, no :creds.
 (ns user.ptv-review-measure
@@ -9,8 +10,11 @@
             [lipas.backend.db.sports-site :as ss]
             [lipas.backend.gis :as gis]
             [lipas.backend.org :as org]
+            [lipas.backend.ptv.core :as ptv-core]
             [lipas.backend.ptv.integration :as ptvi]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-review :as ptv-review]
+            [lipas.data.types :as types]
             [lipas.roles :as roles]))
 
 (defn- sys []
@@ -275,3 +279,53 @@
                    (sort-by first >) vec)
      :saves-touching-ptv-fields (count (filter (comp seq :changed) rows))
      :field-counts (frequencies (mapcat :changed rows))}))
+
+;;; Rollout dry run: each synced site's status in the PTV tool after deploy ;;;
+
+(defn review-dry-run-org
+  "The PTV tool's status for each synced site of `org`, computed by the
+   review that ships (ptv-review/sports-site->ptv-input) on today's data,
+   with the keys of the rows waiting for a choice. No decisions recorded,
+   as on the first visit after the deploy."
+  [{:keys [ptv-data name] :as _org}]
+  (let [ptv-org-id (:org-id ptv-data)
+        by-id #(into {} (map (juxt :id identity)) (:itemList %))
+        channels (by-id (ptvi/get-org-service-channels (ptv) ptv-org-id))
+        services (by-id (ptvi/get-org-services (ptv) ptv-org-id))
+        sites (synced-sites ptv-org-id)
+        bases (ptv-core/get-ptv-sync-bases (dbc) (vec (keys sites)))
+        ctx {:org-id ptv-org-id
+             :types types/all
+             :org-langs (or (:supported-languages ptv-data) ptv-data/fallback-languages)}]
+    (vec (for [[lipas-id site] sites]
+           (if-not (ptv-data/ptv-candidate? site)
+             ;; removed, or no longer PTV's: listed apart, for archiving (D2)
+             {:org name :lipas-id lipas-id :status :awaiting-archive :open []}
+             (let [row (quiet #(ptv-review/sports-site->ptv-input
+                                 ctx channels services
+                                 (assoc (core/enrich site) :ptv-base (get bases lipas-id))))]
+               {:org name
+                :lipas-id lipas-id
+                :status (:sync-status row)
+                :open (mapv :key (ptv-review/open-review-rows (-> row :review :rows) nil))}))))))
+
+(defonce dry-run (atom nil))
+
+(defn review-dry-run!
+  "review-dry-run-org over every org with PTV: per org, sites by status and
+   the open rows by field. Read-only; the results stay in `dry-run`."
+  []
+  (let [orgs (filterv #(get-in % [:ptv-data :org-id]) (org/all-orgs (dbc)))
+        rs (reset! dry-run
+                   (vec (mapcat (fn [o]
+                                  (try (review-dry-run-org o)
+                                       (catch Exception e [{:org (:name o) :error (ex-message e)}])))
+                                orgs)))]
+    {:errors (filterv :error rs)
+     :by-org (->> (remove :error rs)
+                  (group-by :org)
+                  (map (fn [[o rs]]
+                         [o {:statuses (frequencies (map :status rs))
+                             :open-by-field (frequencies (mapcat #(map first (:open %)) rs))}]))
+                  (sort-by (comp - #(get-in % [1 :statuses :awaiting-choice] 0)))
+                  vec)}))

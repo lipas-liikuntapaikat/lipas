@@ -1,7 +1,11 @@
 # PTV drift review — plan
 
-Status: phases 1–4 built 2026-10-21 on `feat/ptv-drift-review` (see "As built" at the end);
-phase 5 waits for #266.
+Status: phases 1–4 built 2026-10-21 on `feat/ptv-drift-review` (see "As built" at the end).
+**Superseded by the second round, [`ptv-sync-review-v2-plan.md`](ptv-sync-review-v2-plan.md)**
+(built 2026-10-26): every field a sync writes, evidence of PTV's edits, the
+new status chips, PTV managers only, the stale-review check, and the
+PALVELUT tab (this plan's phase 5). Kept for its rationale and its test
+passes.
 Design canvas (private):
 https://claude.ai/artifact/EPsuhiCdWbEex1onT2W3Gy — boards "Liikuntapaikat-
 välilehti: erojen läpikäynti" (interactive) and "Liikuntapaikan lomake:
