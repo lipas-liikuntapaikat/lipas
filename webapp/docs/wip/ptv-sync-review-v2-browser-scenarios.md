@@ -65,12 +65,12 @@ it waits under "Odottaa arkistointia" (E3).
 **A1. Which sites have changes in PTV** (phase 4)
 1. As a PTV manager, open the map, then PTV, choose "Utajärven kunta", then the
    Liikuntapaikat tab.
-2. Click the "Odottaa valintaa" filter chip.
+2. Click the "Ristiriita" filter chip.
 
 Expect:
 - Exactly the sites with PTV-side changes to decide are listed: s4, s5, s6,
   s9, s10, s11, s12 (and s2 once its draft is cleared).
-- Each row shows the amber "Odottaa valintaa" chip.
+- Each row shows the amber "Ristiriita" chip.
 
 **A2. Banner over the table** (phase 4)
 
@@ -85,7 +85,7 @@ With the sites of A1 present:
 |---|---|
 | s1 (draft cleared) | "Ajan tasalla" (green) |
 | s3, s7, s13, s14, s16 | "Valmis synkronoitavaksi" (blue): nothing to decide; a point (D4) or a language removal (D6) is information |
-| s4, s5, s6, s9, s10, s11, s12 | "Odottaa valintaa" (amber) |
+| s4, s5, s6, s9, s10, s11, s12 | "Ristiriita" (amber) |
 | s1, s2 while their drafts are stuck, once opened; a site whose last sync failed | "Estetty" (red) |
 | s8, s15 | not linked, integration off: the faded "PTV" chip |
 
@@ -681,7 +681,7 @@ with the summary under "Päivittyy PTV:hen Lipaksesta" and the footer
 **K3. An edit over a change made in PTV**
 
 Change the summary in PTV's UI, then edit it in Lipas. Expect:
-- the chip "Odottaa valintaa", the row "Muutettu molemmissa";
+- the chip "Ristiriita", the row "Muutettu molemmissa";
 - "Synkronoi nyt" asks first; "Käy muutokset läpi" scrolls to the panel and
   focuses the row;
 - "Ota PTV:n versio" puts PTV's text back in the edit (chip "Ajan
