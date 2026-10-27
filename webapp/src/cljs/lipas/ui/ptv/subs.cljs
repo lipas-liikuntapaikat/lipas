@@ -594,6 +594,13 @@
   (fn [ptv [_ lipas-id]]
     (get-in ptv [:review :choices lipas-id])))
 
+(rf/reg-sub ::rechecking?
+  ;; Whether a location is being fetched again after a draft in PTV
+  ;; (events/recheck-draft)
+  :<- [::ptv]
+  (fn [ptv [_ channel-id]]
+    (contains? (:rechecking ptv) channel-id)))
+
 (rf/reg-sub ::review-written?
   ;; Whether the choices made in a review (a site's, or a service's by its
   ;; edit key) wrote into the edit: something "Kumoa valinnat" takes back

@@ -2282,7 +2282,9 @@
 (rf/reg-event-fx ::refresh-service-channel
   ;; The PTV tool's channels are as they were when the dialog opened; an
   ;; opened row refetches its own (one GET), so its review isn't as old.
-  (fn [{:keys [db]} [_ org-id channel-id]]
+  ;; `then`, an event, gets the location's publishing status once fetched
+  ;; (:failed when it couldn't be).
+  (fn [{:keys [db]} [_ org-id channel-id then]]
     (when (and org-id channel-id)
       (let [token (-> db :user :login :token)]
         {:fx [[:http-xhrio
@@ -2292,22 +2294,51 @@
                 :params {:org-id org-id :service-channel-id channel-id}
                 :format (ajax/transit-request-format)
                 :response-format (ajax/transit-response-format)
-                :on-success [::refresh-service-channel-success org-id channel-id]
-                :on-failure [::refresh-service-channel-failure org-id channel-id]}]]}))))
+                :on-success [::refresh-service-channel-success org-id channel-id then]
+                :on-failure [::refresh-service-channel-failure org-id channel-id then]}]]}))))
 
-(rf/reg-event-db ::refresh-service-channel-success
-  (fn [db [_ org-id channel-id resp]]
-    (-> db
-        (assoc-in [:ptv :org org-id :data :service-channels channel-id] resp)
-        (update-in [:ptv :unreachable-channels] disj channel-id))))
+(rf/reg-event-fx ::refresh-service-channel-success
+  (fn [{:keys [db]} [_ org-id channel-id then resp]]
+    (cond-> {:db (-> db
+                     (assoc-in [:ptv :org org-id :data :service-channels channel-id] resp)
+                     (update-in [:ptv :unreachable-channels] disj channel-id))}
+      then (assoc :fx [[:dispatch (conj then (:publishingStatus resp))]]))))
 
-(rf/reg-event-db ::refresh-service-channel-failure
+(rf/reg-event-fx ::refresh-service-channel-failure
   ;; An archived location 404s: PTV no longer lists it, nothing to refresh.
   ;; Any other failure leaves the review on older data, which ① says.
-  (fn [db [_ _org-id channel-id resp]]
-    (if (= 404 (:status resp))
-      db
-      (update-in db [:ptv :unreachable-channels] (fnil conj #{}) channel-id))))
+  (fn [{:keys [db]} [_ _org-id channel-id then resp]]
+    (cond-> {:db (if (= 404 (:status resp))
+                   db
+                   (update-in db [:ptv :unreachable-channels] (fnil conj #{}) channel-id))}
+      then (assoc :fx [[:dispatch (conj then :failed)]]))))
+
+(rf/reg-event-fx ::recheck-draft
+  ;; "Tarkista uudelleen" on the notice of a draft in PTV, after the user
+  ;; has published or discarded it there: the location fetched again (the
+  ;; PTV tool's copy, or the site form's two), and the user told if the
+  ;; draft is still there. Without it the copies stay as they were until
+  ;; the row or the form is opened again.
+  (fn [{:keys [db]} [_ {:keys [org-id channel-id lipas-id site-form?]}]]
+    (let [then [::draft-rechecked channel-id]]
+      {:db (update-in db [:ptv :rechecking] (fnil conj #{}) channel-id)
+       :fx (if site-form?
+             [[:dispatch [::fetch-site-service-channel lipas-id org-id channel-id then]]
+              [:dispatch [:lipas.ui.map.events/fetch-ptv-site-review lipas-id]]]
+             [[:dispatch [::refresh-service-channel org-id channel-id then]]])})))
+
+(rf/reg-event-fx ::draft-rechecked
+  ;; `status` is PTV's publishing status of the location now ("Modified"
+  ;; while the draft is there), or :failed.
+  (fn [{:keys [db]} [_ channel-id status]]
+    (let [tr (:translator db)
+          message (case status
+                    "Modified" (tr :ptv.review/draft-still-there)
+                    :failed (tr :ptv.review/recheck-failed)
+                    nil)]
+      (cond-> {:db (update-in db [:ptv :rechecking] disj channel-id)}
+        message (assoc :fx [[:dispatch [:lipas.ui.events/set-active-notification
+                                        {:message message :severity :warning}]]])))))
 
 (rf/reg-event-fx ::republish
   ;; "Julkaise uudelleen" for a location archived in PTV: a sync re-publishes
@@ -2349,8 +2380,9 @@
 
 (rf/reg-event-fx ::fetch-site-service-channel
   ;; The single-site view loads none of the org's channels, but warning about
-  ;; PTV texts the next sync would remove needs the linked one.
-  (fn [{:keys [db]} [_ lipas-id org-id service-channel-id]]
+  ;; PTV texts the next sync would remove needs the linked one. `then` as
+  ;; for ::refresh-service-channel.
+  (fn [{:keys [db]} [_ lipas-id org-id service-channel-id then]]
     (let [token (-> db :user :login :token)]
       {:fx [[:http-xhrio
              {:method :post
@@ -2360,17 +2392,22 @@
                        :service-channel-id service-channel-id}
               :format (ajax/transit-request-format)
               :response-format (ajax/transit-response-format)
-              :on-success [::fetch-site-service-channel-success lipas-id]
-              :on-failure [::fetch-site-service-channel-failure lipas-id]}]]})))
+              :on-success [::fetch-site-service-channel-success lipas-id then]
+              :on-failure [::fetch-site-service-channel-failure lipas-id then]}]]})))
 
-(rf/reg-event-db ::fetch-site-service-channel-success
-  (fn [db [_ lipas-id resp]]
-    (assoc-in db [:ptv :site-service-channel lipas-id] resp)))
+(rf/reg-event-fx ::fetch-site-service-channel-success
+  (fn [{:keys [db]} [_ lipas-id then resp]]
+    (cond-> {:db (assoc-in db [:ptv :site-service-channel lipas-id] resp)}
+      then (assoc :fx [[:dispatch (conj then (:publishingStatus resp))]]))))
 
-(rf/reg-event-db ::fetch-site-service-channel-failure
-  ;; e.g. an archived channel (PTV 404s): nothing to warn about.
-  (fn [db [_ lipas-id _resp]]
-    (update-in db [:ptv :site-service-channel] dissoc lipas-id)))
+(rf/reg-event-fx ::fetch-site-service-channel-failure
+  ;; An archived channel (PTV 404s): nothing to warn about. Any other
+  ;; failure keeps what an earlier fetch got.
+  (fn [{:keys [db]} [_ lipas-id then resp]]
+    (cond-> {:db (if (= 404 (:status resp))
+                   (update-in db [:ptv :site-service-channel] dissoc lipas-id)
+                   db)}
+      then (assoc :fx [[:dispatch (conj then :failed)]]))))
 
 (rf/reg-event-fx ::set-manual-services
   (fn [{:keys [db]} [_ org-id source-ids subcategories]]

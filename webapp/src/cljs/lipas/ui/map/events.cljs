@@ -460,6 +460,8 @@
   ;; while a change made in PTV has no choice in the PTV tab's review, ask
   ;; first. `overwrite-ptv?` is the user's answer: those keep Lipas's
   ;; value. Anyone else's save stays in Lipas (D2): no review, no question.
+  ;; Nor while PTV holds an unpublished draft of the location: PTV refuses
+  ;; the write, so nothing is overwritten, and the save says why.
   (fn [{:keys [db]} [_ lipas-id overwrite-ptv?]]
     (let [tr (:translator db)
           editing (get-in db [:sports-sites lipas-id :editing])
@@ -477,10 +479,11 @@
                                                 editing))
           choices (get-in db (ptv-review/choices-path lipas-id))
           open (ptv-sync/open-review-rows (:rows review) choices)
+          draft? (= "Modified" (-> fetched :channel :publishingStatus))
           ;; what the review was made against: the backend refuses the sync
           ;; over a change made in PTV since, and saves Lipas only
           reviewed (when syncs? (ptv-review/reviewed (:channel fetched)))]
-      (if (and (seq open) (not overwrite-ptv?))
+      (if (and (seq open) (not overwrite-ptv?) (not draft?))
         {:dispatch [:lipas.ui.events/confirm-with
                     (ptv-review/overwrite-confirmation
                       tr

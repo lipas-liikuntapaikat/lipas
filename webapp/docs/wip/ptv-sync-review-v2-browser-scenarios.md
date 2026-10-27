@@ -406,10 +406,19 @@ published version, and only its `/active/` endpoint shows the draft. Open
 the row (the refetch asks `/active/`). Expect:
 - the chip turns "Estetty";
 - "PTV:ssä on julkaisemattomia muutoksia. Julkaise tai peru ne PTV:ssä
-  ennen synkronointia." with "Avaa PTV:ssä";
+  ennen synkronointia." with "Avaa PTV:ssä" and "Tarkista uudelleen";
+- no bar and no rows, but "Lipaksen ja PTV:n erot näytetään, kun muutokset
+  on julkaistu tai peruttu PTV:ssä." (the review would be of the published
+  version, and no choice could be written);
 - the sync is blocked.
 
+"Tarkista uudelleen" fetches the location again: with the draft still
+there, "PTV:ssä on yhä julkaisemattomia muutoksia…"; once it's published or
+discarded, the notice goes and the review shows.
+
 The same is shown in the site form, whose review fetch asks `/active/` too.
+Saving it asks nothing (PTV refuses the write, so nothing is overwritten):
+Lipas is saved and the toast says the sync failed on PTV's draft.
 A sync attempt that hits "You cannot update entity with status Modified"
 (e.g. from "Synkronoi kaikki valmiit" before the row was opened) shows this
 notice, not "Synkronointi epäonnistui", and the chip turns "Estetty".
@@ -787,7 +796,7 @@ or exported: the writes were covered by the event-level run.
 | D5 undo in the form | s9 | pass: name back, 0/3 chosen |
 | D6 cancel, reopen | s9 | pass: no choices |
 | D9 view mode | s9 | pass: dot, read-only rows, no choice/bulk/outcome lines, view-mode footer |
-| F2 draft in PTV | s1, s2 | pass: "Estetty" once opened, the notice and "Avaa PTV:ssä", "Synkronoi nyt" disabled |
+| F2 draft in PTV | s1, s2 | pass: "Estetty" once opened, the notice and "Avaa PTV:ssä", "Synkronoi nyt" disabled. Changed after the run, see below |
 | G10 language version PTV has | s17 | **failed, fixed**: see below |
 | H1 first link in the wizard | s8 | pass: "Eroaa" rows, "(ei arvoa)" for Lipas, PTV's connections kept below; **"Kumoa valinnat" showed with nothing to undo, fixed** |
 | H2 export waits for choices | 15 sites | pass: export disabled, the alert lists each site's open rows, bulk buttons |
@@ -823,3 +832,23 @@ Tooling note: Chrome reports a tab of a window that isn't in front as
 hidden and pauses its animation frames, which stalls Reagent's renders.
 For a run in such a tab, point Reagent's scheduler at a MessageChannel
 first (`reagent.impl.batching.next_tick`), or keep the window in front.
+
+### F2 again, after the draft change (2026-10-27)
+
+With the user: while PTV holds a draft, the review is hidden (it compared
+with the published version, read as the draft's changes, and no choice
+could be written), the notice gets "Tarkista uudelleen", and the site form's
+save asks nothing. Run locally:
+
+| Case | Site | Result |
+|---|---|---|
+| Tool, real draft: notice, both buttons, the line, no bar or rows | s1 | pass |
+| Tool, "Tarkista uudelleen" with the draft still there | s1 | pass: spinner, button disabled, then "PTV:ssä on yhä julkaisemattomia muutoksia…" |
+| Tool, the draft gone (simulated: the copy marked Modified, PTV's answer real) | s9 | pass: chip "Ristiriita", the review back, no toast |
+| Site form, view mode, real draft | s1 | pass: same as the tool |
+| Site form, "Tarkista uudelleen", draft still there | s1 | pass |
+| Site form, the draft gone (simulated as above) | s9 | pass: both copies refetched, the review back |
+| Save with a real draft | s1 | pass: no question; "Liikuntapaikka tallennettu, mutta PTV-synkronointi epäonnistui – PTV:ssä on julkaisemattomia muutoksia…" (s1 got fi texts and construction year 2014 for this) |
+| Save with open rows and a draft (simulated; the save itself recorded, not sent) | s9 | pass: no question, `:reviewed` sent; without the draft the question shows |
+| A recheck that fails | – | "PTV:n tietoja ei saatu haettua. Yritä hetken päästä uudelleen." |
+
