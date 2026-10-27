@@ -26,6 +26,8 @@ PTV-välilehdellä.
   synkronoitu viimeksi. Avaa muutokset painikkeesta *Näytä muutokset*.
 - *Palvelupaikan tila* kertoo, jos jokin estää synkronoinnin, esimerkiksi
   PTV:ssä julkaisematon luonnos, tai jos palvelupaikka on arkistoitu PTV:ssä.
+  Luonnoksen ajan muutoksia ei näytetä: julkaise tai peru luonnos PTV:ssä ja
+  paina sitten *Tarkista uudelleen*.
 - *Valitse, mikä jää voimaan* listaa PTV:ssä tehdyt muutokset aiheittain:
   nimi ja kuvaukset, yhteystiedot, osoite ja sijainti, kieliversiot sekä
   liitetyt palvelut. Kunkin kohdan vieressä on Lipaksen ja PTV:n versio.

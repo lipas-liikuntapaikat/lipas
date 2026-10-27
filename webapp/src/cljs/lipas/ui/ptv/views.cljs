@@ -527,7 +527,11 @@
       (conj {:key :modified
              :text (tr :ptv.review/notice-modified)
              :actions [{:label (tr :ptv.review/open-in-ptv)
-                        :href (str (ptv-base-url) "/channels/serviceLocation/" channel-id)}]})
+                        :href (str (ptv-base-url) "/channels/serviceLocation/" channel-id)}
+                       {:label (tr :ptv.review/recheck)
+                        :busy? (<== [::subs/rechecking? channel-id])
+                        :on-click #(==> [::events/recheck-draft {:org-id org-id
+                                                                 :channel-id channel-id}])}]})
 
       (seq other-ids)
       (conj {:key :double-link
@@ -586,6 +590,7 @@
                :site-editor? (contains? (<== [::subs/editable-site-ids org-id]) lipas-id)}
       :org-langs (<== [::subs/org-languages org-id])
       :notices (site-notices tr site)
+      :draft? (= "Modified" (:service-channel-publishing-status site))
       :first-open-id (review-data/first-open-dom-id lipas-id)
       :footer (or footer
                   (if (:last-sync site)

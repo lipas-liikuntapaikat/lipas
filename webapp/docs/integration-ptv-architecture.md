@@ -500,7 +500,7 @@ Each integrated site has a sync status derived in `sports-site->ptv-input`
 | Status | Chip | Meaning |
 |--------|------|---------|
 | `:not-synced` | Ei viety | Never exported to PTV. |
-| `:blocked` | Estetty | A sync can't go through: PTV holds an unpublished draft of the location, or the last sync failed. PTV's listing shows only the published version, so a draft is known once the row is opened (the refetch, and the site form's review fetch, also ask PTV's `/active/` endpoint: `with-draft-status`) or a sync has hit it. |
+| `:blocked` | Estetty | A sync can't go through: PTV holds an unpublished draft of the location, or the last sync failed. PTV's listing shows only the published version, so a draft is known once the row is opened (the refetch, and the site form's review fetch, also ask PTV's `/active/` endpoint: `with-draft-status`) or a sync has hit it. While a draft is known, the review shows only the notice (with "Tarkista uudelleen", `events/recheck-draft`) and the site form's save asks nothing. |
 | `:awaiting-choice` | Ristiriita | Lipas and PTV disagree (usually a change made in PTV); the user chooses which version stays. |
 | `:ready` | Valmis synkronoitavaksi | The next sync has something to send, with nothing to decide (a LIPAS change, a choice made, a language added or removed, a link removed, an archived location re-enabled, an unsaved edit in the PTV tool). |
 | `:ok` | Ajan tasalla | LIPAS and PTV agree and the site hasn't been edited since the last sync. |

@@ -177,13 +177,23 @@
         linked-channel (let [c @(rf/subscribe [::subs/site-service-channel lipas-id])]
                          (when (and channel-id (= channel-id (:id c))) c))
         archived? (and channel-id (= "Deleted" (-> site :ptv :publishing-status)))
+        ;; PTV holds an unpublished draft of the location: it refuses every
+        ;; write until the draft is published or discarded there
+        draft? (= "Modified" (:publishingStatus linked-channel))
         ;; ① the state of the link, as the PTV tool says it
         notices (cond-> []
-                  (= "Modified" (:publishingStatus linked-channel))
+                  draft?
                   (conj {:key :modified
                          :text (tr :ptv.review/notice-modified)
                          :actions [{:label (tr :ptv.review/open-in-ptv)
-                                    :href (str ptv-base "/channels/serviceLocation/" channel-id)}]})
+                                    :href (str ptv-base "/channels/serviceLocation/" channel-id)}
+                                   {:label (tr :ptv.review/recheck)
+                                    :busy? @(rf/subscribe [::subs/rechecking? channel-id])
+                                    :on-click #(rf/dispatch [::events/recheck-draft
+                                                             {:org-id org-id
+                                                              :channel-id channel-id
+                                                              :lipas-id lipas-id
+                                                              :site-form? true}])}]})
 
                   (seq double-link-others)
                   (conj {:key :double-link
@@ -416,6 +426,7 @@
              :rights {:ptv-manager? true :site-editor? (boolean can-edit?)}
              :org-langs org-languages
              :notices notices
+             :draft? draft?
              :site-tab (tr :lipas.sports-site/basic-data)
              :first-open-id (review-data/first-open-dom-id lipas-id)
              :stacked? true

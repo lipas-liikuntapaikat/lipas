@@ -16,6 +16,7 @@
             ["@mui/material/AlertTitle$default" :as AlertTitle]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Chip$default" :as Chip]
+            ["@mui/material/CircularProgress$default" :as CircularProgress]
             ["@mui/material/Collapse$default" :as Collapse]
             ["@mui/material/Divider$default" :as Divider]
             ["@mui/material/GridLegacy$default" :as Grid]
@@ -855,19 +856,22 @@
      [toggle-button tr open? on-toggle details-id]]))
 
 (defn- notice
-  "A ① notice: the state of the link, with its actions."
+  "A ① notice: the state of the link, with its actions. An action that is
+  :busy? shows a spinner and waits."
   [{:keys [severity title text actions]}]
   [:> Alert {:severity (or severity "warning") :variant "outlined"}
    (when title [:> AlertTitle title])
    (when text [:> Typography {:variant "body2" :sx body} text])
    (when (seq actions)
      (into [:> Stack {:direction "row" :spacing 1 :flexWrap "wrap" :useFlexGap true :sx #js {:mt 1}}]
-           (for [{:keys [label on-click href primary? disabled?]} actions]
+           (for [{:keys [label on-click href primary? disabled? busy?]} actions]
              [:> Button (cond-> {:size "small"
                                  :variant (if primary? "contained" "outlined")
                                  :color "warning"
-                                 :disabled disabled?
+                                 :disabled (boolean (or disabled? busy?))
                                  :sx #js {:textTransform "none"}}
+                          busy? (assoc :startIcon (r/as-element
+                                                    [:> CircularProgress {:size 14 :color "inherit"}]))
                           on-click (assoc :on-click on-click)
                           href (assoc :href href :target "_blank"))
               label])))])
@@ -896,7 +900,12 @@
    - :org-langs    the org's PTV languages (LIPAS codes): a language
                    version PTV has can be kept only in one of them
    - :notices      ① the state of the link: [{:key :severity :title :text
-                   :actions [{:label :on-click :href :primary?}]}]
+                   :actions [{:label :on-click :href :primary? :disabled?
+                   :busy?}]}]
+   - :draft?       PTV holds an unpublished draft of the location: no
+                   write goes through until it is published or discarded
+                   in PTV, and the review would be of the published
+                   version, so only the notices show, and why
    - :site-tab     where the site's own data is edited in the site form,
                    for captions (\"Perustiedot\"); nil outside it
    - :first-open-id DOM id for the first undecided row's first button
@@ -908,7 +917,7 @@
                    to make them
    Shows nothing while there is nothing to review and no notice."
   [{:keys [id tr review choices open? on-toggle on-take on-take-value on-reset written?
-           rights org-langs notices site-tab first-open-id footer stacked? read-only?]}]
+           rights org-langs notices draft? site-tab first-open-id footer stacked? read-only?]}]
   (r/with-let [expanded (r/atom #{})
                ;; [row-key :decided/:opened] while a row collapses or
                ;; opens, :first-open while the choices are undone
@@ -954,7 +963,7 @@
                                                (.querySelector el "button[aria-pressed]"))]
                                 (reset! focus-row nil)
                                 (.focus b))))}
-           (when (seq rows)
+           (when (and (seq rows) (not draft?))
              [bar {:tr tr :review review :rows rows :required required :open open
                    :languages languages :open? open? :on-toggle on-toggle
                    :details-id details-id}])
@@ -963,7 +972,13 @@
            (for [n notices]
              ^{:key (:key n)} [notice n])
 
-           (when (seq rows)
+           ;; the choices wait for PTV's draft to go: they couldn't be
+           ;; written, and its publishing may change what PTV has
+           (when (and (seq rows) draft?)
+             [:> Typography {:variant "body2" :color "text.secondary" :sx body}
+              (tr :ptv.review/draft-hides-review)])
+
+           (when (and (seq rows) (not draft?))
              [:> Collapse {:in open? :unmountOnExit true :id details-id}
               [:> Stack {:spacing 1.5 :sx #js {:pt 0.5}}
                ;; how it works, for whoever meets this for the first time

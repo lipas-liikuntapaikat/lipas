@@ -1106,6 +1106,14 @@ the banner "{1} liikuntapaikassa on ristiriitoja PTV:n kanssa – ratkaise
 ne ennen synkronointia.", the wizard's count "Ratkaisematta: {1}". The
 design text above keeps the old name.
 
+And while PTV holds an unpublished draft of the location (the user's
+call): the review compared with the published version, which read as the
+draft's changes, and no choice could be written, so only the notice shows,
+with "Tarkista uudelleen" (fetches the location again, says if the draft is
+still there), and the site form's save no longer asks about overwriting.
+Services keep the old behaviour: a service draft is known only once a sync
+has hit it.
+
 ### Rollout
 
 1. Deploy: app only. No migration, no reindex. `[:ptv :ptv-modified]` is
