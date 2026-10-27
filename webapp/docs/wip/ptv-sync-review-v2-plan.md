@@ -1100,6 +1100,12 @@ PTV's texts still read as removed, and the bar counted it as a change;
 can't undo (it now follows `[:ptv :review :undo id]`, sub
 `::review-written?`); and a deref inside a lazy seq in the panel.
 
+Renamed with the user afterwards: the `:awaiting-choice` chip and filter
+"Odottaa valintaa" became **"Ristiriita"** (sv "Konflikt", en "Conflict"),
+the banner "{1} liikuntapaikassa on ristiriitoja PTV:n kanssa – ratkaise
+ne ennen synkronointia.", the wizard's count "Ratkaisematta: {1}". The
+design text above keeps the old name.
+
 ### Rollout
 
 1. Deploy: app only. No migration, no reindex. `[:ptv :ptv-modified]` is

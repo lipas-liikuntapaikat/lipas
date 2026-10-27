@@ -170,7 +170,7 @@
  :unlink "Unlink"
  :open-in-ptv "Open in PTV"
  :retry "Try again"
- :count-open "Not chosen: {1}"
+ :count-open "Unresolved: {1}"
  :help-link "Guide: reviewing the changes made in PTV"
  :field-user-instruction "User instruction"
  :ptv-changes-kept "Changed in PTV since LIPAS's last export, kept: {1}."}

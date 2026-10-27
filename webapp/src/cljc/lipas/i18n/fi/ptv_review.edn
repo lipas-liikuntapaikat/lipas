@@ -170,7 +170,7 @@
  :unlink "Irrota liitos"
  :open-in-ptv "Avaa PTV:ssä"
  :retry "Yritä uudelleen"
- :count-open "Valitsematta: {1}"
+ :count-open "Ratkaisematta: {1}"
  :help-link "Ohje: PTV-muutosten läpikäynti"
  :field-user-instruction "Toimintaohje"
  :ptv-changes-kept "Muutettu PTV:ssä Lipaksen viimeisimmän viennin jälkeen, säilyy: {1}."}

@@ -101,24 +101,25 @@ Liikuntapaikan tila PTV:ssä:
 - **Ajan tasalla** (vihreä): Lipas ja PTV ovat samat.
 - **Valmis synkronoitavaksi** (sininen): Lipaksessa on muutoksia, jotka
   synkronointi vie PTV:hen; mitään ei tarvitse valita.
-- **Odottaa valintaa** (oranssi): PTV:ssä on tehty muutoksia, joista pitää
-  valita ennen synkronointia (ks. *PTV-muutosten läpikäynti*).
+- **Ristiriita** (oranssi): Lipaksen ja PTV:n tiedot ovat ristiriidassa,
+  yleensä koska PTV:ssä on tehty muutoksia. Valitse ennen synkronointia,
+  mitkä tiedot jäävät voimaan (ks. *PTV-muutosten läpikäynti*).
 - **Estetty** (punainen): synkronointi ei mene läpi. PTV:ssä on
   julkaisematon luonnos, tai edellinen synkronointi epäonnistui.
 - **Ei viety**: liikuntapaikkaa ei ole vielä viety PTV:hen.
 
 Suodattimilla voi näyttää vain tietyn tilan liikuntapaikat. Taulukon
-yläpuolella oleva ilmoitus kertoo, montako liikuntapaikkaa odottaa valintaa,
-ja *Näytä ne* suodattaa ne esiin. *Synkronoi kaikki valmiit* synkronoi
-kerralla kaikki valmiit liikuntapaikat; ne, joissa on valittavaa, jätetään
-väliin ja luetellaan.
+yläpuolella oleva ilmoitus kertoo, monessako liikuntapaikassa on
+ristiriitoja, ja *Näytä ne* suodattaa ne esiin. *Synkronoi kaikki valmiit*
+synkronoi kerralla kaikki valmiit liikuntapaikat; ne, joissa on
+ratkaisemattomia ristiriitoja, jätetään väliin ja luetellaan.
 
 ---
 
 ## Edit: Tietojen ylläpito ja synkronointi PTV:hen
 
 - Step 2: replace "esim. 'Muuttunut'" with "esim. 'Valmis synkronoitavaksi'
-  tai 'Odottaa valintaa'".
+  tai 'Ristiriita'".
 - Add after step 4: "Jos PTV:ssä on tehty muutoksia, Lipas näyttää ne ennen
   synkronointia (ks. *PTV-muutosten läpikäynti*)."
 - Step 5: replace "muista arkistoida kohde myös suoraan PTV:n

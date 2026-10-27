@@ -170,7 +170,7 @@
  :unlink "Ta bort kopplingen"
  :open-in-ptv "Öppna i PTV"
  :retry "Försök igen"
- :count-open "Inte valt: {1}"
+ :count-open "Olösta: {1}"
  :help-link "Anvisning: gå igenom ändringarna i PTV"
  :field-user-instruction "Anvisning"
  :ptv-changes-kept "Ändrat i PTV efter den senaste överföringen från LIPAS, behålls: {1}."}
