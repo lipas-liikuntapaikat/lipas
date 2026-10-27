@@ -32,6 +32,8 @@
  :notes-archived "Archived"
  :notes-author "Author"
  :notes-date "Date"
+ :notes-delete "Delete"
+ :notes-delete-confirm "Delete this note? This can't be undone."
  :notes-empty "No notes."
  :notes-hide-archived "Hide archived"
  :notes-note "Note"
