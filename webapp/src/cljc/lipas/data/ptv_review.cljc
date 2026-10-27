@@ -901,6 +901,29 @@
   [draft writes]
   (reduce-kv assoc-text* draft writes))
 
+(defn record-review-writes
+  "`undo` ({path {:before :written}}) with `writes` (review-writes), which a
+   choice makes into `draft`: :before is what the edit held before the
+   first choice that wrote the path, :written what the last one wrote."
+  [undo draft writes]
+  (reduce-kv (fn [undo path v]
+               (update undo path (fn [entry]
+                                   {:before (if entry (:before entry) (get-in draft path))
+                                    :written v})))
+             (or undo {})
+             writes))
+
+(defn undo-review-writes
+  "The writes that take back, in `draft`, what the review's choices wrote
+   (`undo`, record-review-writes): a path still holding what a choice
+   wrote gets back its value from before. A path the user has typed into
+   since keeps their text."
+  [undo draft]
+  (into {}
+        (for [[path {:keys [before written]}] undo
+              :when (= written (get-in draft path))]
+          [path before])))
+
 ;;; Writing the site's own data from the PTV tool ;;;
 
 (def site-patch-paths

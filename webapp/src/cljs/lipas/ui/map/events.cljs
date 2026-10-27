@@ -554,6 +554,7 @@
                                    (-> review
                                        (update :site dissoc lipas-id)
                                        (update :choices dissoc lipas-id)
+                                       (update :undo dissoc lipas-id)
                                        (update :open dissoc lipas-id))))))
 
 (rf/reg-event-fx ::delete-site

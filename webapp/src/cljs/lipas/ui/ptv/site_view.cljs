@@ -409,8 +409,7 @@
                         (rf/dispatch [::events/review-take :site-form lipas-id rows side]))
              :on-take-value (fn [row value]
                               (rf/dispatch [::events/review-take-value :site-form lipas-id row value]))
-             :on-reset (fn [rows]
-                         (rf/dispatch [::events/review-reset :site-form lipas-id rows]))
+             :on-reset #(rf/dispatch [::events/review-reset :site-form lipas-id])
              ;; the PTV tab is for PTV managers; the site's own data is
              ;; edited right here
              :rights {:ptv-manager? true :site-editor? (boolean can-edit?)}

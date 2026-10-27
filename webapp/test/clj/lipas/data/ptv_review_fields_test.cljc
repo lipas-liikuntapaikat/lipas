@@ -139,6 +139,36 @@
 
 ;;; Contacts ;;;
 
+(deftest undo-choices-test
+  ;; "Kumoa valinnat" takes back what the choices wrote, never the user's text
+  (let [channel (-> (as-channel site :modified days-later)
+                    (with-phones [["+358" "401234567" "fi"]]))
+        phone (row (review channel) [:phone])
+        choose (fn [undo draft side]
+                 (let [writes (sut/review-writes draft phone side)]
+                   [(sut/record-review-writes undo draft writes)
+                    (sut/apply-review-writes draft writes)]))
+        take-back (fn [undo draft]
+                    (sut/apply-review-writes draft (sut/undo-review-writes undo draft)))]
+    (testing "taking PTV's version and undoing it gives back the edit as it was"
+      (let [[u taken] (choose nil site :ptv)]
+        (is (= "+358 401234567" (:phone-number taken)))
+        (is (= site (take-back u taken)))))
+    (testing "a number the user typed before the choice comes back"
+      (let [[u taken] (choose nil (assoc site :phone-number "040 555 5555") :ptv)]
+        (is (= "040 555 5555" (:phone-number (take-back u taken))))))
+    (testing "after two choices, back to before the first"
+      (let [[u1 d1] (choose nil (assoc site :phone-number "040 555 5555") :ptv)
+            [u2 d2] (choose u1 d1 :lipas)]
+        (is (= "08 5875 5700" (:phone-number d2)))
+        (is (= "040 555 5555" (:phone-number (take-back u2 d2))))))
+    (testing "a number typed after the choice stays"
+      (let [[u taken] (choose nil site :ptv)
+            retyped (assoc taken :phone-number "040 666 6666")]
+        (is (= retyped (take-back u retyped)))))
+    (testing "nothing chosen, nothing to take back"
+      (is (= {} (sut/undo-review-writes nil site))))))
+
 (deftest phone-test
   (let [channel (-> (as-channel site :modified days-later)
                     (with-phones [["+358" "401234567" "fi"]]))

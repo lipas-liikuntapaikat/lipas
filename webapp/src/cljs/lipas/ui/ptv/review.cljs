@@ -846,7 +846,8 @@
    - :on-take-value (fn [row value]) makes the edit hold one of PTV's
                    values of a one-slot row, or for other web pages
                    {:slot field :url url}
-   - :on-reset     (fn [rows]) back to the saved versions, nothing decided
+   - :on-reset     (fn []) \"Kumoa valinnat\": the choices forgotten, and what
+                   they wrote into the edit taken back (text the user wrote stays)
    - :rights       {:site-editor? :ptv-manager?}: who may take what
                    (review-data/takeable?)
    - :org-langs    the org's PTV languages (LIPAS codes): a language
@@ -879,11 +880,12 @@
               first-open (first open)
               decided-count (- (count required) (count open))
               takeable (filter #(and (can-take? %) (ptv-review/takeable-in-bulk? %)) required)
-              ;; a choice made against a PTV value that has since changed no
-              ;; longer counts, so there's nothing left to undo
+              ;; a choice to take back: recorded (one made against a PTV
+              ;; value that has since changed no longer counts), or PTV's
+              ;; version taken, also a language version's texts
               touched? (some #(or (ptv-review/review-choice choices %)
-                                  (not= :lipas (:current %)))
-                             (remove #(contains? ptv-review/info-kinds (:kind %)) rows))
+                                  (= :ptv (:current %)))
+                             rows)
               details-id (some-> id (str "-details"))
               props (fn [row]
                       {:tr tr :row row :choices choices :on-take on-take
@@ -964,7 +966,7 @@
                     [:> Button {:size "small" :variant "text"
                                 :sx #js {:textTransform "none"}
                                 :on-click #(do (reset! expanded #{})
-                                               (on-reset rows))}
+                                               (on-reset))}
                      (tr :ptv.review/clear-choices)])])
 
                ;; ⑤

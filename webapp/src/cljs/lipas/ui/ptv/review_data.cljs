@@ -16,6 +16,14 @@
   [lipas-id]
   [:ptv :review :choices lipas-id])
 
+(defn undo-path
+  "What the choices made in a review (a site's, or a service's by its edit
+   key) wrote into the edit, for \"Kumoa valinnat\" to take back: path ->
+   {:before :written} (ptv-review/record-review-writes). Spent with the
+   choices."
+  [id]
+  [:ptv :review :undo id])
+
 (defn open-path
   "Whether a site's review panel is expanded."
   [lipas-id]

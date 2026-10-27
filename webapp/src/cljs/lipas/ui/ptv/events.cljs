@@ -1751,6 +1751,7 @@
                               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :review-saved]
                                         synced))))
                (update-in [:ptv :review :choices] dissoc lipas-id)
+               (update-in [:ptv :review :undo] dissoc lipas-id)
                (update-in [:ptv :review :open] dissoc lipas-id)
                (update-in [:ptv :review :site-patch] dissoc lipas-id))
        :fx (cond-> (into (or (seq extra-fx) [])
@@ -1787,6 +1788,14 @@
 ;; record (review-data/choices-path): the edit alone can't tell it from
 ;; not having looked.
 
+(defn- forget-choices
+  "`db` without the choices made in the review of `id` (a lipas-id, or a
+   service's edit key), and what they wrote (review-data/undo-path)."
+  [db id]
+  (-> db
+      (assoc-in (review-data/choices-path id) {})
+      (update-in [:ptv :review :undo] dissoc id)))
+
 (defn- draft-path
   "Where the edit a review writes into lives: the PTV tool's copy of the
    site, or the site form's edit buffer."
@@ -1807,27 +1816,31 @@
                    (reduce #(ptv-review/apply-review-writes %1 (ptv-review/review-writes %1 %2 side))
                            draft
                            rows))
-          db (update-in db (review-data/choices-path lipas-id)
-                        (fn [choices]
-                          (reduce (fn [choices row]
-                                    (case side
-                                      :lipas (assoc choices (:key row)
-                                                    {:choice :lipas :seen (ptv-review/review-choice-seen row)})
-                                      :edited (assoc choices (:key row) (ptv-review/edited-choice row))
-                                      (dissoc choices (:key row))))
-                                  choices
-                                  rows)))]
+          ;; {path value}: what the choice writes into the edit
+          writes (when-not (= :edited side)
+                   (into {}
+                         (comp (mapcat #(keys (ptv-review/review-writes draft % side)))
+                               (distinct)
+                               (map (fn [p] [p (get-in edited p)])))
+                         rows))
+          db (-> db
+                 (update-in (review-data/choices-path lipas-id)
+                            (fn [choices]
+                              (reduce (fn [choices row]
+                                        (case side
+                                          :lipas (assoc choices (:key row)
+                                                        {:choice :lipas :seen (ptv-review/review-choice-seen row)})
+                                          :edited (assoc choices (:key row) (ptv-review/edited-choice row))
+                                          (dissoc choices (:key row))))
+                                      choices
+                                      rows)))
+                 (update-in (review-data/undo-path lipas-id) ptv-review/record-review-writes draft writes))]
       (case target
         :ptv-tool {:db (assoc-in db path edited)}
         ;; through edit-fields, which also recalculates derived fields
         :site-form {:db db
-                    :fx (when-not (= :edited side)
-                          [[:dispatch [:lipas.ui.sports-sites.events/edit-fields lipas-id
-                                       (into {}
-                                             (comp (mapcat #(keys (ptv-review/review-writes draft % side)))
-                                                   (distinct)
-                                                   (map (fn [p] [p (get-in edited p)])))
-                                             rows)]]])}))))
+                    :fx (when (seq writes)
+                          [[:dispatch [:lipas.ui.sports-sites.events/edit-fields lipas-id writes]]])}))))
 
 (rf/reg-event-fx ::review-take-value
   ;; Make the edit hold `value`, one of PTV's values of a one-slot `row`,
@@ -1835,6 +1848,8 @@
   (fn [{:keys [db]} [_ target lipas-id row value]]
     (let [path (draft-path db target lipas-id)
           writes (ptv-review/review-value-writes row value)
+          db (update-in db (review-data/undo-path lipas-id)
+                        ptv-review/record-review-writes (get-in db path) writes)
           ;; Taking another of PTV's values decides the row by itself (the
           ;; edit holds it). Lipas's own value, which PTV also has, leaves
           ;; the edit as it was: that is keeping Lipas's version.
@@ -1857,14 +1872,23 @@
            [:dispatch [::review-take :ptv-tool lipas-id rows side]])}))
 
 (rf/reg-event-fx ::review-reset
-  ;; Back to the saved version of every row, nothing decided.
-  (fn [_ [_ target lipas-id rows]]
-    {:fx [[:dispatch [::review-take target lipas-id rows :lipas]]
-          [:dispatch [::forget-review-choices lipas-id]]]}))
+  ;; "Kumoa valinnat": the choices made in the review are forgotten, and
+  ;; what they wrote into the edit is taken back, where the user hasn't
+  ;; typed over it since. Text the user wrote stays.
+  (fn [{:keys [db]} [_ target lipas-id]]
+    (let [path (draft-path db target lipas-id)
+          writes (ptv-review/undo-review-writes (get-in db (review-data/undo-path lipas-id))
+                                                (get-in db path))
+          db (forget-choices db lipas-id)]
+      (case target
+        :ptv-tool {:db (update-in db path ptv-review/apply-review-writes writes)}
+        :site-form {:db db
+                    :fx (when (seq writes)
+                          [[:dispatch [:lipas.ui.sports-sites.events/edit-fields lipas-id writes]]])}))))
 
 (rf/reg-event-db ::forget-review-choices
-  (fn [db [_ lipas-id]]
-    (assoc-in db (review-data/choices-path lipas-id) {})))
+  (fn [db [_ id]]
+    (forget-choices db id)))
 
 (rf/reg-event-db ::set-review-open
   (fn [db [_ lipas-id open?]]
@@ -2134,26 +2158,47 @@
   ;; without bases every edit reads as Lipas's: no conflicts can be told
   (fn [db _] db))
 
+(defn- service-edit-path
+  "Where a service's edit (its unsaved texts, {field {locale text}}) lives."
+  [org-id edit-key]
+  [:ptv :org org-id :data :service-candidates edit-key])
+
+(defn- assoc-service-texts
+  "A service's edit with `writes` ({[field locale] text}) made."
+  [edit writes]
+  (reduce-kv assoc-in edit writes))
+
 (rf/reg-event-fx ::service-review-take
   ;; A service's edit (its unsaved texts, at `edit-key`) holding `side`'s
   ;; version of each of `rows`: PTV's text replaces the edit's, or the
   ;; user's own edit is kept, which is recorded against PTV's text.
   (fn [{:keys [db]} [_ org-id edit-key rows side]]
-    (let [path [:ptv :org org-id :data :service-candidates edit-key]
-          db (update-in db (review-data/choices-path edit-key)
-                        (fn [choices]
-                          (reduce (fn [choices row]
-                                    (if (= :lipas side)
-                                      (assoc choices (:key row) (ptv-review/service-kept-choice row))
-                                      (dissoc choices (:key row))))
-                                  choices
-                                  rows)))]
-      {:db (if (= :ptv side)
-             (reduce (fn [db {:keys [field locale ptv]}]
-                       (assoc-in db (conj path field locale) ptv))
-                     db
-                     rows)
-             db)})))
+    (let [path (service-edit-path org-id edit-key)
+          ;; {[field locale] text}: PTV's texts into the edit
+          writes (when (= :ptv side)
+                   (into {} (for [{:keys [field locale ptv]} rows] [[field locale] ptv])))
+          db (-> db
+                 (update-in (review-data/choices-path edit-key)
+                            (fn [choices]
+                              (reduce (fn [choices row]
+                                        (if (= :lipas side)
+                                          (assoc choices (:key row) (ptv-review/service-kept-choice row))
+                                          (dissoc choices (:key row))))
+                                      choices
+                                      rows)))
+                 (update-in (review-data/undo-path edit-key)
+                            ptv-review/record-review-writes (get-in db path) writes))]
+      {:db (update-in db path assoc-service-texts writes)})))
+
+(rf/reg-event-db ::service-review-reset
+  ;; "Kumoa valinnat" for a service, as ::review-reset for a site.
+  (fn [db [_ org-id edit-key]]
+    (let [path (service-edit-path org-id edit-key)
+          writes (ptv-review/undo-review-writes (get-in db (review-data/undo-path edit-key))
+                                                (get-in db path))]
+      (-> db
+          (forget-choices edit-key)
+          (update-in path assoc-service-texts writes)))))
 
 ;;; Sites waiting to be archived in PTV (D2) ;;;
 
