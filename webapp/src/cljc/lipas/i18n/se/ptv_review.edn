@@ -6,6 +6,8 @@
  :bar-lipas-only "Synkroniseringen uppdaterar {1} uppgifter i PTV."
  :removes-version "Synkroniseringen tar dessutom bort den {1} språkversionen."
  :removes-versions "Synkroniseringen tar dessutom bort de {1} språkversionerna."
+ :bar-removes-version "Synkroniseringen tar bort den {1} språkversionen från PTV."
+ :bar-removes-versions "Synkroniseringen tar bort de {1} språkversionerna från PTV."
  :and "och"
  :synced-at "Senast synkroniserad {1}"
  :modified-in-ptv-at "ändrad i PTV {1}"
@@ -28,6 +30,7 @@
  :origin-first-link "Skiljer sig"
  :origin-language-added "Ny språkversion"
  :origin-language-removed "Tas bort från PTV"
+ :origin-language-kept "Behålls"
  :origin-info "Information"
  :choose-before-sync "Välj före synkroniseringen"
 
@@ -70,6 +73,7 @@
  :point-not-takeable "Läget kan inte kopieras från PTV. Om läget i PTV är rätt, flytta idrottsplatsen på kartan."
 
  :language-removed "Synkroniseringen tar bort den {1} språkversionen från PTV: namnet, sammanfattningen och beskrivningen."
+ :language-kept "{1} språkversionen behålls i PTV, och dess texter kopieras till LIPAS."
  :language-enable-hint "{1} används inte av er organisation i LIPAS. Om du vill behålla språkversionen, be LIPAS-stödet att ta språket i bruk (lipasinfo@jyu.fi) före synkroniseringen. Du kan också kopiera texterna härifrån."
  :show-removed-texts "Visa texterna som tas bort"
  :take-ptv-texts "Ta PTV:s texter"

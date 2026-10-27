@@ -73,10 +73,13 @@
       (empty-value tr))))
 
 (defn- origin-chip
-  [tr {:keys [origin language-added? kind]}]
+  [tr {:keys [origin language-added? kind current]}]
   (let [[label color] (cond
                         language-added? [(tr :ptv.review/origin-language-added) "info"]
-                        (= :languages kind) [(tr :ptv.review/origin-language-removed) "warning"]
+                        ;; kept with PTV's texts taken, or removed
+                        (= :languages kind) (if (= :ptv current)
+                                              [(tr :ptv.review/origin-language-kept) "success"]
+                                              [(tr :ptv.review/origin-language-removed) "warning"])
                         (contains? ptv-review/info-kinds kind) [(tr :ptv.review/origin-info) "default"]
                         :else (case origin
                                 :ptv [(tr :ptv.review/origin-ptv) "warning"]
@@ -436,12 +439,15 @@
   [{:keys [tr row on-take can-take? org-langs read-only?]}]
   (r/with-let [texts-open? (r/atom false)]
     (let [{:keys [language locale texts current]} row
+          kept? (= :ptv current)
           enabled? (and locale (contains? (set org-langs) (name locale)))
           lang-name (review-data/language-name tr language)]
       [:> Stack {:spacing 1}
        [:> Typography {:variant "body2" :sx body}
-        (tr :ptv.review/language-removed (review-data/language-adjective tr language false))]
-       (when (seq texts)
+        (if kept?
+          (tr :ptv.review/language-kept (review-data/language-adjective tr language true))
+          (tr :ptv.review/language-removed (review-data/language-adjective tr language false)))]
+       (when (and (seq texts) (not kept?))
          [:> Stack {:spacing 0.5}
           [:> Button {:size "small" :variant "text" :color "inherit"
                       :aria-expanded @texts-open?
@@ -466,8 +472,8 @@
          [:> Stack {:spacing 0.5}
           [choice-button {:label (tr :ptv.review/take-ptv-texts)
                           :subject lang-name
-                          :chosen? (= :ptv current)
-                          :on-click #(on-take [row] (if (= :ptv current) :lipas :ptv))}]
+                          :chosen? kept?
+                          :on-click #(on-take [row] (if kept? :lipas :ptv))}]
           (caption (tr :ptv.review/take-ptv-texts-hint lang-name))]
 
          :else
@@ -571,24 +577,47 @@
     :languages [language-row props]
     nil))
 
+(defn- focus-ref
+  "A ref moving the focus to its element, or to the first button in it,
+   when `focus-row` holds `target`, once: a row that collapses or opens
+   unmounts the button that had the focus."
+  [focus-row target]
+  (fn [el]
+    (when (and el (= target @focus-row))
+      (reset! focus-row nil)
+      (some-> (if (= "BUTTON" (.-tagName el)) el (.querySelector el "button"))
+              .focus))))
+
 (defn- review-row
   "A row of ②: its field, who changed it and its versions. A decided row
-   collapses to one line, which [Muuta] opens again."
-  [{:keys [tr row choices read-only? expanded on-expand] :as props}]
-  (let [required? (ptv-review/review-choice-required? row)
+   collapses to one line, which [Muuta] opens again; the focus follows."
+  [{:keys [tr row choices read-only? expanded on-expand focus-row on-take on-take-value]
+    :as props}]
+  (let [k (:key row)
+        required? (ptv-review/review-choice-required? row)
         decided? (ptv-review/review-decided? choices row)
-        open? (and (not read-only?) required? (not decided?))]
-    (if (and required? decided? (not read-only?) (not (contains? expanded (:key row))))
+        open? (and (not read-only?) required? (not decided?))
+        ;; a row opened with [Muuta] stays open
+        collapsing (fn [f]
+                     (if (contains? expanded k)
+                       f
+                       (fn [& args]
+                         (reset! focus-row [k :decided])
+                         (apply f args))))]
+    (if (and required? decided? (not read-only?) (not (contains? expanded k)))
       [:> Stack {:direction "row" :spacing 1 :alignItems "center" :sx #js {:py 0.5}}
        [:> Icon {:fontSize "small" :color "success"} "check"]
        [:> Typography {:variant "body2" :sx (clj->js {:fontWeight 400 :flex 1})}
         (decided-text tr row choices)]
        [:> Button {:size "small" :variant "text"
+                   :ref (focus-ref focus-row [k :decided])
                    :sx #js {:textTransform "none"}
                    :aria-label (str (tr :ptv.review/change) ": " (review-data/field-label tr row))
-                   :on-click #(on-expand (:key row))}
+                   :on-click #(do (reset! focus-row [k :opened])
+                                  (on-expand k))}
         (tr :ptv.review/change)]]
       [:> Paper {:variant "outlined"
+                 :ref (focus-ref focus-row [k :opened])
                  :sx #js {:p 1.5
                           :bgcolor (when (= :both (:origin row)) "rgba(237, 108, 2, 0.06)")}}
        [:> Stack {:spacing 1}
@@ -599,7 +628,9 @@
          (when open?
            [:> Typography {:variant "caption" :color "warning.dark"}
             (tr :ptv.review/choose-before-sync)])]
-        [row-body props]]])))
+        [row-body (cond-> props
+                    on-take (assoc :on-take (collapsing on-take))
+                    on-take-value (assoc :on-take-value (collapsing on-take-value)))]]])))
 
 (defn- group-title
   [tr group]
@@ -765,12 +796,15 @@
    (tr (if open? :ptv.review/hide :ptv.review/show))])
 
 (defn- removals-text
-  "\"ruotsinkielisen kieliversion\" for the language versions a sync
-   removes; nil when none."
-  [tr languages]
+  "\"Lisäksi synkronointi poistaa ruotsinkielisen kieliversion.\" for the
+   language versions a sync removes, without \"Lisäksi\" when `only?`;
+   nil when none."
+  [tr languages only?]
   (when (seq languages)
     (let [names (map #(review-data/language-adjective tr (:language %) false) languages)]
-      (tr (if (next names) :ptv.review/removes-versions :ptv.review/removes-version)
+      (tr (if (next names)
+            (if only? :ptv.review/bar-removes-versions :ptv.review/removes-versions)
+            (if only? :ptv.review/bar-removes-version :ptv.review/removes-version))
           (str/join (str " " (tr :ptv.review/and) " ") names)))))
 
 (defn- ptv-date
@@ -784,8 +818,10 @@
    who changed what and when (D7)."
   [{:keys [tr review rows required open languages open? on-toggle details-id]}]
   (let [{:keys [base? first-link? evidence? last-sync ptv-modified]} review
-        changes (count (remove #(= :ptv (:current %)) rows))
-        removes (removals-text tr languages)
+        ;; a language version is told apart: removed, or kept with PTV's
+        ;; texts taken
+        changes (count (remove #(or (= :ptv (:current %)) (= :languages (:kind %))) rows))
+        taken? (some #(= :ptv (:current %)) rows)
         [severity text] (cond
                           (seq open)
                           ["warning" (tr (cond
@@ -794,20 +830,24 @@
                                            :else :ptv.review/bar-open)
                                          (count required))]
 
-                          (seq required)
+                          (or (seq required) taken?)
                           ["success" (if (pos? changes)
                                        (tr :ptv.review/bar-decided changes)
                                        (tr :ptv.review/bar-decided-none))]
 
-                          :else
-                          ["info" (tr :ptv.review/bar-lipas-only changes)])
+                          (pos? changes)
+                          ["info" (tr :ptv.review/bar-lipas-only changes)]
+
+                          ;; only language versions removed
+                          :else ["info" nil])
+        removes (removals-text tr languages (nil? text))
         dates (remove nil? [(when last-sync
                               (tr :ptv.review/synced-at (utils/->human-date-time-at-user-tz last-sync)))
                             (when (and evidence? base? ptv-modified)
                               (tr :ptv.review/modified-in-ptv-at (ptv-date ptv-modified)))])]
     [:> Alert {:severity severity :variant "outlined"}
      [:> AlertTitle {:sx #js {:mb 0.5}}
-      (if removes (str text " " removes) text)]
+      (str/join " " (remove nil? [text removes]))]
      (when (seq dates)
        [:> Typography {:variant "body2" :color "text.secondary" :sx body}
         (str/join " · " dates)])
@@ -848,6 +888,9 @@
                    {:slot field :url url}
    - :on-reset     (fn []) \"Kumoa valinnat\": the choices forgotten, and what
                    they wrote into the edit taken back (text the user wrote stays)
+   - :written?     whether the choices wrote into the edit
+                   (review-data/undo-path): with a choice, what shows
+                   \"Kumoa valinnat\"
    - :rights       {:site-editor? :ptv-manager?}: who may take what
                    (review-data/takeable?)
    - :org-langs    the org's PTV languages (LIPAS codes): a language
@@ -864,9 +907,12 @@
                    mode: the choices go into an edit); :footer says how
                    to make them
    Shows nothing while there is nothing to review and no notice."
-  [{:keys [id tr review choices open? on-toggle on-take on-take-value on-reset
+  [{:keys [id tr review choices open? on-toggle on-take on-take-value on-reset written?
            rights org-langs notices site-tab first-open-id footer stacked? read-only?]}]
-  (r/with-let [expanded (r/atom #{})]
+  (r/with-let [expanded (r/atom #{})
+               ;; [row-key :decided/:opened] while a row collapses or
+               ;; opens, :first-open while the choices are undone
+               focus-row (r/atom nil)]
     (let [{:keys [rows matching services]} review]
       (when (or (seq rows) (seq notices))
         (let [can-take? #(review-data/takeable? rights %)
@@ -878,14 +924,16 @@
                                    rows)
               from-lipas (remove (set in-decisions) rows)
               first-open (first open)
+              ;; read here: props are made in lazy seqs, where a deref isn't tracked
+              expanded-keys @expanded
               decided-count (- (count required) (count open))
               takeable (filter #(and (can-take? %) (ptv-review/takeable-in-bulk? %)) required)
               ;; a choice to take back: recorded (one made against a PTV
-              ;; value that has since changed no longer counts), or PTV's
-              ;; version taken, also a language version's texts
-              touched? (some #(or (ptv-review/review-choice choices %)
-                                  (= :ptv (:current %)))
-                             rows)
+              ;; value that has since changed no longer counts), or a
+              ;; version taken into the edit. Not PTV's version that the
+              ;; edit holds otherwise, e.g. connections a first link keeps.
+              touched? (or written?
+                           (some #(ptv-review/review-choice choices %) rows))
               details-id (some-> id (str "-details"))
               props (fn [row]
                       {:tr tr :row row :choices choices :on-take on-take
@@ -893,9 +941,19 @@
                        :org-langs org-langs :stacked? stacked? :read-only? read-only?
                        :site-tab site-tab
                        :first-open-id (when (= row first-open) first-open-id)
-                       :expanded @expanded
-                       :on-expand #(swap! expanded conj %)})]
-          [:> Stack {:id id :spacing 1}
+                       :expanded expanded-keys
+                       :on-expand #(swap! expanded conj %)
+                       :focus-row focus-row})]
+          [:> Stack {:id id :spacing 1
+                     ;; "Kumoa valinnat" goes with the choices: the focus
+                     ;; goes to the first row to choose again, or the first
+                     ;; choice, once they are gone
+                     :ref (fn [el]
+                            (when (and el (= :first-open @focus-row) (not touched?))
+                              (when-let [b (or (some-> first-open-id js/document.getElementById)
+                                               (.querySelector el "button[aria-pressed]"))]
+                                (reset! focus-row nil)
+                                (.focus b))))}
            (when (seq rows)
              [bar {:tr tr :review review :rows rows :required required :open open
                    :languages languages :open? open? :on-toggle on-toggle
@@ -955,17 +1013,20 @@
                   (when (next takeable)
                     [:> Button {:size "small" :variant "outlined"
                                 :sx #js {:textTransform "none"}
-                                :on-click #(on-take takeable :ptv)}
+                                :on-click #(do (reset! focus-row nil)
+                                               (on-take takeable :ptv))}
                      (tr :ptv.review/take-all-ptv)])
                   (when (next required)
                     [:> Button {:size "small" :variant "outlined"
                                 :sx #js {:textTransform "none"}
-                                :on-click #(on-take required :lipas)}
+                                :on-click #(do (reset! focus-row nil)
+                                               (on-take required :lipas))}
                      (tr :ptv.review/keep-all-lipas)])
                   (when touched?
                     [:> Button {:size "small" :variant "text"
                                 :sx #js {:textTransform "none"}
                                 :on-click #(do (reset! expanded #{})
+                                               (reset! focus-row :first-open)
                                                (on-reset))}
                      (tr :ptv.review/clear-choices)])])
 
@@ -974,6 +1035,11 @@
                 [:> Stack {:spacing 1}
                  (when-not read-only?
                    [outcome-lines tr (remove #(contains? ptv-review/info-kinds (:kind %)) rows) choices])
+                 (when-let [kept (and (not read-only?)
+                                      (seq (filter #(and (= :languages (:kind %)) (= :ptv (:current %)))
+                                                   rows)))]
+                   [:> Typography {:variant "body2" :sx body}
+                    (tr :ptv.review/to-lipas (labels tr kept))])
                  (when (and (not read-only?) (seq languages))
                    [:> Typography {:variant "body2" :sx body}
                     (tr :ptv.review/outcome-removes

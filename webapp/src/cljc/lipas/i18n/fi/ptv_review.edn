@@ -6,6 +6,8 @@
  :bar-lipas-only "Synkronointi päivittää PTV:hen {1} tietoa."
  :removes-version "Lisäksi synkronointi poistaa {1} kieliversion."
  :removes-versions "Lisäksi synkronointi poistaa {1} kieliversiot."
+ :bar-removes-version "Synkronointi poistaa PTV:stä {1} kieliversion."
+ :bar-removes-versions "Synkronointi poistaa PTV:stä {1} kieliversiot."
  :and "ja"
  :synced-at "Synkronoitu viimeksi {1}"
  :modified-in-ptv-at "muokattu PTV:ssä {1}"
@@ -28,6 +30,7 @@
  :origin-first-link "Eroaa"
  :origin-language-added "Uusi kieliversio"
  :origin-language-removed "Poistuu PTV:stä"
+ :origin-language-kept "Säilyy"
  :origin-info "Tieto"
  :choose-before-sync "Valitse ennen synkronointia"
 
@@ -70,6 +73,7 @@
  :point-not-takeable "Sijaintia ei voi kopioida PTV:stä. Jos PTV:n sijainti on oikea, siirrä liikuntapaikkaa kartalla."
 
  :language-removed "Synkronointi poistaa PTV:stä {1} kieliversion: nimen, tiivistelmän ja kuvauksen."
+ :language-kept "{1} kieliversio säilyy PTV:ssä, ja sen tekstit kopioidaan Lipakseen."
  :language-enable-hint "{1} ei ole käytössä organisaatiollanne Lipaksessa. Jos haluat säilyttää kieliversion, pyydä Lipaksen tukea ottamaan kieli käyttöön (lipasinfo@jyu.fi) ennen synkronointia. Voit myös kopioida tekstit talteen tästä."
  :show-removed-texts "Näytä poistuvat tekstit"
  :take-ptv-texts "Ota PTV:n tekstit"

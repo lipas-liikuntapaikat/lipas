@@ -6,6 +6,8 @@
  :bar-lipas-only "The sync updates {1} items in PTV."
  :removes-version "The sync also removes the {1} language version."
  :removes-versions "The sync also removes the {1} language versions."
+ :bar-removes-version "The sync removes the {1} language version from PTV."
+ :bar-removes-versions "The sync removes the {1} language versions from PTV."
  :and "and"
  :synced-at "Last synced {1}"
  :modified-in-ptv-at "changed in PTV {1}"
@@ -28,6 +30,7 @@
  :origin-first-link "Differs"
  :origin-language-added "New language version"
  :origin-language-removed "Removed from PTV"
+ :origin-language-kept "Kept"
  :origin-info "Information"
  :choose-before-sync "Choose before syncing"
 
@@ -70,6 +73,7 @@
  :point-not-takeable "The location can't be copied from PTV. If PTV's location is right, move the facility on the map."
 
  :language-removed "The sync removes the {1} language version from PTV: its name, summary and description."
+ :language-kept "{1} language version stays in PTV, and its texts are copied into LIPAS."
  :language-enable-hint "{1} isn't enabled for your organisation in LIPAS. To keep the language version, ask LIPAS support to enable the language (lipasinfo@jyu.fi) before syncing. You can also copy the texts from here."
  :show-removed-texts "Show the texts that are removed"
  :take-ptv-texts "Take the PTV texts"

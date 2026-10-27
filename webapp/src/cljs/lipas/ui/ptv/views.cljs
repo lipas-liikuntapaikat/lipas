@@ -578,6 +578,7 @@
       :on-take (fn [rows side] (==> [::events/review-take :ptv-tool lipas-id rows side]))
       :on-take-value (fn [row value] (==> [::events/review-take-value :ptv-tool lipas-id row value]))
       :on-reset #(==> [::events/review-reset :ptv-tool lipas-id])
+      :written? (<== [::subs/review-written? lipas-id])
       ;; the tool is for PTV managers; taking a site's own data (its name,
       ;; contacts, address) changes the site, which needs the right to edit it
       :rights {:ptv-manager? true
@@ -2554,6 +2555,7 @@
               :on-toggle #(==> [::events/set-review-open edit-key (not open?)])
               :on-take (fn [rows side] (==> [::events/service-review-take org-id edit-key rows side]))
               :on-reset #(==> [::events/service-review-reset org-id edit-key])
+              :written? (<== [::subs/review-written? edit-key])
               :rights {:ptv-manager? true}
               :org-langs org-languages
               :notices (when modified?

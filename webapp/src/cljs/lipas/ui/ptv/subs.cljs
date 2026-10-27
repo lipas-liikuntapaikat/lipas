@@ -594,6 +594,13 @@
   (fn [ptv [_ lipas-id]]
     (get-in ptv [:review :choices lipas-id])))
 
+(rf/reg-sub ::review-written?
+  ;; Whether the choices made in a review (a site's, or a service's by its
+  ;; edit key) wrote into the edit: something "Kumoa valinnat" takes back
+  :<- [::ptv]
+  (fn [ptv [_ id]]
+    (boolean (seq (get-in ptv [:review :undo id])))))
+
 (rf/reg-sub ::editable-site-ids
   ;; lipas-ids of the org's sites the user may edit as such, not just their
   ;; PTV data: taking PTV's name for a site renames it in Lipas.
