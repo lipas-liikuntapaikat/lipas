@@ -91,13 +91,25 @@ municipality is purely a role assignment — no code changes.
 
 ### Assigning the role
 
-Grant `:images-manager` from the admin role UI. Required context:
+The role can be granted two ways, and the scope depends on which:
 
-- `city-code` — e.g. `430` for Loimaa.
+- **Directly** from the admin role UI (Users → "Suorat käyttöoikeudet"). The
+  grant covers a city:
+  - `city-code` (required) — e.g. `430` for Loimaa.
+  - `type-code` (optional) — further narrow to specific sports-site types.
+- **Through an organisation**: a LIPAS admin adds `images-manager` to a
+  template in the org's role catalog (Käyttöoikeudet tab), and the org's
+  admins assign that template to members. The grant covers only the sites
+  under the org's management — those it owns and those another org has
+  granted it edit rights on — because the role is org-scoped
+  (`lipas.roles/org-scoped-roles`): the org's id is attached at login. A
+  `city-code` or `type-code` in the template is optional and narrows it
+  further. The grant is projected at login, so a member sees it after their
+  next login.
 
-Optional:
-
-- `type-code` — further narrow to specific sports-site types.
+Image links on other sites (e.g. association-owned facilities in the same
+city) are not reachable through an org. A LIPAS admin grants those directly,
+which is how Loimaa's pre-existing pilot user keeps editing them.
 
 ## Public API
 
