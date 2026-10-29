@@ -48,7 +48,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          INSTALLED=$("${RUNNER_WORKSPACE%/_work/*}/bin/Runner.Listener" --version)
+          # Where the myoung34 image installs the runner. Jobs run elsewhere
+          # (/_work/<runner name>), so this can't be derived from the workspace.
+          INSTALLED=$(/actions-runner/bin/Runner.Listener --version)
           LATEST=$(curl -fsS --max-time 20 -H "Authorization: Bearer $GH_TOKEN" \
                      https://api.github.com/repos/actions/runner/releases/latest \
                    | jq -r .tag_name) || LATEST=
