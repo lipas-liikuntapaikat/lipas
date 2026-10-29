@@ -530,6 +530,10 @@
                    (catch Exception e (:type (ex-data e))))]
       (is (= :invalid-catalog ex))))
 
+  (testing "An org-scoped role needs no :city-code (the org bounds it)"
+    (let [org-id (catalog-org! {:images {:roles [{:role "images-manager"}]}})]
+      (is (contains? (:role-templates (backend-org/get-org (test-db) org-id)) :images))))
+
   (testing "A present-but-empty context key is allowed (matches nothing; admin fills it later)"
     (let [org-id (catalog-org! {:ptv {:roles [{:role "ptv-manager" :city-code []}]}})]
       (is (contains? (:role-templates (backend-org/get-org (test-db) org-id)) :ptv)))))
@@ -2065,16 +2069,21 @@
 ;;; org the actor holds :site/create-edit on. Site-level edit perms are still
 ;;; enforced in core; here we isolate the ownership-claim boundary.
 
-(defn- editor-of-org!
-  "Make a user an org-editor of `org-id` (member assigned the :editor template)
-  and return a token carrying the derived roles, exactly as login bakes them."
-  [org-id]
+(defn- member-of-org!
+  "Make a user a member of `org-id` holding the catalog templates `roles` and
+  return a token carrying the derived roles, exactly as login bakes them."
+  [org-id roles]
   (let [user (test-utils/gen-regular-user :db-component (test-db))]
     (backend-org/add-member! (test-db) org-id (:id user)
-                             {:roles ["editor"]} nil)
+                             {:roles roles} nil)
     (jwt/create-token
       (assoc-in user [:permissions :roles]
                 (backend-org/derive-user-org-roles (test-db) (:id user))))))
+
+(defn- editor-of-org!
+  "Make a user an org-editor of `org-id` (member assigned the :editor template)."
+  [org-id]
+  (member-of-org! org-id ["editor"]))
 
 (defn- post-site [token site]
   (test-app (-> (mock/request :post "/api/sports-sites")
@@ -2242,6 +2251,49 @@
             resp  (post-site cm-91 (assoc-in (fetch) [:location :city :city-code] 91))]
         (is (= 403 (:status resp)))
         (is (= 889 (-> (fetch) :location :city :city-code)) "site was not claimed")))))
+
+(deftest catalog-images-manager-test
+  ;; Image-link editing granted through an org catalog covers only the org's own
+  ;; sites (owner + edit-grants); images elsewhere need a direct grant from a
+  ;; LIPAS admin, which stays city-scoped (handler-test).
+  (let [org-id    (catalog-org! {:editor    {:label "Muokkaaja" :roles [{:role "org-editor"}]}
+                                 :images    {:label "Kuvat" :roles [{:role "images-manager"}]}
+                                 :images-91 {:label "Kuvat 91"
+                                             :roles [{:role "images-manager" :city-code [91]}]}})
+        other-org (:id (first (create-test-orgs)))
+        member    (member-of-org! org-id ["images"])
+        member-91 (member-of-org! org-id ["images-91"])
+        editor    (member-of-org! org-id ["editor"])
+        ;; a distinct URL per save, so every post really changes :images
+        images    (fn [tag] [{:url       (str "https://example.fi/img/" tag ".jpg")
+                              :alt-text  {:fi "alt"}
+                              :copyright {:fi "© 2026 Example"}}])
+        fetch     #(assoc (core/get-sports-site (test-db) %) :event-date (utils/timestamp))
+        owned     (:lipas-id (seed-site-in-city! 889 {:owner-org-id (str org-id)
+                                                      :owner        (owner-enum-for org-id)}))
+        granted   (:lipas-id (seed-site-in-city! 889 {:owner-org-id (str other-org)
+                                                      :owner        (owner-enum-for other-org)
+                                                      :edit-grants  [(str org-id)]}))
+        unmanaged (:lipas-id (seed-site-in-city! 889 {}))]
+
+    (testing "a member holding the images template may change images on the org's own site"
+      (is (= 201 (:status (post-site member (assoc (fetch owned) :images (images "owned"))))))
+      (is (= (images "owned") (:images (core/get-sports-site (test-db) owned)))))
+
+    (testing "...and on a site another org has granted it"
+      (is (= 201 (:status (post-site member (assoc (fetch granted) :images (images "granted")))))))
+
+    (testing "...but not on a site in the same city that the org doesn't manage"
+      (is (= 403 (:status (post-site member (assoc (fetch unmanaged) :images (images "unmanaged")))))))
+
+    (testing "the images template grants no other edits"
+      (is (= 403 (:status (post-site member (assoc (fetch owned) :name "Renamed"))))))
+
+    (testing "an optional city narrows the grant further"
+      (is (= 403 (:status (post-site member-91 (assoc (fetch owned) :images (images "city-91")))))))
+
+    (testing "an org-editor without the images template cannot change images"
+      (is (= 403 (:status (post-site editor (assoc (fetch owned) :images (images "editor")))))))))
 
 (deftest save-preserves-ownership-fields-when-absent-test
   ;; F6: a body that OMITS :owner-org-id / :edit-grants is a pure content edit —

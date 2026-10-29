@@ -686,6 +686,7 @@
             {:spec spec
              :roles catalog-roles
              :hide-context-keys #{:org-id}
+             :org-catalog? true
              :on-role-change (fn [role] (rf/dispatch [::events/set-template-role tkey idx role]))
              :on-context-change (fn [k vals] (rf/dispatch [::events/set-template-role-context tkey idx k vals]))
              :tr tr}]]

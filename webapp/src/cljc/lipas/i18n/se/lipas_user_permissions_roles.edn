@@ -40,11 +40,13 @@
   :ptv-manager "Hantering av PTV-uppgifter",
   :org-editor "Redigering av denna organisations anläggningar"},
  :privileges-label "Innehåller behörigheter:",
+ :org-scoped-note "Gäller endast anläggningar som organisationen förvaltar.",
  :privilege-descriptions
  {:site.save-api "Spara delvisa ändringar (t.ex. aktiviteter, innebandy, ITRS)",
   :site.create-edit "Tillägg och redigering av anläggningar",
   :site.view "Visning av anläggningsuppgifter",
   :site.edit-any-status "Redigering även av anläggningar som tagits ur bruk",
+  :site.edit-images "Redigering av anläggningarnas bildlänkar",
   :activity.view "Visning av frilufts- och rekreationsuppgifter (UTP)",
   :activity.edit "Redigering av frilufts- och rekreationsuppgifter (UTP)",
   :loi.create-edit "Skapande och redigering av övriga objekt",
