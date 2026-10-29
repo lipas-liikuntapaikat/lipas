@@ -139,6 +139,24 @@ SELECT lipas_id, document ->> 'name' AS name
 FROM sports_site_current
 WHERE document #> '{ptv,service-channel-ids}' @> to_jsonb(:service_channel_id ::text)
 
+-- :name get-ptv-sync-bases
+-- :command :query
+-- :result :many
+-- :doc For each given site with a PTV sync, the revision that sync wrote: the
+-- :doc first one stored that carries the current revision's [:ptv :last-sync].
+-- :doc Every sync writes a revision with a fresh last-sync and later revisions
+-- :doc copy it forward, so the earliest holding it is the sync's own. Matched
+-- :doc on the stored value, not on event_date, so no timestamp format or
+-- :doc precision can make it miss.
+SELECT DISTINCT ON (s.lipas_id) s.lipas_id, s.document
+FROM sports_site s
+JOIN sports_site_current c USING (lipas_id)
+WHERE s.lipas_id IN (:v*:lipas_ids)
+  AND s.status = 'published'
+  AND c.document #>> '{ptv,last-sync}' IS NOT NULL
+  AND s.document #>> '{ptv,last-sync}' = c.document #>> '{ptv,last-sync}'
+ORDER BY s.lipas_id, s.created_at, s.event_date
+
 -- :name get-ptv-adoption
 -- :command :query
 -- :result :many
@@ -211,3 +229,30 @@ WHERE lipas_id = :lipas_id AND event_date > :event_date ::timestamptz
 SELECT *
 FROM sports_site_current
 WHERE city_code = :city_code
+
+-- :name get-ptv-language-usage
+-- :command :query
+-- :result :many
+-- :doc For a PTV organisation, how many of its service locations published
+-- :doc in PTV each language version is in (LIPAS codes), as their last sync
+-- :doc stored them: what a sync removes when the org stops publishing it.
+SELECT lang, count(*) AS n
+FROM sports_site_current s,
+     jsonb_array_elements_text(
+       CASE WHEN jsonb_typeof(s.document #> '{ptv,languages}') = 'array'
+            THEN s.document #> '{ptv,languages}'
+            ELSE '[]'::jsonb
+       END) AS lang
+WHERE s.document #>> '{ptv,org-id}' = :ptv_org_id
+  AND s.document #>> '{ptv,publishing-status}' = 'Published'
+GROUP BY lang
+
+-- :name get-ptv-published-sites
+-- :command :query
+-- :result :many
+-- :doc The current revisions of a PTV organisation's sites whose service
+-- :doc location is published in PTV, as their last sync stored it.
+SELECT *
+FROM sports_site_current
+WHERE document #>> '{ptv,org-id}' = :ptv_org_id
+  AND document #>> '{ptv,publishing-status}' = 'Published'

@@ -13,9 +13,6 @@
  :service-channel-archived "Service location archived in PTV",
  :select-service-channel "Select service location",
  :sync-now "Sync now",
- :load-texts-from-ptv "Load texts from PTV",
- :load-texts-from-ptv-tooltip
- "Replace the summary and description with the texts currently in PTV. Unsaved changes will be lost.",
  :refresh-data "Re-fetch all data from PTV",
  :archive-in-ptv "Archive in PTV",
  :archive "Archive",

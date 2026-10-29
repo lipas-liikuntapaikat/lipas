@@ -1,0 +1,172 @@
+{:note
+ "Recorded 2026-10-23 from the PTV test env (Utajärvi): the revision the last sync wrote (->review-base) and the location as PTV returns it afterwards, unchanged in PTV since.",
+ :base
+ {:name "Kirkonkylän uimaranta",
+  :name-localized {},
+  :email "asiointipiste@utajarvi.fi",
+  :phone-number "+358858755700",
+  :www "https://www.utajarvi.fi",
+  :location
+  {:address "Uimarannantie 34",
+   :postal-code "91600",
+   :postal-office "Utajärvi",
+   :city {:city-code 889}},
+  :lipas-id 600093,
+  :ptv
+  {:summary
+   {:fi
+    "Kirkonkylän uimaranta on hiekkapohjainen uimaranta Utajärven keskustassa."},
+   :description
+   {:fi
+    "Uimarannalla on laituri, pukukopit ja lasten uimapaikka. Rannalla ei ole valvontaa. Uimaveden laatu tarkastetaan kesän aikana."},
+   :service-ids ["ea2e945a-21b8-45d3-a8f6-db0758042113"],
+   :service-channel-ids ["5fde958b-9674-4347-b26a-7de18808d8ee"],
+   :languages ["fi"],
+   :last-sync "2026-10-21T14:50:57.117068Z"}},
+ :channel
+ {:addresses
+  [{:type "Location",
+    :subType "Single",
+    :postOfficeBoxAddress nil,
+    :streetAddress
+    {:municipality
+     {:code "889",
+      :name
+      [{:value "Utajärvi", :language "sv"}
+       {:value "Utajärvi", :language "en"}
+       {:value "Utajärvi", :language "fi"}]},
+     :longitude "472513.9431152338",
+     :streetNumber nil,
+     :street
+     [{:value "Uimarannantie 34", :language "fi"}
+      {:value "Uimarannantie 34", :language "sv"}
+      {:value "Uimarannantie 34", :language "en"}
+      {:value "Uimarannantie 34", :language "se"}
+      {:value "Uimarannantie 34", :language "smn"}
+      {:value "Uimarannantie 34", :language "sms"}],
+     :postOffice
+     [{:value "UTAJÄRVI", :language "se"}
+      {:value "UTAJÄRVI", :language "smn"}
+      {:value "UTAJÄRVI", :language "sv"}
+      {:value "UTAJÄRVI", :language "sms"}
+      {:value "UTAJÄRVI", :language "en"}
+      {:value "UTAJÄRVI", :language "fi"}],
+     :postalCode "91600",
+     :additionalInformation [],
+     :latitude "7182593.937179564",
+     :coordinateState "EnteredByUser"},
+    :otherAddress nil,
+    :locationAbroad nil,
+    :entrances [],
+    :country "FI"}],
+  :serviceHours [],
+  :serviceCollections [],
+  :serviceChannelType "ServiceLocation",
+  :ontologyTerms
+  [{:name
+    [{:value "idrottsplatser", :language "sv"}
+     {:value "sports grounds and physical exercise facilities",
+      :language "en"}
+     {:value "liikuntapaikat", :language "fi"}],
+    :code nil,
+    :ontologyType "JUPO",
+    :uri "http://www.yso.fi/onto/koko/p10416",
+    :parentId nil,
+    :parentUri "http://www.yso.fi/onto/koko/p11148"}
+   {:name
+    [{:value "siminrättningar", :language "sv"}
+     {:value "open-air bathing pools", :language "en"}
+     {:value "uimalat", :language "fi"}],
+    :code nil,
+    :ontologyType "JUPO",
+    :uri "http://www.yso.fi/onto/koko/p13459",
+    :parentId nil,
+    :parentUri
+    "http://www.yso.fi/onto/koko/p75672;http://www.yso.fi/onto/koko/p67276"}
+   {:name
+    [{:value "vattenmotion", :language "sv"}
+     {:value "water exercise", :language "en"}
+     {:value "vesiliikunta", :language "fi"}],
+    :code nil,
+    :ontologyType "YSO",
+    :uri "http://www.yso.fi/onto/koko/p18621",
+    :parentId nil,
+    :parentUri "http://www.yso.fi/onto/koko/p30612"}
+   {:name
+    [{:value nil, :language "sv"}
+     {:value nil, :language "en"}
+     {:value "maauimalat", :language "fi"}],
+    :code nil,
+    :ontologyType "KOKO",
+    :uri "http://www.yso.fi/onto/koko/p76123",
+    :parentId nil,
+    :parentUri "http://www.yso.fi/onto/koko/p13459"}
+   {:name
+    [{:value "badstränder", :language "sv"}
+     {:value "bathing beaches", :language "en"}
+     {:value "uimarannat", :language "fi"}],
+    :code nil,
+    :ontologyType "JUPO",
+    :uri "http://www.yso.fi/onto/koko/p32279",
+    :parentId nil,
+    :parentUri
+    "http://www.yso.fi/onto/koko/p67276;http://www.yso.fi/onto/koko/p32966;http://www.yso.fi/onto/koko/p33219;http://www.yso.fi/onto/koko/p75672"}],
+  :serviceChannelDescriptions
+  [{:language "fi",
+    :value
+    "Kirkonkylän uimaranta on hiekkapohjainen uimaranta Utajärven keskustassa.",
+    :type "Summary"}
+   {:language "fi",
+    :value
+    "Uimarannalla on laituri, pukukopit ja lasten uimapaikka. Rannalla ei ole valvontaa. Uimaveden laatu tarkastetaan kesän aikana.",
+    :type "Description"}],
+  :phoneNumbers
+  [{:type "Phone",
+    :additionalInformation nil,
+    :serviceChargeType "Chargeable",
+    :chargeDescription nil,
+    :prefixNumber "+358",
+    :isFinnishServiceNumber false,
+    :number "858755700",
+    :language "fi"}],
+  :webPages
+  [{:url "https://www.utajarvi.fi",
+    :value "Liikuntapaikan verkko-osoite",
+    :language "fi"}],
+  :publishingStatus "Published",
+  :modified "2026-10-21T14:50:57.924163",
+  :organizationId "3d1759a2-e47a-4947-9a31-cab1c1e2512b",
+  :oid nil,
+  :serviceChannelNames
+  [{:language "fi", :value "Kirkonkylän uimaranta", :type "Name"}],
+  :id "5fde958b-9674-4347-b26a-7de18808d8ee",
+  :sourceId "lipas-3d1759a2-e47a-4947-9a31-cab1c1e2512b-600093",
+  :displayNameType
+  [{:type "Name", :language "sv"}
+   {:type "Name", :language "en"}
+   {:type "Name", :language "fi"}],
+  :emails [{:value "asiointipiste@utajarvi.fi", :language "fi"}],
+  :languages ["fi"],
+  :responsibleSoteOrganization nil,
+  :areas
+  [{:type "Municipality",
+    :code nil,
+    :name nil,
+    :municipalities
+    [{:code "889",
+      :name
+      [{:value "Utajärvi", :language "sv"}
+       {:value "Utajärvi", :language "en"}
+       {:value "Utajärvi", :language "fi"}]}]}],
+  :services
+  [{:service
+    {:id "ea2e945a-21b8-45d3-a8f6-db0758042113",
+     :name "Maauimalat ja uimarannat"},
+    :serviceChargeType nil,
+    :description [],
+    :extraTypes [],
+    :serviceHours [],
+    :contactDetails nil,
+    :digitalAuthorizations [],
+    :modified "2024-09-03T11:42:11.406005"}],
+  :areaType "LimitedType"}}

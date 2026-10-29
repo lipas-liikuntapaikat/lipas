@@ -9,7 +9,7 @@
             [lipas.backend.org :as backend-org]
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.backend.ptv.integration :as ptv-integration]
-            [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-review :as ptv-review]
             [lipas.data.types :as types]
             [lipas.test-utils :as tu]
             [lipas.utils :as utils]
@@ -398,7 +398,7 @@
                          (is (= 200 (:status resp)))
                          (some #(when (= lipas-id (:lipas-id %)) %) body)))
           sync-status (fn [candidate]
-                        (:sync-status (ptv-data/sports-site->ptv-input
+                        (:sync-status (ptv-review/sports-site->ptv-input
                                         {:types types/all :org-id "test-org-id" :org-langs ["fi"]}
                                         {} {} candidate)))
           before (candidates)
@@ -1249,7 +1249,10 @@
                                  :audit {:summary {:status "changes-requested" :feedback "Korjaa"}}})
           _ (Thread/sleep 1100)
           _ (with-redefs [ptv-integration/update-service
-                          (fn [_ _ data] (assoc data :id svc-id))]
+                          (fn [_ _ data] (assoc data :id svc-id))
+                          ;; the sync reads the service it has a record of
+                          ptv-integration/get-service
+                          (fn [_ _ _] {:id svc-id :sourceId source-id})]
               (test-app (-> (mock/request :post "/api/actions/save-ptv-service")
                             (mock/content-type "application/json")
                             (mock/body (tu/->json {:org-id svc-ptv-org-id
@@ -1270,6 +1273,53 @@
       (is (= "changes-requested" (get-in stored [:summary :status])))
       (is (= "Korjaa" (get-in stored [:summary :feedback])))
       (is (= [stored] (map :audit served))))))
+
+(deftest save-ptv-service-keeps-ptv-entries-without-service-id-test
+  ;; A sync of a LIPAS-created service that doesn't name its PTV id (the
+  ;; wizard, an older browser) still keeps what PTV has that LIPAS never
+  ;; writes: the id comes from LIPAS's own ptv_service record.
+  (let [_org (seed-service-org!)
+        admin (tu/gen-admin-user :db-component (test-db))
+        svc-id (str (java.util.UUID/randomUUID))
+        source-id (str "lipas-" svc-ptv-org-id "-1300")
+        live {:id svc-id
+              :sourceId source-id
+              :serviceNames [{:type "Name" :language "fi" :value "Pallokentät"}
+                             {:type "AlternativeName" :language "fi" :value "Kentät"}]
+              :serviceDescriptions [{:type "Summary" :language "fi" :value "Tiivistelmä"}
+                                    {:type "ChargeTypeAdditionalInfo" :language "fi" :value "Maksu 5 euroa"}]
+              :requirements [{:language "fi" :value "Ikäraja 15 vuotta"}]}
+        put (atom nil)
+        got (atom [])
+        sync! (fn []
+                (with-redefs [ptv-integration/get-service (fn [_ _ id] (swap! got conj id) live)
+                              ptv-integration/update-service (fn [_ _ data]
+                                                               (reset! put data)
+                                                               (assoc data :id svc-id))]
+                  (test-app (-> (mock/request :post "/api/actions/save-ptv-service")
+                                (mock/content-type "application/json")
+                                (mock/body (tu/->json {:org-id svc-ptv-org-id
+                                                       :city-codes [91]
+                                                       :source-id source-id
+                                                       :sub-category-id 1300
+                                                       :languages ["fi"]
+                                                       :summary {:fi "Uusi tiivistelmä"}
+                                                       :description {:fi "Uusi kuvaus"}}))
+                                (tu/token-header (jwt/create-token admin))))))]
+    (testing "a service LIPAS has no record of yet: nothing read, LIPAS's body alone"
+      (is (= 200 (:status (sync!))))
+      (is (empty? @got))
+      (is (not (contains? @put :requirements))))
+
+    (testing "once LIPAS has written it, its record names the service to build on"
+      (is (= 200 (:status (sync!))))
+      (is (= [svc-id] @got))
+      (is (= [{:language "fi" :value "Ikäraja 15 vuotta"}] (:requirements @put)))
+      (is (some #{{:type "AlternativeName" :language "fi" :value "Kentät"}} (:serviceNames @put)))
+      (is (some #{{:type "ChargeTypeAdditionalInfo" :language "fi" :value "Maksu 5 euroa"}}
+                (:serviceDescriptions @put)))
+      (is (some #{{:type "Summary" :language "fi" :value "Uusi tiivistelmä"}}
+                (:serviceDescriptions @put))))))
 
 (comment
   (clojure.test/run-tests *ns*)
