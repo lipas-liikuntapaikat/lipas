@@ -19,12 +19,13 @@ jobs:
     runs-on: [self-hosted, "${{ matrix.host }}"]
     timeout-minutes: 10
     steps:
+      # No `docker system df`: it walks every volume, and the prod MapProxy
+      # tile cache alone holds millions of files (3.5 min in Oct 2026).
       - name: Report runner health
         run: |
           set -uo pipefail
           echo "runner: ${RUNNER_NAME:-unknown} on $(hostname)"
           df -h /
-          docker system df || true
           echo "--- last deploy ---"
           cat /var/lipas/DEPLOYED 2>/dev/null || echo "(no DEPLOYED stamp yet)"
 
@@ -36,4 +37,34 @@ jobs:
           if [ "$USE" -gt 85 ]; then
             echo "::error::Root filesystem ${USE}% full on $(hostname) — clean up before the next deploy"
             exit 1
+          fi
+
+      # Updates come as image bumps (DISABLE_AUTO_UPDATE), and GitHub stops
+      # accepting old runner versions: 2.336 was cut off on 2026-11-05, about
+      # two minor releases after it shipped. Warn one release behind and fail
+      # two behind, so the bump happens weeks before a cutoff.
+      - name: Fail if the runner version is falling behind
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          INSTALLED=$("${RUNNER_WORKSPACE%/_work/*}/bin/Runner.Listener" --version)
+          LATEST=$(curl -fsS --max-time 20 -H "Authorization: Bearer $GH_TOKEN" \
+                     https://api.github.com/repos/actions/runner/releases/latest \
+                   | jq -r .tag_name) || LATEST=
+          LATEST=${LATEST#v}
+          echo "Runner ${INSTALLED}, latest release ${LATEST:-unknown}"
+          if ! [[ $LATEST =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::warning::Could not look up the latest runner release; skipped the version check"
+            exit 0
+          fi
+          IFS=. read -r IMAJ IMIN _ <<< "$INSTALLED"
+          IFS=. read -r LMAJ LMIN _ <<< "$LATEST"
+          BEHIND=$(( (LMAJ * 1000 + LMIN) - (IMAJ * 1000 + IMIN) ))
+          FIX="bump RUNNER_IMAGE_TAG in /opt/lipas-runner/.env (infra/runner/README.md → Upgrade)"
+          if [ "$BEHIND" -ge 2 ]; then
+            echo "::error::${RUNNER_NAME:-runner} runs ${INSTALLED}, latest is ${LATEST}; GitHub will soon refuse it — ${FIX}"
+            exit 1
+          elif [ "$BEHIND" -eq 1 ]; then
+            echo "::warning::${RUNNER_NAME:-runner} runs ${INSTALLED}, latest is ${LATEST}; ${FIX} before it falls two releases behind"
           fi
