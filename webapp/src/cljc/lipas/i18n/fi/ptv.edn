@@ -11,13 +11,11 @@
  :sports-sites-count "liikuntapaikkaa",
  :sports-site-count-singular "liikuntapaikka",
  :synced-to-ptv "Viety PTV:hen",
- :out-of-date "Lipaksessa on uudempia muutoksia kuin PTV:ssä",
- :content-drift "PTV:ssä on eri sisältö kuin Lipaksessa",
- :modified-in-ptv "PTV:ssa julkaisemattomia muutoksia – julkaise tai peru muutokset ensin PTV:ssa ennen synkronointia",
  ;; Titles (rendered bold). Used standalone when there's no actionable detail,
  ;; or paired with one of the body strings below for the full message.
  :sync-failed "Synkronointi PTV:hen epäonnistui",
  :saved-but-sync-failed "Liikuntapaikka tallennettu, mutta PTV-synkronointi epäonnistui",
+ :saving-and-syncing "Tallennetaan ja synkronoidaan PTV:hen… Tämä voi kestää hetken."
  ;; Bodies for the dialog-driven sync flows (PTV dialog wizard / Liikuntapaikat tab).
  :sync-failed-body-ptv-modified "PTV:ssä on julkaisemattomia muutoksia. Julkaise tai peru muutokset PTV:ssä ja yritä uudelleen.",
  :sync-failed-body-invalid-postal-code "Postinumeroa '{1}' ei tunneta PTV:ssä (ei löydy Postin rekisteristä). Korjaa kohteen postinumero (esim. 'Selvitä osoite automaattisesti' -toiminnolla kohteen perustiedoissa), tallenna ja yritä synkronointia uudelleen.",
@@ -37,7 +35,6 @@
  :filter-sync-disabled "Integraatio pois"
  :filter-no-longer-matches "Ei enää vastaa suodatinta"
  :filter-not-synced "Ei vielä viety"
- :filter-out-of-date "Muuttunut"
  :filter-ok "Ajan tasalla"
  :filter-missing-descriptions "Kuvaukset puuttuvat"
  :search-placeholder "Hae nimellä..."
@@ -57,7 +54,6 @@
  :open-in-ptv "Avaa PTV:ssä"
  :open-in-suomi-fi "Avaa suomi.fi:ssä"
  :service-missing-for-type "Liikuntapaikan tyyppi on muuttunut ja uutta tyyppiä vastaava Palvelu puuttuu PTV:stä."
- :type-changed-may-rebind "Liikuntapaikan tyyppi on vaihdettu. Liikuntapaikka liitetään PTV:ssä mahdollisesti toiseen Palveluun vaihdon seurauksena."
  :delete-will-archive "Tämä liikuntapaikka on viety PTV:hen. Poistaminen arkistoi myös PTV-palvelupaikan."
  :error-summary-too-long "Tiivistelmä on liian pitkä (enintään 150 merkkiä)."
  :error-description-too-long "Kuvaus on liian pitkä (enintään 5000 merkkiä)."
@@ -84,10 +80,31 @@
  :step-texts-hint "Kirjoita ne alle tai luo ne tekoälyllä."
  :finish-footer "Liikuntapaikka viedään PTV:hen, kun tallennat."
  :save-needs-texts "Täydennä PTV-välilehdeltä tiivistelmä ja kuvaus, tai kytke PTV-integraatio pois."
- :unpublished-languages-title "Osa PTV:n kieliversioista poistuu synkronoinnissa"
- :unpublished-languages-intro "Seuraava synkronointi poistaa PTV:stä nämä kieliversiot:"
- :unpublished-languages-not-enabled "ei otettu käyttöön integraatiossa. Jos haluat säilyttää kieliversion, ota yhteyttä lipasinfo@jyu.fi ennen synkronointia."
- :unpublished-languages-missing-texts "tiivistelmä ja kuvaus puuttuvat Lipaksesta. Lisää ne kielen välilehdelle ennen synkronointia: kirjoita ne itse, käännä suomenkielisistä teksteistä (\"Käännä muille kielille\") tai laadi tekoälyllä (\"Laadi luonnokset tekoälyllä\")."
- :lang-fi "suomi"
- :lang-se "ruotsi"
- :lang-en "englanti"}
+ :blocker-texts-too-short "Tiivistelmässä ja kuvauksessa pitää olla vähintään 5 merkkiä jokaisella kielellä."
+ :text-min-length "vähintään {1} merkkiä"
+ :sync-failed-body-ptv-message "PTV hylkäsi tiedot: {1}"
+ :filter-awaiting-choice "Ristiriita"
+ :filter-ready "Valmis synkronoitavaksi"
+ :filter-blocked "Estetty"
+ :status-awaiting-choice "Lipaksen ja PTV:n tiedot ovat ristiriidassa: valitse ennen synkronointia, mitkä jäävät voimaan"
+ :status-ready "Lipaksessa on muutoksia, jotka synkronointi vie PTV:hen"
+ :status-blocked "Synkronointi ei mene läpi: PTV:ssä on julkaisematon luonnos tai edellinen synkronointi epäonnistui"
+ :awaiting-choice-banner "{1} liikuntapaikassa on ristiriitoja PTV:n kanssa – ratkaise ne ennen synkronointia."
+ :show-awaiting-choice "Näytä ne"
+ :will-be-republished "Palvelupaikka on arkistoitu PTV:ssä. Tallennus julkaisee saman palvelupaikan uudelleen."
+ :delete-waits-for-archive "Tämä liikuntapaikka on viety PTV:hen. Palvelupaikka arkistoidaan PTV:ssä, kun kunnan PTV-vastaava hyväksyy sen."
+ :sync-failed-body-changed-since-review "PTV:ssä on muutettu tietoja sen jälkeen, kun avasit näkymän. Tarkista muutokset ja synkronoi uudelleen."
+ :saved-but-sync-failed-body-changed-since-review "Liikuntapaikka tallennettiin, mutta sitä ei synkronoitu, koska PTV:ssä on muutettu tietoja sen jälkeen, kun avasit liikuntapaikan. Käy muutokset läpi PTV-välilehdellä ja tallenna uudelleen."
+ :sync-failed-body-not-reviewed "PTV:ssä on muutoksia, joita ei ole käyty läpi. Käy ne läpi ja synkronoi uudelleen."
+ :saved-but-sync-failed-body-not-reviewed "Liikuntapaikka tallennettiin, mutta sitä ei synkronoitu, koska PTV:ssä on muutoksia, joita ei ole käyty läpi. Käy ne läpi PTV-työkalussa tai liikuntapaikan PTV-välilehdellä ja synkronoi."
+ :sync-failed-body-ptv-down "PTV ei vastannut. Jos PTV:hen jäi keskeneräinen luonnos, julkaise tai peru se PTV:ssä ennen uutta synkronointia."
+ :awaiting-archive-title "Odottaa arkistointia ({1})"
+ :awaiting-archive-removed "Liikuntapaikka on merkitty Lipaksessa poistetuksi ({1}, {2}). Palvelupaikka näkyy yhä PTV:ssä."
+ :awaiting-archive-not-candidate "Liikuntapaikka ei enää kuulu PTV:hen (omistaja tai tyyppi on muuttunut). Palvelupaikka näkyy yhä PTV:ssä."
+ :archive-in-ptv-now "Arkistoi PTV:ssä"
+ :open-site "Avaa liikuntapaikka"
+ :sync-all-ready "Synkronoi kaikki valmiit ({1})"
+ :sync-all-ready-title "Synkronoidaanko {1} liikuntapaikkaa?"
+ :sync-all-ready-intro "Synkronointi vie {1} liikuntapaikan muutokset PTV:hen."
+ :sync-all-ready-skipped "Näissä liikuntapaikoissa on ratkaisemattomia ristiriitoja, ja ne jätetään väliin:"
+ :sync-all-ready-confirm "Synkronoi"}

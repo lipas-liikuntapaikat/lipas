@@ -692,6 +692,18 @@
                       {:status 200
                        :body {:message "PTV configuration updated successfully"}})}}]
 
+      ;; How many of the org's published service locations each language
+      ;; version is in: what removing a language from the PTV config deletes
+      ;; from PTV on their next syncs (lipas-admin only, as editing it).
+        ["/actions/get-ptv-language-usage"
+         {:post
+          {:no-doc true
+           :require-privilege :users/manage
+           :parameters {:body [:map [:ptv-org-id :string]]}
+           :handler (fn [req]
+                      {:status 200
+                       :body (core/get-ptv-language-usage db (-> req :parameters :body :ptv-org-id))})}}]
+
       ;; --- Org-management rollout: which orgs' members get the org UI.
       ;; LIPAS-admin only; the admin page's rollout tab is the one place it
       ;; changes (it is also set at creation, see /actions/create-org). ---

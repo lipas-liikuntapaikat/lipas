@@ -13,8 +13,6 @@
  :generate-descriptions-helper3
  "Service locations can be created in PTV when they have at least a Finnish description and summary. LIPAS automatically fills in the service classification, keywords and other metadata.",
  :integrate-service-locations "Create service locations from sports sites",
- :service-channel-name-conflict
- "A service location with the name {1} already exists in PTV.",
  :services-to-add "Services to create",
  :export-blocked-invalid
  "Export is blocked. Fix or deselect the following sports sites:",
@@ -48,6 +46,14 @@
  :export-halted "Export interrupted",
  :export-complete "Export complete",
  :export-result "{1}/{2} sports facilities exported to PTV.",
+ :export-failed-site "Exporting the sports facility {1} to PTV failed.",
+ :export-skipped "The export stopped there, so {1} sports facilities were not exported.",
+ :export-skipped-one "The export stopped there, so one sports facility was not exported.",
+ :export-resume-hint
+ "Continue the export once the cause is fixed. If PTV didn't respond, try again in a while. Contact LIPAS support (lipasinfo@jyu.fi) if the problem persists.",
+ :export-resume "Continue the export",
  :start-new-export "Start a new export",
  :go-to-sports-sites-tab "Go to the Sports facilities tab",
- :go-to-services-tab "Go to the Services tab"}
+ :go-to-services-tab "Go to the Services tab"
+ :linked-services "Linked to existing PTV services"
+ :link-existing-helper "The sports facilities of the type class are linked to the selected service and no new service is created. The service's texts can be updated later on the Services tab."}

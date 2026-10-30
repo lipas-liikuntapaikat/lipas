@@ -6,4 +6,5 @@
  :save-success "Sparningen lyckades",
  :copied-to-clipboard "Kopierat till urklipp"
  :translate-success "Översättningen lyckades"
+ :translate-success-shortened "Översättningen lyckades. Förkortades för att rymmas inom PTV:s teckengräns, kontrollera: {1}"
  :thank-you-for-feedback "Tack för feedbacken!"}
