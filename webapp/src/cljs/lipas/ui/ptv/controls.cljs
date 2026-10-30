@@ -27,7 +27,7 @@
    {:variant "body1"}
    children])
 
-(def ^:private label-collator
+(def label-collator
   ;; Finnish alphabetical order: case-insensitive, Å Ä Ö after Z, and
   ;; "Kenttä 2" before "Kenttä 10".
   (js/Intl.Collator. "fi" #js {:sensitivity "base" :numeric true}))

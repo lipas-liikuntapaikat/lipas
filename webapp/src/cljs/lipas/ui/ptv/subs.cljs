@@ -2,6 +2,7 @@
   (:require [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
             [lipas.data.ptv-review :as ptv-review]
+            [lipas.data.ptv-services :as ptv-services]
             [lipas.data.types :as types]
             [lipas.roles :as roles]
             [lipas.schema.sports-sites.ptv :as ptv-schema]
@@ -264,37 +265,126 @@
   (fn [ptv _]
     (get ptv :services-filter "sports")))
 
-(rf/reg-sub ::linked-service-ids
-  ;; Ids of the services the org's LIPAS sites are linked to
-  :<- [::ptv]
-  (fn [ptv [_ org-id]]
-    (into #{} (mapcat #(get-in % [:ptv :service-ids]))
-          (vals (get-in ptv [:org org-id :data :sports-sites])))))
+(rf/reg-sub ::service-audits-current
+  ;; (str service-id) -> the audit the Palvelut tab shows: the auditor's
+  ;; unsaved draft over the stored one (as ::service-audit-data)
+  (fn [db [_ org-id]]
+    (merge (get-in db [:ptv :org org-id :data :service-audits])
+           (get-in db [:ptv :audit :service-draft]))))
 
-(rf/reg-sub ::service-sections
-  ;; The Palvelut tab's two sections: services created in LIPAS, and those
-  ;; made in PTV (or by another system). The PTV section shows by default
-  ;; only the services that concern LIPAS: linked to a LIPAS site, or
-  ;; written by LIPAS. The org's other PTV services (libraries, health care,
-  ;; ...) show with the "all" filter; :ptv-hidden-count says how many, and
-  ;; :ptv-total how many PTV services the org has in all (the heading).
+(defonce ^:private service-state-cache
+  ;; service-id -> {:args [...] :result state}: a service's
+  ;; ptv-services/service-state, reused while its inputs are the very same
+  ;; values. Every keystroke in a service's texts changes the edits of the
+  ;; whole org, and this keeps it from rebuilding the review and patch body
+  ;; of every other service (as ptv-input-cache does for the sites).
+  (atom {}))
+
+(defn- cached-service-state
+  [{:keys [service] :as args}]
+  (let [ks [:org-id :service :descriptions :org-languages :base :choices :audit]
+        vs (mapv args ks)
+        hit (get @service-state-cache (:service-id service))]
+    (if (and hit (every? true? (map identical? vs (:args hit))))
+      (:result hit)
+      (let [result (ptv-services/service-state args)]
+        (swap! service-state-cache assoc (:service-id service) {:args vs :result result})
+        result))))
+
+(defonce ^:private service-row-cache
+  ;; service-id -> the row ::service-rows gave for it last
+  (atom {}))
+
+(defn- interned-row
+  "`row`, or the row given for its service last when equal to it: then the
+   table's row of a service the keystroke didn't touch gets the very same
+   map, and skips its render."
+  [row]
+  (let [id (:service-id row)
+        prev (get @service-row-cache id)]
+    (if (= prev row)
+      prev
+      (do (swap! service-row-cache assoc id row)
+          row))))
+
+(rf/reg-sub ::service-rows
+  ;; The Palvelut tab's rows: each of the org's PTV services with its
+  ;; ptv-services/service-state, its channels (ptv-services/service-channels),
+  ;; the Lipas sites saved as linked to it (:site-ids, :linked-sites) and
+  ;; whether it concerns Lipas (ptv-services/concerns-lipas?).
+  ;;
+  ;; Sites' links read what is saved (:ptv-saved), both to services and to
+  ;; their service locations: on load the tool links every site to its
+  ;; sub-category's service in memory (events/assign-services-to-sports-sites),
+  ;; which no one has decided yet.
   (fn [[_ org-id]]
     [(rf/subscribe [::services org-id])
-     (rf/subscribe [::services-filter])
-     (rf/subscribe [::linked-service-ids org-id])])
-  (fn [[services filter' linked-ids] _]
-    (let [{lipas :lipas others nil} (group-by #(when (= :lipas (:management %)) :lipas) services)
-          concerns-lipas? (fn [m] (or (some? (:source-id m))
-                                      (contains? linked-ids (:service-id m))))
-          relevant (filter #(and (= :native (:management %)) (concerns-lipas? %)) others)
-          relevant (concat relevant
-                           (filter #(and (= :other-system (:management %))
-                                         (contains? linked-ids (:service-id %)))
-                                   others))]
-      {:lipas (sort-by :label lipas)
-       :ptv (sort-by :label (if (= "all" filter') others relevant))
-       :ptv-hidden-count (- (count others) (count relevant))
-       :ptv-total (count others)})))
+     (rf/subscribe [::service-candidate-descriptions org-id])
+     (rf/subscribe [::org-languages org-id])
+     (rf/subscribe [::service-bases org-id])
+     (rf/subscribe [::all-review-choices])
+     (rf/subscribe [::service-audits-current org-id])
+     (rf/subscribe [::service-channels-by-id org-id])
+     (rf/subscribe [::org-sports-sites org-id])])
+  (fn [[services descriptions org-languages bases choices audits channels sites] [_ org-id]]
+    (let [saved (fn [k]
+                  ;; id -> #{lipas-id} of the sites saved with it under :ptv k
+                  (reduce-kv (fn [m lipas-id site]
+                               (reduce #(update %1 %2 (fnil conj #{}) lipas-id)
+                                       m
+                                       (get-in site [:ptv-saved k])))
+                             {}
+                             sites))
+          saved-links (saved :service-ids)
+          channel->lipas-ids (saved :service-channel-ids)
+          ;; links in memory too, to show a service the wizard just linked
+          current-links (into #{} (mapcat #(get-in % [:ptv :service-ids])) (vals sites))]
+      (mapv (fn [service]
+              (let [service-id (:service-id service)
+                    edit-key (ptv-services/service-edit-key service)
+                    state (cached-service-state
+                            {:org-id org-id
+                             :service service
+                             :descriptions (get descriptions edit-key)
+                             :org-languages org-languages
+                             :base (get bases service-id)
+                             :choices (get choices edit-key)
+                             :audit (get audits (str service-id))})
+                    channels (ptv-services/service-channels service channels channel->lipas-ids)
+                    site-ids (get saved-links service-id #{})]
+                (interned-row
+                  (merge service state channels
+                         {:site-ids site-ids
+                          :linked-sites (->> site-ids
+                                             (map (fn [id] {:lipas-id id :name (get-in sites [id :name])}))
+                                             (sort-by (comp str :name)))
+                          :concerns-lipas? (ptv-services/concerns-lipas?
+                                             service
+                                             {:linked? (or (seq site-ids) (contains? current-links service-id))
+                                              :lipas-location? (some (comp seq :lipas-ids) (:locations channels))})}))))
+            services))))
+
+(rf/reg-sub ::sites-service-filter
+  ;; The service the Liikuntapaikat tab lists the linked sites of
+  ;; (events/show-service-sites): its :service-id, its name and the
+  ;; :site-ids saved as linked to it, as ::service-rows counts them. nil
+  ;; when the tab lists all.
+  (fn [[_ org-id]]
+    [(rf/subscribe [::ptv])
+     (rf/subscribe [::services-by-id org-id])
+     (rf/subscribe [::org-sports-sites org-id])])
+  (fn [[ptv services sites] _]
+    (when-let [service-id (:sites-service-filter ptv)]
+      (let [service (get services service-id)]
+        {:service-id service-id
+         :name (ptv-services/display-name
+                 {:label (ptv-data/select-service-name (:serviceNames service))
+                  :name (ptv-data/service-names service)})
+         :site-ids (into #{}
+                         (keep (fn [[lipas-id site]]
+                                 (when (some #{service-id} (get-in site [:ptv-saved :service-ids]))
+                                   lipas-id)))
+                         sites)}))))
 
 (rf/reg-sub ::service-mappings
   :<- [::ptv]
@@ -1252,13 +1342,3 @@
   (fn [audit _]
     (:service-notification-sent? audit)))
 
-;;; Services made in PTV ;;;
-
-(rf/reg-sub ::service-linked-site-count
-  ;; How many of the org's LIPAS sites link to the service.
-  :<- [::ptv]
-  (fn [ptv [_ org-id service-id]]
-    (->> (get-in ptv [:org org-id :data :sports-sites])
-         vals
-         (filter #(some #{service-id} (get-in % [:ptv :service-ids])))
-         count)))
