@@ -5,7 +5,6 @@
  :loading-from-ptv "Haetaan tietoja PTV:stä...",
  :service "Palvelu",
  :service-channel "Palvelupaikka",
- :service-channels "Palveluun liitetyt asiointikanavat PTV:ssa",
  :services "Palvelut",
  :sports-sites "Liikuntapaikat",
  :sports-sites-count "liikuntapaikkaa",

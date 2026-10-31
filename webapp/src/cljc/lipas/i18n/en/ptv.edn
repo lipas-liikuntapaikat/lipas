@@ -5,7 +5,6 @@
  :loading-from-ptv "Fetching data from PTV..."
  :service "Service"
  :service-channel "Service location"
- :service-channels "Service locations"
  :services "Services"
  :sports-sites "Sports sites"
  :sports-sites-count "sports sites"

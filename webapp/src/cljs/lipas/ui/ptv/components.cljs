@@ -442,27 +442,3 @@
                 :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
                 :helperText (controls/text-length-hint tr v ptv-data/max-user-instruction-length)
                 :error (controls/text-length-error? v ptv-data/max-user-instruction-length)}])]])]])))
-
-(defn add-service-panel
-  "Entry point for adding a PTV service: \"Create new\" switches to the
-   creation form. (A service already in PTV isn't added here: sites link to
-   it as is, and its panel offers to capture it.)
-   Props:
-   - :org-id (required)
-   - :locked-sub-category-id (optional) — passed to add-service-create-form
-   - :lipas-id (optional) — passed to the form for auto-attach"
-  [{:keys [org-id locked-sub-category-id lipas-id]}]
-  (r/with-let [mode (r/atom nil)]
-    (let [tr @(rf/subscribe [:lipas.ui.subs/translator])]
-      [:> Stack {:spacing 2 :sx #js {:p 2}}
-       (case @mode
-         :create [add-service-create-form {:org-id org-id
-                                           :locked-sub-category-id locked-sub-category-id
-                                           :lipas-id lipas-id
-                                           :on-cancel #(reset! mode nil)}]
-         [:> Stack {:direction "row" :spacing 1}
-          [:> Button
-           {:variant "outlined" :size "small" :sx #js {:textTransform "none"}
-            :startIcon (r/as-element [:> Icon "add"])
-            :on-click #(reset! mode :create)}
-           (tr :ptv.service/create-new)]])])))

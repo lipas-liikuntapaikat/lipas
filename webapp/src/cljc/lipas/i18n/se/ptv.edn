@@ -5,7 +5,6 @@
  :loading-from-ptv "Hämtar information från PTV...",
  :service "Service",
  :service-channel "Serviceställe",
- :service-channels "Servicekanaler kopplade till tjänsten i PTV",
  :services "Service",
  :sports-sites "Idrottsanläggningar",
  :sports-sites-count "idrottsanläggningar",

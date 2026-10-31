@@ -4,6 +4,7 @@
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
             [lipas.data.ptv-review :as ptv-review]
+            [lipas.data.ptv-services :as ptv-services]
             [lipas.roles :as roles]
             [lipas.schema.sports-sites.ptv :as ptv-schema]
             [lipas.ui.ptv.review-data :as review-data]
@@ -392,7 +393,8 @@
              ;; org data is refetched, discarding unsaved audit edits
              ;; and any selection from the previous org
              (update-in [:ptv :audit] dissoc :site-draft :service-draft)
-             (update :ptv dissoc :selected-audit-site :selected-audit-service))
+             (update :ptv dissoc :selected-audit-site :selected-audit-service
+                     :sites-service-filter))
      :fx [[:dispatch [::fetch-ptv-org-data lipas-org]]]}))
 
 (rf/reg-event-fx ::set-candidates-search
@@ -409,6 +411,18 @@
 (rf/reg-event-db ::select-tab
   (fn [db [_ v]]
     (assoc-in db [:ptv :selected-tab] v)))
+
+(rf/reg-event-db ::show-service-sites
+  ;; The Liikuntapaikat tab with the sites linked to the service: the
+  ;; Palvelut tab's count of them leads there
+  (fn [db [_ service-id]]
+    (-> db
+        (assoc-in [:ptv :sites-service-filter] service-id)
+        (assoc-in [:ptv :selected-tab] "sports-sites"))))
+
+(rf/reg-event-db ::clear-sites-service-filter
+  (fn [db _]
+    (update db :ptv dissoc :sites-service-filter)))
 
 (rf/reg-event-fx ::reset-wizard
   ;; Reset all ephemeral wizard state back to defaults.
@@ -632,11 +646,15 @@
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
 (rf/reg-event-fx ::fetch-ptv-services
-  (fn [{:keys [db]} [_ lipas-org]]
+  ;; `background?`: a refetch of services the tabs already show, e.g. after
+  ;; a sync changed them in PTV. It leaves the loading flag alone: that
+  ;; unmounts the tabs, and with them the open rows and the filters.
+  (fn [{:keys [db]} [_ lipas-org {:keys [background?]}]]
     (let [token (-> db :user :login :token)
           ptv-org-id (get-in lipas-org [:ptv-data :org-id])]
       (when ptv-org-id
-        {:db (assoc-in db [:ptv :loading-from-ptv :services] true)
+        {:db (cond-> db
+               (not background?) (assoc-in [:ptv :loading-from-ptv :services] true))
          :fx [[:http-xhrio
                {:method :post
                 :headers {:Authorization (str "Token " token)}
@@ -1488,8 +1506,12 @@
                (assoc-in [:ptv :loading-from-lipas :services] false)
                (update-in [:ptv :syncing :service] dissoc id)
                (assoc-in [:ptv :org org-id :data :services (:id resp)] resp)
-               (update-in [:ptv :org org-id :data :service-candidates id]
-                          #(-> % (assoc :created-in-ptv true) (dissoc :remove-languages)))
+               ;; what was sent is PTV's now: only what differs stays an edit
+               (update-in [:ptv :org org-id :data :service-candidates]
+                          (fn [candidates]
+                            (if-let [left (ptv-services/drop-written-edits (get candidates id) resp)]
+                              (assoc candidates id left)
+                              (dissoc candidates id))))
                (update-in [:ptv :org org-id :data :manual-services]
                           dissoc (:sourceId resp)))
        :fx (cond-> (into (or (seq extra-fx) [])
@@ -1509,7 +1531,8 @@
           modified? (ptv-modified-error? resp)
           ;; Refused because the service was edited in PTV after this page
           ;; loaded it: reload the services so the panel shows PTV's current
-          ;; texts under the user's unsaved edits, which are kept.
+          ;; texts under the user's unsaved edits, which are kept. In the
+          ;; background: the open row and the filters stay.
           changed-in-ptv? (= :changed-in-ptv (some-> resp :response :type keyword))
           notification (ptv-sync-error-notification tr resp)
           ;; Find the service to update its cached publishingStatus: `id` is
@@ -1527,9 +1550,13 @@
                (cond->
                  (and modified? service-id)
                  (assoc-in [:ptv :org org-id :data :services service-id :publishingStatus] "Modified")))
-       :fx (cond-> (into (or (seq extra-fx) [])
-                         [[:dispatch [:lipas.ui.events/set-active-notification notification]]])
-             changed-in-ptv? (conj [:dispatch [::fetch-ptv-services (get-in db [:ptv :selected-org])]]))})))
+       :fx (cond-> (vec extra-fx)
+             ;; PTV's draft is said by the row it blocks (the review's
+             ;; notice, and the chip "Estetty"), as for a site
+             (not (and modified? service-id))
+             (conj [:dispatch [:lipas.ui.events/set-active-notification notification]])
+             changed-in-ptv?
+             (conj [:dispatch [::fetch-ptv-services (get-in db [:ptv :selected-org]) {:background? true}]]))})))
 
 (rf/reg-event-fx ::create-all-ptv-services*
   (fn [{:keys [db]} [_ org-id ids]]
@@ -1682,6 +1709,13 @@
       (review-data/reviewed channel)
       (assoc :reviewed (review-data/reviewed channel)))))
 
+(defn- refetch-services-fx
+  "Refetches the org's services in the background (::fetch-ptv-services):
+   a site's sync connects its location to services in PTV, which the
+   Palvelut tab counts, and which tells whether a service concerns Lipas."
+  [db]
+  [:dispatch [::fetch-ptv-services (get-in db [:ptv :selected-org]) {:background? true}]])
+
 (rf/reg-event-fx ::create-ptv-service-location
   (fn [{:keys [db]} [_ lipas-id success-fx failure-fx]]
     (let [token (-> db :user :login :token)]
@@ -1757,7 +1791,10 @@
        :fx (cond-> (into (or (seq extra-fx) [])
                          [[:dispatch [:lipas.ui.events/set-active-notification
                                       {:message (tr :notifications/save-success) :success? true}]]])
-             (reload-map-site? db lipas-id) (conj (reload-map-site-fx db lipas-id)))})))
+             (reload-map-site? db lipas-id) (conj (reload-map-site-fx db lipas-id))
+             ;; a batch refetches once, at its end
+             (not (get-in db [:ptv :service-locations-creation :in-progress?]))
+             (conj (refetch-services-fx db)))})))
 
 (rf/reg-event-fx ::create-ptv-service-location-failure
   (fn [{:keys [db]} [_ lipas-id extra-fx resp]]
@@ -1774,8 +1811,11 @@
                (cond->
                  (and modified? channel-id)
                  (assoc-in [:ptv :org org-id :data :service-channels channel-id :publishingStatus] "Modified")))
-       :fx (cond-> (into (or (seq extra-fx) [])
-                         [[:dispatch [:lipas.ui.events/set-active-notification notification]]])
+       :fx (cond-> (vec extra-fx)
+             ;; PTV's draft is said by the site's notice and its chip
+             ;; "Estetty" (a batch's halt says it too)
+             (not (and modified? channel-id))
+             (conj [:dispatch [:lipas.ui.events/set-active-notification notification]])
              ;; changed in PTV since the review: show the review on fresh data
              (changed-since-review? resp)
              (into [[:dispatch [::refresh-service-channel org-id channel-id]]
@@ -1966,7 +2006,8 @@
                (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv-saved]
                          (saved-snapshot ptv)))
        :fx (cond-> [[:dispatch [:lipas.ui.events/set-active-notification
-                                {:message (tr :ptv.actions/archived-in-ptv) :success? true}]]]
+                                {:message (tr :ptv.actions/archived-in-ptv) :success? true}]]
+                    (refetch-services-fx db)]
              (reload-map-site? db lipas-id) (conj (reload-map-site-fx db lipas-id)))})))
 
 (rf/reg-event-fx ::create-all-ptv-service-locations*
@@ -1988,7 +2029,10 @@
               [:dispatch [::create-ptv-service-location
                           (first ids)
                           on-single-success
-                          on-single-failure]])]})))
+                          on-single-failure]])
+            ;; done, or stopped by the user, after syncing some
+            (when (and (or halt? (empty? ids)) (seq processed))
+              (refetch-services-fx db))]})))
 
 (defn ptv-meta-entry
   "The /actions/save-ptv-meta entry for `site`: the same editable keys the
@@ -2051,19 +2095,21 @@
        :fx [[:dispatch [::create-all-ptv-service-locations* org-id ids]]
             [:dispatch [::save-ptv-meta to-save]]]})))
 
-(rf/reg-event-db ::halt-service-locations-creation
+(rf/reg-event-fx ::halt-service-locations-creation
   ;; After ::create-ptv-service-location-failure, which stored the error.
   ;; The sites not reached drop their review patches; a resume makes them
   ;; again from the choices of that time.
-  (fn [db [_ failed-lipas-id]]
+  (fn [{:keys [db]} [_ failed-lipas-id]]
     (let [{:keys [ids processed-ids]} (get-in db [:ptv :service-locations-creation])]
-      (-> db
-          (update-in [:ptv :review :site-patch] #(apply dissoc % (remove (set processed-ids) ids)))
-          (update-in [:ptv :service-locations-creation] merge
-                     {:halt? true
-                      :in-progress? false
-                      :failed {:lipas-id failed-lipas-id
-                               :error (get-in db [:ptv :errors :service-locations-creation])}})))))
+      {:db (-> db
+               (update-in [:ptv :review :site-patch] #(apply dissoc % (remove (set processed-ids) ids)))
+               (update-in [:ptv :service-locations-creation] merge
+                          {:halt? true
+                           :in-progress? false
+                           :failed {:lipas-id failed-lipas-id
+                                    :error (get-in db [:ptv :errors :service-locations-creation])}}))
+       :fx [(when (seq processed-ids)
+              (refetch-services-fx db))]})))
 
 (rf/reg-event-fx ::resume-service-locations-creation
   ;; Goes on from the site that failed with those not exported yet; the
