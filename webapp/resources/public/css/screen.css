@@ -8,6 +8,15 @@ html, body, #app {
   }
 }
 
+/* Map scale line: OpenLayers puts it bottom-left, where the drawer
+   covers it. Stack it above the zoom buttons on the right edge.
+   Scoped to #map to win over ol.css, which loads after this file. */
+#map .ol-scale-line {
+  left: auto;
+  right: .5em;
+  bottom: 5.75em;
+}
+
 @font-face {
     font-family: 'Aleo';
     src: url(../fonts/976f09b10bf7cf919474bbc0b81fcb61.eot);

@@ -1,6 +1,8 @@
 (ns lipas.ui.map.map
   (:require ["@mui/material/GridLegacy$default" :as Grid]
             ["ol" :as ol]
+            ["ol/control/ScaleLine$default" :as ScaleLine]
+            ["ol/control/defaults" :as control-defaults]
             ["ol/events/condition" :as events-condition]
             ["ol/extent" :as extent]
             ["ol/interaction/DoubleClickZoom$default" :as DoubleClickZoom]
@@ -239,6 +241,9 @@
                                      (PinchZoom.)
                                      (DragPan.)
                                      (DoubleClickZoom.)]
+                  ;; Positioned in screen.css, above the bottom-right controls
+                  :controls (.extend (control-defaults/defaults)
+                                     #js [(ScaleLine. #js {:units "metric"})])
                   :overlays #js [popup-overlay]
                   :view view}
 
