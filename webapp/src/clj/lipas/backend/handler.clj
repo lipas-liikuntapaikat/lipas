@@ -7,6 +7,7 @@
             [lipas.backend.assistant :as assistant]
             [lipas.backend.auth :as auth]
             [lipas.backend.bulk-operations.core :as bulk-ops]
+            [lipas.backend.control-chars :as control-chars]
             [lipas.backend.core :as core]
             [lipas.backend.help :as help]
             [lipas.backend.jwt :as jwt]
@@ -82,6 +83,14 @@
    ;; Untrusted ES query body rejected by lipas.backend.search-guard —
    ;; client error, never a 500.
    :invalid-search-query (exception-handler 400 :invalid-search-query)
+   ;; NUL or ESC in user input, rejected by lipas.backend.control-chars —
+   ;; :paths tells the client where they are.
+   :control-characters (fn [^Exception e _request]
+                         (-> {:status 400
+                              :body {:message (.getMessage e)
+                                     :type :control-characters
+                                     :paths (:paths (ex-data e))}}
+                             mw/add-cors-headers))
    ;; Uploaded file whose magic bytes are not PNG/JPEG/WebP, rejected by
    ;; lipas.backend.core/upload-utp-image! — client error, never a 500.
    :invalid-image (exception-handler 400 :invalid-image)
@@ -1906,6 +1915,9 @@
                      exceptions-mw
                    ;; decoding request body
                      muuntaja/format-request-middleware
+                   ;; rejecting NUL and ESC in user input, once the body is
+                   ;; decoded and before coercion
+                     control-chars/middleware
                    ;; coercing response bodys
                      coercion/coerce-response-middleware
                    ;; coercing request parameters
