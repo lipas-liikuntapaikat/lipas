@@ -1424,6 +1424,37 @@
     (is (= 200 (:status resp)))
     (is (number? (get-in body [275 :area-m2-pc])))))
 
+(deftest calculate-stats-by-region-test
+  ;; Seeded cities: 275 Konnevesi (province 13, AVI 4, pop 3000 in 2019)
+  ;; and 972 Yli-Ii (province 17, AVI 5). Only 275 gets a site.
+  (let [_ (seed/seed-city-data! (test-db) (test-search))
+        user (tu/gen-admin-user :db-component (test-db))
+        site (-> (tu/gen-sports-site)
+                 (dissoc :images)
+                 (assoc :status "active")
+                 (assoc-in [:location :city :city-code] 275)
+                 (assoc-in [:properties :area-m2] 100))
+        _ (core/upsert-sports-site!* (test-db) user site)
+        _ (core/index! (test-search) site :sync)
+        calc (fn [grouping]
+               (-> (test-app (-> (mock/request :post "/api/actions/calculate-stats")
+                                 (mock/content-type "application/transit+json")
+                                 (mock/header "Accept" "application/transit+json")
+                                 (mock/body (->transit {:city-codes [275 972]
+                                                        :year 2019
+                                                        :grouping grouping}))))
+                   (update :body <-transit)))]
+    (doseq [[grouping region-id] [["search-meta.location.province.id" 13]
+                                  ["search-meta.location.avi-area.id" 4]]]
+      (testing grouping
+        (let [{:keys [status body]} (calc grouping)]
+          (is (= 200 status))
+          (is (= #{region-id} (set (keys body))))
+          (is (= 3000 (get-in body [region-id :population])))
+          (is (= 1 (get-in body [region-id :sites-count])))
+          (is (== 100 (get-in body [region-id :area-m2-sum])))
+          (is (== (/ 100 3000) (get-in body [region-id :area-m2-pc]))))))))
+
 (deftest create-energy-report-test
   (let [resp (test-app (-> (mock/request :post "/api/actions/create-energy-report")
                            (mock/content-type "application/json")

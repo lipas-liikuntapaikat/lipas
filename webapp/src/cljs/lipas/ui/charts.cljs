@@ -347,10 +347,12 @@
 
 (defn sports-stats-chart
   [{:keys [data labels metric grouping on-click]}]
-  (let [margin     {:top 5 :right 100 :bottom 5 :left 100}
-        y-axis-key (if (= "location.city.city-code" grouping)
-                     :city-name
-                     :type-name)
+  (let [margin     {:top 5 :right 100 :bottom 5 :left 10}
+        y-axis-key (case grouping
+                     "location.city.city-code"          :city-name
+                     "search-meta.location.province.id" :province-name
+                     "search-meta.location.avi-area.id" :avi-name
+                     "type.type-code"                   :type-name)
         precision (if (= metric "length-km-pc") 8 2)
         formatter (when (ugly-keys (keyword metric)) #(utils/round-safe % precision))
         height    (+ 60 (* 30 (count data)))
@@ -367,7 +369,11 @@
       [:> Legend {:content (fn [^js props] (legend labels props))}]
       [:> Tooltip tooltip-props]
       [:> XAxis {:tick font-styles :type "number"}]
-      [:> YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
+      ;; interval 0: with only a few bars (e.g. two provinces) recharts
+      ;; would otherwise hide some of the category labels. Long names
+      ;; ("Länsi- ja Sisä-Suomen AVI") need the width to not overlap.
+      [:> YAxis {:dataKey y-axis-key :type "category" :tick font-styles
+                 :interval 0 :width 150}]
       [:> Bar {:dataKey (keyword metric) :fill "orange"}
        [:> LabelList {:position "right" :formatter formatter}]]]]))
 

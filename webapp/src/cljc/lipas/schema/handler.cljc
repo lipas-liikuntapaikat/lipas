@@ -95,7 +95,11 @@
      [:year [:int {:min 2000 :max 2100}]]
      [:city-codes {:optional true} city-codes]
      [:type-codes {:optional true} type-codes]
-     [:grouping {:optional true} [:enum "location.city.city-code" "type.type-code"]]]))
+     [:grouping {:optional true} [:enum
+                                  "location.city.city-code"
+                                  "search-meta.location.province.id"
+                                  "search-meta.location.avi-area.id"
+                                  "type.type-code"]]]))
 
 ;; Magic link
 (def email-variant (m/schema [:enum "lipas" "portal"]))

@@ -39,14 +39,35 @@
       [::select-types []]
       [::create-report]]}))
 
+(defn- region-city-codes
+  "City codes of a region, narrowed to the current city selection if any."
+  [db region-cities]
+  (let [selected (set (get-in db [:stats :sport :selected-cities]))]
+    (cond->> (map :city-code region-cities)
+      (seq selected) (filter selected))))
+
 (rf/reg-event-fx ::select-filters
-  (fn [{:keys [db]} [_ {:keys [type-code city-code]} grouping]]
+  (fn [{:keys [db]} [_ {:keys [type-code city-code province-id avi-id]} grouping]]
     (let [city-k        "location.city.city-code"
+          province-k    "search-meta.location.province.id"
+          avi-k         "search-meta.location.avi-area.id"
           type-k        "type.type-code"
           types-path    [:stats :sport :selected-types]
           cities-path   [:stats :sport :selected-cities]
           grouping-path [:stats :sport :selected-grouping]]
       {:db (condp = grouping
+             ;; Drill into provinces in selected AVI, keeping the type filter
+             avi-k (-> db
+                       (assoc-in cities-path
+                                 (region-city-codes
+                                   db (get-in db [:cities-by-avi-id avi-id])))
+                       (assoc-in grouping-path province-k))
+             ;; Drill into cities in selected province, keeping the type filter
+             province-k (-> db
+                            (assoc-in cities-path
+                                      (region-city-codes
+                                        db (get-in db [:cities-by-province-id province-id])))
+                            (assoc-in grouping-path city-k))
              type-k (-> db
                         (assoc-in types-path [type-code])
                         (assoc-in grouping-path city-k)
