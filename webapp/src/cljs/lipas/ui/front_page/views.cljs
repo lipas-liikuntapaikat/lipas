@@ -99,7 +99,8 @@
    {:label "Olympiakomitea" :href "https://www.olympiakomitea.fi/"}
    {:label "Sitowise" :href "https://www.sitowise.com/fi/teknologia-ja-design/tuoteratkaisut/routa-infran-kunnossapitojarjestelma"}
    {:label "Luontotori.fi" :href "https://luontotori.fi/"}
-   {:label "Trimble" :href "https://upa.trimble.com/fi-fi/tuotteet/julkishallinto"}])
+   {:label "Trimble" :href "https://upa.trimble.com/fi-fi/tuotteet/julkishallinto"}
+   {:label "Polkuopas" :href "https://polkuopas.fi"}])
 
 (defn ->logo [{:keys [img full-height?]}]
   [:> Grid {:item true :xs 12 :sm "auto" :md "auto" :lg "auto" :xl "auto"}
