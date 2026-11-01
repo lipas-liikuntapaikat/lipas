@@ -40,14 +40,15 @@
 ;; is fine — it only has to be non-blank). Control characters are rejected: they
 ;; have no business in a name, and a CR/LF in a value that ends up in an email is
 ;; how header injection starts. `multiline?` keeps \t \n \r for text areas.
+(def ^:private control-chars #"[\x00-\x1F\x7F]")
+(def ^:private control-chars-except-whitespace #"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]")
+
 (defn- trim-string [x]
   (if (string? x) (str/trim x) x))
 
 (defn human-text
   [min max & {:keys [multiline?]}]
-  (let [forbidden (if multiline?
-                    common/control-chars-except-whitespace
-                    common/control-chars)]
+  (let [forbidden (if multiline? control-chars-except-whitespace control-chars)]
     [:and
      [:string {:min min :max max :decode/json trim-string}]
      [:fn {:error/message "Must not be blank"} (complement str/blank?)]

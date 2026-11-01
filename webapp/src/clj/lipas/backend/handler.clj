@@ -83,8 +83,8 @@
    ;; Untrusted ES query body rejected by lipas.backend.search-guard —
    ;; client error, never a 500.
    :invalid-search-query (exception-handler 400 :invalid-search-query)
-   ;; Control characters in user input, rejected by
-   ;; lipas.backend.control-chars — :paths tells the client where they are.
+   ;; NUL or ESC in user input, rejected by lipas.backend.control-chars —
+   ;; :paths tells the client where they are.
    :control-characters (fn [^Exception e _request]
                          (-> {:status 400
                               :body {:message (.getMessage e)
@@ -1915,8 +1915,8 @@
                      exceptions-mw
                    ;; decoding request body
                      muuntaja/format-request-middleware
-                   ;; rejecting control characters in user input, once the
-                   ;; body is decoded and before coercion
+                   ;; rejecting NUL and ESC in user input, once the body is
+                   ;; decoded and before coercion
                      control-chars/middleware
                    ;; coercing response bodys
                      coercion/coerce-response-middleware

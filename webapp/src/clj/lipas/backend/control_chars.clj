@@ -1,21 +1,32 @@
 (ns lipas.backend.control-chars
-  "Rejects requests that carry control characters in user input.
+  "Rejects requests that carry harmful control characters in user input.
 
-  Postgres can't store NUL in text or jsonb, so a NUL that got past validation
-  used to fail the save with a 500. Rather than adding a check to every
-  `:string` schema, this middleware walks the decoded request once, before
-  coercion, and answers 400 with the paths of the offending values.
+  Only two are rejected, each for a concrete reason:
+
+  - NUL (U+0000): Postgres can't store it in text or jsonb, so a NUL that got
+    past validation used to fail the save with a 500.
+  - ESC (U+001B): it starts terminal escape sequences. Request values reach
+    the logs verbatim (request coercion errors log the value), and an escape
+    sequence there acts on the terminal of whoever reads them.
+
+  Other control characters are left alone. They do no harm here, and real data
+  has them: text pasted from PDFs can carry U+0002 at hyphenation points.
+
+  Rather than adding a check to every `:string` schema, this middleware walks
+  the decoded request once, before coercion, and answers 400 with the paths of
+  the offending values.
 
   It runs on decoded data, so one check covers JSON, EDN and Transit bodies
   alike. EDN and Transit can also carry keywords, symbols and characters, and
   any of them as map keys, so those are checked too. Open maps are covered as
   well: keys a schema doesn't know about are still walked.
 
-  \\t \\n \\r are allowed; multiline text legitimately contains them.
-
   Not covered: multipart params, which are decoded by route-level middleware
-  that runs after this one."
-  (:require [lipas.schema.common :as common]))
+  that runs after this one.")
+
+(def ^:private harmful-chars
+  "NUL and ESC, see the namespace docstring."
+  #"[\x00\x1B]")
 
 (def ^:private max-paths
   "Enough to show the caller where the problem is without echoing a whole
@@ -27,12 +38,12 @@
                  (string? x) x
                  (or (keyword? x) (symbol? x)) (str x)
                  (char? x) (str x))]
-    (boolean (re-find common/control-chars-except-whitespace s))))
+    (boolean (re-find harmful-chars s))))
 
 (defn offending-paths
-  "`get-in` style paths to the values in `x` that contain control characters
-  other than \\t \\n \\r. A map key that contains one is reported at the path
-  of its entry; a set member at the path of the set. At most `max-paths`."
+  "`get-in` style paths to the values in `x` that contain NUL or ESC. A map key
+  that contains one is reported at the path of its entry; a set member at the
+  path of the set. At most `max-paths`."
   [x]
   (letfn [(walk [path x]
             (cond
@@ -63,7 +74,7 @@
 (def middleware
   "Throws `:type :control-characters` (an HTTP 400, see
   `lipas.backend.handler/exception-handlers`) when any user input in the
-  request contains control characters. Mount it after muuntaja's
+  request contains NUL or ESC. Mount it after muuntaja's
   format-request-middleware, so the body is already decoded."
   {:name ::reject-control-characters
    :wrap (fn [handler]
