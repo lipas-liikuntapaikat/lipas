@@ -8,9 +8,23 @@ html, body, #app {
   }
 }
 
-/* Map scale line: OpenLayers puts it bottom-left, where the drawer
-   covers it. Stack it above the zoom buttons on the right edge.
-   Scoped to #map to win over ol.css, which loads after this file. */
+/* OpenLayers control positions. ol.css (a verbatim copy of
+   node_modules/ol/ol.css) puts these on the left, where the drawer
+   covers them. Scoped to #map to win over ol.css, which loads after
+   this file. */
+#map .ol-zoom {
+  top: auto;
+  left: auto;
+  right: .5em;
+  bottom: .5em;
+}
+
+/* Desktop gets the size ol.css gives touch devices (.ol-touch) */
+#map .ol-zoom button {
+  font-size: 1.5em;
+}
+
+/* Stacked above the zoom buttons */
 #map .ol-scale-line {
   left: auto;
   right: .5em;
