@@ -277,12 +277,13 @@
         :body)))
 
 (defn update-service-by-id
-  "Update PTV service by its PTV UUID (not source-id).
-   Used when adopting an existing service into LIPAS integration."
-  [ptv service-id data]
+  "Update PTV service by its PTV UUID (not source-id), as `org-id`. The org is
+   explicit, not the body's :mainResponsibleOrganization: a patch of a
+   service made in PTV doesn't send that, as the org writing may be only one
+   of its other responsible organisations."
+  [ptv org-id service-id data]
   (log/infof "Update PTV service by ID %s" service-id)
-  (let [org-id (:mainResponsibleOrganization data)
-        params {:url (make-url ptv "/v11/Service/" service-id)
+  (let [params {:url (make-url ptv "/v11/Service/" service-id)
                 :method :put
                 :form-params data}]
     (-> (http ptv org-id params)
@@ -414,16 +415,13 @@
       (str original "-tombstone-" (System/currentTimeMillis)))
 
     (defn- minimal-service-put-body
-      "PTV's PUT-by-id rejects partial bodies — TargetGroups, OntologyTerms,
-       ServiceClasses, PublishingStatus, and mainResponsibleOrganization
-       are all required. Reconstruct them from the GET response."
+      "What a PUT-by-id needs besides the change: the publishing status and
+       the classifications PTV requires and checks (see
+       ptv-data/put-classifications), from the GET response."
       [ptv org-id ptv-id]
       (let [s (get-service ptv org-id ptv-id)]
-        {:mainResponsibleOrganization org-id
-         :publishingStatus (:publishingStatus s)
-         :ontologyTerms (mapv :uri (:ontologyTerms s))
-         :serviceClasses (mapv :uri (:serviceClasses s))
-         :targetGroups (mapv :uri (:targetGroups s))}))
+        (merge {:publishingStatus (:publishingStatus s)}
+               (ptv-data/put-classifications s))))
 
     (defn wipe-ptv-service-locations! [ptv org-id]
       ;; ServiceLocation sourceIds already include a millisecond timestamp
@@ -467,10 +465,10 @@
             (let [base (minimal-service-put-body ptv org-id ptv-id)]
               (when original-id
                 ;; Step 1: rename sourceId to tombstone (keep current status).
-                (update-service-by-id ptv ptv-id
+                (update-service-by-id ptv org-id ptv-id
                                       (assoc base :sourceId (tombstone-source-id original-id))))
               ;; Step 2: archive.
-              (update-service-by-id ptv ptv-id
+              (update-service-by-id ptv org-id ptv-id
                                     (assoc base :publishingStatus "Deleted")))
             (catch Exception e
               (if (modified-status-error? e)

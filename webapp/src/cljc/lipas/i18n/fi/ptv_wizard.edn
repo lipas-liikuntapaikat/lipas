@@ -50,4 +50,6 @@
  :export-result "{1}/{2} liikuntapaikkaa viety PTV:hen.",
  :start-new-export "Aloita uusi vienti",
  :go-to-sports-sites-tab "Siirry Liikuntapaikat-välilehdelle",
- :go-to-services-tab "Siirry Palvelut-välilehdelle"}
+ :go-to-services-tab "Siirry Palvelut-välilehdelle"
+ :linked-services "Liitetty olemassa oleviin PTV-palveluihin"
+ :link-existing-helper "Tyyppiluokan liikuntapaikat liitetään valittuun palveluun, eikä uutta palvelua luoda. Palvelun tekstejä voi päivittää myöhemmin Palvelut-välilehdellä."}

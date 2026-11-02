@@ -13,6 +13,19 @@
    [:se {:optional true} [:string string-props]]
    [:en {:optional true} [:string string-props]]])
 
+(defn- max-length-props
+  "String props for a text of at most `max` characters whose too-long error
+   reads `message` (a localization key). Only a string over the limit gets
+   it: a plain :error/message would label every failure of the schema,
+   e.g. a cleared field's nil, as too long. Other failures keep malli's
+   default message, which the UI doesn't surface (see
+   lipas.ui.ptv.subs/service-location-schema-errors)."
+  [max message]
+  {:max max
+   :error/fn (fn [{:keys [value]} _]
+               (when (and (string? value) (> (count value) max))
+                 message))})
+
 (def integration-enum
   "Enum for PTV integration management types."
   (m/schema [:enum "lipas-managed" "manual"]))
@@ -91,12 +104,13 @@
     ;; Per-language character limits enforced by PTV (see lipas.data.ptv).
     ;; The :error/message values are localization keys resolved via `tr`
     ;; in the UI (e.g. the sync-button why-disabled tooltip).
-     [:summary (localized-string-schema {:max ptv-data/max-summary-length
-                                         :error/message :ptv/error-summary-too-long})]
-     [:description (localized-string-schema {:max ptv-data/max-description-length
-                                             :error/message :ptv/error-description-too-long})]
-     [:user-instruction {:optional true} (localized-string-schema {:max ptv-data/max-user-instruction-length
-                                                                   :error/message :ptv/error-user-instruction-too-long})]
+     [:summary (localized-string-schema (max-length-props ptv-data/max-summary-length
+                                                          :ptv/error-summary-too-long))]
+     [:description (localized-string-schema (max-length-props ptv-data/max-description-length
+                                                              :ptv/error-description-too-long))]
+     [:user-instruction {:optional true} (localized-string-schema
+                                           (max-length-props ptv-data/max-user-instruction-length
+                                                             :ptv/error-user-instruction-too-long))]
 
      [:audit {:optional true} ptv-audit]]))
 

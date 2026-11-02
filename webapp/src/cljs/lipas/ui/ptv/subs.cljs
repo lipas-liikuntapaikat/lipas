@@ -216,6 +216,22 @@
         {:label service-name
          :service-id id
          :source-id (:sourceId service)
+         ;; :lipas (created by LIPAS, its master), :native (made in PTV,
+         ;; texts patched by LIPAS) or :other-system (read-only)
+         :management (ptv-data/service-management (:sourceId service))
+         :name (ptv-data/service-names service)
+         ;; LIPAS locales of the language versions LIPAS can edit, and the
+         ;; PTV codes of those it doesn't model (left as they are)
+         :language-versions (into [] (keep ptv-data/lang->locale)
+                                  (ptv-data/service-language-versions service))
+         :ptv-only-languages (into [] (remove ptv-data/lang->locale)
+                                   (ptv-data/service-language-versions service))
+         ;; What a sync builds its body on (a native's patch, a LIPAS-created
+         ;; service's carried-over entries), here so the panel can check
+         ;; the body before sending it
+         :ptv-entries (select-keys service [:serviceNames :serviceDescriptions :requirements
+                                            :publishingStatus :generalDescriptionId
+                                            :targetGroups :ontologyTerms :serviceClasses])
          :publishing-status (:publishingStatus service)
          :last-modified (:modified service)
          :last-modified-human (utils/->human-date-time-at-user-tz (:modified service))
@@ -245,17 +261,39 @@
 (rf/reg-sub ::services-filter
   :<- [::ptv]
   (fn [ptv _]
-    (get ptv :services-filter "lipas-managed")))
+    (get ptv :services-filter "sports")))
 
-(rf/reg-sub ::services-filtered
+(rf/reg-sub ::linked-service-ids
+  ;; Ids of the services the org's LIPAS sites are linked to
+  :<- [::ptv]
+  (fn [ptv [_ org-id]]
+    (into #{} (mapcat #(get-in % [:ptv :service-ids]))
+          (vals (get-in ptv [:org org-id :data :sports-sites])))))
+
+(rf/reg-sub ::service-sections
+  ;; The Palvelut tab's two sections: services created in LIPAS, and those
+  ;; made in PTV (or by another system). The PTV section shows by default
+  ;; only the services that concern LIPAS: linked to a LIPAS site, or
+  ;; written by LIPAS. The org's other PTV services (libraries, health care,
+  ;; ...) show with the "all" filter; :ptv-hidden-count says how many, and
+  ;; :ptv-total how many PTV services the org has in all (the heading).
   (fn [[_ org-id]]
     [(rf/subscribe [::services org-id])
-     (rf/subscribe [::services-filter])])
-  (fn [[services filter'] _]
-    (sort-by :label
-             (case filter'
-               "lipas-managed" (filter (fn [m] (some-> m :source-id (str/starts-with? "lipas-"))) services)
-               services))))
+     (rf/subscribe [::services-filter])
+     (rf/subscribe [::linked-service-ids org-id])])
+  (fn [[services filter' linked-ids] _]
+    (let [{lipas :lipas others nil} (group-by #(when (= :lipas (:management %)) :lipas) services)
+          concerns-lipas? (fn [m] (or (some? (:source-id m))
+                                      (contains? linked-ids (:service-id m))))
+          relevant (filter #(and (= :native (:management %)) (concerns-lipas? %)) others)
+          relevant (concat relevant
+                           (filter #(and (= :other-system (:management %))
+                                         (contains? linked-ids (:service-id %)))
+                                   others))]
+      {:lipas (sort-by :label lipas)
+       :ptv (sort-by :label (if (= "all" filter') others relevant))
+       :ptv-hidden-count (- (count others) (count relevant))
+       :ptv-total (count others)})))
 
 (rf/reg-sub ::service-mappings
   :<- [::ptv]
@@ -337,14 +375,22 @@
   coerces against. Returns a distinct vector of localization keys (from the
   schema's :error/message props) — empty when the payload is valid. Only
   keyword messages are surfaced; structural errors (missing required keys)
-  are left to the business-level sync hints."
+  are left to the business-level sync hints. A text under PTV's minimum
+  length in a language the sync publishes, which the schema doesn't check
+  (a short draft may be saved), gives :ptv/blocker-texts-too-short; only
+  once the Finnish texts are there, which the missing-texts hint asks for
+  first."
   [db lipas-id]
-  (->> (some-> (explain-service-location (events/service-location-payload db lipas-id))
-               :errors)
-       (map me/error-message)
-       (filter keyword?)
-       distinct
-       vec))
+  (let [payload (events/service-location-payload db lipas-id)]
+    (cond-> (->> (some-> (explain-service-location payload) :errors)
+                 (map me/error-message)
+                 (filter keyword?)
+                 distinct
+                 vec)
+      (and (ptv-data/ptv-ready? payload)
+           (seq (ptv-data/service-location-short-texts payload
+                                                       (get-in payload [:ptv :languages]))))
+      (conj :ptv/blocker-texts-too-short))))
 
 (rf/reg-sub ::service-location-schema-errors
   ;; Used to disable the sync button and explain why in its tooltip.
@@ -388,10 +434,21 @@
                       (assoc :description description)
                       (assoc :summary summary)
                       (assoc :user-instruction user-instruction)
+                      ;; ...and no text PTV would reject in the body the
+                      ;; export sends (a short English summary, say), which
+                      ;; would otherwise halt the whole batch
                       (assoc :valid (boolean (and
                                                (some-> description :fi count (> 5))
                                                (some-> summary :fi count (> 5))
-                                               (some-> user-instruction :fi count (> 5)))))
+                                               (some-> user-instruction :fi count (> 5))
+                                               (empty? (ptv-data/lipas-service-text-errors
+                                                         {:source-id source-id
+                                                          :sub-category-id (:sub-category-id m)
+                                                          :languages languages
+                                                          :summary summary
+                                                          :description description
+                                                          :user-instruction user-instruction}
+                                                         nil)))))
                       (cond->
                         mapping (assoc :service-id (:service-id mapping)
                                        :linked? true)))))))))
@@ -1085,3 +1142,14 @@
   :<- [::audit]
   (fn [audit _]
     (:service-notification-sent? audit)))
+
+;;; Services made in PTV ;;;
+
+(rf/reg-sub ::service-linked-site-count
+  ;; How many of the org's LIPAS sites link to the service.
+  :<- [::ptv]
+  (fn [ptv [_ org-id service-id]]
+    (->> (get-in ptv [:org org-id :data :sports-sites])
+         vals
+         (filter #(some #{service-id} (get-in % [:ptv :service-ids])))
+         count)))
