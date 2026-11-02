@@ -6,4 +6,5 @@
  :save-success "Saving succeeded",
  :copied-to-clipboard "Copied to clipboard"
  :translate-success "Translation succeeded"
+ :translate-success-shortened "Translation succeeded. Shortened to fit PTV's character limit, please check: {1}"
  :thank-you-for-feedback "Thank you for feedback!"}
