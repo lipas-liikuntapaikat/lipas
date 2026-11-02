@@ -140,7 +140,14 @@
         ptv-config (or (:ptv-data org) {})
         ptv-enabled? (and (:sync-enabled ptv-config)
                           (not (str/blank? (:org-id ptv-config))))
-        ptv-config-valid? (m/validate org-schema/ptv-config-update (utils/clean ptv-config))]
+        ptv-config-valid? (m/validate org-schema/ptv-config-update (utils/clean ptv-config))
+        ptv-org-id (:org-id ptv-config)
+        language-usage (when (and is-lipas-admin? (not (str/blank? ptv-org-id)))
+                         @(rf/subscribe [::subs/ptv-language-usage ptv-org-id]))]
+
+    ;; for warning before a language is removed (fetched once per PTV org)
+    (when (and is-lipas-admin? (not (str/blank? ptv-org-id)) (nil? language-usage))
+      (rf/dispatch [::events/fetch-ptv-language-usage ptv-org-id]))
 
     [:> Box {:sx {:p 2}}
      [:> Typography {:variant "h5" :sx {:mb 2}}
@@ -217,6 +224,19 @@
         :required true
         :disabled (not is-lipas-admin?)
         :on-change #(rf/dispatch [::events/edit-org [:ptv-data :supported-languages] %])}]
+
+      ;; A language taken off removes its version from every location
+      ;; published in it, on their next syncs: say how many.
+      (let [enabled (set (:supported-languages ptv-config))]
+        (for [[lang n] (sort language-usage)
+              :when (and (pos? n) (not (contains? enabled (name lang))))]
+          ^{:key (name lang)}
+          [:> Alert {:severity "warning"}
+           (tr :lipas.org.ptv/language-removal-warning
+               (tr (keyword "ptv.review" (str "lang-adj-" (get {"fi" "fi" "se" "sv" "en" "en"}
+                                                               (name lang) "other")))
+                   (str/upper-case (name lang)))
+               n)]))
 
       ;; Sync enabled
       [:> FormControlLabel

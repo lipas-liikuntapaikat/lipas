@@ -1178,12 +1178,17 @@
           :on-change #(==> [::events/select-delete-year %])}])
 
       ;; If this facility is integrated to PTV, a permanently-out / incorrect-data
-      ;; deletion also archives the PTV service-location. Surface it here, where
-      ;; the user is consciously marking the facility gone.
+      ;; deletion also archives the PTV service-location: at once when the user
+      ;; manages PTV for the site's municipality, otherwise once a PTV manager
+      ;; does it (D2). Surface it here, where the user is consciously marking
+      ;; the facility gone.
       (when (and (contains? #{"out-of-service-permanently" "incorrect-data"} status)
                  (ptv-data/is-sent-to-ptv? data))
         [:> Alert {:severity "info" :sx #js {:mt 2}}
-         (tr :ptv/delete-will-archive)])]]))
+         (tr (if (<== [:lipas.ui.user.subs/check-privilege
+                       {:city-code (-> data :location :city :city-code)} :ptv/manage])
+               :ptv/delete-will-archive
+               :ptv/delete-waits-for-archive))])]]))
 
 (defn site-view [{:keys [title on-close close-label bottom-actions lipas-id]}
                  & contents]

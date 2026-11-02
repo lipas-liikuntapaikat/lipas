@@ -1,6 +1,5 @@
 (ns lipas.data.ptv
-  (:require [clojure.set :as set]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
             [lipas.data.types :as types]
             [lipas.utils :as utils]
             [taoensso.timbre :as log]))
@@ -83,7 +82,7 @@
 
    `sports-sites` — seq of maps with :lipas-id :type-code :sub-category-id
    :summary {:fi …} :description {:fi …} :last-sync (from
-   lipas.data.ptv/sports-site->ptv-input shape).
+   lipas.data.ptv-review/sports-site->ptv-input shape).
 
    Returns {:summary string :description string} in Finnish, or nil."
   [sports-sites {:keys [type-code sub-category-id exclude-lipas-id]}]
@@ -221,7 +220,7 @@
   "LIPAS locale keyword -> PTV language code"
   {:fi "fi", :se "sv", :en "en"})
 
-(defn- resolve-lang-pairs
+(defn resolve-lang-pairs
   "Given a set/seq of LIPAS language codes (\"fi\" \"se\" \"en\"),
    returns seq of [ptv-lang lipas-locale] pairs for iteration."
   [languages]
@@ -229,6 +228,15 @@
         :let [ptv-lang (get lipas-lang->ptv-lang lipas-lang)]
         :when ptv-lang]
     [ptv-lang (keyword lipas-lang)]))
+
+(defn drop-blank-texts
+  "`texts` ({locale text}) without the languages whose text is missing or
+   blank. A cleared text field is stored as nil, which is no text, not an
+   invalid one."
+  [texts]
+  (into {}
+        (remove (fn [[_ v]] (or (not (string? v)) (str/blank? v))))
+        texts))
 
 (defn languages-with-texts
   "`org-langs` (LIPAS language codes) minus every language other than Finnish
@@ -264,6 +272,42 @@
 (def max-description-length 5000)
 (def max-summary-length 150)
 (def max-user-instruction-length 5000)
+
+;; ...and a minimum one, missing from PTV's API spec ("Value - At least five
+;; characters are required for this field."), counted after trimming. It
+;; covers every serviceDescriptions entry of a Service (Summary, Description,
+;; UserInstruction, ChargeTypeAdditionalInfo, DeadLine, ProcessingTime,
+;; ValidityTime, ServiceType), its requirements, and a ServiceLocation's
+;; Summary and Description. Names, keywords, addresses and emails have none.
+;; PTV's own UI saves shorter texts, so services made there can carry them.
+;; Verified in the PTV test env 2026-10-16.
+(def min-text-length 5)
+
+(def ^:private edge-whitespace
+  ;; The whitespace .NET's String.Trim (PTV's) strips, by char code:
+  ;; str/trim keeps a no-break space on the JVM and strips it in JS, so
+  ;; neither alone matches PTV, nor do they match each other. (Not a regex:
+  ;; the ClojureScript build turns its \u escapes into raw characters, and a
+  ;; raw U+2028 breaks the JS regex literal.)
+  (into #{}
+        (map char)
+        (concat [9 10 11 12 13 32 0x85 0xA0 0x1680]
+                (range 0x2000 0x200B)
+                [0x2028 0x2029 0x202F 0x205F 0x3000])))
+
+(defn- trimmed-length
+  "The length of `s` without the leading and trailing edge-whitespace."
+  [s]
+  (let [ws? (partial contains? edge-whitespace)]
+    (->> (seq s) (drop-while ws?) reverse (drop-while ws?) count)))
+
+(defn text-too-short?
+  "True when PTV rejects text `v` as too short, counting it as PTV does after
+  trimming. A blank text is no text, which is a different problem (or none)."
+  [v]
+  (and (string? v)
+       (let [n (trimmed-length v)]
+         (and (pos? n) (< n min-text-length)))))
 
 (defn ->service-source-id
   [org-id sub-category-id]
@@ -336,12 +380,15 @@
 
      :fundingType "PubliclyFunded" ;; PubliclyFunded | MarketFunded
 
+     ;; The name edited in LIPAS, else the one PTV has (`:name`, so a name
+     ;; changed in PTV is kept like its texts are), else the sub-category's
      :serviceNames (let [custom-name (:service-name m)]
                      (for [[lang locale] (resolve-lang-pairs lipas-languages)]
                        {:type "Name" ; Name | AlternativeName
                         :language lang
                         :value (or (when (and custom-name (= locale :fi))
                                      custom-name)
+                                   (not-empty (get-in m [:name locale]))
                                    (get-in sub-cat [:name locale])
                                    "")}))
 
@@ -649,11 +696,26 @@
                        (subs head 0 cut)
                        head)))))))
 
+(defn site-wgs84-point
+  "The point a sync sends for `site`, WGS84 [lon lat]: its search-meta
+   point when enriched, else the first coordinate of its first geometry,
+   which is what enrich derives it from. nil without either."
+  [site]
+  (let [coords (or (-> site :search-meta :location :wgs84-point)
+                   (let [geom (-> site :location :geometries :features first :geometry)]
+                     (case (:type geom)
+                       "Point" (:coordinates geom)
+                       "LineString" (first (:coordinates geom))
+                       "Polygon" (ffirst (:coordinates geom))
+                       nil)))]
+    (when (and (sequential? coords) (number? (first coords)) (number? (second coords)))
+      (vec (take 2 coords)))))
+
 (defn ->ptv-service-location
   [org-id
    coord-transform-fn
    now
-   {:keys [status ptv lipas-id location search-meta] :as sports-site}]
+   {:keys [status ptv lipas-id location] :as sports-site}]
   (let [lipas-languages (effective-languages sports-site (get ptv :languages default-langs))
         ;; PTV language codes for the :languages field on the payload
         languages (->> lipas-languages (map lipas-lang->ptv-lang) (remove nil?) set)
@@ -664,12 +726,6 @@
         email (parse-email (:email sports-site))
         web-pages (->ptv-web-pages languages sports-site)
         phone-number (parse-phone-number (:phone-number sports-site))]
-
-    #?(:clj (println "PTV data"))
-    #?(:clj (prn ptv))
-
-    ; (println "Languages resolved" languages)
-    ; (prn location)
 
     (cond-> {:organizationId (or (:org-id ptv) org-id)
              ;; Keep using existing sourceId for sites that were already initialized in PTV,
@@ -684,8 +740,8 @@
              ;; serviceChannelDescriptions. sv/en are declared only when the
              ;; site has their summary and description (`effective-languages`);
              ;; their names fall back to the Finnish name, which is usually a
-             ;; proper noun. PTV-side edits to these fields are not
-             ;; preserved — drift is surfaced separately in the LIPAS UI.
+             ;; proper noun. A change made to these fields in PTV is
+             ;; overwritten unless taken into LIPAS in the sync review.
              :serviceChannelNames (keep identity
                                         (let [fi-name (:name sports-site)
                                               pick (fn [locale]
@@ -725,7 +781,7 @@
                           :subType "Single" ; | Single | Street | PostOfficeBox | Abroad | Other.
                           :country "FI"
                           :streetAddress
-                          (let [[lon lat] (-> search-meta :location :wgs84-point coord-transform-fn)
+                          (let [[lon lat] (some-> (site-wgs84-point sports-site) coord-transform-fn)
                                 street-value (parse-address (:address location))
                                 postal-code (parse-postal-code (:postal-code location))]
                             {:municipality (-> location
@@ -864,14 +920,16 @@
 
 (defn resolve-missing-services
   "Infer services (sub-categories) that need to be created in PTV and
-  attached to sports-sites."
+  attached to sports-sites. `sports-sites` are flat maps with :service-ids,
+  :sub-category-id and :sub-category (the shape of sports-site->ptv-input);
+  a site that already has a service-id of any kind is covered."
   [org-id services sports-sites]
   (let [source-ids (->> services
                         vals
                         (keep :sourceId)
                         set)]
     (->> sports-sites
-         (filter (fn [{:keys [ptv]}] (empty? (:service-ids ptv))))
+         (filter (fn [site] (empty? (:service-ids site))))
          (map (fn [site] {:source-id (->service-source-id org-id (:sub-category-id site))
                           :sub-category (-> site :sub-category)
                           :sub-category-id (-> site :sub-category-id)}))
@@ -1152,13 +1210,16 @@
    Works for both serviceDescriptions and serviceChannelDescriptions."
   [descriptions]
   (reduce (fn [acc {:keys [language value type]}]
-            (if-let [k (case type
-                         "Summary" :summary
-                         "Description" :description
-                         "UserInstruction" :user-instruction
-                         nil)]
-              (update acc k assoc (lang->locale language) value)
-              acc))
+            (let [k (case type
+                      "Summary" :summary
+                      "Description" :description
+                      "UserInstruction" :user-instruction
+                      nil)
+                  locale (lang->locale language)]
+              ;; A language LIPAS doesn't model (e.g. Sámi) has no locale.
+              (if (and k locale)
+                (update acc k assoc locale value)
+                acc)))
           {}
           descriptions))
 
@@ -1189,6 +1250,366 @@
                           (parse-service-source-id source-id))}
       (ptv-descriptions->texts (:serviceDescriptions service)))))
 
+;;; Services made in PTV ;;;
+;;
+;; LIPAS is the master of the services it creates and writes them whole. A
+;; service made directly in PTV ("native") is only patched: LIPAS writes its
+;; name and the Summary/Description/UserInstruction texts in the languages it
+;; models (fi, sv, en), and everything else passes through untouched. Its
+;; first patch gives it the sourceId lipas-{org}-ptv-{uuid}.
+;;
+;; PTV facts these rest on (verified in the PTV test env 2026-10-14):
+;; - A service has a language version in every language that has any name or
+;;   description entry, and each version then requires a Name, a Summary and
+;;   a Description. A leftover ChargeTypeAdditionalInfo in a language alone
+;;   makes PTV demand the rest.
+;; - The service's :languages is the languages the service is provided in,
+;;   not its language versions: PTV accepts a language there with no texts.
+;; - A language version requires the organisation to be described in it.
+;; - A PUT replaces :serviceNames, :serviceDescriptions and :requirements
+;;   whole (requirements even when the body leaves them out), but keeps every
+;;   other field it isn't sent: classifications, areas, producers and other
+;;   responsible organisations, channel connections, legislation, keywords,
+;;   vouchers, the charge type (verified 2026-10-16/17). See
+;;   carry-over-service-entries, and core/native-service-put-body for what a
+;;   patch sends.
+;; - A PUT requires :publishingStatus, and without a :generalDescriptionId
+;;   also :targetGroups, :ontologyTerms, :serviceClasses. (A PUT that leaves
+;;   the id out is validated as if there were none, but the attached
+;;   description stays; only :deleteGeneralDescriptionId, with :type,
+;;   detaches it.) PTV checks its target group rules against the target
+;;   groups sent, so they always go along (put-classifications).
+;; - A service in Draft is invisible to the API: GET 404, left out of the
+;;   org listing, yet a PUT by id updates it. Published can't be set back to
+;;   Draft by a PUT, nor Draft to Deleted (publish first).
+;; - GET and PUT shapes differ: code-list items ({:uri :code ...}) vs URIs,
+;;   never mixing :uri and :newUri forms; areas {:type :code :municipalities}
+;;   vs {:type :areaCodes}; producers and other responsible organisations
+;;   only in GET's :organizations; a general description's classes, ontology
+;;   terms and target groups listed as the service's own, yet counted
+;;   against its limits on a PUT ("Only 4 items allowed!").
+;; - A requirement alone in a language makes it a language version too;
+;;   keywords, service vouchers and law names don't (a version can be
+;;   removed with them left in its language).
+;; - At most one AlternativeName per language; industrial classes need
+;;   target group KR2 (or a sub group), life events KR1; KR2 from a general
+;;   description needs a KR2 sub group of the service's own.
+
+(defn service-management
+  "Who maintains the service with `source-id`:
+   :lipas (created by LIPAS, its master), :native (made in PTV; LIPAS may
+   patch its texts) or :other-system (another system's sourceId; read-only)."
+  [source-id]
+  (cond
+    (str/blank? source-id) :native
+    (adopted-service-source-id? source-id) :native
+    (str/starts-with? source-id "lipas-") :lipas
+    :else :other-system))
+
+(def patched-description-types #{"Summary" "Description" "UserInstruction"})
+
+(def ^:private version-required-description-types ["Summary" "Description"])
+
+(defn- blank-text? [v]
+  (or (not (string? v)) (str/blank? v)))
+
+(defn service-language-versions
+  "PTV language codes `service` has a language version in: every language
+   with a name, description or requirement entry with text (a requirement
+   alone makes PTV demand the language's summary and description). PTV's
+   GET can carry blank per-language slots, which no PUT sends."
+  [service]
+  (into (sorted-set)
+        (comp cat (remove (comp blank-text? :value)) (keep :language))
+        [(:serviceNames service) (:serviceDescriptions service) (:requirements service)]))
+
+(defn service-names
+  "{locale name} of the service's main (\"Name\") names in the languages
+   LIPAS models."
+  [service]
+  (into {}
+        (keep (fn [{:keys [type language value]}]
+                (when-let [locale (and (= "Name" type) (lang->locale language))]
+                  [locale value])))
+        (:serviceNames service)))
+
+(defn patch-service-texts
+  "`service` (PTV shape) with LIPAS's `texts` written in, `texts` being
+   {:name {locale s} :summary {..} :description {..} :user-instruction {..}}.
+
+   Only the languages LIPAS has some text in are written, and in those only
+   the Name entry and the patched description types are replaced (a blank
+   UserInstruction removes it). A language LIPAS has nothing in, one it
+   doesn't model, every other entry type and every other field stay as they
+   are, so a sync never drops a language version implicitly.
+
+   `remove-langs` (PTV codes) are the explicit exception: every name,
+   description and requirement entry in them is dropped, PTV-only types
+   included, since any entry left behind would keep the version alive in
+   PTV."
+  [service texts remove-langs]
+  (let [remove-langs (set remove-langs)
+        by-type {"Name" (:name texts)
+                 "Summary" (:summary texts)
+                 "Description" (:description texts)
+                 "UserInstruction" (:user-instruction texts)}
+        written-langs (into #{}
+                            (comp (filter (fn [lang]
+                                            (let [locale (lang->locale lang)]
+                                              (some #(not (blank-text? (get % locale)))
+                                                    (vals by-type)))))
+                                  (remove remove-langs))
+                            (vals locale->lang))
+        keep-entry? (fn [owned-types {:keys [type language]}]
+                      (not (or (contains? remove-langs language)
+                               (and (contains? written-langs language)
+                                    (contains? owned-types type)))))
+        entries (fn [types]
+                  (for [lang (sort written-langs)
+                        type types
+                        :let [v (get-in by-type [type (lang->locale lang)])]
+                        :when (not (blank-text? v))]
+                    {:type type :language lang :value v}))]
+    (cond-> (-> service
+                (update :serviceNames
+                        (fn [xs] (into (filterv #(keep-entry? #{"Name"} %) xs)
+                                       (entries ["Name"]))))
+                (update :serviceDescriptions
+                        (fn [xs] (into (filterv #(keep-entry? patched-description-types %) xs)
+                                       (entries (sort patched-description-types))))))
+      (seq (:requirements service))
+      (update :requirements (fn [xs] (filterv #(not (contains? remove-langs (:language %))) xs))))))
+
+(defn language-version-problems
+  "{ptv-lang [missing-type ...]} for every language version of `service` that
+   PTV would reject for lacking a Name, a Summary or a Description; empty
+   when there are none."
+  [service]
+  (into (sorted-map)
+        (keep (fn [lang]
+                (let [has? (fn [entries type]
+                             (some #(and (= type (:type %))
+                                         (= lang (:language %))
+                                         (not (blank-text? (:value %))))
+                                   entries))
+                      missing (cond-> []
+                                (not (has? (:serviceNames service) "Name")) (conj "Name")
+                                :always (into (remove #(has? (:serviceDescriptions service) %))
+                                              version-required-description-types))]
+                  (when (seq missing)
+                    [lang missing]))))
+        (service-language-versions service)))
+
+(defn- localized-list?
+  "Localized lists are `[{:value <str> :language <str> ...} ...]`. Used by
+   PTV for descriptions, names, requirements, etc."
+  [v]
+  (and (sequential? v)
+       (seq v)
+       (every? map? v)
+       (every? #(contains? % :value) v)))
+
+(defn strip-blank-localized-entries
+  "PTV's PUT endpoint rejects localized list entries with blank :value
+   (400 'The Value field is required.'). The GET response can include
+   such entries (e.g. :requirements with empty per-language slots), so
+   strip them before writing a list back."
+  [m]
+  (reduce-kv (fn [acc k v]
+               (cond-> acc
+                 (localized-list? v)
+                 (assoc k (filterv #(not (str/blank? (:value %))) v))))
+             m
+             m))
+
+(defn put-classifications
+  "The classifications of `service` (a Service GET) as a PUT that writes
+   them back takes them: URIs, the GET's own :uri form, never mixed with
+   :newUri (\"The urls do not have the same base url.\").
+
+   The target groups always: PTV requires them without a general
+   description, and checks its rules against the ones sent (KR1 for life
+   events, KR2 for industrial classes, a KR2 sub group for a KR2 general
+   description). With a general description, its id instead of the ontology
+   terms and service classes, which the GET lists merged with the
+   description's but a PUT counts against the service's own limits
+   (\"ServiceClasses: Only 4 items allowed!\")."
+  [service]
+  (let [uris (fn [k] (mapv :uri (get service k)))]
+    (merge {:targetGroups (uris :targetGroups)}
+           (if-let [gd (:generalDescriptionId service)]
+             {:generalDescriptionId gd}
+             {:ontologyTerms (uris :ontologyTerms)
+              :serviceClasses (uris :serviceClasses)}))))
+
+(defn native-patch-body
+  "The PUT body for patching `texts` into `service`, made in PTV (a GET
+   response), removing the language versions `remove-langs` (PTV codes).
+
+   It carries only what LIPAS writes and what PTV needs alongside it, never
+   a GET-shaped field written back: a PUT leaves every field it isn't sent
+   as it is (areas, organisations and producers, channel connections,
+   legislation, vouchers, life events, ...), while GET and PUT shapes differ
+   in ways that break a write-back. Verified in the PTV test env
+   2026-10-17/18. Sent:
+   - names and descriptions, patched: PTV replaces these lists whole
+   - requirements, as PTV has them: a PUT without them clears them
+   - publishingStatus, as PTV has it: required
+   - the classifications PTV needs (put-classifications)
+   - LIPAS's sourceId"
+  [org-id service-id service texts remove-langs]
+  (-> (merge {:sourceId (->adopted-service-source-id org-id service-id)
+              :publishingStatus (:publishingStatus service)}
+             (select-keys service [:serviceNames :serviceDescriptions :requirements])
+             (put-classifications service))
+      strip-blank-localized-entries
+      (patch-service-texts texts remove-langs)))
+
+(defn short-service-texts
+  "The texts of the PTV Service `body` that PTV rejects as too short (see
+   min-text-length), as [{:type t :language l}] in body order. A requirement
+   has the :type \"Requirement\"."
+  [body]
+  (into []
+        (comp cat
+              (filter (comp text-too-short? :value))
+              (map #(select-keys % [:type :language])))
+        [(:serviceDescriptions body)
+         (map #(assoc % :type "Requirement") (:requirements body))]))
+
+(defn carry-over-service-entries
+  "`body`, the full PUT body of a service LIPAS created, plus what its live
+   version `live` (PTV shape) has that LIPAS never writes: names other than
+   the main one (AlternativeName), description types other than Summary,
+   Description and UserInstruction, and requirements. A PUT replaces those
+   lists whole, so without this every sync would wipe what the org added to
+   them in PTV. PTV keeps the fields LIPAS doesn't send at all by itself.
+
+   LIPAS's own entries are never carried over: it is the service's master.
+   Neither is anything in a language `body` has no version in, since that
+   would keep the version alive in PTV after LIPAS stopped publishing it."
+  [body live]
+  (let [langs (service-language-versions body)
+        carried (fn [owned-types entries ks]
+                  (into []
+                        (comp (filter (fn [{:keys [type language value]}]
+                                        (and (contains? langs language)
+                                             (not (contains? owned-types type))
+                                             (not (blank-text? value)))))
+                              (map #(select-keys % ks)))
+                        entries))
+        requirements (carried #{} (:requirements live) [:language :value])]
+    (cond-> (-> body
+                (update :serviceNames
+                        #(into (vec %) (carried #{"Name"} (:serviceNames live)
+                                                [:type :language :value])))
+                (update :serviceDescriptions
+                        #(into (vec %) (carried patched-description-types (:serviceDescriptions live)
+                                                [:type :language :value]))))
+      (seq requirements) (assoc :requirements requirements))))
+
+(def create-only-service-fields
+  "Fields LIPAS sets only when it creates a service: defaults it hardcodes
+   and has no UI for (self-produced by the org, the org's municipalities,
+   publicly funded). Afterwards they're PTV's to maintain: an update leaves
+   them out, and PTV keeps what a PUT isn't sent."
+  [:serviceProducers :areaType :areas :fundingType])
+
+(defn lipas-service-update-body
+  "The PUT body updating a service LIPAS created, from `body`, the full body
+   it would be created with (->ptv-service), and `live`, its PTV version, or
+   nil when LIPAS can't read it:
+   - create-only-service-fields left out
+   - the target groups PTV has: like the create-only fields LIPAS only
+     defaults them, but PTV requires them in a PUT without a general
+     description. LIPAS's default only when `live` is unknown.
+   - what PTV has that LIPAS never writes carried over
+     (carry-over-service-entries)
+
+   A service in Draft is invisible to LIPAS: PTV's GET answers 404 and its
+   org listing leaves it out (verified 2026-10-18), so `live` is nil and an
+   update publishes it again. Only the wizard can do that, exporting a
+   sub-category whose service LIPAS doesn't see."
+  [body live]
+  (let [body (apply dissoc body create-only-service-fields)]
+    (if live
+      (cond-> (carry-over-service-entries body live)
+        (seq (:targetGroups live)) (assoc :targetGroups (mapv :uri (:targetGroups live))))
+      body)))
+
+(def ^:private text-max-length
+  {:summary max-summary-length
+   :description max-description-length
+   :user-instruction max-user-instruction-length})
+
+(def ^:private ptv-type->text-field
+  "The PTV name and description types LIPAS writes, as the panel's text fields."
+  {"Name" :name "Summary" :summary "Description" :description "UserInstruction" :user-instruction})
+
+(defn service-text-errors
+  "What stops a service's texts from syncing to PTV, as a vector of error
+   maps, empty when nothing does. `texts` is {field {locale text}} as the
+   panel would send it, `body` the PUT body the sync would send.
+
+   - :missing   a service created in LIPAS lacks its Finnish summary or
+                description (the other languages need no texts: one
+                without them is simply not published); a service made in
+                PTV has a language version without a name, summary or
+                description (`version-problems`, see
+                language-version-problems)
+   - :too-short a text LIPAS writes is under PTV's minimum (:min); found in
+                `body`, so a text only the panel holds but the sync won't
+                publish isn't one
+   - :too-short-in-ptv  likewise for a text the sync sends on as PTV has
+                it, which only PTV can fix: {:ptv-type :language :error :min}
+                with PTV's type and language code
+   - :too-long  a text over PTV's limit (:max)
+
+   The others are {:field :locale :error}."
+  [{:keys [management texts version-problems body]}]
+  (let [missing (case management
+                  :lipas (for [field [:summary :description]
+                               :when (blank-text? (get-in texts [field :fi]))]
+                           {:field field :locale :fi :error :missing})
+                  :native (for [[lang types] version-problems
+                                :let [locale (lang->locale lang)]
+                                :when locale
+                                type types]
+                            {:field (ptv-type->text-field type) :locale locale :error :missing})
+                  [])
+        too-short (for [{:keys [type language]} (short-service-texts body)
+                        :let [field (ptv-type->text-field type)
+                              locale (lang->locale language)]]
+                    (if (and field locale)
+                      {:field field :locale locale :error :too-short :min min-text-length}
+                      {:ptv-type type :language language :error :too-short-in-ptv
+                       :min min-text-length}))
+        too-long (for [[field max-length] text-max-length
+                       [locale v] (sort-by key (get texts field))
+                       :when (and (string? v) (> (count v) max-length))]
+                   {:field field :locale locale :error :too-long :max max-length})]
+    (vec (concat missing too-short too-long))))
+
+(defn lipas-service-text-errors
+  "service-text-errors of a service LIPAS creates or writes whole, `m` being
+   the save-ptv-service request for it (texts, :languages, :source-id, ...).
+   Checks the body as the backend builds it: ->ptv-service when the service
+   is new, the update body (lipas-service-update-body) when `live`, its PTV
+   version, exists."
+  [m live]
+  (service-text-errors {:management :lipas
+                        :texts (select-keys m [:summary :description :user-instruction])
+                        :body (cond-> (->ptv-service m)
+                                live (lipas-service-update-body live))}))
+
+(defn service-versions-to-drop
+  "LIPAS locales of the language versions a service created in LIPAS has in
+   PTV that its next sync won't publish, and so removes: LIPAS is its master
+   and publishes only the org's languages that have both a summary and a
+   description (languages-with-texts). `versions` are LIPAS locale keywords."
+  [versions texts org-langs]
+  (let [published (into #{} (map keyword) (languages-with-texts texts org-langs))]
+    (vec (remove published versions))))
 (def persisted-ptv-keys
   "The editable :ptv meta keys persisted on a sync. Both the sync path
    (upsert-ptv-service-location!*) and the no-sync meta path
@@ -1210,17 +1631,11 @@
    :service-ids
    :service-channel-ids])
 
-(def service-channel-compare-fields
-  "Fields to compare when checking drift against a PTV ServiceChannel.
-   PTV ServiceChannels don't carry :user-instruction — that's a Service-level
-   concept — so leave it out of the comparison."
-  [:summary :description])
-
 (defn normalize-ws
   "Normalize whitespace for *comparing* PTV/LIPAS free-text values — never for
    storing or pushing them. PTV collapses runs of horizontal whitespace in
    fields on save (e.g. a double space in a Name becomes a single space), which
-   would otherwise read as drift immediately after a sync. Collapses runs of
+   would otherwise read as a change immediately after a sync. Collapses runs of
    spaces/tabs to a single space, normalizes line endings and trims, but keeps
    newlines: paragraph structure is meaningful and PTV preserves it. Returns nil
    for nil/blank input (so a missing value and an all-whitespace value compare
@@ -1236,9 +1651,8 @@
 (defn texts-match?
   "Compare LIPAS-side texts with PTV-side texts. Returns true if all
    non-nil fields match. Whitespace is normalized for comparison
-   (see `normalize-ws`). `fields` defaults to all three lipas text fields;
-   callers comparing against a PTV ServiceChannel should pass
-   `service-channel-compare-fields`. `locales` limits the comparison to the
+   (see `normalize-ws`). `fields` defaults to all three lipas text fields.
+   `locales` limits the comparison to the
    languages that get published (default: all three) — a draft text in a
    language the org doesn't publish never reaches PTV, so it can't match."
   ([lipas-texts ptv-texts]
@@ -1257,37 +1671,6 @@
                                  (= l p))))
                          locales)))
              fields))))
-
-(defn- effective-lipas-name
-  "What LIPAS will push for [type, locale] under the strict 1-way model.
-   Mirrors the per-language fallback rule in `->ptv-service-location`:
-   sv/en use the localized name when entered, else the Finnish name.
-   Returns nil when LIPAS has nothing to push (e.g., AlternativeName
-   without a marketing-name)."
-  [site type locale]
-  (case type
-    "Name" (let [v (get-in site [:name-localized locale])]
-             (if (str/blank? v) (:name site) v))
-    "AlternativeName" (when-not (str/blank? (:marketing-name site))
-                        (:marketing-name site))))
-
-(defn- effective-lipas-text
-  "Mirrors the description fallback in `->ptv-service-location`: use the
-   localized value if entered, else the Finnish value, else nil."
-  [site field locale]
-  (let [m (get-in site [:ptv field])
-        v (get m locale)]
-    (if (str/blank? v) (get m :fi) v)))
-
-(defn- resolve-service-name
-  "Resolve a service ID to a human-readable Finnish name from the
-   services-by-id map. Falls back to the ID when the service isn't
-   in the cache (e.g. external services or stale cache)."
-  [services service-id]
-  (or (some-> (get services service-id)
-              :serviceNames
-              select-service-name)
-      service-id))
 
 (defn channel-service-ids
   "Ids of the services the PTV service location `channel` (GET shape) is
@@ -1318,106 +1701,97 @@
       (into ids (remove (set ids)) (channel-service-ids channel))
       ids)))
 
-(defn compute-service-channel-drift
-  "Build a structured per-field drift report comparing what LIPAS would
-   push on next sync against what's currently stored in PTV. Returns a
-   vector of entries; empty vector means no drift. Each entry has
-   `:field` (:name, :marketing-name, :summary, :description, :services).
-   For value fields, the entry has localized `:lipas`/`:ptv` strings
-   (with `:language`, `:type`, `:locale`). For service link drift, the
-   entry's `:lipas`/`:ptv`/`:added`/`:removed` are vectors of
-   `{:id :name}` maps so the UI can show readable service names rather
-   than raw UUIDs.
+(defn- language-items
+  "`items` ({:value :language}) in `languages` (PTV codes), blank ones
+   dropped."
+  [items languages]
+  (vec (for [{:keys [value language]} items
+             :when (and (contains? languages language) (not (str/blank? value)))]
+         {:value value :language language})))
 
-   `site` is the LIPAS sports-site map; `ptv-channel` is the cached PTV
-   ServiceChannel response (or nil if unavailable); `services` is the
-   org's services-by-id map used for resolving service names; and
-   `lipas-languages` is the list of LIPAS-side language codes
-   (e.g. [\"fi\" \"se\" \"en\"]) to consider. Returns nil when the
-   channel hasn't been fetched yet."
-  [site ptv-channel services lipas-languages]
-  (when ptv-channel
-    (let [ptv-names (into {} (map (juxt (juxt :type :language) :value))
-                          (:serviceChannelNames ptv-channel))
-          ptv-descs (into {} (map (juxt (juxt :type :language) :value))
-                          (:serviceChannelDescriptions ptv-channel))
-          lang-pairs (resolve-lang-pairs lipas-languages)
-          ;; Normalize whitespace so PTV's server-side collapsing (e.g. a
-          ;; double space in a name) isn't reported as drift right after a sync.
-          trim normalize-ws
-          mk-text-comparison (fn [field type-v]
-                               (for [[ptv-lang locale] lang-pairs]
-                                 {:field field
-                                  :type type-v
-                                  :language ptv-lang
-                                  :locale locale
-                                  :lipas (effective-lipas-text site (case field
-                                                                      :summary :summary
-                                                                      :description :description) locale)
-                                  :ptv (get ptv-descs [type-v ptv-lang])}))
-          comparisons (concat
-                        (for [[ptv-lang locale] lang-pairs]
-                          {:field :name
-                           :type "Name"
-                           :language ptv-lang
-                           :locale locale
-                           :lipas (effective-lipas-name site "Name" locale)
-                           :ptv (get ptv-names ["Name" ptv-lang])})
-                        [{:field :marketing-name
-                          :type "AlternativeName"
-                          :language "fi"
-                          :locale :fi
-                          :lipas (effective-lipas-name site "AlternativeName" :fi)
-                          :ptv (get ptv-names ["AlternativeName" "fi"])}]
-                        (mk-text-comparison :summary "Summary")
-                        (mk-text-comparison :description "Description"))
-          drifted (->> comparisons
-                       (keep (fn [c]
-                               (let [l (trim (:lipas c))
-                                     p (trim (:ptv c))]
-                                 (when (not= l p)
-                                   (assoc c :lipas l :ptv p))))))
-          lipas-service-ids (set (-> site :ptv :service-ids))
-          ptv-service-ids (set (channel-service-ids ptv-channel))
-          mk-entry (fn [id] {:id id :name (resolve-service-name services id)})
-          mk-entries (fn [id-set] (->> id-set (map mk-entry) (sort-by :name) vec))
-          link-drift (when (not= lipas-service-ids ptv-service-ids)
-                       [{:field :services
-                         :lipas (mk-entries lipas-service-ids)
-                         :ptv (mk-entries ptv-service-ids)
-                         :added (mk-entries (set/difference ptv-service-ids lipas-service-ids))
-                         :removed (mk-entries (set/difference lipas-service-ids ptv-service-ids))}])]
-      (vec (concat drifted link-drift)))))
+(defn- address-municipality
+  "A GET address's municipality (an object) as a PUT takes it (the code)."
+  [m]
+  (if (map? m) (:code m) m))
 
-(defn unpublished-ptv-languages
-  "Languages the linked PTV service location has texts in that the next sync
-   won't publish — and so will remove, since a service location sync replaces
-   the whole channel. Returns nil when there are none (or no channel), else a
-   map of LIPAS language codes. A language LIPAS doesn't support keeps its
-   PTV code, upper-cased so it can't pass for a LIPAS code (PTV's se is
-   Northern Sámi, LIPAS's is Swedish):
-   - :not-enabled   not in the org's PTV languages (only LIPAS admins can
-                    enable one) or not supported by LIPAS at all
-   - :missing-texts enabled for the org, but the site has no summary and
-                    description in it"
-  [site ptv-channel org-langs]
-  (when ptv-channel
-    (let [ptv-langs (->> (concat (:serviceChannelNames ptv-channel)
-                                 (:serviceChannelDescriptions ptv-channel))
-                         (remove (comp str/blank? :value))
-                         (keep :language)
-                         set)
-          published (set (effective-languages site org-langs))
-          enabled (set org-langs)]
-      (not-empty
-        (reduce (fn [acc ptv-lang]
-                  (let [lang (some-> (lang->locale ptv-lang) name)]
-                    (cond
-                      (contains? published lang) acc
-                      (contains? enabled lang) (update acc :missing-texts (fnil conj []) lang)
-                      :else (update acc :not-enabled (fnil conj []) (or lang (str/upper-case ptv-lang))))))
-                {}
-                (sort ptv-langs))))))
+(defn postal-address->input
+  "PTV's postal address `address` (GET shape) as a sync sends it back, kept
+   to the payload's `languages` (PTV codes): a localized entry in a
+   language the location doesn't have makes PTV reject the whole write. nil
+   for an address PTV's API rejects, so it can't be sent back: a street
+   address with neither a street number nor coordinates, a PO box without a
+   box or a postal code, or another sub-type."
+  [languages {:keys [subType streetAddress postOfficeBoxAddress]}]
+  (case subType
+    "PostOfficeBox"
+    (let [{:keys [postOfficeBox postalCode municipality additionalInformation]} postOfficeBoxAddress
+          box (language-items postOfficeBox languages)
+          info (language-items additionalInformation languages)
+          municipality (address-municipality municipality)]
+      (when (and (seq box) (not (str/blank? postalCode)))
+        {:type "Postal"
+         :subType "PostOfficeBox"
+         :country "FI"
+         :postOfficeBoxAddress (cond-> {:postOfficeBox box :postalCode postalCode}
+                                 (not (str/blank? municipality)) (assoc :municipality municipality)
+                                 (seq info) (assoc :additionalInformation info))}))
+
+    ("Street" "Single")
+    (let [{:keys [street streetNumber postalCode municipality latitude longitude
+                  additionalInformation]} streetAddress
+          streets (language-items street languages)
+          info (language-items additionalInformation languages)
+          number (when-not (str/blank? streetNumber) streetNumber)
+          coords? (every? #(and (some? %) (not (str/blank? (str %)))) [latitude longitude])
+          municipality (address-municipality municipality)]
+      (when (and (seq streets) (not (str/blank? postalCode)) (or number coords?))
+        {:type "Postal"
+         :subType "Street"
+         :country "FI"
+         :streetAddress (cond-> {:street streets :postalCode postalCode}
+                          number (assoc :streetNumber number)
+                          coords? (assoc :latitude (str latitude) :longitude (str longitude))
+                          (not (str/blank? municipality)) (assoc :municipality municipality)
+                          (seq info) (assoc :additionalInformation info))}))
+
+    nil))
+
+(defn ptv-postal-addresses
+  "The postal addresses of the PTV location `channel` (GET shape), which
+   Lipas has no field for, split by what a sync to `languages` (PTV codes,
+   the payload's) does with them: :kept are sent back as the PUT takes them
+   (postal-address->input), so the location keeps them; :dropped are those
+   PTV's API rejects, which the sync therefore removes."
+  [channel languages]
+  (let [languages (set languages)
+        postal (filter #(= "Postal" (:type %)) (:addresses channel))
+        converted (map (fn [a] [a (postal-address->input languages a)]) postal)]
+    {:kept (into [] (keep second) converted)
+     :dropped (into [] (keep (fn [[a input]] (when-not input a))) converted)}))
+
+(defn sports-site->service-ids [types source-id->service sports-site]
+  (let [sub-cat-id (-> sports-site :type :type-code types :sub-category)
+        org-id (-> sports-site :ptv :org-id)
+        source-id (str "lipas-" org-id "-" sub-cat-id)]
+    (when-let [service (get source-id->service source-id)]
+      #{(:id service)})))
+
+(defn rebound-service-ids
+  "The services a sync connects `site` to after its type changed since the
+   last sync ([:ptv :previous-type-code]): the LIPAS service of its old
+   sub-category swapped for that of the new one. `source-id->service`
+   indexes the org's services by sourceId. Connections made otherwise, in
+   Lipas or in PTV, stay. The site's own list while the type is unchanged."
+  [source-id->service site]
+  (let [ptv (:ptv site)
+        ids (vec (:service-ids ptv))]
+    (if (= (-> site :type :type-code) (:previous-type-code ptv))
+      ids
+      (let [old-ids (set (sports-site->service-ids types/all source-id->service
+                                                   (assoc-in site [:type :type-code]
+                                                             (:previous-type-code ptv))))
+            new-ids (sports-site->service-ids types/all source-id->service site)]
+        (vec (distinct (concat (remove old-ids ids) new-ids)))))))
 
 (def synced-content-keys
   "The :ptv keys of a site the PTV tool edits and a sync sends. The tool
@@ -1429,7 +1803,7 @@
   "Whether the PTV tool's edit of `site` (its :ptv) differs from what was
    saved (its :ptv-saved snapshot) in what a sync sends. Comparing with PTV
    can't tell: an edit that makes the site match a change made in PTV, such
-   as connecting the service someone connected there, leaves no drift, yet
+   as connecting the service someone connected there, leaves no row, yet
    only a sync saves it. Neither can turning sync back on for a site saved
    with sync off. False when there's no snapshot."
   [site]
@@ -1441,136 +1815,6 @@
           (not= (ids edit :service-channel-ids) (ids saved :service-channel-ids))
           (not (texts-match? edit saved [:summary :description]))))
     false))
-
-(defn sports-site->ptv-input [{:keys [types org-id org-langs]} service-channels services site]
-  (let [service-id (-> site :ptv :service-ids first)
-        service-channel-id (-> site :ptv :service-channel-ids first)
-
-        summary (-> site :ptv :summary)
-        description (-> site :ptv :description)
-        user-instruction (-> site :ptv :user-instruction)
-
-        last-sync (-> site :ptv :last-sync)
-
-        ;; Drift detection: build a structured per-field diff comparing what
-        ;; LIPAS would push on next sync vs what's currently stored in PTV.
-        ;; Covers Name (per language), AlternativeName/marketing-name, Summary
-        ;; and Description (per language), and service-link membership.
-        ptv-channel (get service-channels service-channel-id)
-        ptv-texts (when ptv-channel (ptv-descriptions->texts (:serviceChannelDescriptions ptv-channel)))
-        ;; The languages the next sync would publish, from the org's live
-        ;; config — not the site's stored :languages, which is a snapshot of
-        ;; the last sync and would hide e.g. English texts written after the
-        ;; org enabled English.
-        langs (effective-languages site (or org-langs fallback-languages))
-        drift-fields (when (and last-sync ptv-channel)
-                       (compute-service-channel-drift site ptv-channel services langs))
-        has-drift? (boolean (seq drift-fields))
-        ;; An edit made here but not saved: it needs a sync even when it
-        ;; leaves no drift, e.g. connecting the service someone connected in
-        ;; PTV. Without this the site read :ok and the sync that would save
-        ;; the edit was disabled.
-        unsaved-edits? (unsaved-ptv-edits? site)
-
-        ;; The languages the channel is published in now: PTV's own record when
-        ;; the channel is cached, else what the last sync stored. A difference
-        ;; means the next sync adds or removes a language version, so the site
-        ;; needs a sync even when no text compared in `langs` changed.
-        published-langs (if ptv-channel
-                          (keep (comp #(some-> % name) lang->locale) (:languages ptv-channel))
-                          (-> site :ptv :languages))
-        languages-changed? (boolean (and last-sync
-                                         (seq published-langs)
-                                         (not= (set published-langs) (set langs))))
-
-        ;; A site that was synced before (last-sync present) but now has no
-        ;; service-channel-id was deliberately unlinked by the user — a
-        ;; successful sync always writes service-channel-ids back, so this
-        ;; combination can't arise any other way. (Use str/blank? rather than
-        ;; empty?: clearing the autocomplete can leave service-channel-ids as
-        ;; [nil]/[""], not [].) Treat it as out-of-date so the sync button
-        ;; re-activates and the backend create-path (channel id nil) builds a
-        ;; fresh PTV service-location. Without this, has-drift? is false (no
-        ;; channel left to diff) and event-date still equals last-sync, so
-        ;; sync-status would wrongly read :ok and the button would stay
-        ;; disabled ("up to date").
-        link-removed? (and last-sync (str/blank? service-channel-id))
-
-        ;; A channel archived in PTV ("Deleted") that the user has re-enabled
-        ;; needs a sync to resurrect it (the upsert PUTs publishingStatus
-        ;; "Published" on the same channel). Without this, event-date still
-        ;; equals last-sync (from the archive) and the archived channel can't be
-        ;; diffed, so status reads :ok and "Synkronoi nyt" stays disabled.
-        archived-resync? (and (= "Deleted" (-> site :ptv :publishing-status))
-                              (get-in site [:ptv :sync-enabled] false))]
-
-    {:valid (boolean (and (some-> description :fi count (> 5))
-                          (some-> summary :fi count (> 5))))
-     :lipas-id (:lipas-id site)
-     :name (:name site)
-     :event-date (:event-date site)
-     :name-conflict (detect-name-conflict site (vals service-channels))
-     :marketing-name (:marketing-name site)
-     :type (-> site :search-meta :type :name :fi)
-     :type-code (-> site :type :type-code)
-     :sub-category (-> site :search-meta :type :sub-category :name :fi)
-     :sub-category-id (-> site :type :type-code types :sub-category)
-     :org-id org-id
-     :admin (-> site :search-meta :admin :name :fi)
-     :owner (-> site :search-meta :owner :name :fi)
-     :summary summary
-     :description description
-     :user-instruction user-instruction
-     :languages langs
-
-     :sync-enabled (get-in site [:ptv :sync-enabled] false)
-     :last-sync last-sync
-
-     :sync-status (cond
-                    (not last-sync) :not-synced
-                    link-removed? :out-of-date
-                    archived-resync? :out-of-date
-                    has-drift? :content-drift
-                    unsaved-edits? :out-of-date
-                    languages-changed? :out-of-date
-                    (= (:event-date site) last-sync) :ok
-                    :else :out-of-date)
-
-     :drift-fields drift-fields
-     :unpublished-ptv-languages (unpublished-ptv-languages site ptv-channel
-                                                           (or org-langs fallback-languages))
-
-     :ptv-texts ptv-texts
-
-     :service-ids (-> site :ptv :service-ids)
-     :service-name (-> services
-                       (get service-id)
-                       :serviceNames
-                       (select-service-name))
-     :service-channel-id service-channel-id
-     :service-channel-ids (-> site :ptv :service-channel-ids)
-     :service-channel-name (-> (get service-channels service-channel-id)
-                               (resolve-service-channel-name))
-     ;; Live status from the cached PTV channel (nil once archived — PTV drops
-     ;; Deleted channels from /list/organization).
-     :service-channel-publishing-status (:publishingStatus ptv-channel)
-     ;; LIPAS-persisted status from the last sync/archive. Stays "Deleted" for
-     ;; an archived channel, so the UI can label it instead of showing a bare
-     ;; UUID it can no longer resolve to a name.
-     :publishing-status (-> site :ptv :publishing-status)
-
-     ;; The audit record itself, so the listing can caption its status
-     ;; symbol (date + which field). This map replaces the site for the
-     ;; listing, so reading it back off :ptv there finds nothing.
-     :audit (-> site :ptv :audit)
-     :audit-status (determine-audit-status (with-persisted-audit-content site))}))
-
-(defn sports-site->service-ids [types source-id->service sports-site]
-  (let [sub-cat-id (-> sports-site :type :type-code types :sub-category)
-        org-id (-> sports-site :ptv :org-id)
-        source-id (str "lipas-" org-id "-" sub-cat-id)]
-    (when-let [service (get source-id->service source-id)]
-      #{(:id service)})))
 
 (defn is-sent-to-ptv?
   "Check if the :ptv data shows that the site has been sent to PTV previously"
@@ -1590,6 +1834,17 @@
                   ;; Huoltorakennus
                   ;; Opastuspiste
                   (not (#{7000 207} type-code))))))
+
+(defn save-syncs?
+  "Whether saving `site` (a saved revision, not a draft) also writes to
+   PTV: sync is on, or an archive is asked for, and the site belongs there
+   or is there already. lipas.backend.core/save-sports-site! syncs by it;
+   the UI tells the user a save will take PTV's time."
+  [site]
+  (boolean (and (or (-> site :ptv :sync-enabled)
+                    (-> site :ptv :delete-existing))
+                (or (ptv-candidate? site)
+                    (is-sent-to-ptv? site)))))
 
 (defn ptv-ready?
   [site]
@@ -1646,6 +1901,19 @@
                :when (hits reason)]
            {:reason reason :severity severity}))))
 
+(defn service-location-short-texts
+  "[{:field :locale}] for the site's PTV summaries and descriptions that PTV
+  rejects as too short (see min-text-length), in the languages a sync
+  publishes: the org's `org-langs` the site has both texts in
+  (effective-languages). A text in any other language never reaches PTV,
+  and its tab isn't even shown."
+  [site org-langs]
+  (vec (for [lang (effective-languages site org-langs)
+             field [:summary :description]
+             :let [locale (keyword lang)]
+             :when (text-too-short? (get-in site [:ptv field locale]))]
+         {:field field :locale locale})))
+
 (defn sync-blockers
   "What stops `site` from syncing to PTV, as a set of keywords (empty when
   nothing does). Only meaningful while `[:ptv :sync-enabled]` is on and the
@@ -1656,7 +1924,12 @@
                          summary/description (see `ptv-ready?`)
 
   Shared by the site form (save gate + messages) and `save-sports-site!`
-  (hard gate), so both reject exactly the same states."
+  (hard gate), so both reject exactly the same states.
+
+  A text under PTV's minimum length isn't a blocker here: which languages a
+  sync publishes depends on the org's live config, which the site doesn't
+  carry. The sync refuses it instead (`:ptv/texts-too-short`, see
+  service-location-short-texts), and the text fields warn about it."
   [site]
   (let [{:keys [sync-enabled delete-existing org-id]} (:ptv site)]
     (if (or (not sync-enabled) delete-existing)
@@ -1674,7 +1947,7 @@
   revision — so a browser holding an outdated copy of the site can't roll them
   back. (Seen in prod: a site archived by one save was marked incorrect-data
   seconds later with its pre-archive :ptv, leaving LIPAS saying Published.)"
-  [:publishing-status :last-sync :source-id :service-channel-ids
+  [:publishing-status :last-sync :ptv-modified :source-id :service-channel-ids
    :previous-type-code :error])
 
 (def user-controlled-ptv-keys

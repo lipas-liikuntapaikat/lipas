@@ -19,6 +19,8 @@
             [lipas.ui.ptv.components :as ptv-components]
             [lipas.ui.ptv.controls :as controls]
             [lipas.ui.ptv.events :as events]
+            [lipas.ui.ptv.review :as review]
+            [lipas.ui.ptv.review-data :as review-data]
             [lipas.ui.ptv.subs :as subs]
             [lipas.ui.utils :refer [prod?]]
             [re-frame.core :as rf]
@@ -167,15 +169,47 @@
                                                    :value (:org-id ptv-data)}))))
                                     [orgs])
         single-org? (= 1 (count org-options))
-        service-channel-modified? (= "Modified" (-> site :ptv :service-channel-publishing-status))
         double-link-others @(rf/subscribe [::subs/double-link-others lipas-id])
         channel-id (first (:service-channel-ids (:ptv site)))
         last-sync (-> sports-site :ptv :last-sync)
-        linked-channel @(rf/subscribe [::subs/site-service-channel lipas-id])
-        ;; nil until the linked channel is fetched, and for a channel that
-        ;; was fetched for a previous link
-        unpublished (when (and channel-id (= channel-id (:id linked-channel)))
-                      (ptv-data/unpublished-ptv-languages site linked-channel org-languages))]
+        ;; the linked location as fetched (nil until then, and for one
+        ;; fetched for a previous link)
+        linked-channel (let [c @(rf/subscribe [::subs/site-service-channel lipas-id])]
+                         (when (and channel-id (= channel-id (:id c))) c))
+        archived? (and channel-id (= "Deleted" (-> site :ptv :publishing-status)))
+        ;; PTV holds an unpublished draft of the location: it refuses every
+        ;; write until the draft is published or discarded there
+        draft? (= "Modified" (:publishingStatus linked-channel))
+        ;; ① the state of the link, as the PTV tool says it
+        notices (cond-> []
+                  draft?
+                  (conj {:key :modified
+                         :text (tr :ptv.review/notice-modified)
+                         :actions [{:label (tr :ptv.review/open-in-ptv)
+                                    :href (str ptv-base "/channels/serviceLocation/" channel-id)}
+                                   {:label (tr :ptv.review/recheck)
+                                    :busy? @(rf/subscribe [::subs/rechecking? channel-id])
+                                    :on-click #(rf/dispatch [::events/recheck-draft
+                                                             {:org-id org-id
+                                                              :channel-id channel-id
+                                                              :lipas-id lipas-id
+                                                              :site-form? true}])}]})
+
+                  (seq double-link-others)
+                  (conj {:key :double-link
+                         :text (str (tr :ptv.review/notice-double-link
+                                        (str/join ", " (map :name double-link-others)))
+                                    " " (tr :ptv.double-link/remediation))})
+
+                  (and linked-channel
+                       (review-data/names-differ-wholesale?
+                         (:name site)
+                         (some #(when (and (= "Name" (:type %)) (= "fi" (:language %))) (:value %))
+                               (:serviceChannelNames linked-channel))))
+                  (conj {:key :names-differ
+                         :text (tr :ptv.review/notice-names-differ
+                                   (some #(when (and (= "Name" (:type %)) (= "fi" (:language %))) (:value %))
+                                         (:serviceChannelNames linked-channel)))}))]
 
     ;; Load the PTV orgs the user may act for (by PTV rights, not membership)
     ;; on mount. nil = not loaded, [] = loaded but none.
@@ -350,6 +384,14 @@
          (and previous-sent? (not candidate-now?))
          (alert "warning" (tr :ptv/will-be-archived-type-changed))
 
+         ;; archived in PTV: a save with sync on publishes the same location
+         ;; again, it doesn't create a new one
+         (and archived? candidate-now? sync-enabled)
+         (alert "info" (tr :ptv/will-be-republished))
+
+         archived?
+         (alert "info" (tr :ptv.review/notice-archived))
+
          (and candidate-now? ready? sync-enabled)
          (alert "info" (tr :ptv/new-service-location-will-be-created))
 
@@ -357,6 +399,41 @@
          (alert "warning" (tr :ptv/not-suitable-for-export))
 
          :else nil))
+
+     ;; What differs from PTV and who changed it. A save syncs the site, so
+     ;; the choices go into the save (:lipas.ui.map.events/save-edits),
+     ;; which asks before overwriting a change made in PTV without one.
+     ;; Viewing the site shows the differences only: choosing writes into
+     ;; an edit.
+     (let [site-review @(rf/subscribe [:lipas.ui.map.subs/ptv-site-review lipas-id])]
+       (when (or site-review (seq notices))
+         (let [open? @(rf/subscribe [::subs/review-open? lipas-id])]
+           [review/review-panel
+            {:id (review-data/panel-dom-id lipas-id)
+             :tr tr
+             :review site-review
+             :choices @(rf/subscribe [::subs/review-choices lipas-id])
+             :open? open?
+             :on-toggle #(rf/dispatch [::events/set-review-open lipas-id (not open?)])
+             :on-take (fn [rows side]
+                        (rf/dispatch [::events/review-take :site-form lipas-id rows side]))
+             :on-take-value (fn [row value]
+                              (rf/dispatch [::events/review-take-value :site-form lipas-id row value]))
+             :on-reset #(rf/dispatch [::events/review-reset :site-form lipas-id])
+             :written? @(rf/subscribe [::subs/review-written? lipas-id])
+             ;; the PTV tab is for PTV managers; the site's own data is
+             ;; edited right here
+             :rights {:ptv-manager? true :site-editor? (boolean can-edit?)}
+             :org-langs org-languages
+             :notices notices
+             :draft? draft?
+             :site-tab (tr :lipas.sports-site/basic-data)
+             :first-open-id (review-data/first-open-dom-id lipas-id)
+             :stacked? true
+             :read-only? (not editing?)
+             :footer (tr (if editing?
+                           :ptv.review/site-form-footer
+                           :ptv.review/view-mode-footer))}])))
 
      ;; 3. Organization selector — only relevant once the user opts in to sync.
      ;; Pre-filled from ::resolved-org-id. Shown as a caption + edit affordance
@@ -421,10 +498,9 @@
             (and (seq missing-services) previous-sent? type-code-changed?)
             [:> Alert {:severity "warning"} (tr :ptv/service-missing-for-type)]
 
-            ;; Type changed but a matching service exists — heads-up that the
-            ;; site may be re-linked on next sync.
-            (and previous-sent? type-code-changed?)
-            [:> Alert {:severity "info"} (tr :ptv/type-changed-may-rebind)])
+            ;; (a matching service exists: the review shows the connections
+            ;; the type change swaps)
+            )
 
           ;; When the site isn't yet attached to any service and no lipas-managed
           ;; service exists for its sub-category, offer a "create new" shortcut.
@@ -448,37 +524,11 @@
                  :on-click #(set-creating-service? true)}
                 (tr :ptv.service/create-new)]]))]))
 
-     ;; Double-link warning: another sports-site is bound to the same PTV
-     ;; service-location. Always shown (independent of sync state) since it's a
-     ;; data-integrity problem. Remediation is the unlink → sync flow.
-     (when (seq double-link-others)
-       [:> Alert {:severity "warning" :variant "outlined"}
-        [:> AlertTitle (tr :ptv.double-link/warning-title)]
-        [:> Typography {:variant "body2"}
-         (tr :ptv.double-link/linked-also-to
-             (str/join ", " (map :name double-link-others)))]
-        [:> Typography {:variant "body2" :sx #js {:mt 1}}
-         (tr :ptv.double-link/explanation)]
-        [:> Typography {:variant "body2" :sx #js {:mt 1}}
-         (tr :ptv.double-link/remediation)]])
-
-     ;; Texts in PTV that the next sync would remove, e.g. after linking a
-     ;; service location that exists in PTV in more languages than the org
-     ;; publishes.
-     (when sync-enabled
-       [ptv-components/unpublished-languages-alert
-        {:tr tr :unpublished unpublished}])
-
      ;; 5. Descriptions and everything below — gated on sync-enabled + org-id.
      (when (and sync-enabled org-id)
        [:<>
         ;; Audit summary notification - show if there are audit issues
         [audit-summary-notification {:tr tr :org-id org-id :lipas-id lipas-id}]
-
-        ;; Warn when PTV has unpublished edits that would block sync.
-        (when service-channel-modified?
-          [:> Alert {:severity "warning" :variant "outlined"}
-           (tr :ptv/modified-in-ptv)])
 
         ;; Generate + Translate buttons grouped in one row, matching the wizard.
         ;; Use org-languages (real PTV org config) rather than :languages on the
@@ -546,8 +596,8 @@
             :label (str (tr :ptv/summary) " *")
             :value v
             :inputProps #js {:maxLength ptv-data/max-summary-length}
-            :helperText (str (count v) "/" ptv-data/max-summary-length)
-            :error (> (count v) ptv-data/max-summary-length)}])
+            :helperText (controls/text-length-hint tr v ptv-data/max-summary-length)
+            :error (controls/text-length-error? v ptv-data/max-summary-length)}])
 
         ;; Summary audit feedback
         [audit-feedback-component
@@ -571,8 +621,8 @@
             :label (str (tr :ptv/description) " *")
             :value v
             :inputProps #js {:maxLength ptv-data/max-description-length}
-            :helperText (str (count v) "/" ptv-data/max-description-length)
-            :error (> (count v) ptv-data/max-description-length)}])
+            :helperText (controls/text-length-hint tr v ptv-data/max-description-length)
+            :error (controls/text-length-error? v ptv-data/max-description-length)}])
 
         ;; Description audit feedback
         [audit-feedback-component

@@ -1640,6 +1640,24 @@
       (log/error e "Failed to enqueue background jobs after save"
                  {:lipas-id (:lipas-id resp)}))))
 
+(defn ptv-sync-by?
+  "Whether `user`'s save of `site` (a saved revision) writes to PTV: the
+  save would sync or archive it (ptv-data/save-syncs?) and the user manages
+  PTV for the site's municipality (D2). An editor without PTV rights saves
+  to Lipas only; the PTV tool then lists the site as ready to sync, or as
+  waiting to be archived, for a PTV manager."
+  [user site]
+  (and (ptv-data/save-syncs? site)
+       (roles/check-privilege user {:city-code (get-in site [:location :city :city-code])}
+                              :ptv/manage)))
+
+(defn get-ptv-language-usage
+  "LIPAS language code -> how many of the PTV org's published service
+  locations are in it: what removing the language from the org's PTV config
+  deletes from PTV on their next syncs."
+  [db ptv-org-id]
+  (db/get-ptv-language-usage db ptv-org-id))
+
 (defn- ptv-orgs
   "Every LIPAS org with a PTV config."
   [db]
@@ -1739,8 +1757,11 @@
    ;; approve! — they call upsert-sports-site!* directly). This fn serves the
    ;; user-facing save endpoint, so strip it here to keep the audit column
    ;; unforgeable via POST /sports-sites (the save schema is :closed false).
-   (let [sports-site (-> sports-site
-                         (dissoc :acting-org-id)
+   (let [;; what the user's PTV review was made against, for refusing a sync
+         ;; over a change made in PTV since (see ptv core); not stored
+         reviewed (:reviewed sports-site)
+         sports-site (-> sports-site
+                         (dissoc :acting-org-id :reviewed)
                          clamp-future-event-date)
 
          ;; Phase 1: All DB operations inside the transaction.
@@ -1765,11 +1786,8 @@
              {:prev (not-empty prev)
               :resp
               (if (and (not draft?)
-                       (or (:sync-enabled (:ptv resp))
-                           (:delete-existing (:ptv resp)))
-                       ;; TODO: Check privilage :ptv/basic or such
-                       (or (ptv-data/ptv-candidate? resp)
-                           (ptv-data/is-sent-to-ptv? resp)))
+                       ;; only a PTV manager's save reaches PTV (D2)
+                       (ptv-sync-by? user resp))
                 ;; NOTE:  this will create a new sports-site rev.
                 ;; Make it instead update the sports-site already created in the tx?
                 ;; Otherwise each save-sports-site! will create two sports-site revs.
@@ -1778,7 +1796,11 @@
                                  {:sports-site resp
                                   :org-id (:org-id (:ptv resp))
                                   :lipas-id (:lipas-id resp)
-                                  :ptv (:ptv resp)})]
+                                  :ptv (:ptv resp)
+                                  :reviewed reviewed
+                                  ;; as stored before: a sync without a
+                                  ;; review checks PTV holds nothing undecided
+                                  :saved prev})]
                   (log/infof "Sports site updated and PTV integration enabled")
                   ;; sync-ptv! wrote a new revision (success or failure)
                   ;; and returned the event-date it used. Adopt both so

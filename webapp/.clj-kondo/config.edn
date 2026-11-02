@@ -2,8 +2,21 @@
  :lint-as
  {reagent.core/with-let clojure.core/let}
 
+ ;; re-frame registrations take no docstring: a string after the id lands in
+ ;; the interceptor (or signal fn) slot and only fails when the namespace
+ ;; loads. See .clj-kondo/hooks/re_frame.clj.
+ :hooks
+ {:analyze-call {re-frame.core/reg-event-db hooks.re-frame/no-docstring
+                 re-frame.core/reg-event-fx hooks.re-frame/no-docstring
+                 re-frame.core/reg-event-ctx hooks.re-frame/no-docstring
+                 re-frame.core/reg-sub hooks.re-frame/no-docstring
+                 re-frame.core/reg-fx hooks.re-frame/no-docstring
+                 re-frame.core/reg-cofx hooks.re-frame/no-docstring}}
+
  :linters
- {:unsorted-required-namespaces {:level :warning
+ {:lipas/re-frame-docstring {:level :error}
+
+  :unsorted-required-namespaces {:level :warning
                                  :sort :case-sensitive}
 
   :consistent-alias {:aliases {clojure.string str

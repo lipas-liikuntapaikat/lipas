@@ -141,7 +141,11 @@
                 ;; Headroom over the current size is deliberately ~20 KB:
                 ;; accidental hoists are whole-module-sized (the smallest
                 ;; module is ~11 KB gzip, most 30+), so they still trip this.
-                app-budget-kb 815
+                ;; 815 → 835 (2026-10-21): the PTV sync review grew :app by
+                ;; ~2 KB gzip (8 KB raw: its Finnish texts and shared dialog
+                ;; code; far below any module, so no hoist), which took the
+                ;; integration branch to 817.
+                app-budget-kb 835
                 manifest-path (get-in deploy-config [:paths :frontend-manifest])
                 dir (get-in deploy-config [:paths :frontend-compiled-dir])
                 _ (when-not (.exists (java.io.File. manifest-path))

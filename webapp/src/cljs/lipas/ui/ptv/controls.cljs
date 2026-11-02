@@ -3,14 +3,39 @@
     ["@mui/material/Tab$default" :as Tab]
     ["@mui/material/Tabs$default" :as Tabs]
     ["@mui/material/Typography$default" :as Typography]
+    [lipas.data.ptv :as ptv-data]
     [lipas.ui.components.autocompletes :refer [autocomplete2]]
     [reagent.core :as r]
     [reagent.hooks :as hooks]))
+
+(defn text-length-hint
+  "Helper text for a PTV text field holding `v`: its length against PTV's
+  maximum, and what PTV's minimum is while the text is under it."
+  [tr v max-length]
+  (cond-> (str (count v) "/" max-length)
+    (ptv-data/text-too-short? v)
+    (str " – " (tr :ptv/text-min-length ptv-data/min-text-length))))
+
+(defn text-length-error?
+  "Is `v` a text PTV rejects for its length? A blank one isn't."
+  [v max-length]
+  (or (ptv-data/text-too-short? v)
+      (> (count v) max-length)))
 
 (r/defc info-text [{:keys [children]}]
   [:> Typography
    {:variant "body1"}
    children])
+
+(def ^:private label-collator
+  ;; Finnish alphabetical order: case-insensitive, Å Ä Ö after Z, and
+  ;; "Kenttä 2" before "Kenttä 10".
+  (js/Intl.Collator. "fi" #js {:sensitivity "base" :numeric true}))
+
+(defn sort-by-label
+  "Selector options in alphabetical order of their :label."
+  [options]
+  (sort-by #(or (:label %) "") #(.compare label-collator %1 %2) options))
 
 (r/defc services-selector
   [{:keys [disabled options value on-change label value-fn multiple sx]
@@ -22,7 +47,7 @@
                                         (map (fn [x]
                                                {:value (value-fn x)
                                                 :label (:label x)}))
-                                        (sort-by :label)))
+                                        (sort-by-label)))
                                  [options value-fn])]
     [autocomplete2
      (cond-> {:disabled  disabled
