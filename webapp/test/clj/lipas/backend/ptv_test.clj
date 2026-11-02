@@ -60,7 +60,8 @@
                                       :features [{:type "Feature"
                                                   :geometry {:type "Point"
                                                              :coordinates [24.9384 60.1695]}}]}}
-              :ptv {:org-id "test-ptv-org"
+              :ptv {:previous-type-code 1210
+                    :org-id "test-ptv-org"
                     :summary {:fi "Tiivistelmä"}
                     :description {:fi "Kuvaus"}}}]
     (core/upsert-sports-site!* (test-db) user site)
@@ -373,13 +374,13 @@
 
           ;; TODO: is this ptv-input data useful? Could everything (the view components) just use raw site data directly?
             ptv-sites (for [site (vals sports-sites)]
-                        (ptv-data/sports-site->ptv-input {:types types
-                                                          :org-id org-id
-                                                          :org-defaults default-settings
-                                                          :org-langs org-langs}
-                                                         service-channels
-                                                         services
-                                                         site))]
+                        (ptv-review/sports-site->ptv-input {:types types
+                                                            :org-id org-id
+                                                            :org-defaults default-settings
+                                                            :org-langs org-langs}
+                                                           service-channels
+                                                           services
+                                                           site))]
 
         (is (= 1 (count ptv-sites)))
 
@@ -417,8 +418,8 @@
 (deftest upsert-ptv-service-location-refetches-channel-after-connection-updates
   ;; Regression: the PUT response is captured BEFORE the separate
   ;; update-service-connections calls land, so its :services list is stale.
-  ;; The FE caches that response as service-channels[id], and drift detection
-  ;; in compute-service-channel-drift sees stale services → reports
+  ;; The FE caches that response as service-channels[id], and the sync
+  ;; review (lipas.data.ptv/sync-review) sees stale services → reports
   ;; :content-drift → the green "synced" chip never appears immediately
   ;; after sync. The fix refetches the channel via GET after the connection
   ;; updates so the FE caches the canonical post-sync shape.
@@ -452,7 +453,8 @@
                                                   :geometry {:type "Point"
                                                              :coordinates [25.0 65.0]}}]}}
               :search-meta {:location {:wgs84-point [25.0 65.0]}}
-              :ptv {:org-id "org-x"
+              :ptv {:previous-type-code 1210
+                    :org-id "org-x"
                     :source-id "lipas-org-x-12345-2026-04-26T18-12-24.376411Z"
                     :service-channel-ids [channel-id]
                     :service-ids [new-service-id]
@@ -522,7 +524,8 @@
                                                   :geometry {:type "Point"
                                                              :coordinates [25.0 65.0]}}]}}
               :search-meta {:location {:wgs84-point [25.0 65.0]}}
-              :ptv {:org-id "org-x"
+              :ptv {:previous-type-code 1210
+                    :org-id "org-x"
                     :source-id "lipas-org-x-12345-2026-04-26T18-12-24.376411Z"
                     :service-channel-ids ["channel-uuid"]
                     :service-ids ["service-new"]
@@ -570,6 +573,7 @@
                                                                :coordinates [26.4 64.7]}}]}}
                 :search-meta {:location {:wgs84-point [26.4 64.7]}}
                 :ptv (merge {:org-id "org-x"
+                             :previous-type-code 1530
                              :service-channel-ids ["chan-1"]
                              :service-ids ["service-ice"]
                              :sync-enabled true
@@ -621,7 +625,9 @@
 ;;; Archiving behaviour ;;;
 
 (defn- sent-ptv [extra]
+  ;; the sites using this are of type 1210, which their services were bound for
   (merge {:org-id "org-x" :source-id "src-1" :service-channel-ids ["chan-1"]
+          :previous-type-code 1210
           :publishing-status "Published" :service-ids [] :sync-enabled true
           :languages ["fi"] :summary {:fi "summary"} :description {:fi "description"}}
          extra))
@@ -680,7 +686,7 @@
           "blanked texts do not archive a published site"))
     (testing "Never-published site is never archived"
       (is (false? (ptv-core/to-archive?
-                    {:status "out-of-service-permanently" :ptv {}} {}))))))
+                    {:status "out-of-service-permanently" :ptv {:previous-type-code 1210}} {}))))))
 
 (deftest archive-preserves-ptv-link-test
   (let [channel-id "chan-1"

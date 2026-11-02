@@ -33,6 +33,21 @@
      {:closed true}
      [:lipas-ids [:vector {:max 5000} #'sports-sites-schema/lipas-id]]]))
 
+(def fetch-sync-bases-body
+  "Request body for /actions/fetch-ptv-sync-bases: the sites (as loaded by
+   get-ptv-integration-candidates) whose last sync to review against."
+  (m/schema
+    [:map
+     {:closed true}
+     [:lipas-ids [:vector {:max 5000} #'sports-sites-schema/lipas-id]]]))
+
+(def fetch-site-review-body
+  "Request body for /actions/fetch-ptv-site-review."
+  (m/schema
+    [:map
+     {:closed true}
+     [:lipas-id #'sports-sites-schema/lipas-id]]))
+
 (def service-document
   "Persisted ptv_service document. Deliberately open — the document evolves
    (e.g. :last-sync, future draft fields) without schema migrations."
