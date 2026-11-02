@@ -20,7 +20,8 @@
   a quietly-wrong answer, so instead `check-query!` throws an ex-info that
   `lipas.backend.handler` maps to HTTP 400. The caps below are set above every
   query shape any real LIPAS client sends, so a 400 always means misuse."
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [lipas.backend.search :as search]))
 
 (def max-size
   "Cap for the top-level `:size`.
@@ -31,19 +32,28 @@
   (`lipas.ui.search.subs/pagination`). The report flow
   (`::create-report-from-current-search`) sends `:size 1000`.
 
-  10000 gives 2x headroom over that and is exactly Elasticsearch's own default
-  `index.max_result_window`: ES rejects `from + size > 10000` for a plain
-  search anyway, so this cap never rejects a query ES would have accepted — it
-  only turns what would be a spandex 500 into a clean 400."
+  10000 gives 2x headroom over that. It is not the result-window bound — that
+  is `max-from` plus the `from + size` rule below, which together are what keep
+  this guard from rejecting a query ES would have accepted."
   10000)
 
 (def max-from
-  "Cap for the top-level `:from`.
+  "Cap for the top-level `:from`, and with `:size` the bound on the result
+  window.
 
-  Paging in the map's result table sends `:from (* page page-size)`. It is
-  bounded in practice by the same `index.max_result_window` of 10000 that
-  bounds `from + size`, so nothing legitimate ever exceeds this."
-  10000)
+  Paging in the map's result table sends `:from (* page page-size)`, so this
+  has to reach the last page of the whole corpus. It is therefore tied to
+  `lipas.backend.search/max-result-window` — the `index.max_result_window`
+  the sports-site index is actually created with — and not to ES's 10000
+  default. Hard-coding the default here rejected page 11 of a 1000-row table
+  with a 400 that ES itself would never have raised.
+
+  Indices with a smaller window than the sports-site one (`lois` sets 50000;
+  the schools and population indices take the 10000 default) are still guarded
+  by this single coarse cap. Paging past *their* window is not something any
+  LIPAS client does, and if it ever happens ES rejects it with its own error —
+  the guard's job here is to bound abuse, not to mirror each index's settings."
+  search/max-result-window)
 
 (def max-agg-size
   "Cap for every `:size` below the top level — aggregation sizes, `top_hits`
@@ -141,15 +151,43 @@
       :scripting (str "Scripting is not allowed in search queries. "
                       "Offending key \"" key "\" at " at ".")
       :size (str "Query size " value " at " at " exceeds the maximum of " limit ".")
-      :from (str "Query from " value " at " at " exceeds the maximum of " limit "."))))
+      :from (str "Query from " value " at " at " exceeds the maximum of " limit ".")
+      :window (str "Query from + size " value " exceeds the result window of "
+                   limit "."))))
+
+(defn- root-number
+  "Value of root-level key named `k` when it is a number, else nil. Root keys
+  arrive as keywords from JSON bodies and as strings from transit clients, so
+  both spellings are matched (see `key-name`)."
+  [q k]
+  (when (map? q)
+    (some (fn [[kk v]] (when (and (= k (key-name kk)) (number? v)) v)) q)))
+
+(defn- window-violation
+  "The `from + size > index.max_result_window` case, which ES rejects outright.
+
+  The per-key `max-from` and `max-size` caps cannot catch this on their own:
+  each is at or below the window, but their sum is not, so `{:from 60000 :size
+  10000}` clears both and would reach ES only to come back as a spandex 500.
+  Checking the sum here keeps the guard's promise that a rejection is always a
+  clean 400. `size` defaults to 10 when absent, as it does in ES."
+  [q]
+  (let [total (+ (or (root-number q "from") 0)
+                 (or (root-number q "size") 10))]
+    (when (> total search/max-result-window)
+      {:rule :window :path ["from" "size"] :value total
+       :limit search/max-result-window})))
 
 (defn violation
   "Returns the first rule violation in ES query body `q` as a map
-  `{:rule :scripting|:size|:from :path [...] ...}`, or nil when `q` is safe.
-  Pure — useful for testing and for callers that want to inspect rather than
-  throw."
+  `{:rule :scripting|:size|:from|:window :path [...] ...}`, or nil when `q` is
+  safe. Pure — useful for testing and for callers that want to inspect rather
+  than throw."
   [q]
-  (find-violation q [] true))
+  ;; Per-key rules first, so a scripting key is always reported as scripting
+  ;; rather than masked by an oversized window in the same body.
+  (or (find-violation q [] true)
+      (window-violation q)))
 
 (defn check-query!
   "Validates an untrusted Elasticsearch query body. Returns `q` unchanged when

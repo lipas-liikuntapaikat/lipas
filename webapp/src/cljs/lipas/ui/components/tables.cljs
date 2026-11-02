@@ -108,12 +108,13 @@
            action-icon hide-action-btn? action-label on-sort-change
            in-progress?  allow-editing? on-item-save edit-label
            save-label discard-label allow-saving? multi-select?
-           on-edit-start]
+           on-edit-start server-sorted?]
     :or   {sort-cmp         compare
            sort-asc?        false
            action-icon      "keyboard_arrow_right"
            hide-action-btn? false
            in-progress?     false
+           server-sorted?   false
            on-sort-change   :default
            on-item-save     #(prn "Item save clicked!" %)
            allow-editing?   (constantly false)
@@ -183,7 +184,13 @@
 
          ;; Rows
          (doall
-           (for [item (if @sort-fn*
+           ;; `server-sorted?` callers get `items` untouched: they re-query on
+           ;; every header click and the backend decides the order. Sorting
+           ;; again here would silently override it -- cljs `compare` is
+           ;; case-sensitive code-point order and puts nil first, so blank
+           ;; cells would jump between the top and the bottom of the page on
+           ;; every asc/desc toggle.
+           (for [item (if (and @sort-fn* (not server-sorted?))
                         (sort-by @sort-fn* (if @sort-asc?
                                              sort-cmp
                                              utils/reverse-cmp)

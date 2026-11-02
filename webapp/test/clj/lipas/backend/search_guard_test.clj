@@ -3,6 +3,7 @@
    real app rejects the reproduction payloads on /api/actions/search."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [lipas.backend.core :as core]
+            [lipas.backend.search :as search]
             [lipas.backend.search-guard :as search-guard]
             [lipas.test-utils :refer [->json <-json] :as tu]
             [ring.mock.request :as mock]))
@@ -133,9 +134,44 @@
     (is (not (rejects? {:from 0 :size 5000 :query {:match_all {}}})))))
 
 (deftest top-level-from-cap-test
-  (is (not (rejects? {:from search-guard/max-from :size 10})))
   (is (= :from (rule {:from (inc search-guard/max-from) :size 10})))
-  (is (= :from (rule {:from 2000000000}))))
+  (is (= :from (rule {:from 2000000000})))
+
+  (testing "max-from tracks the index's real max_result_window, not ES's default"
+    (is (= search/max-result-window search-guard/max-from)))
+
+  (testing "deep paging inside the window is allowed"
+    ;; The regression: a 1000-row result table past page 10 sends
+    ;; :from 22000, which the old hard-coded 10000 cap rejected with a 400
+    ;; that ES itself would never have raised.
+    (is (not (rejects? {:from 22000 :size 1000 :query {:match_all {}}})))
+    (is (not (rejects? {:from (- search/max-result-window 1000)
+                        :size 1000
+                        :query {:match_all {}}}))
+        "the very last page of the window is fine")))
+
+(deftest result-window-cap-test
+  (testing "from + size past the window is rejected, though neither cap alone is"
+    (let [q {:from search-guard/max-from :size search-guard/max-size}]
+      (is (<= (:from q) search-guard/max-from))
+      (is (<= (:size q) search-guard/max-size))
+      (is (= :window (rule q))
+          "the sum is what ES rejects, so the guard has to check the sum")))
+
+  (testing "the message names the window"
+    (is (re-find #"result window"
+                 (try
+                   (search-guard/check-query!
+                     {:from search-guard/max-from :size search-guard/max-size})
+                   (catch clojure.lang.ExceptionInfo e (ex-message e))))))
+
+  (testing "size 0 aggregation-only queries are not charged a default size"
+    (is (not (rejects? {:from search-guard/max-from :size 0}))))
+
+  (testing "a scripting key in the same body is still reported as scripting"
+    (is (= :scripting (rule {:from search-guard/max-from
+                             :size search-guard/max-size
+                             :script_fields {}})))))
 
 (deftest nested-agg-size-cap-test
   (testing "a 5000-bucket terms aggregation is rejected"
@@ -271,6 +307,22 @@
         sites (->> resp :body <-json :hits :hits (map :_source))]
     (is (= 200 (:status resp)))
     (is (some (comp #{lipas-id} :lipas-id) sites))))
+
+(deftest search-endpoint-serves-deep-pages-test
+  (testing "the page-11-of-1000 payload that used to come back as a 400"
+    (let [resp (post-search {:from 22000
+                             :size 1000
+                             :query {:match_all {}}})]
+      (is (= 200 (:status resp))
+          "ES's window on this index is 60000; nothing here exceeds it")))
+
+  (testing "past the window it is still a clean 400, not a spandex 500"
+    (let [resp (post-search {:from search-guard/max-from
+                             :size search-guard/max-size
+                             :query {:match_all {}}})
+          body (<-json (:body resp))]
+      (is (= 400 (:status resp)))
+      (is (= "invalid-search-query" (:type body))))))
 
 (deftest report-endpoint-rejects-scripting-test
   (let [resp (test-app
