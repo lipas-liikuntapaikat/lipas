@@ -111,12 +111,63 @@
             [field (-> (select-keys (get result field) keep-langs)
                        (assoc from (get doc field)))]))))
 
+(def ^:private translation-limits
+  {:summary ptv-data/max-summary-length
+   :description ptv-data/max-description-length
+   :user-instruction ptv-data/max-user-instruction-length})
+
+(defn cut-to-limit
+  "`s` cut to at most `limit` characters: after the last whole sentence that
+   fits, else after the last whole word. `s` itself when it fits."
+  [s limit]
+  (if (<= (count s) limit)
+    s
+    (let [sentence-end? (fn [i]
+                          (and (#{\. \! \?} (.charAt ^String s i))
+                               (Character/isWhitespace (.charAt ^String s (inc i)))))
+          sentence-cut (some #(when (sentence-end? %) (inc %))
+                             (range (dec limit) -1 -1))
+          word-cut (str/last-index-of (subs s 0 (inc limit)) " ")]
+      (if sentence-cut
+        (subs s 0 sentence-cut)
+        (-> (subs s 0 (or word-cut limit))
+            (str/replace #"[\s,;:–-]+$" ""))))))
+
+(defn fit-translation
+  "`translation` (select-translation's) within PTV's character limits, which
+   a faithful translation can exceed: an over-long summary is first
+   reworded (every fact kept), then condensed (secondary details dropped),
+   and any text still over its limit is cut after its last whole sentence.
+   The source language is the user's own text and stays as written.
+   :shortened lists the texts the last two steps changed, which may have
+   lost something, as [{:field :lang}]."
+  [doc translation]
+  (let [from (keyword (:from doc))
+        reworded (enforce-summary-limit translation :skip-langs #{from} :mode :wording)
+        condensed (enforce-summary-limit reworded :skip-langs #{from} :mode :condense)
+        fitted (reduce-kv (fn [t field limit]
+                            (cond-> t
+                              (map? (get t field))
+                              (update field (fn [texts]
+                                              (into {}
+                                                    (for [[lang v] texts]
+                                                      [lang (if (and (string? v) (not= from lang))
+                                                              (cut-to-limit v limit)
+                                                              v)]))))))
+                          condensed
+                          translation-limits)
+        shortened (vec (for [[field texts] fitted
+                             [lang v] texts
+                             :when (not= v (get-in reworded [field lang]))]
+                         {:field field :lang (name lang)}))]
+    (cond-> fitted
+      (seq shortened) (assoc :shortened shortened))))
+
 (defn translate-to-other-langs
   [doc]
   (let [content (-> (ai/translate-to-other-langs doc) :message :content)]
     (if (map? content)
-      (-> (select-translation doc content)
-          (enforce-summary-limit :skip-langs #{(keyword (:from doc))}))
+      (fit-translation doc (select-translation doc content))
       content)))
 
 (defn make-overview

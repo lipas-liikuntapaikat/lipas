@@ -2,11 +2,12 @@
  :module-load-failed "Sovelluksen osan lataaminen epäonnistui. Tarkista verkkoyhteys ja lataa sivu uudelleen.",
  :ie
  (str
-  "Internet Explorer ei ole tuettu selain. "
-  "Suosittelemme käyttämään toista selainta, "
-  "esim. Chrome, Firefox tai Edge."),
+   "Internet Explorer ei ole tuettu selain. "
+   "Suosittelemme käyttämään toista selainta, "
+   "esim. Chrome, Firefox tai Edge."),
  :save-failed "Tallennus epäonnistui",
  :save-success "Tallennus onnistui",
  :copied-to-clipboard "Kopioitu leikepöydälle"
  :translate-success "Käännös onnistui"
+ :translate-success-shortened "Käännös onnistui. Lyhennettiin mahtumaan PTV:n merkkirajaan, tarkista: {1}"
  :thank-you-for-feedback "Kiitos palautteesta!"}
