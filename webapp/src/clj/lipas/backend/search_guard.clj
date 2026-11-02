@@ -43,17 +43,17 @@
 
   Paging in the map's result table sends `:from (* page page-size)`, so this
   has to reach the last page of the whole corpus. It is therefore tied to
-  `lipas.backend.search/max-result-window` — the `index.max_result_window`
-  the sports-site index is actually created with — and not to ES's 10000
-  default. Hard-coding the default here rejected page 11 of a 1000-row table
-  with a 400 that ES itself would never have raised.
+  the `:sports-site` entry of `lipas.backend.search/max-result-window` — the
+  `index.max_result_window` the sports-site index is actually created with —
+  and not to ES's 10000 default. Hard-coding the default here rejected page
+  11 of a 1000-row table with a 400 that ES itself would never have raised.
 
   Indices with a smaller window than the sports-site one (`lois` sets 50000;
   the schools and population indices take the 10000 default) are still guarded
   by this single coarse cap. Paging past *their* window is not something any
   LIPAS client does, and if it ever happens ES rejects it with its own error —
   the guard's job here is to bound abuse, not to mirror each index's settings."
-  search/max-result-window)
+  (:sports-site search/max-result-window))
 
 (def max-agg-size
   "Cap for every `:size` below the top level — aggregation sizes, `top_hits`
@@ -174,9 +174,9 @@
   [q]
   (let [total (+ (or (root-number q "from") 0)
                  (or (root-number q "size") 10))]
-    (when (> total search/max-result-window)
+    (when (> total max-from)
       {:rule :window :path ["from" "size"] :value total
-       :limit search/max-result-window})))
+       :limit max-from})))
 
 (defn violation
   "Returns the first rule violation in ES query body `q` as a map

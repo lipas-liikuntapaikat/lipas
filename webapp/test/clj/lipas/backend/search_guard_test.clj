@@ -138,14 +138,14 @@
   (is (= :from (rule {:from 2000000000})))
 
   (testing "max-from tracks the index's real max_result_window, not ES's default"
-    (is (= search/max-result-window search-guard/max-from)))
+    (is (= (:sports-site search/max-result-window) search-guard/max-from)))
 
   (testing "deep paging inside the window is allowed"
     ;; The regression: a 1000-row result table past page 10 sends
     ;; :from 22000, which the old hard-coded 10000 cap rejected with a 400
     ;; that ES itself would never have raised.
     (is (not (rejects? {:from 22000 :size 1000 :query {:match_all {}}})))
-    (is (not (rejects? {:from (- search/max-result-window 1000)
+    (is (not (rejects? {:from (- (:sports-site search/max-result-window) 1000)
                         :size 1000
                         :query {:match_all {}}}))
         "the very last page of the window is fine")))
