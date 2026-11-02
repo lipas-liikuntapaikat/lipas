@@ -1,5 +1,6 @@
 (ns lipas.reports
-  (:require [lipas.data.prop-types :as prop-types]
+  (:require [lipas.data.cities :as cities]
+            [lipas.data.prop-types :as prop-types]
             [lipas.utils :as utils]))
 
 (defn- all-energy-data-exists? [{:keys [energy-consumption]}]
@@ -344,6 +345,12 @@
   {"location.city.city-code" {:fi "Kunta"
                               :se "Kommun"
                               :en "City"}
+   "search-meta.location.province.id" {:fi "Maakunta"
+                                       :se "Landskap"
+                                       :en "Region"}
+   "search-meta.location.avi-area.id" {:fi "AVI-alue"
+                                       :se "RFV-område"
+                                       :en "AVI area"}
    "type.type-code"          {:fi "Tyyppi"
                               :se "Typ"
                               :en "Type"}})
@@ -441,71 +448,80 @@
     {:country-averages (calc-stats years all-cities)
      :data-points      (select-keys cities city-codes)}))
 
+(defn- ->stats-entry
+  "Turns one ES grouping bucket into a stats row. `population` is the
+  population behind the bucket, used for the per-capita figures."
+  [bucket population]
+  (let [per-capita?     (and population (pos? population))
+        m2-sum          (-> bucket :area_m2_stats :sum)
+        km-sum          (-> bucket :length_km_stats :sum)
+        area-m2-stats   (-> bucket
+                            :area_m2_stats
+                            (assoc :pc (when (and per-capita? m2-sum)
+                                         (double (/ m2-sum population))))
+                            (utils/->prefix-map "area-m2-"))
+        length-km-stats (-> bucket
+                            :length_km_stats
+                            (assoc :pc (when (and per-capita? km-sum)
+                                         (double (/ km-sum population))))
+                            (utils/->prefix-map "length-km-"))
+        sites-count     (:doc_count bucket)]
+    (merge
+      area-m2-stats
+      length-km-stats
+      {:population         population
+       :sites-count        sites-count
+       :sites-count-p1000c (when (and per-capita? sites-count)
+                             (double
+                               (/ sites-count
+                                  (/ population 1000))))})))
+
+(defn- selected-populations [pop-data city-codes]
+  (if (empty? city-codes)
+    pop-data ;; all
+    (select-keys pop-data city-codes)))
+
+;; ES 8.x returns numeric aggregation keys as floats, so convert to int
+(defn- bucket-key [bucket]
+  (int (:key bucket)))
+
 (defn calculate-stats-by-city [aggs-data pop-data]
   (reduce
     (fn [res m]
-     ;; ES 8.x returns numeric aggregation keys as floats, so convert to int
-      (let [city-code  (int (:key m))
-            population (pop-data city-code)
-
-            m2-sum          (-> m :area_m2_stats :sum)
-            km-sum          (-> m :length_km_stats :sum)
-            area-m2-stats   (-> m
-                                :area_m2_stats
-                                (assoc :pc (when (and population m2-sum)
-                                             (double (/ m2-sum population))))
-                                (utils/->prefix-map "area-m2-"))
-            length-km-stats (-> m
-                                :length_km_stats
-                                (assoc :pc (when (and population km-sum)
-                                             (double (/ km-sum population))))
-                                (utils/->prefix-map "length-km-"))
-            sites-count     (:doc_count m)
-            entry           (merge
-                              area-m2-stats
-                              length-km-stats
-                              {:population         population
-                               :sites-count        sites-count
-                               :sites-count-p1000c (when (and population sites-count)
-                                                     (double
-                                                       (/ sites-count
-                                                          (/ population 1000))))})]
-        (assoc res city-code entry)))
+      (let [city-code (bucket-key m)]
+        (assoc res city-code (->stats-entry m (pop-data city-code)))))
     {}
     aggs-data))
 
 (defn calculate-stats-by-type [aggs-data pop-data city-codes]
-  (reduce
-    (fn [res m]
-     ;; ES 8.x returns numeric aggregation keys as floats, so convert to int
-      (let [type-code       (int (:key m))
-            populations     (if (empty? city-codes)
-                              pop-data ;; all
-                              (select-keys pop-data city-codes))
-            population      (->> populations vals (reduce +))
-            m2-sum          (-> m :area_m2_stats :sum)
-            km-sum          (-> m :length_km_stats :sum)
-            area-m2-stats   (-> m
-                                :area_m2_stats
-                                (assoc :pc (when (and population m2-sum)
-                                             (double (/ m2-sum population))))
-                                (utils/->prefix-map "area-m2-"))
-            length-km-stats (-> m
-                                :length_km_stats
-                                (assoc :pc (when (and population km-sum)
-                                             (double (/ km-sum population))))
-                                (utils/->prefix-map "length-km-"))
+  (let [population (->> (selected-populations pop-data city-codes)
+                        vals
+                        (reduce +))]
+    (reduce
+      (fn [res m]
+        (assoc res (bucket-key m) (->stats-entry m population)))
+      {}
+      aggs-data)))
 
-            sites-count (:doc_count m)
-            entry       (merge
-                          area-m2-stats
-                          length-km-stats
-                          {:population         population
-                           :sites-count        sites-count
-                           :sites-count-p1000c (when (and population sites-count)
-                                                 (double
-                                                   (/ sites-count
-                                                      (/ population 1000))))})]
-        (assoc res type-code entry)))
-    {}
-    aggs-data))
+(def ^:private cities-by-city-code
+  (utils/index-by :city-code cities/all))
+
+(defn calculate-stats-by-region
+  "Stats grouped by a region of cities. `region-k` is the city attribute
+  the buckets are keyed by, :province-id or :avi-id. A region's population
+  counts only the selected cities (all when none are selected), including
+  those without matching sites, so per-capita figures follow the filter."
+  [aggs-data pop-data city-codes region-k]
+  (let [pop-by-region (reduce
+                        (fn [res [city-code population]]
+                          (if-let [region (get-in cities-by-city-code [city-code region-k])]
+                            (update res region (fnil + 0) population)
+                            res))
+                        {}
+                        (selected-populations pop-data city-codes))]
+    (reduce
+      (fn [res m]
+        (let [region (bucket-key m)]
+          (assoc res region (->stats-entry m (pop-by-region region)))))
+      {}
+      aggs-data)))

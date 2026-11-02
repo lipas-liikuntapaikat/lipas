@@ -194,9 +194,11 @@
          :search-meta.location.city.name.fi (text-with-sort "fi")
          :search-meta.location.city.name.se (text-with-sort "sv")
          :search-meta.location.city.name.en (text-with-sort "en")
+         :search-meta.location.province.id {:type "integer"}
          :search-meta.location.province.name.fi text-with-keyword
          :search-meta.location.province.name.se text-with-keyword
          :search-meta.location.province.name.en text-with-keyword
+         :search-meta.location.avi-area.id {:type "integer"}
          :search-meta.location.avi-area.name.fi text-with-keyword
          :search-meta.location.avi-area.name.se text-with-keyword
          :search-meta.location.avi-area.name.en text-with-keyword

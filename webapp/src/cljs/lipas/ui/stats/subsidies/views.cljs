@@ -156,9 +156,8 @@
 
      ;; Chart
      (when (= "chart" view)
-       (let [on-click (fn [evt]
-                        (when-let [m (charts/->payload evt)]
-                          (==> [::events/select-filters m grouping])))]
+       (let [on-click (fn [m]
+                        (==> [::events/select-filters m grouping]))]
          (if (= "ranking" chart-type)
            [charts/subsidies-ranking-chart
             {:data     ranking-data
