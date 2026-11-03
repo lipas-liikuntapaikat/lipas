@@ -1156,8 +1156,10 @@
                       "Polygon" (-> geom2 :coordinates last last))
 
          city-code (-> sports-site :location :city :city-code)
-         province (-> city-code cities :province-id cities/provinces)
-         avi-area (-> city-code cities :avi-id cities/avi-areas)
+         province-id (-> city-code cities :province-id)
+         avi-id (-> city-code cities :avi-id)
+         province (cities/provinces province-id)
+         avi-area (cities/avi-areas avi-id)
 
          type-code (-> sports-site :type :type-code)
          main-category (-> type-code types :main-category types/main-categories)
@@ -1201,8 +1203,9 @@
                        :wgs84-end end-coords
                        :geometries (feature-coll->geom-coll (gis/strip-z-fcoll fcoll))
                        :city {:name (-> city-code cities :name)}
-                       :province {:name (:name province)}
-                       :avi-area {:name (:name avi-area)}
+                       ;; Ids are aggregated on by the sports stats grouping
+                       :province {:id province-id :name (:name province)}
+                       :avi-area {:id avi-id :name (:name avi-area)}
                        :simple-geoms (gis/simplify-safe fcoll)}
                       :type
                       {:name (-> type-code types :name)
@@ -1947,9 +1950,13 @@
                  {:area_m2_stats {:stats {:field :properties.area-m2}}
                   :length_km_stats {:stats {:field :properties.route-length-km}}}}}}
         aggs-data (-> (search search* query) :body :aggregations :grouping :buckets)]
-    (if (= "location.city.city-code" grouping)
-      (reports/calculate-stats-by-city aggs-data pop-data)
-      (reports/calculate-stats-by-type aggs-data pop-data city-codes))))
+    (case grouping
+      "location.city.city-code" (reports/calculate-stats-by-city aggs-data pop-data)
+      "type.type-code" (reports/calculate-stats-by-type aggs-data pop-data city-codes)
+      "search-meta.location.province.id"
+      (reports/calculate-stats-by-region aggs-data pop-data city-codes :province-id)
+      "search-meta.location.avi-area.id"
+      (reports/calculate-stats-by-region aggs-data pop-data city-codes :avi-id))))
 
 (defn get-front-page-stats
   [db search*]
