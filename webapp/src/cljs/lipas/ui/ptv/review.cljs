@@ -481,82 +481,59 @@
          (caption (tr :ptv.review/language-enable-hint lang-name)))])))
 
 (defn- service-list
-  "The services one side connects the location to, those only it has
-   marked."
-  [tr services only-ids side]
-  (if (seq services)
+  "The services `ids` one side connects the location to (by the
+   connections `row`'s names), those the `other` side hasn't marked."
+  [tr row ids other side]
+  (if (seq ids)
     (into [:> Stack {:spacing 0.5}]
-          (for [{:keys [id name]} services]
+          (for [id (sort-by #(str/lower-case (get-in row [:names %] %)) ids)
+                :let [service-name (get-in row [:names id] id)]]
             [:> Typography {:variant "body2" :sx body}
-             (if (only-ids id)
-               [:mark {:style (get diff-styles side)} name]
-               name)]))
+             (if (contains? other id)
+               service-name
+               [:mark {:style (get diff-styles side)} service-name])]))
     (empty-value tr)))
 
-(defn- connection-change
-  "What happened to a connection since the last sync."
-  [tr {:keys [origin ptv?]}]
-  (tr (case [origin (boolean ptv?)]
-        [:ptv true] :ptv.review/connection-added-in-ptv
-        [:ptv false] :ptv.review/connection-removed-in-ptv
-        [:lipas true] :ptv.review/connection-removed-in-lipas
-        [:lipas false] :ptv.review/connection-added-in-lipas
-        (if ptv?
-          :ptv.review/connection-only-in-ptv
-          :ptv.review/connection-only-in-lipas))))
-
-(defn- connection-choice
-  "One differing connection and the choice to keep or remove it."
-  [{:keys [tr row choices on-take can-take? read-only? first-open-id]}]
-  (let [{:keys [name ptv? lipas?]} row
-        shown (shown-side choices row)
-        ;; keeping it takes the side that has it
-        keep-side (if ptv? :ptv :lipas)
-        remove-side (if ptv? :lipas :ptv)
-        connected? (when shown (if (= :ptv shown) ptv? lipas?))]
-    [:> Stack {:direction "row" :spacing 1 :alignItems "center" :flexWrap "wrap" :useFlexGap true}
-     [:> Typography {:variant "body2" :sx #js {:fontWeight 600}} name]
-     [:> Typography {:variant "body2" :color "text.secondary" :sx body}
-      (connection-change tr row)]
-     (when-not read-only?
-       [:<>
-        (when (and (ptv-review/review-choice-required? row) (not shown))
-          [:> Typography {:variant "caption" :color "warning.dark"}
-           (tr :ptv.review/choose-before-sync)])
-        [:span {:style {:flex 1}}]
-        (if (can-take? row)
-          [:<>
-           [choice-button {:id first-open-id
-                           :label (tr :ptv.review/keep-connection)
-                           :subject name
-                           :chosen? (true? connected?)
-                           :on-click #(on-take [row] keep-side)}]
-           [choice-button {:label (tr :ptv.review/remove-connection)
-                           :subject name
-                           :chosen? (false? connected?)
-                           :on-click #(on-take [row] remove-side)}]]
-          (caption (not-takeable-caption tr row)))])]))
-
-(defn- connections-block
-  "The location's connections to services: everything each side has, with
-   a choice for each difference."
-  [{:keys [tr rows services stacked?] :as props}]
-  (let [only-lipas (into #{} (comp (filter :lipas?) (map :id)) rows)
-        only-ptv (into #{} (comp (filter :ptv?) (map :id)) rows)]
-    [:> Stack {:spacing 1.5}
+(defn- services-row
+  "The services the location is connected to: Lipas's set against PTV's,
+   kept or taken as a whole like any other value."
+  [{:keys [tr row choices on-take can-take? stacked? read-only? first-open-id]}]
+  (let [{:keys [origin lipas ptv current draft]} row
+        shown (when-not read-only? (shown-side choices row))
+        subject (review-data/field-label tr row)]
+    [:> Stack {:spacing 1}
      [two-cards {:stacked? stacked?}
       [side-card {:tr tr
                   :title (tr :ptv.review/lipas)
-                  :changed? (some #(#{:lipas :both} (:origin %)) rows)
-                  :content [service-list tr (:lipas services) only-lipas :lipas]}]
+                  :changed? (#{:lipas :both} origin)
+                  :in-form? (= :lipas shown)
+                  :content [service-list tr row lipas ptv :lipas]
+                  :button (when-not read-only?
+                            [choice-button {:id first-open-id
+                                            :label (tr :ptv.review/keep-lipas)
+                                            :subject subject
+                                            :chosen? (= :lipas shown)
+                                            :on-click #(on-take [row] :lipas)}])}]
       [side-card {:tr tr
                   :title (tr :ptv.review/ptv)
-                  :changed? (some #(#{:ptv :both} (:origin %)) rows)
-                  :content [service-list tr (:ptv services) only-ptv :ptv]}]]
-     (into [:> Stack {:spacing 1}]
-           (for [[i row] (map-indexed vector rows)]
-             [connection-choice (cond-> (assoc props :row row)
-                                  (pos? i) (dissoc :first-open-id))]))]))
+                  :changed? (#{:ptv :both} origin)
+                  :in-form? (= :ptv shown)
+                  :content [service-list tr row ptv lipas :ptv]
+                  :button (cond
+                            read-only? nil
+
+                            (can-take? row)
+                            [choice-button {:label (tr :ptv.review/take-ptv)
+                                            :subject subject
+                                            :chosen? (= :ptv shown)
+                                            :on-click #(on-take [row] :ptv)}]
+
+                            :else (caption (not-takeable-caption tr row)))}]]
+     (caption (tr :ptv.review/services-legend))
+     (when (and (not read-only?) (= :edited current))
+       [edited-alert {:tr tr :row row :choices choices :on-take on-take
+                      :title (tr :ptv.review/edited-services-title)
+                      :text (str/join "\n" (review-data/service-names row draft))}])]))
 
 (defn- decided-text
   "One line for a decided row: which version stays."
@@ -576,6 +553,7 @@
     :address [address-row props]
     (:info :distance) [info-row props]
     :languages [language-row props]
+    :set [services-row props]
     nil))
 
 (defn- focus-ref
@@ -647,9 +625,8 @@
   [tr row]
   (let [{:keys [field kind lipas ptv]} row]
     (cond
-      (= :services field)
-      (tr (if (:lipas? row) :ptv.review/connection-to-ptv :ptv.review/connection-removed-from-ptv)
-          (:name row))
+      (= :set kind)
+      (tr :ptv.review/services-in-ptv (review-data/services-change tr row ptv lipas))
 
       (short-row-text? row)
       (tr :ptv.review/lipas-change-value (review-data/field-label tr row)
@@ -678,6 +655,29 @@
                                        :description :ptv.review/field-description))))
                              rows)))]))
 
+(defn- first-link-services?
+  "Whether `row` is the connections on a first link, which need no
+   decision: the first sync keeps PTV's (ptv-data/link-service-ids)."
+  [row]
+  (and (= :set (:kind row)) (= :first-link (:origin row))))
+
+(defn- first-link-services-lines
+  "What the first sync does with the connections `row`: it connects the
+   location to the edit's services and PTV's (ptv-data/link-service-ids),
+   so PTV's that the saved site lacks stay and are copied into Lipas (the
+   PTV tool's edit holds them from the link on), and the edit's that PTV
+   lacks are added in PTV."
+  [tr row]
+  (let [saved (set (:lipas row))
+        held (set (or (:draft row) (:lipas row)))
+        ptv (set (:ptv row))
+        names #(str/join ", " (review-data/service-names row %))]
+    (remove nil?
+            [(when-let [ids (seq (remove saved ptv))]
+               (tr :ptv.review/services-kept (names ids)))
+             (when-let [ids (seq (remove ptv held))]
+               (tr :ptv.review/services-to-ptv (names ids)))])))
+
 (defn- lipas-changes
   "③ What the sync updates in PTV from Lipas: Lipas's own changes, and on
    a first link the connections the location keeps. Collapsed while
@@ -696,12 +696,13 @@
        [:> Collapse {:in expanded? :unmountOnExit true}
         [:ul {:style {:margin 0 :paddingLeft "1.5em"}}
          (language-added-lines tr added)
-         (for [row others]
-           ^{:key (str (:key row))}
+         (for [row others
+               [i line] (map-indexed vector (if (first-link-services? row)
+                                              (first-link-services-lines tr row)
+                                              [(lipas-change-line tr row)]))]
+           ^{:key (str (:key row) i)}
            [:li [:> Typography {:variant "body2" :component "span" :sx body}
-                 (if (and (= :services (:field row)) (= :first-link (:origin row)))
-                   (tr (if (:ptv? row) :ptv.review/connection-kept :ptv.review/connection-to-ptv) (:name row))
-                   (lipas-change-line tr row))]])]]])))
+                 line]])]]])))
 
 (defn- up-to-date-line
   [tr matching]
@@ -714,9 +715,9 @@
                             (str/lower-case (review-data/field-label tr m))))))]))
 
 (defn- kept-in-ptv-line
-  "What PTV keeps that Lipas has no field for (D8), a postal address the
-   sync can't send back, and on a service, PTV's changes the edit keeps."
-  [tr {:keys [service-hours? postal-addresses ptv-changes]}]
+  "What PTV keeps that Lipas has no field for (D8), and a postal address
+   the sync can't send back."
+  [tr {:keys [service-hours? postal-addresses]}]
   (let [kept (cond-> []
                service-hours? (conj (tr :ptv.review/kept-service-hours))
                (seq (:kept postal-addresses)) (conj (tr :ptv.review/kept-postal-address)))]
@@ -726,41 +727,22 @@
         (tr :ptv.review/kept-in-ptv (str/join ", " kept))])
      (when (seq (:dropped postal-addresses))
        [:> Typography {:variant "body2" :color "warning.dark" :sx body}
-        (tr :ptv.review/postal-address-dropped)])
-     (when (seq ptv-changes)
-       [:> Typography {:variant "body2" :color "text.secondary" :sx body}
-        (tr :ptv.review/ptv-changes-kept
-            (str/join ", " (map #(str/lower-case (review-data/field-label tr %)) ptv-changes)))])]))
-
-(defn- connection-outcome
-  "What a sync does with the connection `row` when the edit holds
-   `shown`'s side: adds it to the side without it, or removes it from the
-   side with it."
-  [shown {:keys [ptv? lipas?]}]
-  (let [connected? (if (= :ptv shown) ptv? lipas?)]
-    (case [(boolean connected?) (boolean ptv?)]
-      [true true] :ptv.review/connection-to-lipas
-      [true false] :ptv.review/connection-to-ptv
-      [false true] :ptv.review/connection-removed-from-ptv
-      [false false] :ptv.review/connection-removed-from-lipas)))
+        (tr :ptv.review/postal-address-dropped)])]))
 
 (defn- labels
   [tr rows]
   (str/join ", " (map #(review-data/field-label tr %) rows)))
 
 (defn- outcome-lines
-  "Where each decision ends up with what the edit holds now."
+  "Where each decision ends up with what the edit holds now. The
+   connections on a first link are merged, not chosen."
   [tr rows choices]
   (let [side (fn [row]
                (if (= :edited (:current row))
                  :edited
                  (shown-side choices row)))
-        by (group-by (fn [row]
-                       (let [s (side row)]
-                         ;; a connection is added or removed, not copied
-                         (if (and s (= :services (:field row))) :connection s)))
-                     rows)
-        connections (group-by #(connection-outcome (side %) %) (get by :connection))]
+        {merged true rows false} (group-by first-link-services? rows)
+        by (group-by side rows)]
     [:> Stack {:spacing 0.5}
      (when-let [rows (seq (get by :lipas))]
        [:> Typography {:variant "body2" :sx body}
@@ -771,15 +753,10 @@
      (when-let [rows (seq (get by :edited))]
        [:> Typography {:variant "body2" :sx body}
         (tr :ptv.review/edited-in-form (labels tr rows))])
-     (for [k [:ptv.review/connection-to-lipas
-              :ptv.review/connection-to-ptv
-              :ptv.review/connection-removed-from-ptv
-              :ptv.review/connection-removed-from-lipas]
-           :let [rows (get connections k)]
-           :when rows]
-       ^{:key k}
-       [:> Typography {:variant "body2" :sx body}
-        (tr k (str/join ", " (map :name rows)))])
+     (for [row merged
+           line (first-link-services-lines tr row)]
+       ^{:key line}
+       [:> Typography {:variant "body2" :sx body} line])
      (when-let [rows (seq (get by nil))]
        [:> Typography {:variant "body2" :color "warning.dark"}
         (tr :ptv.review/still-open (labels tr rows))])]))
@@ -876,6 +853,22 @@
                           href (assoc :href href :target "_blank"))
               label])))])
 
+(defn- gone-notice
+  "① The services the site connects that PTV no longer has
+   (ptv-review/gone-service): archived in PTV, or not found there at all,
+   the id in small print for one nobody can name. PTV has dropped the
+   connections already; the next sync drops them from Lipas. Nothing to
+   choose."
+  [tr services]
+  [:> Alert {:severity "info" :variant "outlined"}
+   (into [:> Stack {:spacing 0.5}]
+         (for [{:keys [id gone] :as service} services]
+           [:div
+            [:> Typography {:variant "body2" :sx body}
+             (review-data/gone-notice-line tr service)]
+            (when (= :unknown gone)
+              (caption id))]))])
+
 (defn review-panel
   "The review of one site, collapsed to a bar until opened.
 
@@ -915,15 +908,17 @@
    - :read-only?   only what differs, without choices (the site's view
                    mode: the choices go into an edit); :footer says how
                    to make them
-   Shows nothing while there is nothing to review and no notice."
+   The review's :gone-services, services PTV no longer has, are a notice of
+   ① of their own. Shows nothing while there is nothing to review and no
+   notice."
   [{:keys [id tr review choices open? on-toggle on-take on-take-value on-reset written?
            rights org-langs notices draft? site-tab first-open-id footer stacked? read-only?]}]
   (r/with-let [expanded (r/atom #{})
                ;; [row-key :decided/:opened] while a row collapses or
                ;; opens, :first-open while the choices are undone
                focus-row (r/atom nil)]
-    (let [{:keys [rows matching services]} review]
-      (when (or (seq rows) (seq notices))
+    (let [{:keys [rows matching gone-services]} review]
+      (when (or (seq rows) (seq notices) (seq gone-services))
         (let [can-take? #(review-data/takeable? rights %)
               required (filter ptv-review/review-choice-required? rows)
               open (ptv-review/open-review-rows rows choices)
@@ -971,6 +966,8 @@
            ;; ① always in sight: it may block the sync
            (for [n notices]
              ^{:key (:key n)} [notice n])
+           (when (seq gone-services)
+             [gone-notice tr gone-services])
 
            ;; the choices wait for PTV's draft to go: they couldn't be
            ;; written, and its publishing may change what PTV has
@@ -1004,14 +1001,9 @@
                     ^{:key group}
                     [:> Stack {:spacing 1}
                      [group-title tr group]
-                     (if (= :services group)
-                       [connections-block (assoc (props (first group-rows))
-                                                 :rows group-rows :services services
-                                                 :first-open-id (when (some #{first-open} group-rows)
-                                                                  first-open-id))]
-                       (for [row group-rows]
-                         ^{:key (str (:key row))}
-                         [review-row (props row)]))])])
+                     (for [row group-rows]
+                       ^{:key (str (:key row))}
+                       [review-row (props row)])])])
 
                ;; ③
                (when (seq from-lipas)

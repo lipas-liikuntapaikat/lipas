@@ -204,6 +204,27 @@
     (when org-id
       (get-in ptv [:org org-id :data :services]))))
 
+(rf/reg-sub ::unlisted-services
+  ;; id -> a services-by-id entry for each service the org's sites connect
+  ;; that the org's published services and its locations' connections
+  ;; don't have (events/fetch-unlisted-services): those PTV no longer has
+  ;; marked :gone (ptv-review/gone-service), another organisation's named
+  :<- [::ptv]
+  (fn [ptv [_ org-id]]
+    (get-in ptv [:org org-id :data :unlisted-services])))
+
+(rf/reg-sub ::review-services
+  ;; The services the sync review names the connections by: the org's own
+  ;; and the unlisted ones, these without a :sourceId (a type change never
+  ;; swaps to them). The org's own map as such while there are none.
+  (fn [[_ org-id]]
+    [(rf/subscribe [::services-by-id org-id])
+     (rf/subscribe [::unlisted-services org-id])])
+  (fn [[services unlisted] _]
+    (if (seq unlisted)
+      (merge (update-vals unlisted #(dissoc % :sourceId)) services)
+      services)))
+
 (def langs {"sv" :se "fi" :fi "en" :en})
 
 (rf/reg-sub ::services
@@ -236,7 +257,10 @@
                                             :targetGroups :ontologyTerms :serviceClasses])
          :publishing-status (:publishingStatus service)
          :last-modified (:modified service)
-         :last-modified-human (utils/->human-date-time-at-user-tz (:modified service))
+         ;; PTV's :modified is UTC without a zone
+         :last-modified-human (some-> (:modified service)
+                                      (cond-> (not (str/ends-with? (:modified service) "Z")) (str "Z"))
+                                      utils/->human-date-time-at-user-tz)
          :service-classes (->> service
                                :serviceClasses
                                (map (fn [m]
@@ -637,7 +661,7 @@
   (fn [[_ org-id]]
     [(rf/subscribe [::org-sports-sites org-id])
      (rf/subscribe [::site-audits org-id])
-     (rf/subscribe [::services-by-id org-id])
+     (rf/subscribe [::review-services org-id])
      (rf/subscribe [::service-channels-by-id org-id])
      (rf/subscribe [::default-settings org-id])
      (rf/subscribe [:lipas.ui.sports-sites.subs/all-types])

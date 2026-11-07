@@ -74,10 +74,12 @@
         (is (= ["summary-sv" "kunta-summary-sv"]
                ((juxt :lipas :ptv) (row review [:summary "sv"]))))))
 
-    (testing "a connection made in PTV carries the service's name"
-      (is (= {:field :services :id "svc-b" :name "Liikuntahallit" :lipas? false :ptv? true}
-             (select-keys (row review [:services "svc-b"])
-                          [:field :id :name :lipas? :ptv?]))))
+    (testing "the connections are one row: Lipas's set against PTV's, with the services' names"
+      (is (= {:field :services :kind :set :lipas #{"svc-a"} :ptv #{"svc-a" "svc-b"} :base nil
+              :names {"svc-a" "Pallokentät" "svc-b" "Liikuntahallit"}}
+             (select-keys (row review [:services])
+                          [:field :kind :lipas :ptv :base :names])))
+      (is (= 1 (count (filter #(= :services (:field %)) (:rows review))))))
 
     (testing "what agrees is listed as matching"
       (is (some #{{:field :summary :language "fi"}} (:matching review)))
@@ -86,7 +88,7 @@
   (testing "an unknown service is named by its id"
     (let [review (sut/sync-review (assoc-in site [:ptv :service-ids] ["svc-x"])
                                   nil channel services langs)]
-      (is (= "svc-x" (:name (row review [:services "svc-x"]))))))
+      (is (= "svc-x" (get-in (row review [:services]) [:names "svc-x"])))))
 
   (testing "marketing name: set in Lipas only, or in PTV only"
     (let [review (sut/sync-review (assoc site :marketing-name "Hallikauppa")
@@ -119,7 +121,7 @@
 
     (testing "its texts need a choice, its connections don't (they're kept)"
       (is (sut/review-choice-required? (row review [:name "sv"])))
-      (is (not (sut/review-choice-required? (row review [:services "svc-b"])))))))
+      (is (not (sut/review-choice-required? (row review [:services])))))))
 
 (def ^:private synced-channel
   "What a sync of `site` with languages fi and en sent."
@@ -187,17 +189,29 @@
       (is (= #{:name :summary :description} (set (map :field rows))))
       (is (every? #(and (= :lipas (:origin %)) (:language-added? %)) rows))))
 
-  (testing "connections: made in PTV, removed in PTV, added in Lipas"
-    (let [review (sut/sync-review (assoc-in synced-site [:ptv :service-ids] ["svc-a" "svc-c"])
-                                  base
-                                  (assoc synced-channel :services [{:service {:id "svc-b"}}])
-                                  services ["fi" "en"])]
-      (is (= {:origin :ptv :lipas? false :ptv? true}
-             (select-keys (row review [:services "svc-b"]) [:origin :lipas? :ptv?])))
-      (is (= {:origin :ptv :lipas? true :ptv? false}
-             (select-keys (row review [:services "svc-a"]) [:origin :lipas? :ptv?])))
-      (is (= {:origin :lipas :lipas? true :ptv? false}
-             (select-keys (row review [:services "svc-c"]) [:origin :lipas? :ptv?])))))
+  (testing "connections, as a set: changed in PTV, in Lipas, or both"
+    (let [origin (fn [lipas-ids ptv-ids]
+                   (:origin (row (sut/sync-review (assoc-in synced-site [:ptv :service-ids] lipas-ids)
+                                                  base
+                                                  (assoc synced-channel :services
+                                                         (mapv (fn [id] {:service {:id id}}) ptv-ids))
+                                                  services ["fi" "en"])
+                                 [:services])))]
+      (is (= :ptv (origin ["svc-a"] ["svc-a" "svc-b"])))
+      (is (= :ptv (origin ["svc-a"] [])) "all removed in PTV")
+      (is (= :lipas (origin ["svc-a" "svc-c"] ["svc-a"])))
+      (is (= :both (origin ["svc-a" "svc-c"] ["svc-b"])))
+      (is (nil? (origin ["svc-a" "svc-b"] ["svc-b" "svc-a"])) "the same set in another order")))
+
+  (testing "a connection made in PTV needs no evidence: it doesn't move PTV's :modified"
+    (let [site (assoc-in synced-site [:ptv :ptv-modified] "2026-10-01T10:00:02")
+          channel (assoc synced-channel
+                         :modified "2026-10-01T10:00:02"
+                         :services [{:service {:id "svc-a"}} {:service {:id "svc-b"}}])
+          review (sut/sync-review site (sut/->review-base site) channel services ["fi" "en"])]
+      (is (false? (:evidence? review)))
+      (is (= :ptv (:origin (row review [:services]))))
+      (is (sut/review-choice-required? (row review [:services])))))
 
   (testing "a base from another sync or another location isn't used"
     (let [changed (set-ptv-text synced-channel "Summary" "fi" "PTV:n teksti")]
@@ -225,10 +239,10 @@
         keep-lipas (fn [k] {k {:choice :lipas :seen (sut/review-choice-seen (row review k))}})
         open-keys (fn [draft choices] (set (map :key (sut/open-review-rows (rows-of draft) choices))))]
     (testing "the review is of the saved site; untouched, PTV's changes are open"
-      (is (= #{[:summary "fi"] [:services "svc-b"]} (open-keys synced-site {}))))
+      (is (= #{[:summary "fi"] [:services]} (open-keys synced-site {}))))
 
     (testing "taking PTV's version writes it into the edit, which decides the row"
-      (let [draft (take synced-site :ptv [:summary "fi"] [:services "svc-b"])]
+      (let [draft (take synced-site :ptv [:summary "fi"] [:services])]
         (is (= "PTV:n teksti" (get-in draft [:ptv :summary :fi])))
         (is (= ["svc-a" "svc-b"] (get-in draft [:ptv :service-ids])))
         (is (= #{} (open-keys draft {})))
@@ -445,6 +459,137 @@
                           (ptv-data/normalize-ws (get-in there-and-back [:ptv :summary :fi])))
                        (= (set (-> site :ptv :service-ids))
                           (set (-> there-and-back :ptv :service-ids)))))))
+
+(def ^:private ids-gen
+  (gen/fmap (comp vec sort) (gen/set (gen/elements ["svc-a" "svc-b" "svc-c"]))))
+
+(defn- with-service-ids [site ids]
+  (assoc-in site [:ptv :service-ids] ids))
+
+(defspec connections-are-one-row-decided-as-a-set 300
+  (prop/for-all [b ids-gen
+                 l ids-gen
+                 p ids-gen
+                 own ids-gen]
+                (let [base (sut/->review-base (with-service-ids synced-site b))
+                      site (with-service-ids synced-site l)
+                      channel (assoc synced-channel :services (mapv (fn [id] {:service {:id id}}) p))
+                      review (sut/sync-review site base channel services ["fi" "en"])
+                      r (row review [:services])
+                      annotated (fn [draft] (row (annotate review draft) [:services]))
+                      take-side (fn [side] (sut/apply-review-writes site (sut/review-writes site r side)))
+                      [b l p own] (map set [b l p own])]
+                  (and (= (some? r) (not= l p))
+                       (or (nil? r)
+                           (and (= (:origin r) (cond (= b p) :lipas
+                                                     (= b l) :ptv
+                                                     :else :both))
+                                (= [r] (filter #(= :services (:field %)) (:rows review)))
+                                ;; taking PTV's set leaves no difference
+                                (= p (set (get-in (take-side :ptv) [:ptv :service-ids])))
+                                (= :ptv (:current (annotated (take-side :ptv))))
+                                (nil? (row (sut/sync-review (take-side :ptv) base channel services ["fi" "en"])
+                                           [:services]))
+                                ;; keeping Lipas's set is the saved one, recorded
+                                (= :lipas (:current (annotated (take-side :lipas))))
+                                (sut/review-decided? {[:services] {:choice :lipas
+                                                                   :seen (sut/review-choice-seen r)}}
+                                                     (annotated (take-side :lipas)))
+                                ;; a set of the user's own is :edited, its
+                                ;; services named
+                                (let [a (annotated (with-service-ids site (vec own)))]
+                                  (and (= (:current a) (cond (= own p) :ptv
+                                                             (= own l) :lipas
+                                                             :else :edited))
+                                       (= own (:draft a))
+                                       (every? #(contains? (:names a) %) own)))))))))
+
+;;; Services PTV no longer has ;;;
+
+(def ^:private archived-svc
+  "A service archived in PTV, as the org's archived list names it."
+  {:gone :archived
+   :archivingDate "2026-05-16T09:12:00.123456"
+   :serviceNames [{:type "Name" :language "fi" :value "Arkistoitu palvelu"}]})
+
+(defn- with-gone [services]
+  (assoc services "svc-x" archived-svc "svc-y" {:gone :unknown}))
+
+(deftest gone-service-is-no-choice-test
+  ;; Synced with svc-a and svc-x; then svc-x was archived in PTV, which
+  ;; dropped the location's connection to it at once.
+  (let [site (with-service-ids synced-site ["svc-a" "svc-x"])
+        base (sut/->review-base site)
+        review (sut/sync-review site base synced-channel (with-gone services) ["fi" "en"])]
+    (testing "the connections don't differ for it alone, and need no choice"
+      (is (nil? (row review [:services])))
+      (is (= [] (:rows review)))
+      (is (some #{{:field :services}} (:matching review))))
+
+    (testing "it is named apart, with when PTV archived it"
+      (is (= [{:id "svc-x" :name "Arkistoitu palvelu" :gone :archived
+               :archived-at "2026-05-16T09:12:00.123456"}]
+             (:gone-services review))))
+
+    (testing "one PTV doesn't have at all is unknown, named when Lipas knows it"
+      (is (= [{:id "svc-y" :name nil :gone :unknown :archived-at nil}]
+             (:gone-services (sut/sync-review (with-service-ids synced-site ["svc-a" "svc-y"])
+                                              base synced-channel (with-gone services) ["fi" "en"])))))
+
+    (testing "those archived first, one nobody can name last"
+      (is (= ["svc-x" "svc-y"]
+             (map :id (:gone-services (sut/sync-review (with-service-ids synced-site ["svc-y" "svc-a" "svc-x"])
+                                                       base synced-channel (with-gone services) ["fi" "en"]))))))
+
+    (testing "without knowing it is gone, it is a change made in PTV to decide about"
+      (is (= :ptv (:origin (row (sut/sync-review site base synced-channel services ["fi" "en"])
+                                [:services])))))
+
+    (testing "another change of the connections is still a row, without it"
+      (let [r (row (sut/sync-review site base
+                                    (assoc synced-channel :services [{:service {:id "svc-a"}}
+                                                                     {:service {:id "svc-b"}}])
+                                    (with-gone services) ["fi" "en"])
+                   [:services])]
+        (is (= :ptv (:origin r)))
+        (is (= #{"svc-a"} (:lipas r)))
+        (is (= #{"svc-a" "svc-b"} (:ptv r)))
+        (is (not (contains? (:names r) "svc-x")))))
+
+    (testing "the edit, which still holds it, is projected without it"
+      (let [r (row (annotate (sut/sync-review site base
+                                              (assoc synced-channel :services [])
+                                              (with-gone services) ["fi" "en"])
+                             site)
+                   [:services])]
+        (is (= #{"svc-a"} (:draft r)))
+        (is (= :lipas (:current r)))))
+
+    (testing "the site needs a sync, which drops it"
+      (is (= :ready (:sync-status (sut/sports-site->ptv-input
+                                    {:org-id "o" :types {} :org-defaults {} :org-langs ["fi" "en"]}
+                                    {"C1" synced-channel} (with-gone services)
+                                    (assoc site :event-date "T1" :ptv-base base))))))))
+
+(defspec gone-services-change-nothing-else 300
+  (prop/for-all [b ids-gen
+                 l ids-gen
+                 p ids-gen
+                 gone (gen/fmap (comp vec sort) (gen/set (gen/elements ["svc-x" "svc-y"])))]
+                ;; the same site, base and location, with and without services
+                ;; PTV no longer has in Lipas's lists
+                (let [channel (assoc synced-channel :services (mapv (fn [id] {:service {:id id}}) p))
+                      review (fn [extra]
+                               (let [site (with-service-ids synced-site (into l extra))]
+                                 (-> (sut/sync-review site (sut/->review-base (with-service-ids synced-site (into b extra)))
+                                                      channel (with-gone services) ["fi" "en"])
+                                     (annotate site))))
+                      without (review [])
+                      with (review gone)
+                      shape (fn [r] (mapv #(select-keys % [:key :origin :lipas :ptv :base :current]) (:rows r)))]
+                  (and (= (shape without) (shape with))
+                       (= (set gone) (set (map :id (:gone-services with))))
+                       (empty? (:gone-services without))))))
 
 ;;; Coverage and projection ;;;
 

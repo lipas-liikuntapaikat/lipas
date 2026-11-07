@@ -358,6 +358,75 @@
                         (assoc-in [:ptv :summary :en] "The gym of Katajisto village hall is a small hall for the villagers' exercise.")
                         (assoc-in [:ptv :description :en] "The gym is in Katajisto village hall. You can play badminton and table tennis and take part in group exercise. Book a turn from the village committee."))))
 
+;;; Archived services (section N) ;;;
+;; Not in `all`: each run creates throwaway services in Utajärvi's PTV org
+;; and archives them, which can't be undone. Reset a site with its own
+;; scenario function (s3-lipas-texts!, s7-new-language!).
+
+(defn create-test-service!
+  "A throwaway LIPAS service in Utajärvi's PTV org, named `service-name`
+   (keep \"(Lipas-testi)\" in it), mirrored in ptv_service. Its id."
+  [service-name]
+  (:id (ptv-core/upsert-ptv-service!
+         (dbc) (ptv) (admin)
+         {:org-id org
+          :source-id (str "lipas-" org "-arkistointikoe-" (System/currentTimeMillis))
+          :sub-category-id 2100
+          :city-codes [889]
+          :service-name service-name
+          :summary {:fi "Testipalvelu, jolla kokeillaan arkistoidun palvelun käsittelyä."}
+          :description {:fi "Tämä palvelu on Lipaksen testipalvelu. Se luodaan, liitetään liikuntapaikkaan ja arkistoidaan, jotta nähdään, miten Lipas käsittelee arkistoidun palvelun."}})))
+
+(defn archive-service!
+  "Archives the service `service-id` as PTV's own UI does. PTV drops its
+   connections at once, and answers 404 to every GET of it from then on."
+  [service-id]
+  (let [s (ptvi/get-service (ptv) org service-id)]
+    (ptvi/update-service-by-id (ptv) org service-id
+                               {:mainResponsibleOrganization org
+                                :publishingStatus "Deleted"
+                                :ontologyTerms (mapv :uri (:ontologyTerms s))
+                                :serviceClasses (mapv :uri (:serviceClasses s))
+                                :targetGroups (mapv :uri (:targetGroups s))})))
+
+(defn- connected-to-archived!
+  "`lipas-id`, in sync with its texts and `services`, synced with a new
+   throwaway service `service-name` too, which is then archived in PTV.
+   The archived service's id."
+  [lipas-id service-name opts]
+  (in-sync! lipas-id opts)
+  (let [t (create-test-service! service-name)
+        site (db/get-sports-site (dbc) lipas-id)]
+    (sync! lipas-id (-> (:ptv site)
+                        (select-keys [:org-id :sync-enabled :service-channel-ids :summary :description])
+                        (assoc :service-ids (conj (vec (-> site :ptv :service-ids)) t))))
+    (archive-service! t)
+    t))
+
+(def unknown-service-id
+  "A service id PTV doesn't have, archived or not (another environment's)."
+  "5b3f8d0e-2f6a-4c1e-9d7a-1a2b3c4d5e6f")
+
+(defn n1-archived-service! []
+  ;; Arkistoitu palvelu: s3 synced with a throwaway service, archived in PTV
+  ;; since. Lipas still lists it; PTV has dropped the connection.
+  (connected-to-archived! 506495 "Arkistointikoe N1 (Lipas-testi)"
+                          {:name "Utajärven koulun piha-alue"
+                           :summary "Utajärven koulun piha-alue on avoin lähiliikuntapaikka koulun pihalla."
+                           :description "Piha-alueella on pelikenttä, kiipeilytelineitä ja koripallokorit. Alue on koulupäivien aikana koulun käytössä."
+                           :services [:lahiliikunta]}))
+
+(defn n2-archived-and-unknown! []
+  ;; Arkistoitu ja tuntematon palvelu: s7 synced with a throwaway service,
+  ;; archived in PTV since, and an id PTV doesn't have at all added in Lipas.
+  (let [t (connected-to-archived! 600093 "Arkistointikoe N2 (Lipas-testi)"
+                                  {:name "Kirkonkylän uimaranta"
+                                   :summary "Kirkonkylän uimaranta on hiekkapohjainen uimaranta Utajärven keskustassa."
+                                   :description "Uimarannalla on laituri, pukukopit ja lasten uimapaikka. Rannalla ei ole valvontaa. Uimaveden laatu tarkastetaan kesän aikana."
+                                   :services [:uimarannat]})]
+    (set-site! 600093 #(update-in % [:ptv :service-ids] conj unknown-service-id))
+    t))
+
 (def all [#'s1-in-sync! #'s2-ptv-texts! #'s3-lipas-texts! #'s4-conflict! #'s5-connections!
           #'s6-names! #'s7-new-language! #'s8-first-link! #'s9-everything!
           #'s10-phone! #'s11-second-phone-and-page! #'s12-address! #'s13-point!
@@ -397,12 +466,16 @@
 
 (defn state
   "Where `lipas-id` stands after a sync: the saved site, its PTV location and
-   the review rows that remain."
+   the review rows that remain, reviewed with the services the site form's
+   review has (names, and those PTV no longer has, listed under :gone)."
   [lipas-id]
   (let [site (db/get-sports-site (dbc) lipas-id)
         ch-id (-> site :ptv :service-channel-ids first)
         ch (when ch-id (ptvi/get-org-service-channel (ptv) org ch-id))
-        base (get (ptv-core/get-ptv-sync-bases (dbc) [lipas-id]) lipas-id)]
+        base (get (ptv-core/get-ptv-sync-bases (dbc) [lipas-id]) lipas-id)
+        services (or (:services (ptv-core/get-ptv-site-review (dbc) (ptv) lipas-id)) {})
+        review (ptv-review/sync-review site base ch services
+                                       (ptv-data/effective-languages site ["fi" "en"]))]
     {:lipas {:name (:name site)
              :name-en (-> site :name-localized :en)
              :marketing-name (:marketing-name site)
@@ -411,9 +484,8 @@
              :services (-> site :ptv :service-ids sort vec)
              :last-sync (-> site :ptv :last-sync)}
      :ptv (channel-texts ch)
-     :review (mapv (juxt :key :origin)
-                   (:rows (ptv-review/sync-review site base ch {}
-                                                  (ptv-data/effective-languages site ["fi" "en"]))))}))
+     :review (mapv (juxt :key :origin) (:rows review))
+     :gone (mapv (juxt :id :gone :name) (:gone-services review))}))
 
 (defn report
   "Each scenario site's review, as the PTV tool computes it."

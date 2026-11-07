@@ -15,6 +15,7 @@
             [lipas.backend.search :as search]
             [lipas.data.ptv :as ptv-data]
             [lipas.data.ptv-review :as ptv-review]
+            [lipas.data.ptv-services :as ptv-services]
             [lipas.data.types :as types]
             [lipas.roles :as roles]
             [lipas.utils :as utils]
@@ -67,28 +68,68 @@
     (cond-> channel
       (= "Modified" (:publishingStatus active)) (assoc :publishingStatus "Modified"))))
 
+(defn- not-found?
+  "Whether `e`, a failed PTV call, is PTV answering 404."
+  [e]
+  (= 404 (-> e ex-data :resp :status)))
+
 (defn- get-channel-or-nil
   "The service location, or nil when PTV doesn't have it (archived)."
   [ptv org-id channel-id]
   (try
     (ptv/get-org-service-channel ptv org-id channel-id)
     (catch clojure.lang.ExceptionInfo e
-      (if (= 404 (-> e ex-data :resp :status))
+      (if (not-found? e)
         nil
         (throw e)))))
 
-(defn- service-names-by-id
-  "services-by-id shaped {id {:serviceNames ...}} for the services among
-  `service-ids` that PTV has, read one by one: a site has a few."
+(defn- get-service-or-nil
+  "The service, or nil when PTV doesn't have it: archived (PTV answers 404
+  to every GET of an archived service), or never in this environment."
+  [ptv org-id service-id]
+  (try
+    (ptv/get-service ptv org-id service-id)
+    (catch clojure.lang.ExceptionInfo e
+      (if (not-found? e)
+        nil
+        (throw e)))))
+
+(defn- read-services
+  "id -> the service as PTV has it, or nil when PTV doesn't have it, for
+  each of `service-ids`, read one by one: a site has a few. One PTV
+  doesn't answer for is left out."
   [ptv org-id service-ids]
   (into {} (keep (fn [id]
                    (try
-                     [id (select-keys (ptv/get-service ptv org-id id) [:serviceNames])]
+                     [id (get-service-or-nil ptv org-id id)]
                      (catch clojure.lang.ExceptionInfo e
-                       (log/warnf "PTV service %s not readable for the sync review: %s"
-                                  id (ex-message e))
+                       (log/warnf "PTV service %s not readable: %s" id (ex-message e))
                        nil))))
         service-ids))
+
+(defn gone-service-entries
+  "services-by-id shaped entries for `service-ids`, services PTV no longer
+  has (a GET of each answered 404), marked :gone (see
+  ptv-review/gone-service): {:gone :archived :archivingDate :serviceNames}
+  for those the org's archived list has, else {:gone :unknown}, named by
+  `names` (id -> :serviceNames, Lipas's mirror) when it can. One listing of
+  the org's archived services, none without `service-ids`; without an
+  answer from it every one is :unknown."
+  [ptv org-id service-ids & {:keys [names]}]
+  (when (seq service-ids)
+    (let [archived (try
+                     (utils/index-by :id (ptv/get-org-archived-services ptv org-id))
+                     (catch Exception e
+                       (log/warnf "PTV's archived services of %s not readable: %s"
+                                  org-id (ex-message e))
+                       {}))]
+      (into {} (for [id service-ids
+                     :let [{:keys [archivingDate serviceNames] :as listed} (get archived id)
+                           service-names (or (not-empty serviceNames) (get names id))]]
+                 [id (cond-> (if listed
+                               {:gone :archived :archivingDate archivingDate}
+                               {:gone :unknown})
+                       (seq service-names) (assoc :serviceNames service-names))])))))
 
 (defn- lipas-services-by-id
   "The org's LIPAS-managed PTV services, services-by-id shaped with their
@@ -114,8 +155,9 @@
   save syncs it over PTV: what the last sync sent (:base), the linked
   service location as PTV has it now (:channel, nil if gone), services by
   id (:services): names for those only Lipas connects it to (the location
-  names its own) and the org's LIPAS services, for the swap a type change
-  makes, and the org's PTV languages. nil for a site not synced to a
+  names its own), those of them PTV no longer has marked
+  (gone-service-entries), and the org's LIPAS services, for the swap a type
+  change makes, and the org's PTV languages. nil for a site not synced to a
   location."
   [db ptv lipas-id]
   (let [site (db/get-sports-site db lipas-id)
@@ -124,16 +166,40 @@
     (when (and org-id channel-id (-> site :ptv :last-sync))
       (let [channel (with-draft-status ptv org-id (get-channel-or-nil ptv org-id channel-id))
             lipas-only (remove (set (ptv-data/channel-service-ids channel))
-                               (-> site :ptv :service-ids))]
+                               (-> site :ptv :service-ids))
+            mirror (lipas-services-by-id db org-id)
+            read (read-services ptv org-id lipas-only)]
         {:lipas-id lipas-id
          :base (get (get-ptv-sync-bases db [lipas-id]) lipas-id)
          :channel channel
          ;; PTV's names over the mirror's, keeping its :sourceId
          :services (merge-with merge
-                               (lipas-services-by-id db org-id)
-                               (service-names-by-id ptv org-id lipas-only))
+                               mirror
+                               (into {} (for [[id service] read
+                                              :when service]
+                                          [id (select-keys service [:serviceNames])]))
+                               (gone-service-entries ptv org-id (keep (fn [[id service]] (when-not service id)) read)
+                                                     :names (update-vals mirror :serviceNames)))
          :org-langs (or (:supported-languages (ptv/get-org-ptv-config-with-fallback ptv org-id))
                         ptv-data/fallback-languages)}))))
+
+(defn get-unlisted-services
+  "The PTV tool's names for `service-ids`, services the org's sites connect
+  that neither the org's published services nor the locations' connections
+  have: id -> a services-by-id entry. Those PTV no longer has are marked
+  :gone (gone-service-entries): first the org's archived list, one listing,
+  then a GET of each it doesn't have, which tells a service of another
+  organisation, named as PTV has it, from one PTV doesn't have at all. One
+  PTV doesn't answer for is left out."
+  [db ptv org-id service-ids]
+  (let [listed (gone-service-entries ptv org-id (distinct service-ids)
+                                     :names (update-vals (lipas-services-by-id db org-id) :serviceNames))
+        unlisted (keep (fn [[id {:keys [gone]}]] (when (= :unknown gone) id)) listed)
+        read (read-services ptv org-id unlisted)]
+    (-> (apply dissoc listed (remove (set (keys read)) unlisted))
+        (merge (into {} (for [[id service] read
+                              :when service]
+                          [id (select-keys service [:serviceNames])]))))))
 
 (defn- enforce-summary-limit
   "Single-result variant of `ai/enforce-summary-limit`. Non-map content
@@ -260,11 +326,34 @@
         :content
         enforce-summary-limit)))
 
+(defn- insert-ptv-service-revision!
+  "Appends a ptv_service revision of the LIPAS org `org` from `service`, a
+   PTV Service API response. The document carries PTV's :modified of it
+   (:ptv-modified), which tells a later change made in PTV from Lipas's
+   own (ptv-review/service-changed-since-write?)."
+  [db user org ptv-org-id service extra-doc]
+  (let [now (utils/timestamp)
+        doc (merge (ptv-data/->service-document ptv-org-id service)
+                   extra-doc
+                   {:ptv-modified (:modified service)
+                    :last-sync now})]
+    (ptv-service-db/insert-service-rev!
+      db
+      {:org-id (:id org)
+       :source-id (:sourceId service)
+       :service-id (:id service)
+       :status "active"
+       :author-id (or (:id user) (get-in user [:login :user :id]))
+       :event-date now
+       :document doc})))
+
 (defn persist-ptv-service-revision!
   "Appends a ptv_service revision from a PTV Service API response. Never
    throws — the PTV write has already succeeded and cannot be rolled back;
    a failed shadow write is only logged and the next upsert self-heals.
-   (Audits live apart in ptv_service_audit, nothing to carry forward.)"
+   (Audits live apart in ptv_service_audit, nothing to carry forward.)
+   `extra-doc` {:read-from-ptv true} marks a revision of a service as read
+   from PTV rather than written by Lipas."
   ([db user ptv-org-id ptv-resp]
    (persist-ptv-service-revision! db user ptv-org-id ptv-resp nil))
   ([db user ptv-org-id ptv-resp extra-doc]
@@ -274,19 +363,7 @@
          (log/warnf "PTV service %s has no sourceId; skipping ptv_service revision"
                     (:id ptv-resp))
          (if-let [org (backend-org/get-org-by-ptv-org-id db ptv-org-id)]
-           (let [now (utils/timestamp)
-                 doc (merge (ptv-data/->service-document ptv-org-id ptv-resp)
-                            extra-doc
-                            {:last-sync now})]
-             (ptv-service-db/insert-service-rev!
-               db
-               {:org-id (:id org)
-                :source-id source-id
-                :service-id (:id ptv-resp)
-                :status "active"
-                :author-id (or (:id user) (get-in user [:login :user :id]))
-                :event-date now
-                :document doc}))
+           (insert-ptv-service-revision! db user org ptv-org-id ptv-resp extra-doc)
            (log/warnf "No LIPAS org found for PTV org %s; skipping ptv_service revision"
                       ptv-org-id))))
      (catch Exception e
@@ -439,6 +516,37 @@
     (persist-ptv-service-revision! db user org-id resp)
     resp))
 
+(defn take-ptv-service-version!
+  "Records PTV's current version of a service as Lipas's own without
+  writing to PTV: a ptv_service revision from a fresh GET, marked
+  :read-from-ptv. For when the user took, in the Palvelut tab's review,
+  every change made in PTV since Lipas's last write as it is: nothing is
+  left to send, and without this the review would come back, as Lipas's
+  version would still be the old one.
+
+  Only for a service Lipas has written (its mirror in the org has it), and
+  refused, as a write is, when PTV has changed the service since the user
+  reviewed it (`expected-modified`). Returns the service as read."
+  [db ptv user {:keys [org-id service-id expected-modified]}]
+  (let [org (backend-org/get-org-by-ptv-org-id db org-id)
+        mirrored (when (and org (parse-uuid (str service-id)))
+                   (ptv-service-db/get-current-by-service-id db (:id org) service-id))
+        _ (when-not (= "active" (:status mirrored))
+            (throw (ex-info "Lipas hasn't written this PTV service"
+                            {:type :not-written :service-id service-id})))
+        service (ptv/get-service ptv org-id service-id)]
+    (when (and expected-modified (not= expected-modified (:modified service)))
+      (throw (ex-info "PTV service changed since it was loaded"
+                      {:type :changed-in-ptv
+                       :service-id service-id
+                       :modified (:modified service)})))
+    ;; another system has taken it over since
+    (when (not= (:source-id mirrored) (:sourceId service))
+      (throw (ex-info "PTV service is maintained by another system"
+                      {:type :source-id-in-use :service-id service-id})))
+    (insert-ptv-service-revision! db user org org-id service {:read-from-ptv true})
+    service))
+
 (defn fetch-ptv-org
   [ptv org-id]
   (ptv/get-org ptv org-id))
@@ -569,12 +677,14 @@
   as stored before this sync) against its `base` and PTV's `location`
   (fresh GET), with `site`, what this sync sends, as the edit. So a save
   goes through as before while PTV holds nothing undecided. Only for the
-  location `saved` was last synced to: a first link is reviewed in the UI."
-  [{:keys [saved base location channel-id site org-langs]}]
+  location `saved` was last synced to: a first link is reviewed in the UI.
+  `gone` (gone-service-entries) are the services PTV no longer has, whose
+  connections the sync drops: nothing to decide about."
+  [{:keys [saved base location channel-id site org-langs gone]}]
   (when (and location
              (-> saved :ptv :last-sync)
              (= channel-id (-> saved :ptv :service-channel-ids first)))
-    (let [open (-> (ptv-review/sync-review saved base location {}
+    (let [open (-> (ptv-review/sync-review saved base location (or gone {})
                                            (ptv-data/effective-languages saved org-langs))
                    (ptv-review/annotate-review site (ptv-data/effective-languages site org-langs))
                    :rows
@@ -618,12 +728,21 @@
         ;; every PTV read endpoint but is still addressable for a PUT — so a
         ;; resurrect (re-publish) must tolerate the 404 here and proceed.
         old-service-location (when id
-                               (try
-                                 (ptv/get-org-service-channel ptv-component org-id id)
-                                 (catch clojure.lang.ExceptionInfo e
-                                   (if (= 404 (-> e ex-data :resp :status))
-                                     nil
-                                     (throw e)))))
+                               (get-channel-or-nil ptv-component org-id id))
+        ;; Each service the sync connects the location to anew is read
+        ;; from PTV before anything is written, so the sync can't fail
+        ;; halfway on one. One PTV no longer has (archived in PTV, which
+        ;; drops its connections at once, or never in this environment)
+        ;; can't be connected: its connection is dropped from Lipas, a change
+        ;; PTV made with nothing to decide (gone-service-entries names them).
+        service-ids (:service-ids (merge (:ptv site) ptv))
+        gone (gone-service-entries ptv-component org-id
+                                   (->> service-ids
+                                        (remove (set (ptv-data/channel-service-ids old-service-location)))
+                                        distinct
+                                        (remove #(get-service-or-nil ptv-component org-id %))))
+        ptv (cond-> ptv
+              (seq gone) (assoc :service-ids (vec (remove #(contains? gone %) service-ids))))
         ;; Nothing PTV got since the user's review is overwritten unseen, nor
         ;; a change made in PTV that a sync without a review would. A
         ;; status-only archive writes no content.
@@ -635,7 +754,8 @@
                                           :location old-service-location
                                           :channel-id id
                                           :site (update site :ptv merge ptv)
-                                          :org-langs org-langs})))
+                                          :org-langs org-langs
+                                          :gone gone})))
         ;; A type change swaps the sub-category's service, whichever way the
         ;; sync was started (rebind-on-type-change).
         ptv (if archive?
@@ -682,21 +802,31 @@
                                                                       id)
                    id (ptv/update-service-location ptv-component id data)
                    :else (ptv/create-service-location ptv-component data))
-        _ (when id
-            ;; Update service connection changes
-            (let [old-services (->> old-service-location
-                                    :services
-                                    (map (comp :id :service))
-                                    set)
-                  new-services (set (:service-ids (:ptv site)))
-                  removed-services (set/difference old-services new-services)
-                  new-services (set/difference new-services old-services)
-                  service-channel-id (first (:service-channel-ids (:ptv site)))]
-              (log/infof "Update service-location connections: +%s -%s" new-services removed-services)
-              (doseq [service-id removed-services]
-                (ptv/update-service-connections ptv-component org-id service-id #(disj % service-channel-id)))
-              (doseq [service-id new-services]
-                (ptv/update-service-connections ptv-component org-id service-id #(conj % service-channel-id)))))
+        ;; Update service connection changes. A service archived in PTV
+        ;; while the location was written (it was read just before) answers
+        ;; 404: PTV has dropped its connections, and it is dropped from
+        ;; Lipas too (`late-gone`), as above.
+        late-gone (when id
+                    (let [old-services (->> old-service-location
+                                            :services
+                                            (map (comp :id :service))
+                                            set)
+                          new-services (set (:service-ids (:ptv site)))
+                          removed-services (set/difference old-services new-services)
+                          new-services (set/difference new-services old-services)
+                          service-channel-id (first (:service-channel-ids (:ptv site)))
+                          update-connections! (fn [service-id f]
+                                                (try
+                                                  (ptv/update-service-connections ptv-component org-id service-id f)
+                                                  nil
+                                                  (catch clojure.lang.ExceptionInfo e
+                                                    (if (not-found? e) service-id (throw e)))))]
+                      (log/infof "Update service-location connections: +%s -%s" new-services removed-services)
+                      (doseq [service-id removed-services]
+                        (update-connections! service-id #(disj % service-channel-id)))
+                      (into #{} (keep #(update-connections! % (fn [ids] (conj ids service-channel-id))))
+                            new-services)))
+        gone (merge gone (gone-service-entries ptv-component org-id late-gone))
         ;; Refetch the channel via GET so the FE caches the canonical
         ;; post-sync shape (the same shape /list/organization returns and
         ;; that the sync review, `lipas.data.ptv-review/sync-review`, expects).
@@ -730,7 +860,7 @@
                                 :publishing-status (:publishingStatus ptv-resp)
                                 ;; NOTE: The ptv map might not have this value in some cases...?
                                 ;; but the value merged with data from site should have it always?
-                                :service-ids (:service-ids (:ptv site))
+                                :service-ids (vec (remove #(contains? gone %) (:service-ids (:ptv site))))
                                 ;; Take the created ID from ptv response and store to Lipas DB right away.
                                 ;; TODO: Is there a case where this could be multiple ids?
                                 :service-channel-ids [(:id ptv-resp)])
@@ -747,8 +877,11 @@
 
     (log/infof "Upserted service-location %s (status: %s, update: %s, channel: %s)"
                (:lipas-id site) (:status site) (boolean id) (:id ptv-resp))
+    (when (seq gone)
+      (log/infof "Site %s: dropped the connections to services PTV no longer has: %s"
+                 (:lipas-id site) (pr-str gone)))
 
-    [ptv-resp new-ptv-data]))
+    [ptv-resp new-ptv-data (ptv-review/gone-services gone (keys gone))]))
 
 (defn assert-no-double-link!
   "Guards the PTV invariant of one service-location per sports-site: throws an
@@ -805,15 +938,18 @@
           ;; before we touch PTV (a fresh create / unlink has no id and passes).
           _ (assert-no-double-link! tx lipas-id (-> ptv :service-channel-ids first))
 
-          [ptv-resp new-ptv-data] (upsert-ptv-service-location!* ptv-component
-                                                                 {:org-id org-id
-                                                                  :site site
-                                                                  :ptv ptv
-                                                                  :archive? archive?
-                                                                  :reviewed reviewed
-                                                                  :saved saved
-                                                                  :base (get (get-ptv-sync-bases tx [lipas-id])
-                                                                             lipas-id)})]
+          [ptv-resp new-ptv-data dropped] (upsert-ptv-service-location!* ptv-component
+                                                                         {:org-id org-id
+                                                                          :site site
+                                                                          :ptv ptv
+                                                                          :archive? archive?
+                                                                          :reviewed reviewed
+                                                                          :saved saved
+                                                                          :base (get (get-ptv-sync-bases tx [lipas-id])
+                                                                                     lipas-id)})
+          ;; one PTV's archived list doesn't name, Lipas's mirror may
+          mirror (when (some (comp nil? :name) dropped)
+                   (lipas-services-by-id tx (:org-id new-ptv-data)))]
 
       (let [resp (core/upsert-sports-site! tx
                                            user
@@ -829,7 +965,15 @@
        :ptv new-ptv-data
        ;; Return full PTV response so frontend can update service-channels cache
        ;; (needed for the sync review and PTV link)
-       :ptv-resp ptv-resp})))
+       :ptv-resp ptv-resp
+       ;; the connections the sync dropped, to services PTV no longer has
+       ;; (ptv-review/gone-service), for telling the user
+       :dropped-services (mapv (fn [{:keys [id name] :as d}]
+                                 (cond-> d
+                                   (and (nil? name) (get mirror id))
+                                   (assoc :name (ptv-data/select-service-name
+                                                  (get-in mirror [id :serviceNames])))))
+                               dropped)})))
 
 (comment
   (require '[integrant.repl.state :as state])
@@ -951,9 +1095,7 @@
     (into {} (for [{:keys [service-id status document]}
                    (ptv-service-db/get-current-by-org db (:id org))
                    :when (and service-id (= "active" status))]
-               [(str service-id)
-                (select-keys document [:name :summary :description :user-instruction
-                                       :languages :last-sync])]))
+               [(str service-id) (select-keys document ptv-services/base-keys)]))
     {}))
 
 (defn get-ptv-awaiting-archive
@@ -1194,7 +1336,8 @@
         (ptv-service-db/get-current db (:id org) source-id))
       (when-let [ptv-org-id (-> org :ptv-data :org-id)]
         (persist-ptv-service-revision!
-          db user ptv-org-id (ptv/get-service ptv ptv-org-id (str service-id))))))
+          db user ptv-org-id (ptv/get-service ptv ptv-org-id (str service-id))
+          {:read-from-ptv true}))))
 
 (defn save-ptv-service-audit
   "Saves auditor feedback for a PTV Service of the LIPAS org `org-id` (see
@@ -1219,16 +1362,49 @@
 
 (defn backfill-ptv-service-revisions!
   "REPL helper: seed ptv_service with current PTV state for every org
-   with PTV config. Skips lineages that already exist only in the sense
-   that a fresh revision is appended (harmless). Not wired to migrations
-   or startup."
+   with PTV config, appending a fresh revision also to the lineages that
+   exist. Not wired to migrations or startup.
+
+   Not harmless since the Palvelut tab's review: the latest revision is
+   the base it tells PTV's changes by, so this takes every change made in
+   PTV since Lipas's last write as Lipas's own, and the review never
+   shows it. Use backfill-missing-ptv-service-revisions!."
   [db ptv]
   (doseq [org (backend-org/all-orgs db)
           :let [ptv-org-id (-> org :ptv-data :org-id)]
           :when ptv-org-id
           svc (:itemList (ptv/get-org-services ptv ptv-org-id))
           :when (some-> (:sourceId svc) (str/starts-with? "lipas-"))]
-    (persist-ptv-service-revision! db nil ptv-org-id svc)))
+    (persist-ptv-service-revision! db nil ptv-org-id svc {:read-from-ptv true})))
+
+(defn backfill-missing-ptv-service-revisions!
+  "REPL helper: seed ptv_service from PTV's current state for the Lipas
+   services (sourceId lipas-…, created or adopted by Lipas) that have no
+   revision at all, so the Palvelut tab's review tells PTV's changes from
+   then on. One with a revision is left be: a fresh one from PTV would
+   take the changes made in PTV since Lipas's last write as Lipas's own.
+   Every org with PTV config, or those of `ptv-org-ids`. With `dry-run?`
+   nothing is written. Returns what was (or would be) seeded:
+   [{:ptv-org-id :service-id :source-id :name}]."
+  [db ptv & {:keys [ptv-org-ids dry-run?]}]
+  (let [wanted? (if ptv-org-ids (set ptv-org-ids) some?)]
+    (reduce
+      (fn [seeded [org svc]]
+        (let [ptv-org-id (-> org :ptv-data :org-id)]
+          (when-not dry-run?
+            (persist-ptv-service-revision! db nil ptv-org-id svc {:read-from-ptv true}))
+          (conj seeded {:ptv-org-id ptv-org-id
+                        :service-id (:id svc)
+                        :source-id (:sourceId svc)
+                        :name (ptv-data/select-service-name (:serviceNames svc))})))
+      []
+      (for [org (backend-org/all-orgs db)
+            :let [ptv-org-id (-> org :ptv-data :org-id)]
+            :when (and ptv-org-id (wanted? ptv-org-id))
+            svc (:itemList (ptv/get-org-services ptv ptv-org-id))
+            :when (and (some-> (:sourceId svc) (str/starts-with? "lipas-"))
+                       (nil? (ptv-service-db/get-current-by-service-id db (:id org) (:id svc))))]
+        [org svc]))))
 
 (comment
   (generate-ptv-service-descriptions

@@ -4,6 +4,7 @@
             [lipas.data.ptv :as ptv-data]
             [lipas.data.ptv-review :as ptv-sync]
             [lipas.ui.ptv.review-data :as ptv-review]
+            [lipas.ui.ptv.review-fetch :as review-fetch]
             [re-frame.core :as rf]
             [reagent.ratom :as ratom]))
 
@@ -572,6 +573,13 @@
 (rf/reg-sub ::ptv-site-review-data
   (fn [db [_ lipas-id]]
     (get-in db (ptv-review/site-path lipas-id))))
+
+(rf/reg-sub ::ptv-review-pending?
+  ;; Lives here like ::ptv-save-blockers. Whether Save waits for the edit's
+  ;; PTV review, still on its way (lipas.ui.ptv.review-fetch): saving
+  ;; before it lands would skip the question about changes made in PTV.
+  (fn [db [_ lipas-id]]
+    (review-fetch/save-waits? db lipas-id)))
 
 (rf/reg-sub ::ptv-site-review
   ;; Lives here like ::ptv-save-blockers: the site form's PTV sync review

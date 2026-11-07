@@ -36,7 +36,8 @@
                               point-threshold-m; information only
                     :languages a language version PTV has that the sync
                               removes; information only
-                    :set      a set of ids, a row per difference
+                    :set      a set of ids (the connected services), one
+                              row for the whole set
    - :languages     :published (a row per published language) or the PTV
                     language codes it has rows for (texts only)
    - :takeable-by   who may take PTV's version into Lipas: :site-editor (it
@@ -421,6 +422,48 @@
               ptv-data/select-service-name)
       service-id))
 
+;; A service archived in PTV answers 404 to every GET of it, and PTV drops
+;; its connections at once, so a site's saved list can hold an id PTV no
+;; longer has. Its entry in services-by-id says so with :gone: :archived
+;; (the org's archived list has it, with its :archivingDate and
+;; :serviceNames), or :unknown (purged, or an id of another environment).
+;; Such a connection can't be kept: a sync drops it from Lipas, a change PTV
+;; made with nothing to choose, so the review compares the connections
+;; without it and names it apart (:gone-services).
+
+(defn gone-service?
+  "Whether `services` (services-by-id) marks `service-id` as a service PTV no
+   longer has."
+  [services service-id]
+  (some? (get-in services [service-id :gone])))
+
+(defn gone-service
+  "{:id :name :gone :archived-at} of the service `service-id`, which
+   `services` marks as one PTV no longer has: :gone :archived (and when) or
+   :unknown, :name its Finnish name, nil when no one knows it."
+  [services service-id]
+  (let [{:keys [gone archivingDate serviceNames]} (get services service-id)]
+    {:id service-id
+     :name (ptv-data/select-service-name serviceNames)
+     :gone gone
+     :archived-at archivingDate}))
+
+(defn gone-services
+  "gone-service of each of `service-ids`, those archived in PTV first, then
+   by name; one nobody can name last."
+  [services service-ids]
+  (->> service-ids
+       (map #(gone-service services %))
+       (sort-by (juxt #(not= :archived (:gone %))
+                      #(nil? (:name %))
+                      #(str/lower-case (or (:name %) (:id %)))))
+       vec))
+
+(defn- without-gone
+  "The ids of `ids` that `services` doesn't mark as gone, as a set."
+  [services ids]
+  (into #{} (remove #(gone-service? services %)) ids))
+
 (def ^:private ptv-language-order ["fi" "sv" "en"])
 
 (defn- language-sort-key
@@ -450,10 +493,11 @@
 (defn- with-sent-service-ids
   "`site` with the service ids its sync sends: after the type-change swap
    (ptv-data/rebound-service-ids), when `services` (by id) has the org's
-   LIPAS services to swap."
+   LIPAS services to swap. Never to one PTV no longer has, which Lipas's
+   mirror still lists."
   [site services]
   (let [source-id->service (into {} (keep (fn [[id s]]
-                                            (when-let [sid (:sourceId s)]
+                                            (when-let [sid (and (not (:gone s)) (:sourceId s))]
                                               [sid (assoc s :id id)])))
                                  services)]
     (cond-> site
@@ -494,8 +538,12 @@
    - :distance: [easting northing], and :distance-m between them;
    - :languages: a language version PTV has that the sync removes, with
      :language, :locale and :texts, PTV's {field text} in it;
-   - a connection: :field :services, :id, :name, and :lipas?, :ptv? and
-     :base?, whether each is connected to the service.
+   - :set, the connections (key [:services]): the sets of the ids of the
+     services each side connects the location to, and :names, id -> the
+     service's name. One row for the whole set: the user keeps Lipas's set
+     or takes PTV's, as any other value. A service PTV no longer has
+     (gone-service?) is left out of every side: its connection can't be
+     kept, so it is no choice.
    Its :origin says who changed it since the last sync: :lipas, :ptv or
    :both. A value counts as changed in PTV only with evidence that PTV was
    edited since (ptv-changed-since-sync?); without it the difference is
@@ -509,7 +557,9 @@
    :matching lists the {:field :language} pairs (texts) and {:field} that
    agree, for telling the user what is up to date. :services has every
    service each side connects the location to, {:lipas [{:id :name}] :ptv
-   [...]}, for showing a difference in context. :langs are `langs`, for
+   [...]}, for showing a difference in context. :gone-services are those
+   the site connects that PTV no longer has (gone-service), whose
+   connections the next sync drops from Lipas. :langs are `langs`, for
    annotate-review. :postal-addresses and :service-hours? say what PTV keeps
    that Lipas has no field for (a sync leaves them be, but drops a postal
    address PTV's API rejects).
@@ -588,9 +638,12 @@
                                                :else :ptv)}]]
                       (merge (assoc row :saved (site-values site (row-site-paths row)))
                              (row-spec row)))
-          lipas-ids (get lipas [:services])
+          ;; a service PTV no longer has is no difference: its connection
+          ;; goes with the next sync
+          gone-ids (filter #(gone-service? services %) (get lipas [:services]))
+          lipas-ids (without-gone services (get lipas [:services]))
           ptv-ids (get ptv [:services])
-          base-ids (get sent [:services] #{})
+          base-ids (when sent (without-gone services (get sent [:services])))
           ;; The location names the services it is connected to, also those
           ;; of other organisations that `services` doesn't have.
           channel-names (into {} (keep (fn [{:keys [service]}]
@@ -605,28 +658,27 @@
                        (map (fn [id] {:id id :name (service-name id)}))
                        (sort-by (comp str/lower-case :name))
                        vec))
-          connections (for [id (sort (set/union lipas-ids ptv-ids))
-                            :let [l? (contains? lipas-ids id)
-                                  p? (contains? ptv-ids id)]
-                            :when (not= l? p?)]
-                        (merge {:key [:services id]
+          connections (when-not (same-value? :services lipas-ids ptv-ids)
+                        (merge {:key [:services]
                                 :field :services
-                                :id id
-                                :name (service-name id)
-                                :lipas? l?
-                                :ptv? p?
-                                :base? (when base (contains? base-ids id))
+                                :lipas lipas-ids
+                                :ptv ptv-ids
+                                :base (when base base-ids)
+                                :names (into {} (for [id (set/union lipas-ids ptv-ids)]
+                                                  [id (service-name id)]))
+                                ;; as the edit keeps them: before the type
+                                ;; change swap
+                                :saved {[:ptv :service-ids] (vec (-> site :ptv :service-ids))}
                                 ;; connections need no evidence: connecting a
                                 ;; service from its side doesn't change the
                                 ;; location's :modified
-                                :origin (if base
-                                          (cond
-                                            (= (contains? base-ids id) p?) :lipas
-                                            (= (contains? base-ids id) l?) :ptv
-                                            :else :both)
-                                          no-base)}
+                                :origin (cond
+                                          (not base) no-base
+                                          (same-value? :services base-ids ptv-ids) :lipas
+                                          (same-value? :services base-ids lipas-ids) :ptv
+                                          :else :both)}
                                (row-spec {:field :services})))]
-      {:rows (vec (concat (filter :origin compared) values languages connections))
+      {:rows (vec (concat (filter :origin compared) values languages (when connections [connections])))
        :matching (vec (concat
                         (for [{:keys [field language origin lipas]} compared
                               :when (and (nil? origin) (ptv-data/normalize-ws lipas))]
@@ -635,9 +687,10 @@
                               :when (and (comparable field (get lipas [field]))
                                          (same-value? field (get lipas [field]) (get ptv [field])))]
                           {:field field})
-                        (when (and (empty? connections) (seq lipas-ids))
+                        (when (and (nil? connections) (seq lipas-ids))
                           [{:field :services}])))
        :services {:lipas (named lipas-ids) :ptv (named ptv-ids)}
+       :gone-services (gone-services services gone-ids)
        :base? (some? base)
        :first-link? (= :first-link no-base)
        :evidence? evidence?
@@ -653,7 +706,7 @@
   "Whether `row` needs the user's decision before a sync overwrites PTV with
    Lipas: PTV changed it, or who did can't be told. Information rows never
    do. On a first link the location keeps its connections
-   (link-service-ids), so a connection row needs no decision there."
+   (link-service-ids), so the connections row needs no decision there."
   [row]
   (and (not (contains? info-kinds (:kind row)))
        (case (:origin row)
@@ -709,10 +762,6 @@
    Lipas name, which can be taken into a web-page slot."
   [values ptv-pages {:keys [field kind] :as row}]
   (case kind
-    :set (if (= (contains? (get values [:services]) (:id row)) (:ptv? row))
-           :ptv
-           :lipas)
-
     :languages (if (contains? (get values [:languages]) (:language row)) :ptv :lipas)
 
     (:info :distance) :lipas
@@ -741,27 +790,34 @@
    value. The edit is projected as its sync sends it, in `langs` (the
    languages it publishes, ptv-data/effective-languages of the draft: a
    language version whose texts were taken from PTV stays), with the same
-   type-change swap as the review's Lipas side."
+   type-change swap as the review's Lipas side, and without the services
+   PTV no longer has, as that side. The connections' :names also name the
+   services only the edit has."
   [review draft langs]
   (if-not review
     review
-    (let [values (location-values (site->location (with-sent-service-ids draft (:services-by-id review))
-                                                  langs))
+    (let [services (:services-by-id review)
+          values (-> (location-values (site->location (with-sent-service-ids draft services) langs))
+                     (update [:services] #(without-gone services %)))
           ptv-pages (some #(when (= :extra (:kind %)) (:ptv %)) (:rows review))]
       (update review :rows (fn [rows]
                              (mapv (fn [row]
-                                     (cond-> (assoc row :current (row-current values ptv-pages row))
-                                       (not= :services (:field row))
-                                       (assoc :draft (get values (:key row)))))
+                                     (let [v (get values (:key row))]
+                                       (cond-> (assoc row
+                                                      :current (row-current values ptv-pages row)
+                                                      :draft v)
+                                         (= :set (:kind row))
+                                         (update :names (fn [names]
+                                                          (into (or names {})
+                                                                (for [id v :when (not (contains? names id))]
+                                                                  [id (resolve-service-name services id)])))))))
                                    rows))))))
 
 (defn review-choice-seen
   "The PTV side of `row` a decision is made against. A decision counts
    only while PTV still has it (see review-choice)."
   [row]
-  (if (= :services (:field row))
-    (:ptv? row)
-    (comparable (:field row) (:ptv row))))
+  (comparable (:field row) (:ptv row)))
 
 (defn edited-choice
   "The record of sending the user's own value of `row` (annotated) to PTV:
@@ -855,30 +911,29 @@
   "What to write into the edit `draft` to make it hold `side`'s version of
    `row` (:ptv, or :lipas for the saved one): {path value}, a nil value
    removing the key. A one-slot row takes PTV's only value (several:
-   review-value-writes)."
+   review-value-writes); the connections, PTV's set, in the edit's order
+   with PTV's others after."
   [draft row side]
-  (if (= :services (:field row))
-    (let [connected? (if (= :ptv side) (:ptv? row) (:lipas? row))
-          ids (vec (-> draft :ptv :service-ids))]
-      {[:ptv :service-ids] (if connected?
-                             (vec (distinct (conj ids (:id row))))
-                             (vec (remove #{(:id row)} ids)))})
-    (if (= :lipas side)
-      (:saved row)
-      (let [{:keys [field kind ptv]} row]
-        (case kind
-          (:short :text) {(review-text-path row) (when-not (str/blank? ptv) ptv)}
-          :one-slot {(first (row-site-paths row)) (some->> (first (ptv-values row)) (slot-text field))}
-          :address (cond-> {}
-                     (:street ptv) (assoc [:location :address] (:street ptv))
-                     (:postal-code ptv) (assoc [:location :postal-code] (:postal-code ptv))
-                     (:post-office ptv) (assoc [:location :postal-office] (title-case (:post-office ptv))))
-          :languages (into {} (for [[path f] (map vector (row-site-paths row)
-                                                  [:name :summary :description])
-                                    :let [v (get-in row [:texts f])]
-                                    :when v]
-                                [path v]))
-          {})))))
+  (if (= :lipas side)
+    (:saved row)
+    (let [{:keys [field kind ptv]} row]
+      (case kind
+        (:short :text) {(review-text-path row) (when-not (str/blank? ptv) ptv)}
+        :one-slot {(first (row-site-paths row)) (some->> (first (ptv-values row)) (slot-text field))}
+        :address (cond-> {}
+                   (:street ptv) (assoc [:location :address] (:street ptv))
+                   (:postal-code ptv) (assoc [:location :postal-code] (:postal-code ptv))
+                   (:post-office ptv) (assoc [:location :postal-office] (title-case (:post-office ptv))))
+        :languages (into {} (for [[path f] (map vector (row-site-paths row)
+                                                [:name :summary :description])
+                                  :let [v (get-in row [:texts f])]
+                                  :when v]
+                              [path v]))
+        :set (let [ids (-> draft :ptv :service-ids)]
+               {[:ptv :service-ids] (into (filterv (set ptv) ids)
+                                          (sort-by #(str/lower-case (get-in row [:names %] %))
+                                                   (remove (set ids) ptv)))})
+        {}))))
 
 (defn lipas-value?
   "Whether `value`, one of PTV's values of a one-slot `row`, is the one Lipas
@@ -1061,35 +1116,80 @@
    [field kind]."
   [[:name :short] [:summary :text] [:description :text] [:user-instruction :text]])
 
-(defn service-review
-  "The review of a PTV service in the Palvelut tab. `edit` is its texts
-   with the user's unsaved edits over PTV's ({field {locale text}}), `ptv`
-   PTV's texts now and `base` Lipas's mirror of what PTV returned after
-   Lipas's last write (ptv_service; nil when Lipas hasn't written it), all
-   in that shape; `locales` the languages compared.
+(defn service-changed-since-write?
+  "Whether a service has demonstrably been changed in PTV since Lipas's last
+   write of it, `base` (Lipas's mirror of it, ptv_service): its :modified
+   now, `modified`, differs from the one PTV reported for that write
+   (:ptv-modified) or, for a write mirrored before that was stored, is over
+   2 minutes after it (:last-sync). True when it can't be told, as for a
+   site (ptv-changed-since-sync?); false without a base."
+  [base modified]
+  (boolean
+    (when base
+      (let [stored (:ptv-modified base)]
+        (cond
+          (str/blank? modified) true
+          (not (str/blank? stored)) (not= modified stored)
+          :else (let [m (instant-ms modified)
+                      s (instant-ms (:last-sync base))]
+                  (or (nil? m) (nil? s) (> m (+ s sync-margin-ms)))))))))
 
-   A sync sends the edit, which holds PTV's own text in every field the
-   user hasn't edited, so only an edited field can overwrite PTV. A row is
-   a difference between the edit and PTV: :lipas, the user's edit, or
-   :both when PTV changed the field too since Lipas's last write: a
-   conflict to decide (review-choice-required?). Rows are shaped as a
-   location review's text rows (:service? true), the edit holding Lipas's
-   side (:current :lipas). :ptv-changes lists the fields PTV changed that
-   the edit keeps as PTV has them."
-  [{:keys [edit ptv base locales last-sync ptv-modified]}]
-  (let [norm ptv-data/normalize-ws
-        compared (for [[field kind] service-review-fields
-                       locale locales
-                       :let [l (get-in edit [field locale])
-                             p (get-in ptv [field locale])
-                             b (get-in base [field locale])
-                             language (ptv-data/locale->lang locale)]]
-                   {:field field :kind kind :locale locale :language language
-                    :lipas l :ptv p :base b
-                    :differs? (not= (norm l) (norm p))
-                    :changed-in-ptv? (boolean (and base (not= (norm p) (norm b))))})]
-    {:rows (vec (for [{:keys [field kind locale language lipas ptv base differs? changed-in-ptv?]} compared
-                      :when differs?]
+(defn- written-locale?
+  "Whether `base`, Lipas's mirror of a service, has a language version in
+   `locale`: a name or a text in it."
+  [base locale]
+  (boolean (some (fn [[field _]] (not (str/blank? (get-in base [field locale]))))
+                 service-review-fields)))
+
+(defn service-lipas-texts
+  "A service's names and texts as Lipas has them ({field {locale text}}),
+   which its edit starts from: those of Lipas's last write, `base` (its
+   mirror), when PTV has changed the service since (`changed-in-ptv?`), so
+   that PTV's changes show as changes to decide. Otherwise PTV's own,
+   `ptv`, which then are what Lipas wrote: Lipas tracks a service from its
+   first write on. A language version the write didn't have, added in PTV
+   since, is PTV's: Lipas has no version of it."
+  [base ptv changed-in-ptv?]
+  (if-not (and base changed-in-ptv?)
+    ptv
+    (into {}
+          (for [[field _] service-review-fields]
+            [field (into {}
+                         (for [locale (into #{} (mapcat #(keys (get % field))) [base ptv])
+                               :let [v (get-in (if (written-locale? base locale) base ptv)
+                                               [field locale])]
+                               :when (some? v)]
+                           [locale v]))]))))
+
+(defn service-review
+  "The review of a PTV service in the Palvelut tab, three ways per name and
+   text in each of `locales`: `edit`, what a sync sends (Lipas's version
+   with the user's unsaved edits over it), `ptv`, PTV's texts now, and
+   `base`, Lipas's version (service-lipas-texts), all {field {locale
+   text}}. `base?` says whether Lipas has written the service (has a
+   mirror of it), `changed-in-ptv?` whether PTV has changed it since
+   (service-changed-since-write?): only then can PTV's text differ from
+   Lipas's version.
+
+   A row is a field PTV changed since Lipas's last write, or where the
+   edit differs from PTV. Its :origin: :ptv when only PTV changed it (also
+   when the edit took PTV's version), :lipas when only Lipas did (the
+   user's edit), :both when both did. A change PTV made needs a choice
+   (review-choice-required?) before a sync overwrites it. Rows are shaped
+   as a location review's text rows (:service? true): :lipas is Lipas's
+   side, the edit's text or, where the edit holds PTV's, Lipas's version;
+   :current which of the two the edit holds."
+  [{:keys [edit ptv base base? changed-in-ptv? locales last-sync ptv-modified]}]
+  (let [norm ptv-data/normalize-ws]
+    {:rows (vec (for [[field kind] service-review-fields
+                      locale locales
+                      :let [l (get-in edit [field locale])
+                            p (get-in ptv [field locale])
+                            b (get-in base [field locale])
+                            differs? (not= (norm l) (norm p))
+                            ptv-changed? (not= (norm p) (norm b))
+                            language (ptv-data/locale->lang locale)]
+                      :when (or differs? ptv-changed?)]
                   {:key [field language]
                    :field field
                    :kind kind
@@ -1098,18 +1198,18 @@
                    :service? true
                    :language language
                    :locale locale
-                   :lipas lipas
-                   :ptv ptv
-                   :base base
-                   :origin (if changed-in-ptv? :both :lipas)
-                   :current :lipas}))
+                   :lipas (if differs? l b)
+                   :ptv p
+                   :base b
+                   :origin (cond
+                             (not ptv-changed?) :lipas
+                             (or (not differs?) (= (norm l) (norm b))) :ptv
+                             :else :both)
+                   :current (if differs? :lipas :ptv)}))
      :matching []
-     :ptv-changes (vec (for [{:keys [field language differs? changed-in-ptv?]} compared
-                             :when (and changed-in-ptv? (not differs?))]
-                         {:field field :language language}))
-     :base? (some? base)
+     :base? (boolean base?)
      :first-link? false
-     :evidence? true
+     :evidence? (boolean changed-in-ptv?)
      :last-sync last-sync
      :ptv-modified ptv-modified
      :langs (mapv name locales)}))
@@ -1162,9 +1262,11 @@
                    (annotate-review site langs))
         ;; a change made in PTV still waiting for the user's choice
         awaiting-choice? (boolean (seq (open-review-rows (:rows review) (:review-choices site))))
-        ;; The edit differs from PTV (a review choice, or texts edited here):
-        ;; the next sync has something to send.
+        ;; The edit differs from PTV (a review choice, or texts edited here),
+        ;; or the site connects a service PTV no longer has, whose connection
+        ;; a sync drops from Lipas: the next sync has something to do.
         something-to-send? (boolean (or (seq (:rows review))
+                                        (seq (:gone-services review))
                                         (and (not= saved site)
                                              (seq (:rows (sync-review site (:ptv-base site) ptv-channel
                                                                       services langs))))))

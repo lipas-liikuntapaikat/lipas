@@ -292,6 +292,16 @@
         {:fx [[:dispatch [:lipas.ui.events/set-active-notification
                           (ptv-saved-but-sync-failed-notification tr err)]]]}))))
 
+(rf/reg-event-fx ::notify-dropped-services
+  ;; After a site-form save that synced: the connections it dropped from
+  ;; Lipas, to services PTV no longer has, which the review named before the
+  ;; save (`gone`, its :gone-services). Replaces the save's own success
+  ;; notification with one that says it.
+  (fn [{:keys [db]} [_ gone result]]
+    (when-let [n (review-data/dropped-notification
+                   (:translator db) (review-data/site-form-dropped gone result))]
+      {:fx [[:dispatch [:lipas.ui.events/set-active-notification n]]]})))
+
 ;; The PTV orgs the user may act for: orgs covering a municipality they hold
 ;; :ptv/manage for (direct OR org-catalog role), all for admins/auditors. NOT the
 ;; membership-based [:user :orgs] — a city-scoped PTV manager needn't be a
@@ -516,7 +526,8 @@
             [:dispatch [::fetch-ptv-sync-bases ptv-org-id
                         (vec (keep (fn [[lipas-id site]]
                                      (when (-> site :ptv :last-sync) lipas-id))
-                                   merged-sites))]]]})))
+                                   merged-sites))]]
+            [:dispatch [::fetch-unlisted-services ptv-org-id]]]})))
 
 ;; What each synced site's last sync sent (lipas.data.ptv/->review-base),
 ;; cached at [:ptv :org <ptv-org-id> :data :sync-bases] keyed by lipas-id and
@@ -671,7 +682,62 @@
       {:db (-> db
                (assoc-in [:ptv :loading-from-ptv :services] false)
                (assoc-in [:ptv :org ptv-org-id :data :services] services))
-       :fx [[:dispatch [::assign-services-to-sports-sites]]]})))
+       :fx [[:dispatch [::assign-services-to-sports-sites]]
+            [:dispatch [::fetch-unlisted-services ptv-org-id]]]})))
+
+;; A site's saved services can include one the org's published services
+;; don't: one archived in PTV (PTV answers 404 to it and drops its
+;; connections at once), an id PTV never had, or another organisation's.
+;; Once the services, the locations and the sites are loaded, those that
+;; neither the services nor the locations' connections have are asked
+;; about once (/actions/fetch-ptv-unlisted-services: one listing of the
+;; org's archived services), so the review, the services field and its
+;; chips can name them instead of showing their ids.
+
+(defn- unlisted-service-ids
+  "The ids the org's sites connect, saved or in the edit, that neither the
+   org's services nor its locations' connections have, and that haven't
+   been asked about. nil until all three are loaded."
+  [db org-id]
+  (let [{:keys [services service-channels sports-sites unlisted-services
+                unlisted-pending]} (get-in db [:ptv :org org-id :data])]
+    (when (and services service-channels sports-sites)
+      (let [known (-> (set (keys services))
+                      (into (mapcat ptv-data/channel-service-ids) (vals service-channels))
+                      (into (keys unlisted-services))
+                      (into unlisted-pending))]
+        (->> (vals sports-sites)
+             (mapcat #(concat (get-in % [:ptv :service-ids]) (get-in % [:ptv-saved :service-ids])))
+             (remove #(or (str/blank? %) (contains? known %)))
+             distinct
+             vec)))))
+
+(rf/reg-event-fx ::fetch-unlisted-services
+  (fn [{:keys [db]} [_ org-id]]
+    (let [ids (unlisted-service-ids db org-id)
+          token (-> db :user :login :token)]
+      (when (seq ids)
+        {:db (update-in db [:ptv :org org-id :data :unlisted-pending] (fnil into #{}) ids)
+         :fx [[:http-xhrio
+               {:method :post
+                :headers {:Authorization (str "Token " token)}
+                :uri (str (:backend-url db) "/actions/fetch-ptv-unlisted-services")
+                :params {:org-id org-id :service-ids ids}
+                :format (ajax/transit-request-format)
+                :response-format (ajax/transit-response-format)
+                :on-success [::fetch-unlisted-services-success org-id ids]
+                :on-failure [::fetch-unlisted-services-failure org-id ids]}]]}))))
+
+(rf/reg-event-db ::fetch-unlisted-services-success
+  (fn [db [_ org-id ids resp]]
+    (-> db
+        (update-in [:ptv :org org-id :data :unlisted-services] merge resp)
+        (update-in [:ptv :org org-id :data :unlisted-pending] #(reduce disj % ids)))))
+
+(rf/reg-event-db ::fetch-unlisted-services-failure
+  ;; Without the answer the ids show as before, and the next load asks again
+  (fn [db [_ org-id ids _resp]]
+    (update-in db [:ptv :org org-id :data :unlisted-pending] #(reduce disj % ids))))
 
 (rf/reg-event-fx ::fetch-ptv-services-failure
   (fn [{:keys [db]} [_ resp]]
@@ -704,7 +770,8 @@
     (let [service-channels (->> resp :itemList (utils/index-by :id))]
       {:db (-> db
                (assoc-in [:ptv :loading-from-ptv :service-channels] false)
-               (assoc-in [:ptv :org org-id :data :service-channels] service-channels))})))
+               (assoc-in [:ptv :org org-id :data :service-channels] service-channels))
+       :fx [[:dispatch [::fetch-unlisted-services org-id]]]})))
 
 (rf/reg-event-fx ::fetch-ptv-service-channels-failure
   (fn [{:keys [db]} [_ resp]]
@@ -1367,12 +1434,13 @@
 (rf/reg-event-db ::set-service-candidate-name
   (fn [db [_ id locale v]]
     (let [org-id (-get-ptv-org-id db)]
-      ;; A cleared field is "", not nil: the edit sits on top of PTV's
-      ;; live text, so a missing key would bring that text back.
+      ;; A cleared field is "", not nil: the edit sits on top of Lipas's
+      ;; version of the text, so a missing key would bring that text back.
       (assoc-in db [:ptv :org org-id :data :service-candidates id :name locale] (or v "")))))
 
 (rf/reg-event-db ::discard-service-edits
-  ;; Drops a service's unsaved edits; the panel falls back to PTV's texts.
+  ;; Drops a service's unsaved edits; the panel falls back to Lipas's
+  ;; version of its texts (ptv-review/service-lipas-texts).
   (fn [db [_ id]]
     (let [org-id (-get-ptv-org-id db)]
       (update-in db [:ptv :org org-id :data :service-candidates] dissoc id))))
@@ -1474,6 +1542,32 @@
 
 ;;; Create Services in PTV ;;;
 
+(defn- service-version-saved
+  "`db` once `resp`, the service as PTV has it, is Lipas's version of it:
+   written by Lipas, or read from PTV when the user took PTV's version
+   (`read?`). What was sent or taken is PTV's now: only what differs stays
+   an edit. Until Lipas's mirror is fetched again, the review's base is
+   made from `resp`, so the change just made doesn't read as PTV's."
+  [db org-id id resp read?]
+  (-> db
+      (update-in [:ptv :syncing :service] dissoc id)
+      (assoc-in [:ptv :org org-id :data :services (:id resp)] resp)
+      (assoc-in [:ptv :org org-id :data :service-bases (:id resp)]
+                (ptv-services/written-base resp read?))
+      (update-in [:ptv :org org-id :data :service-candidates]
+                 (fn [candidates]
+                   (if-let [left (ptv-services/drop-written-edits (get candidates id) resp)]
+                     (assoc candidates id left)
+                     (dissoc candidates id))))))
+
+(defn- service-version-saved-fx
+  [tr org-id id]
+  [[:dispatch [:lipas.ui.events/set-active-notification
+               {:message (tr :notifications/save-success) :success? true}]]
+   ;; the new version is the next review's base, and its choices are spent
+   [:dispatch [::fetch-ptv-service-bases org-id]]
+   [:dispatch [::forget-review-choices id]]])
+
 (rf/reg-event-fx ::create-ptv-service
   ;; Optional 7th arg lipas-id: when set, the newly created service's id is
   ;; auto-added to that site's :ptv :service-ids on success.
@@ -1504,35 +1598,49 @@
           existing-ids (set (get-in db [:sports-sites lipas-id :editing :ptv :service-ids]))]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :services] false)
-               (update-in [:ptv :syncing :service] dissoc id)
-               (assoc-in [:ptv :org org-id :data :services (:id resp)] resp)
-               ;; what was sent is PTV's now: only what differs stays an edit
-               (update-in [:ptv :org org-id :data :service-candidates]
-                          (fn [candidates]
-                            (if-let [left (ptv-services/drop-written-edits (get candidates id) resp)]
-                              (assoc candidates id left)
-                              (dissoc candidates id))))
+               (service-version-saved org-id id resp false)
                (update-in [:ptv :org org-id :data :manual-services]
                           dissoc (:sourceId resp)))
        :fx (cond-> (into (or (seq extra-fx) [])
-                         [[:dispatch [:lipas.ui.events/set-active-notification
-                                      {:message (tr :notifications/save-success) :success? true}]]
-                          ;; the write is the next review's base, and its choices are spent
-                          [:dispatch [::fetch-ptv-service-bases org-id]]
-                          [:dispatch [::forget-review-choices id]]])
+                         (service-version-saved-fx tr org-id id))
              (and lipas-id new-service-id)
              (conj [:dispatch [:lipas.ui.sports-sites.events/edit-field
                                lipas-id [:ptv :service-ids]
                                (vec (conj existing-ids new-service-id))]]))})))
+
+(rf/reg-event-fx ::take-ptv-service-version
+  ;; A service whose every change made in PTV the user took as it is:
+  ;; there is nothing to send, so instead of a write PTV's version is
+  ;; recorded as Lipas's, or the review would come back. Refused as a write
+  ;; is when PTV changed the service after it was loaded. `id` is the
+  ;; service's edit key.
+  (fn [{:keys [db]} [_ org-id id service-id expected-modified]]
+    {:db (assoc-in db [:ptv :syncing :service id] true)
+     :fx [[:http-xhrio
+           {:method :post
+            :headers {:Authorization (str "Token " (-> db :user :login :token))}
+            :uri (str (:backend-url db) "/actions/take-ptv-service-version")
+            :params {:org-id org-id
+                     :service-id service-id
+                     :expected-modified expected-modified}
+            :format (ajax/transit-request-format)
+            :response-format (ajax/transit-response-format)
+            :on-success [::take-ptv-service-version-success org-id id]
+            :on-failure [::create-ptv-service-failure org-id id []]}]]}))
+
+(rf/reg-event-fx ::take-ptv-service-version-success
+  (fn [{:keys [db]} [_ org-id id resp]]
+    {:db (service-version-saved db org-id id resp true)
+     :fx (service-version-saved-fx (:translator db) org-id id)}))
 
 (rf/reg-event-fx ::create-ptv-service-failure
   (fn [{:keys [db]} [_ org-id id extra-fx resp]]
     (let [tr (:translator db)
           modified? (ptv-modified-error? resp)
           ;; Refused because the service was edited in PTV after this page
-          ;; loaded it: reload the services so the panel shows PTV's current
-          ;; texts under the user's unsaved edits, which are kept. In the
-          ;; background: the open row and the filters stay.
+          ;; loaded it: reload the services so the review shows PTV's new
+          ;; change, the user's unsaved edits kept. In the background: the
+          ;; open row and the filters stay.
           changed-in-ptv? (= :changed-in-ptv (some-> resp :response :type keyword))
           notification (ptv-sync-error-notification tr resp)
           ;; Find the service to update its cached publishingStatus: `id` is
@@ -1549,7 +1657,18 @@
                (assoc-in [:ptv :errors :services-creation] resp)
                (cond->
                  (and modified? service-id)
-                 (assoc-in [:ptv :org org-id :data :services service-id :publishingStatus] "Modified")))
+                 (assoc-in [:ptv :org org-id :data :services service-id :publishingStatus] "Modified")
+
+                 ;; An edit that repeats PTV's version as loaded (PTV's text
+                 ;; taken in the review) isn't the user's own: it goes, so
+                 ;; PTV's new change is asked about against Lipas's version
+                 (and changed-in-ptv? service-id)
+                 (update-in [:ptv :org org-id :data :service-candidates]
+                            (fn [candidates]
+                              (if-let [left (ptv-services/drop-written-edits (get candidates id)
+                                                                             (get services service-id))]
+                                (assoc candidates id left)
+                                (dissoc candidates id))))))
        :fx (cond-> (vec extra-fx)
              ;; PTV's draft is said by the row it blocks (the review's
              ;; notice, and the chip "Estetty"), as for a site
@@ -1750,7 +1869,10 @@
                 [[:lipas.ui.map.events/fetch-ptv-site-review lipas-id]])]])
 
 (rf/reg-event-fx ::create-ptv-service-location-success
-  (fn [{:keys [db]} [_ lipas-id extra-fx {:keys [ptv-resp ptv]}]]
+  ;; `dropped-services`: the connections the sync dropped from Lipas, to
+  ;; services PTV no longer has (ptv-review/gone-service), said in the
+  ;; notification
+  (fn [{:keys [db]} [_ lipas-id extra-fx {:keys [ptv-resp ptv dropped-services]}]]
     (let [tr (:translator db)
           org-id (-get-ptv-org-id db)
                          ;; Remove old service-channel entry if ID changed
@@ -1790,7 +1912,8 @@
                (update-in [:ptv :review :site-patch] dissoc lipas-id))
        :fx (cond-> (into (or (seq extra-fx) [])
                          [[:dispatch [:lipas.ui.events/set-active-notification
-                                      {:message (tr :notifications/save-success) :success? true}]]])
+                                      (or (review-data/dropped-notification tr dropped-services)
+                                          {:message (tr :notifications/save-success) :success? true})]]])
              (reload-map-site? db lipas-id) (conj (reload-map-site-fx db lipas-id))
              ;; a batch refetches once, at its end
              (not (get-in db [:ptv :service-locations-creation :in-progress?]))
@@ -1959,6 +2082,7 @@
                             tr
                             {:open open
                              :languages (review-data/language-removals rows)
+                             :action :sync
                              :on-overwrite #(rf/dispatch [::sync-with-review lipas-id rows true])
                              :on-review #(rf/dispatch [::show-review lipas-id])})]]]}
         ;; The sync sends the saved site: what the review took from PTV
@@ -2209,32 +2333,19 @@
   [org-id edit-key]
   [:ptv :org org-id :data :service-candidates edit-key])
 
-(defn- assoc-service-texts
-  "A service's edit with `writes` ({[field locale] text}) made."
-  [edit writes]
-  (reduce-kv assoc-in edit writes))
-
 (rf/reg-event-fx ::service-review-take
   ;; A service's edit (its unsaved texts, at `edit-key`) holding `side`'s
-  ;; version of each of `rows`: PTV's text replaces the edit's, or the
-  ;; user's own edit is kept, which is recorded against PTV's text.
+  ;; version of each of `rows`: PTV's text written into the edit, or
+  ;; Lipas's kept, which is recorded against PTV's text
+  ;; (ptv-services/review-writes, review-choices).
   (fn [{:keys [db]} [_ org-id edit-key rows side]]
     (let [path (service-edit-path org-id edit-key)
-          ;; {[field locale] text}: PTV's texts into the edit
-          writes (when (= :ptv side)
-                   (into {} (for [{:keys [field locale ptv]} rows] [[field locale] ptv])))
-          db (-> db
-                 (update-in (review-data/choices-path edit-key)
-                            (fn [choices]
-                              (reduce (fn [choices row]
-                                        (if (= :lipas side)
-                                          (assoc choices (:key row) (ptv-review/service-kept-choice row))
-                                          (dissoc choices (:key row))))
-                                      choices
-                                      rows)))
-                 (update-in (review-data/undo-path edit-key)
-                            ptv-review/record-review-writes (get-in db path) writes))]
-      {:db (update-in db path assoc-service-texts writes)})))
+          writes (ptv-services/review-writes rows side)]
+      {:db (-> db
+               (update-in (review-data/choices-path edit-key) ptv-services/review-choices rows side)
+               (update-in (review-data/undo-path edit-key)
+                          ptv-review/record-review-writes (get-in db path) writes)
+               (update-in path ptv-services/apply-review-writes writes))})))
 
 (rf/reg-event-db ::service-review-reset
   ;; "Kumoa valinnat" for a service, as ::review-reset for a site.
@@ -2244,7 +2355,7 @@
                                                 (get-in db path))]
       (-> db
           (forget-choices edit-key)
-          (update-in path assoc-service-texts writes)))))
+          (update-in path ptv-services/apply-review-writes writes)))))
 
 ;;; Sites waiting to be archived in PTV (D2) ;;;
 

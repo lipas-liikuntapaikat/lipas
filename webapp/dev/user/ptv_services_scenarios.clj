@@ -6,6 +6,8 @@
 ;; (ps/report)     ; each scenario service as the table computes it
 ;; (ps/state :p1)  ; one service: PTV, Lipas's mirror, review rows, audit, links
 ;; (ps/cleanup!)   ; archives p8 and p10, undoes F1, puts p5's English back
+;; Section K (2026-11): p2, p3, p4 and p5-ptv-summary! set up a change made
+;; in PTV, which the review now shows (ps/state's :review)
 ;;
 ;; Every text a scenario writes carries the marker "(e2e...)". The baseline
 ;; functions strip the markers from the live texts and write the result with
@@ -108,6 +110,10 @@
 (defn- mirror [service]
   (when-let [source-id (:sourceId service)]
     (ptv-service-db/get-current (dbc) (lipas-org-id) source-id)))
+
+(defn- mirror-history [service]
+  (when-let [source-id (:sourceId service)]
+    (ptv-service-db/get-history (dbc) (lipas-org-id) source-id)))
 
 (defn lipas-write!
   "Writes `edits` ({field {locale text}}, plus :remove-languages for a
@@ -222,6 +228,13 @@
     (ptvi/update-service-connections (ptv) org id #(conj % (site-channel-id p8-site)))
     id))
 
+(defn p5-ptv-summary!
+  "p5, a service made in PTV that Lipas has written, with its fi summary
+   changed in PTV since (K5)."
+  []
+  (p5-baseline!)
+  (ptv-edit! :p5 #(update-in % [:summary :fi] mark "PTV")))
+
 (defn p11-baseline! [] (baseline! :p11))
 
 (def all [#'p1-baseline! #'p2-ptv-summary! #'p3-ptv-summary! #'p4-ptv-name!
@@ -248,14 +261,17 @@
        set))
 
 (defn state
-  "Where a service stands: live in PTV, in Lipas's mirror, the review rows
-   left with no edits, its audit verdicts and the sites linked to it."
+  "Where a service stands: live in PTV, in Lipas's mirror (its last
+   revision: PTV's :modified then, and :read-from-ptv when PTV's version
+   was taken without a write), the review with no edits ([key origin
+   current] rows; :take-ptv-version? when PTV's version is to be recorded),
+   where it was modified last, its audit verdicts and the sites linked to
+   it."
   [k-or-id]
   (let [service (live k-or-id)
         ui (->ui-service service)
         m (mirror service)
-        base (some-> m :document (select-keys [:name :summary :description :user-instruction
-                                               :languages :last-sync]))
+        base (some-> m :document (select-keys ptv-services/base-keys))
         channels (map :serviceChannel (:serviceChannels service))
         audit (get (ptv-audit/current-service-audits (dbc) (lipas-org-id)) (str (:id service)))
         st (ptv-services/service-state {:org-id org :service ui :org-languages (org-languages)
@@ -263,9 +279,11 @@
     {:ptv (merge (select-keys service [:publishingStatus :sourceId :languages :modified])
                  (texts-of service)
                  {:channels (count channels)})
-     :mirror (some-> base (update :last-sync str))
+     :mirror (some-> base (update :last-sync str) (assoc :revisions (count (mirror-history service))))
      :sync-status (:sync-status st)
-     :review (mapv (juxt :key :origin) (:rows (:review st)))
+     :review (mapv (juxt :key :origin :current) (:rows (:review st)))
+     :take-ptv-version? (:take-ptv-version? st)
+     :last-modified-in (:last-modified-in st)
      :audit (some-> audit (select-keys [:summary :description :user-instruction])
                     (update-vals :status))
      :sites (saved-sites (:id service))}))

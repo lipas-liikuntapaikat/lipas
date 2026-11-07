@@ -14,6 +14,7 @@
             ["@mui/material/Typography$default" :as Typography]
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.types :as types-data]
             [lipas.ui.components.autocompletes :refer [autocomplete2]]
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.ptv.components :as ptv-components]
@@ -78,11 +79,21 @@
            label]]
          body)])
 
+(def ^:private create-service-in-form?
+  "Whether the PTV tab offers to create the service the site's type class
+   lacks in PTV, in place (add-service-create-form). Off for now: services
+   are created on the PTV tool's Palvelut tab until it's agreed whether
+   creating one here stays."
+  false)
+
 (defn- finish-steps
   "What's left before a site with sync switched on can be exported. Shown in
   place of an error: missing texts are the user's next step, not a failure.
-  Save stays blocked meanwhile (same rule as the backend gate)."
-  [{:keys [tr org-name service-names texts-done?]}]
+  Save stays blocked meanwhile (same rule as the backend gate).
+  `service-missing` says which service the site's type class lacks in PTV;
+  `other-langs` are the org's languages besides Finnish, whose texts are
+  optional."
+  [{:keys [tr org-name service-names service-missing texts-done? other-langs]}]
   [:> Alert {:severity "info" :variant "outlined" :icon false}
    [:> AlertTitle (tr :ptv/finish-title)]
    [:> Stack {:spacing 1}
@@ -92,10 +103,16 @@
      [:> Typography {:variant "body2"}
       (if (seq service-names)
         (str/join ", " service-names)
-        (tr :ptv/step-service-none))]]
+        (tr :ptv/step-service-none))]
+     (when (and (empty? service-names) service-missing)
+       [:> Typography {:variant "body2"} service-missing])]
     [finish-step {:done? texts-done? :label (tr :ptv/step-texts)}
      (when-not texts-done?
-       [:> Typography {:variant "body2"} (tr :ptv/step-texts-hint)])]
+       [:> Typography {:variant "body2"} (tr :ptv/step-texts-hint)])
+     (when (and (not texts-done?) (seq other-langs))
+       [:> Typography {:variant "body2"}
+        (tr (if (next other-langs) :ptv/step-texts-other-langs :ptv/step-texts-other-lang)
+            (str/join ", " (map str/upper-case other-langs)))])]
     [:> Typography {:variant "body2" :sx #js {:mt 1}}
      (tr :ptv/finish-footer)]]])
 
@@ -148,12 +165,22 @@
 
         services @(rf/subscribe [::subs/services-by-id org-id])
         services* @(rf/subscribe [::subs/services org-id])
+        ;; what the review was fetched with: also names the site's services
+        ;; the org's list lacks, those PTV no longer has marked
+        review-fetch @(rf/subscribe [:lipas.ui.map.subs/ptv-site-review-data lipas-id])
         site-sub-cat-id (-> site :type :type-code types :sub-category)
         missing-services-input [{:service-ids #{}
                                  :sub-category-id site-sub-cat-id
                                  :sub-category (-> site :search-meta :type :sub-category :name :fi)}]
         missing-services (when (and org-id candidate-now? (not loading-ptv?))
                            (ptv-data/resolve-missing-services org-id services missing-services-input))
+        ;; e.g. a biathlon centre belongs to Maastohiihtokeskukset, not to
+        ;; Ampumaurheilupaikat: name the service the site would get
+        service-missing (when (seq missing-services)
+                          (tr :ptv/step-service-missing
+                              (get-in types [type-code :name (tr)])
+                              (get-in types-data/sub-categories [site-sub-cat-id :name (tr)])
+                              (tr :ptv/services)))
         matching-service-id
         (when (and org-id site-sub-cat-id (seq services))
           (let [expected-source-id (ptv-data/->service-source-id org-id site-sub-cat-id)]
@@ -353,7 +380,9 @@
            :service-names (let [ids (set (:service-ids (:ptv site)))]
                             (for [s services* :when (ids (:service-id s))]
                               (:label s)))
-           :texts-done? ready?}]
+           :service-missing service-missing
+           :texts-done? ready?
+           :other-langs (remove #{"fi"} org-languages)}]
 
          ;; Sync on but no org (sites saved before the gate): a real problem.
          ;; Save is blocked meanwhile.
@@ -464,16 +493,22 @@
      (when (and sync-enabled org-id candidate-now?)
        (let [service-ids (set (:service-ids (:ptv site)))
              linked-services (filter #(contains? service-ids (:service-id %)) services*)
+             ;; the site's services the org's list lacks, as the review
+             ;; fetch knows them: one archived in PTV named as such
+             unlisted (:services review-fetch)
+             unlisted-ids (remove (set (map :service-id linked-services)) (:service-ids (:ptv site)))
              sub-cat-id (-> site :type :type-code types :sub-category)
              needs-service? (and (empty? service-ids) (seq missing-services))]
          [:> FormControl
           [ptv-components/ptv-link-field
            {:tr tr
             :label (tr :ptv/services)
-            :items (for [s linked-services]
-                     {:id (:service-id s)
-                      :name (:label s)
-                      :url (str ptv-base "/service/" (:service-id s))})
+            :items (concat (for [s linked-services]
+                             {:id (:service-id s)
+                              :name (:label s)
+                              :url (str ptv-base "/service/" (:service-id s))})
+                           (review-data/unlisted-link-items tr unlisted unlisted-ids
+                                                            #(str ptv-base "/service/" %)))
             :can-edit? (not read-only?)
             :editing? editing-services?
             :on-edit #(set-editing-services? true)
@@ -482,6 +517,7 @@
             :selector-component
             [controls/services-selector
              {:disabled (or loading? read-only?)
+              :value-labels (review-data/unlisted-labels tr unlisted unlisted-ids)
               :value (:service-ids (:ptv site))
               :options services*
               :on-change (fn [ids]
@@ -503,17 +539,27 @@
             )
 
           ;; When the site isn't yet attached to any service and no lipas-managed
-          ;; service exists for its sub-category, offer a "create new" shortcut.
+          ;; service exists for its sub-category, offer a "create new" shortcut
+          ;; (create-service-in-form?), or say where the service is created.
           ;; Linking an existing PTV service isn't surfaced as a separate flow
           ;; here — the main service selector above already lists every service
           ;; in the org. Auto-attaches on success.
           (when needs-service?
-            (if creating-service?
+            (cond
+              (not create-service-in-form?)
+              ;; the finish steps say it already
+              (when-not (and editing? (= #{:ptv/missing-texts} blockers))
+                [:> Typography {:variant "body2" :sx #js {:mt 1}}
+                 service-missing])
+
+              creating-service?
               [ptv-components/add-service-create-form
                {:org-id org-id
                 :locked-sub-category-id sub-cat-id
                 :lipas-id lipas-id
                 :on-cancel #(set-creating-service? false)}]
+
+              :else
               [:> Stack {:spacing 1 :sx #js {:mt 1}}
                [:> Typography {:variant "body2"}
                 (tr :ptv.service/needs-service-helper)]

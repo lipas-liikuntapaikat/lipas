@@ -9,6 +9,7 @@
             [lipas.ui.map.hooks :as hooks]
             [lipas.ui.map.utils :as map-utils]
             [lipas.ui.ptv.review-data :as ptv-review]
+            [lipas.ui.ptv.review-fetch :as review-fetch]
             [lipas.ui.utils :refer [==>] :as utils]
             [re-frame.core :as rf]))
 
@@ -413,14 +414,26 @@
           [:lipas.ui.accessibility.events/get-statements lipas-id]])
        [[:lipas.ui.events/navigate :lipas.ui.routes.map/map]])}))
 
+(defn- drop-fetched-review
+  "`db` without the site's fetched PTV review (::fetch-ptv-site-review),
+   and with any fetch of it still on its way stale."
+  [db lipas-id]
+  (-> db
+      (update-in [:ptv :review :site] dissoc lipas-id)
+      (review-fetch/forget lipas-id)))
+
 (rf/reg-event-fx ::edit-site
   (fn [{:keys [db]} [_ lipas-id geom-type can-publish? edit-activities? edit-floorball?]]
     (let [sub-mode (if (not can-publish?) :view-only :editing)]
-      {:dispatch-n
+      {;; the edit's save reviews what the edit's own fetch brings, never
+       ;; what an earlier one brought (the view's, a previous edit's)
+       :db (drop-fetched-review db lipas-id)
+       :dispatch-n
        [[:lipas.ui.sports-sites.events/edit-site lipas-id]
        ;;[::zoom-to-site lipas-id]
         [::clear-undo-redo]
-        ;; a save syncs a site with PTV sync on: review PTV's changes first
+        ;; a save syncs a site with PTV sync on: review PTV's changes
+        ;; first. Save waits for it (::fetch-ptv-site-review).
         [::fetch-ptv-site-review lipas-id]
         [::start-editing lipas-id sub-mode geom-type]
        ;; Also jump to activities/floorball tab if user doesn't have permission to
@@ -439,7 +452,7 @@
                    (not= 3 (:selected-sports-site-tab (:map db))))
           [::select-sports-site-tab 3])]})))
 
-(defn- on-success-default [{:keys [lipas-id synced?]} & [result]]
+(defn- on-success-default [{:keys [lipas-id synced? gone]} & [result]]
   (cond-> [[::stop-editing]
            [::clear-ptv-site-review lipas-id]
            [:lipas.ui.search.events/submit-search]
@@ -450,7 +463,13 @@
     ;; The handler lives in the lazy :ptv module; load it on this (rare)
     ;; error path so the warning toast is never silently dropped.
     (conj [:lipas.ui.lazy/load-then :ptv
-           [:lipas.ui.ptv.events/notify-if-sync-failed result]])))
+           [:lipas.ui.ptv.events/notify-if-sync-failed result]])
+
+    ;; services PTV no longer has, which the review named (`gone`): the
+    ;; sync dropped their connections, said in place of the success
+    (and synced? (seq gone))
+    (conj [:lipas.ui.lazy/load-then :ptv
+           [:lipas.ui.ptv.events/notify-dropped-services gone result]])))
 
 (defn- on-failure-default [{:keys [lipas-id]}]
   [[:lipas.ui.map.events/show-sports-site lipas-id]])
@@ -469,7 +488,6 @@
           ;; PTV's time: say so until the save's own notification replaces
           ;; this (sports-sites.events/save-success, save-failure)
           syncs? (ptv-review/save-syncs? (ptv-review/app-user db) editing)
-          on-success (partial on-success-default {:lipas-id lipas-id :synced? syncs?})
           on-failure (partial on-failure-default {:lipas-id lipas-id})
           fetched (get-in db (ptv-review/site-path lipas-id))
           review (when syncs?
@@ -482,13 +500,18 @@
           draft? (= "Modified" (-> fetched :channel :publishingStatus))
           ;; what the review was made against: the backend refuses the sync
           ;; over a change made in PTV since, and saves Lipas only
-          reviewed (when syncs? (ptv-review/reviewed (:channel fetched)))]
+          reviewed (when syncs? (ptv-review/reviewed (:channel fetched)))
+          ;; the services PTV no longer has, whose connections the sync
+          ;; drops: the save's notification says so
+          on-success (partial on-success-default {:lipas-id lipas-id :synced? syncs?
+                                                  :gone (:gone-services review)})]
       (if (and (seq open) (not overwrite-ptv?) (not draft?))
         {:dispatch [:lipas.ui.events/confirm-with
                     (ptv-review/overwrite-confirmation
                       tr
                       {:open open
                        :languages (ptv-review/language-removals (:rows review))
+                       :action :save
                        :on-overwrite #(==> [::save-edits lipas-id true])
                        :on-review #(==> [::open-ptv-review lipas-id])})]}
         ;; the edit holds the decisions
@@ -512,7 +535,10 @@
   ;; What the site form reviews a site against PTV with
   ;; (lipas.ui.ptv.review-data/site-form-review). Only a site synced to a
   ;; location has anything to review, and only a PTV manager's save syncs
-  ;; it (D2).
+  ;; it (D2). Fetched during an edit, the site's Save waits for it, so a
+  ;; quick save can't skip the question (lipas.ui.ptv.review-fetch). Only
+  ;; the site's latest fetch lands: an earlier one's late response is
+  ;; dropped.
   (fn [{:keys [db]} [_ lipas-id]]
     (let [latest (get-in db [:sports-sites lipas-id :history
                              (get-in db [:sports-sites lipas-id :latest])])
@@ -521,24 +547,42 @@
                  (ptv-review/ptv-manager-for? (ptv-review/app-user db) latest)
                  (-> latest :ptv :last-sync)
                  (-> latest :ptv :service-channel-ids first))
-        {:http-xhrio
-         {:method :post
-          :headers {:Authorization (str "Token " token)}
-          :uri (str (:backend-url db) "/actions/fetch-ptv-site-review")
-          :params {:lipas-id lipas-id}
-          :format (ajax/transit-request-format)
-          :response-format (ajax/transit-response-format)
-          :on-success [::fetch-ptv-site-review-success lipas-id]
-          :on-failure [::fetch-ptv-site-review-failure lipas-id]}}))))
+        (let [id (random-uuid)
+              edit? (some? (get-in db [:sports-sites lipas-id :editing]))]
+          {:db (review-fetch/start db lipas-id id edit?)
+           :http-xhrio
+           {:method :post
+            :headers {:Authorization (str "Token " token)}
+            :uri (str (:backend-url db) "/actions/fetch-ptv-site-review")
+            :params {:lipas-id lipas-id}
+            :format (ajax/transit-request-format)
+            :response-format (ajax/transit-response-format)
+            ;; a hanging PTV can't keep Save waiting
+            :timeout review-fetch/timeout-ms
+            :on-success [::fetch-ptv-site-review-success lipas-id id]
+            :on-failure [::fetch-ptv-site-review-failure lipas-id id]}})))))
 
 (rf/reg-event-db ::fetch-ptv-site-review-success
-  (fn [db [_ lipas-id resp]]
-    (assoc-in db (ptv-review/site-path lipas-id) resp)))
+  (fn [db [_ lipas-id id resp]]
+    (if (review-fetch/latest? db lipas-id id)
+      (-> db
+          (assoc-in (ptv-review/site-path lipas-id) resp)
+          (review-fetch/forget lipas-id))
+      db)))
 
-(rf/reg-event-db ::fetch-ptv-site-review-failure
-  ;; Without the review the save syncs as it always has.
-  (fn [db [_ lipas-id _resp]]
-    (update-in db [:ptv :review :site] dissoc lipas-id)))
+(rf/reg-event-fx ::fetch-ptv-site-review-failure
+  ;; Without the review the save syncs as it always has, and the backend
+  ;; refuses the sync over a change made in PTV that nobody has decided
+  ;; about (ptv-not-reviewed). Save is released; an edit's user hears why
+  ;; nothing will be asked.
+  (fn [{:keys [db]} [_ lipas-id id _resp]]
+    (when (review-fetch/latest? db lipas-id id)
+      (cond-> {:db (drop-fetched-review db lipas-id)}
+        (review-fetch/save-waits? db lipas-id)
+        (assoc :dispatch [:lipas.ui.events/set-active-notification
+                          {:message ((:translator db) :ptv/review-fetch-failed)
+                           :severity :warning
+                           :sticky? true}])))))
 
 (rf/reg-event-fx ::open-ptv-review
   ;; The site form's PTV tab with the review open and in sight.
@@ -551,14 +595,17 @@
 
 (rf/reg-event-db ::clear-ptv-site-review
   ;; After a save: it synced, so the review's base and choices are spent.
-  ;; After a cancel: the choices went with the edit.
+  ;; After a cancel: the choices went with the edit, and so does a fetch
+  ;; still on its way.
   (fn [db [_ lipas-id]]
-    (update-in db [:ptv :review] (fn [review]
-                                   (-> review
-                                       (update :site dissoc lipas-id)
-                                       (update :choices dissoc lipas-id)
-                                       (update :undo dissoc lipas-id)
-                                       (update :open dissoc lipas-id))))))
+    (-> db
+        (update-in [:ptv :review] (fn [review]
+                                    (-> review
+                                        (update :site dissoc lipas-id)
+                                        (update :choices dissoc lipas-id)
+                                        (update :undo dissoc lipas-id)
+                                        (update :open dissoc lipas-id))))
+        (review-fetch/forget lipas-id))))
 
 (rf/reg-event-fx ::delete-site
   (fn [_]
