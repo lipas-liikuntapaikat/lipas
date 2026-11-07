@@ -8,16 +8,19 @@
 ;; TODO think something more intuitive here.
 ;; Just return react elements, with <>
 (defn edit-actions-list
+  "`save-busy?`: Save waits for data still loading; `invalid-message`
+   says which."
   [{:keys [editing? valid? logged-in?  user-can-publish? on-discard
            discard-tooltip edit-tooltip publish-tooltip on-edit-start
            invalid-message on-edit-end delete-tooltip on-delete
-           on-publish editing-allowed? save-in-progress?
+           on-publish editing-allowed? save-in-progress? save-busy?
            edit-activities? edit-floorball?]}]
 
   [(when (and editing? (or user-can-publish? edit-activities? edit-floorball?))
      [buttons/save-button
       {:on-click         on-publish
-       :disabled         (or save-in-progress? (not valid?))
+       :disabled         (or save-in-progress? save-busy? (not valid?))
+       :busy?            save-busy?
        :disabled-tooltip invalid-message
        :tooltip          publish-tooltip}])
 

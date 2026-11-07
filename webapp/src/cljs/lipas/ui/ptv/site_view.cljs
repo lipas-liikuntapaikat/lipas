@@ -14,11 +14,14 @@
             ["@mui/material/Typography$default" :as Typography]
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.types :as types-data]
             [lipas.ui.components.autocompletes :refer [autocomplete2]]
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.ptv.components :as ptv-components]
             [lipas.ui.ptv.controls :as controls]
             [lipas.ui.ptv.events :as events]
+            [lipas.ui.ptv.review :as review]
+            [lipas.ui.ptv.review-data :as review-data]
             [lipas.ui.ptv.subs :as subs]
             [lipas.ui.utils :refer [prod?]]
             [re-frame.core :as rf]
@@ -76,11 +79,21 @@
            label]]
          body)])
 
+(def ^:private create-service-in-form?
+  "Whether the PTV tab offers to create the service the site's type class
+   lacks in PTV, in place (add-service-create-form). Off for now: services
+   are created on the PTV tool's Palvelut tab until it's agreed whether
+   creating one here stays."
+  false)
+
 (defn- finish-steps
   "What's left before a site with sync switched on can be exported. Shown in
   place of an error: missing texts are the user's next step, not a failure.
-  Save stays blocked meanwhile (same rule as the backend gate)."
-  [{:keys [tr org-name service-names texts-done?]}]
+  Save stays blocked meanwhile (same rule as the backend gate).
+  `service-missing` says which service the site's type class lacks in PTV;
+  `other-langs` are the org's languages besides Finnish, whose texts are
+  optional."
+  [{:keys [tr org-name service-names service-missing texts-done? other-langs]}]
   [:> Alert {:severity "info" :variant "outlined" :icon false}
    [:> AlertTitle (tr :ptv/finish-title)]
    [:> Stack {:spacing 1}
@@ -90,10 +103,16 @@
      [:> Typography {:variant "body2"}
       (if (seq service-names)
         (str/join ", " service-names)
-        (tr :ptv/step-service-none))]]
+        (tr :ptv/step-service-none))]
+     (when (and (empty? service-names) service-missing)
+       [:> Typography {:variant "body2"} service-missing])]
     [finish-step {:done? texts-done? :label (tr :ptv/step-texts)}
      (when-not texts-done?
-       [:> Typography {:variant "body2"} (tr :ptv/step-texts-hint)])]
+       [:> Typography {:variant "body2"} (tr :ptv/step-texts-hint)])
+     (when (and (not texts-done?) (seq other-langs))
+       [:> Typography {:variant "body2"}
+        (tr (if (next other-langs) :ptv/step-texts-other-langs :ptv/step-texts-other-lang)
+            (str/join ", " (map str/upper-case other-langs)))])]
     [:> Typography {:variant "body2" :sx #js {:mt 1}}
      (tr :ptv/finish-footer)]]])
 
@@ -146,12 +165,22 @@
 
         services @(rf/subscribe [::subs/services-by-id org-id])
         services* @(rf/subscribe [::subs/services org-id])
+        ;; what the review was fetched with: also names the site's services
+        ;; the org's list lacks, those PTV no longer has marked
+        review-fetch @(rf/subscribe [:lipas.ui.map.subs/ptv-site-review-data lipas-id])
         site-sub-cat-id (-> site :type :type-code types :sub-category)
         missing-services-input [{:service-ids #{}
                                  :sub-category-id site-sub-cat-id
                                  :sub-category (-> site :search-meta :type :sub-category :name :fi)}]
         missing-services (when (and org-id candidate-now? (not loading-ptv?))
                            (ptv-data/resolve-missing-services org-id services missing-services-input))
+        ;; e.g. a biathlon centre belongs to Maastohiihtokeskukset, not to
+        ;; Ampumaurheilupaikat: name the service the site would get
+        service-missing (when (seq missing-services)
+                          (tr :ptv/step-service-missing
+                              (get-in types [type-code :name (tr)])
+                              (get-in types-data/sub-categories [site-sub-cat-id :name (tr)])
+                              (tr :ptv/services)))
         matching-service-id
         (when (and org-id site-sub-cat-id (seq services))
           (let [expected-source-id (ptv-data/->service-source-id org-id site-sub-cat-id)]
@@ -167,15 +196,47 @@
                                                    :value (:org-id ptv-data)}))))
                                     [orgs])
         single-org? (= 1 (count org-options))
-        service-channel-modified? (= "Modified" (-> site :ptv :service-channel-publishing-status))
         double-link-others @(rf/subscribe [::subs/double-link-others lipas-id])
         channel-id (first (:service-channel-ids (:ptv site)))
         last-sync (-> sports-site :ptv :last-sync)
-        linked-channel @(rf/subscribe [::subs/site-service-channel lipas-id])
-        ;; nil until the linked channel is fetched, and for a channel that
-        ;; was fetched for a previous link
-        unpublished (when (and channel-id (= channel-id (:id linked-channel)))
-                      (ptv-data/unpublished-ptv-languages site linked-channel org-languages))]
+        ;; the linked location as fetched (nil until then, and for one
+        ;; fetched for a previous link)
+        linked-channel (let [c @(rf/subscribe [::subs/site-service-channel lipas-id])]
+                         (when (and channel-id (= channel-id (:id c))) c))
+        archived? (and channel-id (= "Deleted" (-> site :ptv :publishing-status)))
+        ;; PTV holds an unpublished draft of the location: it refuses every
+        ;; write until the draft is published or discarded there
+        draft? (= "Modified" (:publishingStatus linked-channel))
+        ;; ① the state of the link, as the PTV tool says it
+        notices (cond-> []
+                  draft?
+                  (conj {:key :modified
+                         :text (tr :ptv.review/notice-modified)
+                         :actions [{:label (tr :ptv.review/open-in-ptv)
+                                    :href (str ptv-base "/channels/serviceLocation/" channel-id)}
+                                   {:label (tr :ptv.review/recheck)
+                                    :busy? @(rf/subscribe [::subs/rechecking? channel-id])
+                                    :on-click #(rf/dispatch [::events/recheck-draft
+                                                             {:org-id org-id
+                                                              :channel-id channel-id
+                                                              :lipas-id lipas-id
+                                                              :site-form? true}])}]})
+
+                  (seq double-link-others)
+                  (conj {:key :double-link
+                         :text (str (tr :ptv.review/notice-double-link
+                                        (str/join ", " (map :name double-link-others)))
+                                    " " (tr :ptv.double-link/remediation))})
+
+                  (and linked-channel
+                       (review-data/names-differ-wholesale?
+                         (:name site)
+                         (some #(when (and (= "Name" (:type %)) (= "fi" (:language %))) (:value %))
+                               (:serviceChannelNames linked-channel))))
+                  (conj {:key :names-differ
+                         :text (tr :ptv.review/notice-names-differ
+                                   (some #(when (and (= "Name" (:type %)) (= "fi" (:language %))) (:value %))
+                                         (:serviceChannelNames linked-channel)))}))]
 
     ;; Load the PTV orgs the user may act for (by PTV rights, not membership)
     ;; on mount. nil = not loaded, [] = loaded but none.
@@ -319,7 +380,9 @@
            :service-names (let [ids (set (:service-ids (:ptv site)))]
                             (for [s services* :when (ids (:service-id s))]
                               (:label s)))
-           :texts-done? ready?}]
+           :service-missing service-missing
+           :texts-done? ready?
+           :other-langs (remove #{"fi"} org-languages)}]
 
          ;; Sync on but no org (sites saved before the gate): a real problem.
          ;; Save is blocked meanwhile.
@@ -350,6 +413,14 @@
          (and previous-sent? (not candidate-now?))
          (alert "warning" (tr :ptv/will-be-archived-type-changed))
 
+         ;; archived in PTV: a save with sync on publishes the same location
+         ;; again, it doesn't create a new one
+         (and archived? candidate-now? sync-enabled)
+         (alert "info" (tr :ptv/will-be-republished))
+
+         archived?
+         (alert "info" (tr :ptv.review/notice-archived))
+
          (and candidate-now? ready? sync-enabled)
          (alert "info" (tr :ptv/new-service-location-will-be-created))
 
@@ -357,6 +428,41 @@
          (alert "warning" (tr :ptv/not-suitable-for-export))
 
          :else nil))
+
+     ;; What differs from PTV and who changed it. A save syncs the site, so
+     ;; the choices go into the save (:lipas.ui.map.events/save-edits),
+     ;; which asks before overwriting a change made in PTV without one.
+     ;; Viewing the site shows the differences only: choosing writes into
+     ;; an edit.
+     (let [site-review @(rf/subscribe [:lipas.ui.map.subs/ptv-site-review lipas-id])]
+       (when (or site-review (seq notices))
+         (let [open? @(rf/subscribe [::subs/review-open? lipas-id])]
+           [review/review-panel
+            {:id (review-data/panel-dom-id lipas-id)
+             :tr tr
+             :review site-review
+             :choices @(rf/subscribe [::subs/review-choices lipas-id])
+             :open? open?
+             :on-toggle #(rf/dispatch [::events/set-review-open lipas-id (not open?)])
+             :on-take (fn [rows side]
+                        (rf/dispatch [::events/review-take :site-form lipas-id rows side]))
+             :on-take-value (fn [row value]
+                              (rf/dispatch [::events/review-take-value :site-form lipas-id row value]))
+             :on-reset #(rf/dispatch [::events/review-reset :site-form lipas-id])
+             :written? @(rf/subscribe [::subs/review-written? lipas-id])
+             ;; the PTV tab is for PTV managers; the site's own data is
+             ;; edited right here
+             :rights {:ptv-manager? true :site-editor? (boolean can-edit?)}
+             :org-langs org-languages
+             :notices notices
+             :draft? draft?
+             :site-tab (tr :lipas.sports-site/basic-data)
+             :first-open-id (review-data/first-open-dom-id lipas-id)
+             :stacked? true
+             :read-only? (not editing?)
+             :footer (tr (if editing?
+                           :ptv.review/site-form-footer
+                           :ptv.review/view-mode-footer))}])))
 
      ;; 3. Organization selector — only relevant once the user opts in to sync.
      ;; Pre-filled from ::resolved-org-id. Shown as a caption + edit affordance
@@ -387,16 +493,22 @@
      (when (and sync-enabled org-id candidate-now?)
        (let [service-ids (set (:service-ids (:ptv site)))
              linked-services (filter #(contains? service-ids (:service-id %)) services*)
+             ;; the site's services the org's list lacks, as the review
+             ;; fetch knows them: one archived in PTV named as such
+             unlisted (:services review-fetch)
+             unlisted-ids (remove (set (map :service-id linked-services)) (:service-ids (:ptv site)))
              sub-cat-id (-> site :type :type-code types :sub-category)
              needs-service? (and (empty? service-ids) (seq missing-services))]
          [:> FormControl
           [ptv-components/ptv-link-field
            {:tr tr
             :label (tr :ptv/services)
-            :items (for [s linked-services]
-                     {:id (:service-id s)
-                      :name (:label s)
-                      :url (str ptv-base "/service/" (:service-id s))})
+            :items (concat (for [s linked-services]
+                             {:id (:service-id s)
+                              :name (:label s)
+                              :url (str ptv-base "/service/" (:service-id s))})
+                           (review-data/unlisted-link-items tr unlisted unlisted-ids
+                                                            #(str ptv-base "/service/" %)))
             :can-edit? (not read-only?)
             :editing? editing-services?
             :on-edit #(set-editing-services? true)
@@ -405,6 +517,7 @@
             :selector-component
             [controls/services-selector
              {:disabled (or loading? read-only?)
+              :value-labels (review-data/unlisted-labels tr unlisted unlisted-ids)
               :value (:service-ids (:ptv site))
               :options services*
               :on-change (fn [ids]
@@ -421,23 +534,32 @@
             (and (seq missing-services) previous-sent? type-code-changed?)
             [:> Alert {:severity "warning"} (tr :ptv/service-missing-for-type)]
 
-            ;; Type changed but a matching service exists — heads-up that the
-            ;; site may be re-linked on next sync.
-            (and previous-sent? type-code-changed?)
-            [:> Alert {:severity "info"} (tr :ptv/type-changed-may-rebind)])
+            ;; (a matching service exists: the review shows the connections
+            ;; the type change swaps)
+            )
 
           ;; When the site isn't yet attached to any service and no lipas-managed
-          ;; service exists for its sub-category, offer a "create new" shortcut.
+          ;; service exists for its sub-category, offer a "create new" shortcut
+          ;; (create-service-in-form?), or say where the service is created.
           ;; Linking an existing PTV service isn't surfaced as a separate flow
           ;; here — the main service selector above already lists every service
           ;; in the org. Auto-attaches on success.
           (when needs-service?
-            (if creating-service?
+            (cond
+              (not create-service-in-form?)
+              ;; the finish steps say it already
+              (when-not (and editing? (= #{:ptv/missing-texts} blockers))
+                [:> Typography {:variant "body2" :sx #js {:mt 1}}
+                 service-missing])
+
+              creating-service?
               [ptv-components/add-service-create-form
                {:org-id org-id
                 :locked-sub-category-id sub-cat-id
                 :lipas-id lipas-id
                 :on-cancel #(set-creating-service? false)}]
+
+              :else
               [:> Stack {:spacing 1 :sx #js {:mt 1}}
                [:> Typography {:variant "body2"}
                 (tr :ptv.service/needs-service-helper)]
@@ -448,37 +570,11 @@
                  :on-click #(set-creating-service? true)}
                 (tr :ptv.service/create-new)]]))]))
 
-     ;; Double-link warning: another sports-site is bound to the same PTV
-     ;; service-location. Always shown (independent of sync state) since it's a
-     ;; data-integrity problem. Remediation is the unlink → sync flow.
-     (when (seq double-link-others)
-       [:> Alert {:severity "warning" :variant "outlined"}
-        [:> AlertTitle (tr :ptv.double-link/warning-title)]
-        [:> Typography {:variant "body2"}
-         (tr :ptv.double-link/linked-also-to
-             (str/join ", " (map :name double-link-others)))]
-        [:> Typography {:variant "body2" :sx #js {:mt 1}}
-         (tr :ptv.double-link/explanation)]
-        [:> Typography {:variant "body2" :sx #js {:mt 1}}
-         (tr :ptv.double-link/remediation)]])
-
-     ;; Texts in PTV that the next sync would remove, e.g. after linking a
-     ;; service location that exists in PTV in more languages than the org
-     ;; publishes.
-     (when sync-enabled
-       [ptv-components/unpublished-languages-alert
-        {:tr tr :unpublished unpublished}])
-
      ;; 5. Descriptions and everything below — gated on sync-enabled + org-id.
      (when (and sync-enabled org-id)
        [:<>
         ;; Audit summary notification - show if there are audit issues
         [audit-summary-notification {:tr tr :org-id org-id :lipas-id lipas-id}]
-
-        ;; Warn when PTV has unpublished edits that would block sync.
-        (when service-channel-modified?
-          [:> Alert {:severity "warning" :variant "outlined"}
-           (tr :ptv/modified-in-ptv)])
 
         ;; Generate + Translate buttons grouped in one row, matching the wizard.
         ;; Use org-languages (real PTV org config) rather than :languages on the
@@ -546,8 +642,8 @@
             :label (str (tr :ptv/summary) " *")
             :value v
             :inputProps #js {:maxLength ptv-data/max-summary-length}
-            :helperText (str (count v) "/" ptv-data/max-summary-length)
-            :error (> (count v) ptv-data/max-summary-length)}])
+            :helperText (controls/text-length-hint tr v ptv-data/max-summary-length)
+            :error (controls/text-length-error? v ptv-data/max-summary-length)}])
 
         ;; Summary audit feedback
         [audit-feedback-component
@@ -571,8 +667,8 @@
             :label (str (tr :ptv/description) " *")
             :value v
             :inputProps #js {:maxLength ptv-data/max-description-length}
-            :helperText (str (count v) "/" ptv-data/max-description-length)
-            :error (> (count v) ptv-data/max-description-length)}])
+            :helperText (controls/text-length-hint tr v ptv-data/max-description-length)
+            :error (controls/text-length-error? v ptv-data/max-description-length)}])
 
         ;; Description audit feedback
         [audit-feedback-component

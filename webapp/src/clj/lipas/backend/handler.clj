@@ -1,6 +1,8 @@
 (ns lipas.backend.handler
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
+            [lipas.backend.address.core :as address]
+            [lipas.backend.address.pelias :as pelias]
             [lipas.backend.analysis.heatmap :as heatmap]
             [lipas.backend.api.v1.routes :as v1]
             [lipas.backend.api.v2 :as v2]
@@ -254,8 +256,21 @@
     (or (roles/check-privilege user ctx :activity/edit)
         (roles/check-privilege user ctx :loi/create-edit))))
 
+(defn- pelias-reverse-fn
+  "`(fn [lat lon] -> [<pelias address properties> ...])` for the `:pelias` app
+  config.
+
+  A `:reverse-fn` in that config wins over the real HTTP call. That is the
+  seam tests use: `GET /actions/reverse-geocode` is the only route with an
+  outbound third-party dependency, and injecting the fn keeps the test's
+  Pelias half a plain function while everything else — routing, coercion,
+  the database lookups — stays real."
+  [pelias]
+  (or (:reverse-fn pelias)
+      (partial pelias/nearest-addresses pelias)))
+
 (defn create-app
-  [{:keys [db emailer search mailchimp ptv] :as ctx}]
+  [{:keys [db emailer search mailchimp ptv pelias] :as ctx}]
   (ring/ring-handler
     (ring/router
 
@@ -701,6 +716,18 @@
                       {:status 200
                        :body {:message "PTV configuration updated successfully"}})}}]
 
+      ;; How many of the org's published service locations each language
+      ;; version is in: what removing a language from the PTV config deletes
+      ;; from PTV on their next syncs (lipas-admin only, as editing it).
+        ["/actions/get-ptv-language-usage"
+         {:post
+          {:no-doc true
+           :require-privilege :users/manage
+           :parameters {:body [:map [:ptv-org-id :string]]}
+           :handler (fn [req]
+                      {:status 200
+                       :body (core/get-ptv-language-usage db (-> req :parameters :body :ptv-org-id))})}}]
+
       ;; --- Org-management rollout: which orgs' members get the org UI.
       ;; LIPAS-admin only; the admin page's rollout tab is the one place it
       ;; changes (it is also set at creation, see /actions/create-org). ---
@@ -1063,6 +1090,23 @@
            ;; lipas.backend.search-guard.
            (fn [{:keys [body-params]}]
              (core/search search (search-guard/check-query! body-params)))}}]
+
+        ;; Click the map -> nearest address, postal code, postitoimipaikka.
+        ;; Public and unauthenticated like /actions/search below it: the answer
+        ;; is open data (Posti, Tilastokeskus, Digitransit) about a point the
+        ;; caller already knows, and the map it serves is public too. The
+        ;; coordinate bounds in the query schema are what keeps an open
+        ;; endpoint from being a free proxy to Digitransit for the rest of the
+        ;; world.
+        ["/actions/reverse-geocode"
+         {:get
+          {:no-doc false
+           :parameters {:query handler-schema/reverse-geocode-query-params}
+           :responses {200 {:body handler-schema/reverse-geocode-response}}
+           :handler
+           (fn [{{{:keys [lat lon]} :query} :parameters}]
+             {:status 200
+              :body (address/reverse-geocode db (pelias-reverse-fn pelias) lat lon)})}}]
 
         ["/actions/find-fields"
          {:post

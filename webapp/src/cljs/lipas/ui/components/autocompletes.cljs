@@ -103,12 +103,15 @@
 (r/defc autocomplete2
   "Helper for version of autocomplete where:
 
-  :options should be a cljs sequential collection with {:value ... :label ...}"
-  [{:keys [options input-props label] :as props}]
+  :options should be a cljs sequential collection with {:value ... :label ...}
+  :value-labels (optional) {value label} names values that aren't among
+  the options, so that they don't show as bare values"
+  [{:keys [options input-props label value-labels] :as props}]
   (let [value->label (hooks/use-memo (fn []
-                                       (into {} (map (juxt (comp safe-name :value) :label)
-                                                     options)))
-                                     [options])
+                                       (into (or value-labels {})
+                                             (map (juxt (comp safe-name :value) :label))
+                                             options))
+                                     [options value-labels])
         js-options (hooks/use-memo (fn [] (to-array options))
                                    [options])]
     (r/create-element Autocomplete
@@ -129,7 +132,7 @@
                                     :isOptionEqualToValue (fn [option value]
                                                             (= (safe-name (:value option))
                                                                value))}
-                                   (clj->js (dissoc props :input-props :label :options))))))
+                                   (clj->js (dissoc props :input-props :label :options :value-labels))))))
 
 (r/defc type-selector
   "Type selector using autocomplete2 with all active types"

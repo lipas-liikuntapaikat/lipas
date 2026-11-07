@@ -545,3 +545,22 @@
             (is (= {:fi "Uusi kuvaus"} (:description after)))
             (is (= own-ptv-org-id (:org-id after)))
             (is (empty? @ptv-calls) "a meta save never calls the PTV API")))))))
+
+(deftest archived-channel-refetch-is-a-404-test
+  (testing "PTV's 404 for a location it no longer has (archived) is a 404"
+    ;; The PTV tool refetches an opened row's location; a 404 there means
+    ;; nothing to refresh, any other failure means PTV couldn't be reached.
+    (let [_org (seed-org! ptv-org-id [own-city])
+          token (jwt/create-token (ptv-manager own-city))
+          body {:org-id ptv-org-id :service-channel-id channel-id}]
+      (with-redefs [ptv-integration/get-org-service-channel
+                    (fn [& _] (throw (ex-info "HTTP Error: 404" {:resp {:status 404}})))]
+        (is (= 404 (:status (post* "/api/actions/fetch-ptv-service-channel" body token)))))
+      (testing "a location PTV has comes back with its draft marked"
+        (with-redefs [ptv-integration/get-org-service-channel
+                      (fn [& _] {:id channel-id :publishingStatus "Published"})
+                      ptv-integration/get-active-service-channel
+                      (fn [& _] {:id channel-id :publishingStatus "Modified"})]
+          (let [resp (post* "/api/actions/fetch-ptv-service-channel" body token)]
+            (is (= 200 (:status resp)))
+            (is (= "Modified" (:publishingStatus (tu/safe-parse-json resp))))))))))

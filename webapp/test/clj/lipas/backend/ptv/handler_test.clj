@@ -9,7 +9,7 @@
             [lipas.backend.org :as backend-org]
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.backend.ptv.integration :as ptv-integration]
-            [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-review :as ptv-review]
             [lipas.data.types :as types]
             [lipas.test-utils :as tu]
             [lipas.utils :as utils]
@@ -398,7 +398,7 @@
                          (is (= 200 (:status resp)))
                          (some #(when (= lipas-id (:lipas-id %)) %) body)))
           sync-status (fn [candidate]
-                        (:sync-status (ptv-data/sports-site->ptv-input
+                        (:sync-status (ptv-review/sports-site->ptv-input
                                         {:types types/all :org-id "test-org-id" :org-langs ["fi"]}
                                         {} {} candidate)))
           before (candidates)
@@ -958,6 +958,49 @@
                 (mock/body (tu/->json body))
                 (tu/token-header token))))
 
+(deftest backfill-missing-ptv-service-revisions-test
+  ;; Only a Lipas service with no revision at all is seeded: a fresh one
+  ;; over an existing lineage would take PTV's changes since Lipas's last
+  ;; write as Lipas's own, hiding them from the Palvelut tab's review.
+  (let [org (seed-service-org!)
+        had-id (str (java.util.UUID/randomUUID))
+        missing-id (str (java.util.UUID/randomUUID))
+        ptv-service (fn [id source-id name]
+                      {:id id
+                       :sourceId source-id
+                       :modified "2026-11-01T10:00:00"
+                       :serviceNames [{:type "Name" :language "fi" :value name}]
+                       :serviceDescriptions [{:type "Summary" :language "fi" :value (str name " PTV:ssä")}]})
+        services [(ptv-service had-id "lipas-had" "Pallokentät")
+                  (ptv-service missing-id "lipas-missing" "Uimahallit")
+                  (ptv-service (str (java.util.UUID/randomUUID)) nil "Kirjastopalvelut")]
+        backfill! (fn [& opts]
+                    (with-redefs [ptv-integration/get-org-services (fn [_ _] {:itemList services})]
+                      (apply ptv-core/backfill-missing-ptv-service-revisions!
+                             (test-db) (:lipas/ptv @test-system) opts)))
+        summary-of (fn [source-id]
+                     (get-in (ptv-service-db/get-current (test-db) (:id org) source-id)
+                             [:document :summary :fi]))]
+    (seed-service-rev! org {:source-id "lipas-had" :service-id had-id
+                            :summary {:fi "Lipaksen tiivistelmä"}})
+
+    (testing "a dry run lists the missing one and writes nothing"
+      (is (= [{:ptv-org-id svc-ptv-org-id :service-id missing-id
+               :source-id "lipas-missing" :name "Uimahallit"}]
+             (backfill! :dry-run? true)))
+      (is (nil? (ptv-service-db/get-current (test-db) (:id org) "lipas-missing"))))
+
+    (testing "another org's run leaves it be"
+      (is (= [] (backfill! :ptv-org-ids ["00000000-0000-0000-0000-000000000000"]))))
+
+    (testing "the run seeds only the missing one, from PTV"
+      (is (= ["lipas-missing"] (map :source-id (backfill!))))
+      (is (= "Uimahallit PTV:ssä" (summary-of "lipas-missing")))
+      (is (= "Lipaksen tiivistelmä" (summary-of "lipas-had")) "the existing base is kept"))
+
+    (testing "a second run has nothing to do"
+      (is (= [] (backfill!))))))
+
 (deftest save-ptv-service-audit-existing-revision-test
   (testing "Saves audit onto the latest existing ptv_service revision"
     (let [org (seed-service-org!)
@@ -1249,7 +1292,10 @@
                                  :audit {:summary {:status "changes-requested" :feedback "Korjaa"}}})
           _ (Thread/sleep 1100)
           _ (with-redefs [ptv-integration/update-service
-                          (fn [_ _ data] (assoc data :id svc-id))]
+                          (fn [_ _ data] (assoc data :id svc-id))
+                          ;; the sync reads the service it has a record of
+                          ptv-integration/get-service
+                          (fn [_ _ _] {:id svc-id :sourceId source-id})]
               (test-app (-> (mock/request :post "/api/actions/save-ptv-service")
                             (mock/content-type "application/json")
                             (mock/body (tu/->json {:org-id svc-ptv-org-id
@@ -1270,6 +1316,154 @@
       (is (= "changes-requested" (get-in stored [:summary :status])))
       (is (= "Korjaa" (get-in stored [:summary :feedback])))
       (is (= [stored] (map :audit served))))))
+
+(deftest save-ptv-service-keeps-ptv-entries-without-service-id-test
+  ;; A sync of a LIPAS-created service that doesn't name its PTV id (the
+  ;; wizard, an older browser) still keeps what PTV has that LIPAS never
+  ;; writes: the id comes from LIPAS's own ptv_service record.
+  (let [_org (seed-service-org!)
+        admin (tu/gen-admin-user :db-component (test-db))
+        svc-id (str (java.util.UUID/randomUUID))
+        source-id (str "lipas-" svc-ptv-org-id "-1300")
+        live {:id svc-id
+              :sourceId source-id
+              :serviceNames [{:type "Name" :language "fi" :value "Pallokentät"}
+                             {:type "AlternativeName" :language "fi" :value "Kentät"}]
+              :serviceDescriptions [{:type "Summary" :language "fi" :value "Tiivistelmä"}
+                                    {:type "ChargeTypeAdditionalInfo" :language "fi" :value "Maksu 5 euroa"}]
+              :requirements [{:language "fi" :value "Ikäraja 15 vuotta"}]}
+        put (atom nil)
+        got (atom [])
+        sync! (fn []
+                (with-redefs [ptv-integration/get-service (fn [_ _ id] (swap! got conj id) live)
+                              ptv-integration/update-service (fn [_ _ data]
+                                                               (reset! put data)
+                                                               (assoc data :id svc-id))]
+                  (test-app (-> (mock/request :post "/api/actions/save-ptv-service")
+                                (mock/content-type "application/json")
+                                (mock/body (tu/->json {:org-id svc-ptv-org-id
+                                                       :city-codes [91]
+                                                       :source-id source-id
+                                                       :sub-category-id 1300
+                                                       :languages ["fi"]
+                                                       :summary {:fi "Uusi tiivistelmä"}
+                                                       :description {:fi "Uusi kuvaus"}}))
+                                (tu/token-header (jwt/create-token admin))))))]
+    (testing "a service LIPAS has no record of yet: nothing read, LIPAS's body alone"
+      (is (= 200 (:status (sync!))))
+      (is (empty? @got))
+      (is (not (contains? @put :requirements))))
+
+    (testing "once LIPAS has written it, its record names the service to build on"
+      (is (= 200 (:status (sync!))))
+      (is (= [svc-id] @got))
+      (is (= [{:language "fi" :value "Ikäraja 15 vuotta"}] (:requirements @put)))
+      (is (some #{{:type "AlternativeName" :language "fi" :value "Kentät"}} (:serviceNames @put)))
+      (is (some #{{:type "ChargeTypeAdditionalInfo" :language "fi" :value "Maksu 5 euroa"}}
+                (:serviceDescriptions @put)))
+      (is (some #{{:type "Summary" :language "fi" :value "Uusi tiivistelmä"}}
+                (:serviceDescriptions @put))))))
+
+(defn- take-ptv-service-version
+  "/actions/take-ptv-service-version with PTV answering `live` to a GET.
+   A write to PTV fails the test."
+  [token live body]
+  (with-redefs [ptv-integration/get-service (fn [_ _ _] live)
+                ptv-integration/update-service (fn [& _] (throw (ex-info "PTV written" {})))
+                ptv-integration/update-service-by-id (fn [& _] (throw (ex-info "PTV written" {})))]
+    (test-app (-> (mock/request :post "/api/actions/take-ptv-service-version")
+                  (mock/content-type "application/json")
+                  (mock/body (tu/->json body))
+                  (tu/token-header token)))))
+
+(deftest take-ptv-service-version-test
+  ;; Every change made in PTV taken as it is in the Palvelut tab's review:
+  ;; nothing to write, PTV's version is recorded as Lipas's
+  (let [org (seed-service-org!)
+        admin (tu/gen-admin-user :db-component (test-db))
+        token (jwt/create-token admin)
+        svc-id (str (java.util.UUID/randomUUID))
+        source-id (str "lipas-" svc-ptv-org-id "-1300")
+        _ (seed-service-rev! org {:source-id source-id :service-id svc-id})
+        modified "2026-11-01T10:00:00.123456"
+        live {:id svc-id
+              :sourceId source-id
+              :modified modified
+              :serviceNames [{:type "Name" :language "fi" :value "Pallokentät"}]
+              :serviceDescriptions [{:type "Summary" :language "fi" :value "PTV:ssä muutettu tiivistelmä"}
+                                    {:type "Description" :language "fi" :value "Kuvaus"}]
+              :languages ["fi"]
+              :publishingStatus "Published"}
+        revisions #(count (ptv-service-db/get-history (test-db) (:id org) source-id))]
+    (testing "refused when PTV changed the service after the review loaded it: nothing recorded"
+      (let [resp (take-ptv-service-version token live {:org-id svc-ptv-org-id
+                                                       :service-id svc-id
+                                                       :expected-modified "2026-10-31T09:00:00"})]
+        (is (= 409 (:status resp)))
+        (is (= "changed-in-ptv" (:type (tu/safe-parse-json resp))))
+        (is (= 1 (revisions)))))
+
+    (testing "PTV's version becomes Lipas's, read from PTV, without a write"
+      (let [resp (take-ptv-service-version token live {:org-id svc-ptv-org-id
+                                                       :service-id svc-id
+                                                       :expected-modified modified})
+            current (ptv-service-db/get-current (test-db) (:id org) source-id)
+            base (get (ptv-core/get-ptv-service-bases (test-db) svc-ptv-org-id) svc-id)]
+        (is (= 200 (:status resp)))
+        (is (= svc-id (:id (tu/safe-parse-json resp))))
+        (is (= 2 (revisions)))
+        (is (= {:fi "PTV:ssä muutettu tiivistelmä"} (get-in current [:document :summary])))
+        (testing "the review's next base: PTV's version, with its :modified"
+          (is (= {:fi "PTV:ssä muutettu tiivistelmä"} (:summary base)))
+          (is (= modified (:ptv-modified base)))
+          (is (true? (:read-from-ptv base)))
+          (is (not (ptv-review/service-changed-since-write? base modified))))))
+
+    (testing "refused for a service Lipas hasn't written"
+      (let [other (str (java.util.UUID/randomUUID))
+            resp (take-ptv-service-version token (assoc live :id other :sourceId nil)
+                                           {:org-id svc-ptv-org-id :service-id other})]
+        (is (= 409 (:status resp)))
+        (is (= "not-written" (:type (tu/safe-parse-json resp))))))
+
+    (testing "refused once another system maintains it"
+      (let [resp (take-ptv-service-version token (assoc live :sourceId "other-system-1")
+                                           {:org-id svc-ptv-org-id :service-id svc-id})]
+        (is (= 409 (:status resp)))
+        (is (= "source-id-in-use" (:type (tu/safe-parse-json resp))))
+        (is (= 2 (revisions)))))
+
+    (testing "only for a PTV manager of the org: not a regular user, nor an auditor"
+      (doseq [user [(tu/gen-user {:db? true :db-component (test-db) :admin? false})
+                    (tu/gen-ptv-auditor :db-component (test-db))]]
+        (is (= 403 (:status (take-ptv-service-version (jwt/create-token user) live
+                                                      {:org-id svc-ptv-org-id :service-id svc-id})))))
+      (is (= 2 (revisions))))))
+
+(deftest service-write-mirrors-ptv-modified-test
+  (testing "A write's revision carries PTV's :modified of it, the evidence of a later change in PTV"
+    (let [org (seed-service-org!)
+          admin (tu/gen-admin-user :db-component (test-db))
+          svc-id (str (java.util.UUID/randomUUID))
+          source-id (str "lipas-" svc-ptv-org-id "-1300")
+          resp (with-redefs [ptv-integration/update-service
+                             (fn [_ _ data] (assoc data :id svc-id :modified "2026-11-02T08:00:00.5"))]
+                 (test-app (-> (mock/request :post "/api/actions/save-ptv-service")
+                               (mock/content-type "application/json")
+                               (mock/body (tu/->json {:org-id svc-ptv-org-id
+                                                      :city-codes [91]
+                                                      :source-id source-id
+                                                      :sub-category-id 1300
+                                                      :languages ["fi"]
+                                                      :summary {:fi "Tiivistelmä"}
+                                                      :description {:fi "Kuvaus"}}))
+                               (tu/token-header (jwt/create-token admin)))))
+          base (get (ptv-core/get-ptv-service-bases (test-db) svc-ptv-org-id) svc-id)]
+      (is (= 200 (:status resp)))
+      (is (= "2026-11-02T08:00:00.5" (:ptv-modified base)))
+      (is (not (:read-from-ptv base)))
+      (is (some? (:last-sync base)))
+      (is (= (:id org) (:org-id (ptv-service-db/get-current (test-db) (:id org) source-id)))))))
 
 (comment
   (clojure.test/run-tests *ns*)

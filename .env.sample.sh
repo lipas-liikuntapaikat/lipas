@@ -72,6 +72,8 @@ export MAILCHIMP_API_URL=https://us20.api.mailchimp.com/3.0
 export MAILCHIMP_API_KEY=***FILL_THIS***
 
 # Digitransit
+# Read by both the proxy (it signs the frontend's geocoding requests) and the
+# backend (GET /actions/reverse-geocode calls Pelias server-side).
 export DIGITRANSIT_SUBSCRIPTION_KEY=***FILL_THIS***
 
 # MML API

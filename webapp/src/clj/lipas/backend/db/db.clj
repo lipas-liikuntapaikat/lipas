@@ -233,6 +233,29 @@
        (map (fn [{:keys [lipas_id name]}]
               {:lipas-id lipas_id :name name}))))
 
+(defn get-ptv-sync-bases
+  "lipas-id -> the revision the site's last PTV sync wrote, for those of
+  `lipas-ids` that have been synced."
+  [db-spec lipas-ids]
+  (if (empty? lipas-ids)
+    {}
+    (->> (sports-site/get-ptv-sync-bases db-spec {:lipas_ids lipas-ids})
+         (into {} (map (fn [{:keys [lipas_id] :as row}]
+                         [lipas_id (sports-site/unmarshall row)]))))))
+
+(defn get-ptv-published-sites
+  "The current revisions of the PTV org's sites published in PTV."
+  [db-spec ptv-org-id]
+  (->> (sports-site/get-ptv-published-sites db-spec {:ptv_org_id ptv-org-id})
+       (mapv sports-site/unmarshall)))
+
+(defn get-ptv-language-usage
+  "LIPAS language code -> how many of the PTV org's published service
+  locations are in it, as their last sync stored it."
+  [db-spec ptv-org-id]
+  (into {} (map (juxt :lang :n))
+        (sports-site/get-ptv-language-usage db-spec {:ptv_org_id ptv-org-id})))
+
 (defn get-ptv-adoption
   "One row per site that has ever had a :ptv subtree: `:first-month` of its
   first :ptv revision, `:first-published-month` of its first revision published
