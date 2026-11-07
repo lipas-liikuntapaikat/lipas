@@ -223,7 +223,8 @@ Verify `(ps/state p1)`:
 - the mirror has the same and a new `:last-sync`;
 - `:review` is empty.
 
-**B2. A change made only in PTV is kept** (p2)
+**B2. A change made only in PTV is kept** (p2) — *superseded by K1/K2
+(2026-11-07): a change made only in PTV is now a choice in the review.*
 
 p2's fi summary was changed in PTV. Expect:
 - the chip "Ajan tasalla", no panel when opened (PTV's text shows in the
@@ -254,7 +255,9 @@ Expect:
 
 Verify: PTV and the mirror have Lipas's summary; `:review` empty.
 
-**B4. Conflict, decided in PTV's favour** (p3 again)
+**B4. Conflict, decided in PTV's favour** (p3 again) — *superseded by K1:
+taking PTV's version now leaves "Valmis synkronoitavaksi", and the sync
+records PTV's version as Lipas's without a write.*
 
 `(ps/run-all! [#'ps/p3-ptv-summary!])`, reload, edit the summary, then "Ota
 PTV:n versio". Expect: the field shows PTV's text, the chip "Ajan tasalla",
@@ -277,6 +280,9 @@ name is the new one, the row shows it after the sync. Rename it back and sync.
 Expect: the refusal "Palvelua on muokattu PTV:ssä sen jälkeen, kun tiedot
 haettiin…", the services reloaded, your description edit kept, the summary
 now PTV's. Sync again. Verify: PTV kept its summary and has your description.
+*Since 2026-11-07 (K7): after the reload the summary is a change made in PTV
+to decide ("Ristiriita"), the form showing Lipas's summary until PTV's is
+taken.*
 
 **B8. Texts PTV would reject**
 
@@ -479,6 +485,148 @@ service's text stays instant (`service-state-cache`).
 texts back. p6 keeps its Lipas sourceId (C3). Check `(ps/report)` against
 the baseline table, apart from p6 now being Lipas-related.
 
+## K. Changes made in PTV, and the tester's findings (2026-11-07)
+
+From Terhi's notes on lipas-dev (`local-scrap/2026-11-ptv-Havaintoja.pdf`,
+`…-Muutosehdotukset_tekstit.xlsx`), decided with the user:
+
+- **A1** A name or text changed in PTV since Lipas's last write of the
+  service opens the review, as on the Liikuntapaikat tab. Lipas's side is
+  its last write (the mirror, `ptv_service`) plus the user's unsaved edits;
+  the form shows it until PTV's version is taken. Who changed what is told
+  by PTV's `modified`: the mirror now stores the one PTV reported for the
+  write (`:ptv-modified`); an older revision falls back to "over 2 minutes
+  after `:last-sync`". A language version added in PTV since the write is
+  PTV's (Lipas has no version of it). A service Lipas hasn't written keeps
+  PTV's texts in the form, as before.
+- **A2** Every difference taken as PTV's and nothing to send: "Synkronoi
+  nyt" records PTV's current service as Lipas's version
+  (`/actions/take-ptv-service-version`, a fresh GET, revision marked
+  `:read-from-ptv`), without a PTV write.
+- **A3** The Integraatio heading and "–" explain that Lipas tracks a
+  service from its first save from Lipas; linking a site doesn't save it.
+- **A4** "Muokattu viimeksi … (Lipaksessa)" / "(PTV:ssä)".
+- **A5** New info texts (Lipas-created; PTV-made, written or not) and a
+  tracking bullet in the first-save dialog.
+- **B1** Only service locations: no "Muut asiointikanavat", no "+n muuta
+  kanavaa". Another organisation's channel (type unknown) is left out too.
+- **B2** The footer line reads like the list heading, "Organisaation muut
+  palvelut (n) · Ei liitetty Lipaksen liikuntapaikkoihin", and its button
+  ("Näytä ne" / "Piilota ne") stays put.
+- **B3** "Palveluun ei ole liitetty yhtään palvelupaikkaa. Liitä palvelu
+  liikuntapaikalle Liikuntapaikat-välilehdellä."
+
+Setups (each re-runnable; PTV writes, fast on 2026-11-07):
+`ps/p2-ptv-summary!`, `ps/p3-ptv-summary!`, `ps/p4-ptv-name!`,
+`ps/p5-ptv-summary!` (new: p5's fi summary changed in PTV). `ps/state`
+now also shows each row's `[key origin current]`, `:take-ptv-version?`,
+`:last-modified-in` and the mirror's `:ptv-modified`, `:read-from-ptv` and
+revision count.
+
+**K1. A text changed only in PTV, PTV's version taken (A1, A2)** (p2)
+1. `(ps/p2-ptv-summary!)`, reload. Expect the banner "1 palvelussa on
+   ristiriita…", Kuntoilukeskukset ja liikuntasalit "Ristiriita".
+2. Open it. Expect the bar "PTV:ssä on muutettu 1 tietoa – valitse, mitkä
+   jäävät voimaan.", and expanded the row "Tiivistelmä (FI) · Muutettu
+   PTV:ssä" with Lipas's text (no "(e2e PTV)") on the Lipas card; the
+   summary field shows Lipas's text.
+3. "Ota PTV:n versio". Expect the field to show PTV's text, the bar
+   "Valinnat tehty. PTV:n versiot otetaan Lipakseen.", the chip "Valmis
+   synkronoitavaksi", "Synkronoi nyt" enabled.
+4. "Synkronoi nyt".
+
+Expect "Ajan tasalla", no panel. Verify `(ps/state :p2)`: PTV's
+`:modified` unchanged (no write), the mirror one revision more with PTV's
+summary, `:read-from-ptv true`, `:review []`. Reload: still "Ajan tasalla".
+
+**K2. A text changed only in PTV, Lipas's version kept (A1)** (p3)
+
+`(ps/p3-ptv-summary!)`, reload, open Pallokentät: "Ristiriita", the same
+row. "Pidä Lipaksen versio": the field keeps Lipas's text, "Valinnat tehty.
+Synkronointi päivittää PTV:hen 1 tietoa.", "Valmis synkronoitavaksi".
+Sync. Verify: PTV's fi summary is Lipas's again (no "(e2e PTV)"), the
+mirror has it with PTV's new `:modified`, `:review []`.
+
+**K3. Sync with the change undecided (A1)** (p2 again)
+
+`(ps/p2-ptv-summary!)`, reload, open p2, "Synkronoi nyt" without deciding.
+Expect the question "PTV:ssä on muutoksia, joita et ole käynyt läpi" naming
+the summary; "Käy muutokset läpi" scrolls to the panel. (Don't overwrite:
+K1 continues from here.)
+
+**K4. A name changed in PTV, taken, with an edit of Lipas's own (A1)** (p4)
+
+`(ps/p4-ptv-name!)`, reload, open Maauimalat ja uimarannat. Expect the row
+"Nimi (FI) · Muutettu PTV:ssä" and the name field showing Lipas's name.
+Take PTV's name, edit the fi description, sync. Expect "Valinnat tehty.
+Synkronointi päivittää PTV:hen 1 tietoa." before the sync, "Ajan tasalla"
+after. Verify: PTV keeps the "(e2e PTV)" name and has the new description;
+the mirror has both, not `:read-from-ptv`.
+
+**K5. A service made in PTV that Lipas has written (A1)** (p5)
+
+`(ps/p5-ptv-summary!)`, open "Lipas capture -testi C" (below the table if
+it isn't listed: "Näytä ne"). Expect "Ristiriita", the summary row, the
+native info text ("…Jos nimeä tai tekstejä on muutettu PTV:ssä Lipaksen
+edellisen synkronoinnin jälkeen…"). Take PTV's version, sync (A2 path).
+Verify as K1.
+
+**K6. A service made in PTV that Lipas hasn't written (A1, A3, A5)**
+(Puistojumppa, read-only)
+
+"Näytä ne", open Puistojumppa. Expect "–" with the tooltip "Ei seurannassa:
+…", no review panel, PTV's texts in the form, the info "Palvelu on luotu
+PTV:ssä, eikä sitä ole vielä tallennettu Lipaksesta…". Edit its summary,
+"Synkronoi nyt": the dialog "Päivitetäänkö PTV:ssä luotu palvelu
+Lipaksesta?" with the new bullet "Tallennuksen jälkeen Lipas seuraa…".
+**Peruuta** (a save would give it Lipas's sourceId for good), then "Peru
+tallentamattomat muutokset".
+
+**K7. PTV changes again before the take is synced (A2)** (p2, after K3)
+
+Take PTV's version, then `(ps/ptv-edit! :p2 #(update-in % [:summary :fi]
+str " (e2e PTV2)"))` before syncing, then "Synkronoi nyt". Expect the
+refusal "Palvelua on muokattu PTV:ssä…", the services reloaded and the
+row "Ristiriita" again over the new text. Verify: no new mirror revision.
+Then take PTV's again and sync (K1's end).
+
+**K8. Integraatio explained (A3)** — hover (or focus) the Integraatio
+heading: "Palvelun tila Lipaksen ja PTV:n välillä. Lipas seuraa palvelua
+siitä alkaen, kun se on luotu Lipaksessa tai ensimmäisen kerran tallennettu
+Lipaksesta. Viiva (–) …".
+
+**K9. Where it was modified (A4)** — open Jäähallit: "Muokattu viimeksi …
+(Lipaksessa)". p2 before K1's sync: "(PTV:ssä)"; after K1 (PTV's version
+recorded) still "(PTV:ssä)"; p3 after K2: "(Lipaksessa)".
+
+**K10. Info texts (A5)** — Jäähallit: "Palvelu on luotu Lipaksessa. Lipas
+ylläpitää palveluluokkia ja asiasanoja, joten niihin PTV:ssä tehdyt
+muutokset korvautuvat seuraavassa synkronoinnissa. Nimeä ja kuvauksia voi
+muokata molemmissa. Jos niitä on muutettu PTV:ssä, Lipas näyttää
+muutokset, ja ennen synkronointia valitaan, kumpi versio jää voimaan. …".
+p5 and Puistojumppa as in K5 and K6.
+
+**K11. Only service locations (B1)** — Liikuntaneuvonta (read-only):
+Palvelupaikat shows only its service locations ("1 · 1 Lipaksesta", no
+"+1 muu kanava"); its tooltip and the open row have no "Muut
+asiointikanavat". The Palvelupaikat heading's tooltip says other channels
+aren't shown. Kirjastopalvelut (below the table, an e-service only): "Ei
+yhtään".
+
+**K12. The footer and the list heading (B2)** — the footer reads
+"Organisaation muut palvelut (n) · Ei liitetty Lipaksen
+liikuntapaikkoihin" and "Näytä ne". Note the button's position, click it:
+the same line, "Piilota ne" at the same place; the table's heading row
+reads "Organisaation muut palvelut (n)" with "Ei liitetty Lipaksen
+liikuntapaikkoihin". Click again: back.
+
+**K13. A service without service locations (B3)** — open Lipas capture
+-testi C (or any "Ei yhtään"): "Palveluun ei ole liitetty yhtään
+palvelupaikkaa. Liitä palvelu liikuntapaikalle
+Liikuntapaikat-välilehdellä."
+
+**K14. Swedish and English** — the new texts in sv and en, no raw keys.
+
 ## Results: run of 2026-10-30
 
 Local Lipas against the PTV test env, Utajärvi, admin. Real writes through
@@ -598,3 +746,67 @@ it was. Besides p7, the locations of 615340 and 89913 hold drafts in PTV
     for a row that didn't change (`subs/interned-row`). Only the open row
     renders now: 27–41 ms per keystroke whether 19 or 86 rows are listed
     (was 31 and 76 ms). What's left is the open row's own render.
+
+## Results: run of 2026-11-07
+
+Section K, local Lipas against the PTV test env, Utajärvi, admin. PTV writes
+took 1–3 s each today (the eight setup writes 14 s in all). The Chrome
+extension couldn't be used: a new tab group's tab stopped at Chrome's
+certificate interstitial for https://localhost, which the extension can't
+act on. The run used a headless `playwright-cli` session instead
+(`.playwright/cli.config.json` ignores the self-signed certificate), driven
+by clicks and fills in the page, with the render patch. Every write was
+verified with `ps/state`.
+
+| Scenario | Service | Result |
+|---|---|---|
+| K1 PTV-only change, PTV's taken | p2 | pass: banner "4 palvelussa on ristiriitoja…", "Ristiriita"; bar "PTV:ssä on muutettu 1 tietoa…", row "Tiivistelmä (FI) · Muutettu PTV:ssä", Lipas card and summary field without the marker; "Ota PTV:n versio" → field PTV's, "Valinnat tehty. PTV:n versiot otetaan Lipakseen.", "Valmis synkronoitavaksi"; sync → "Ajan tasalla", row stays open. PTV `:modified` unchanged (09:45:30.707885, no write), mirror 4 → 5 revisions, `:read-from-ptv true`, `:ptv-modified` = PTV's, `:review []` |
+| K2 PTV-only change, Lipas's kept | p3 | pass: "Valinnat tehty. Synkronointi päivittää PTV:hen 1 tietoa."; after the sync PTV's fi summary is Lipas's, mirror revision 10 with PTV's new `:modified`, "(Lipaksessa)" |
+| K3 sync undecided | p2 | pass: "PTV:SSÄ ON MUUTOKSIA, JOITA ET OLE KÄYNYT LÄPI" naming "Tiivistelmä (FI)", buttons Peruuta / Synkronoi ja korvaa / Käy muutokset läpi; the latter focuses "Pidä Lipaksen versio" |
+| K4 name changed in PTV, taken, plus an edit | p4 | pass: row "Nimi (FI) · Muutettu PTV:ssä", the name field Lipas's until taken; then "…päivittää PTV:hen 1 tietoa."; PTV keeps "(e2e PTV)" and has the new description, mirror revision 5, not `:read-from-ptv`, "(Lipaksessa)" |
+| K5 written native, PTV's taken | p5 | pass: "Ristiriita", the summary row, the new native info text; take + sync recorded without a write (`:modified` unchanged, `:read-from-ptv true`) |
+| K6 native never written | Puistojumppa | pass: "–", no panel, PTV's texts, the not-written info; the first-save dialog with "Tallennuksen jälkeen Lipas seuraa…"; cancelled and discarded: PTV sourceId still nil, `:modified` unchanged |
+| K7 PTV changes again before the take is synced | p2 | **failed, fixed** (finding 1); pass after the fix: 409, toast "…Käy PTV:n muutokset läpi ja synkronoi uudelleen.", row "Ristiriita", "Muutettu PTV:ssä" with Lipas's version beside PTV's newest text; no mirror revision from the refused take |
+| K8 Integraatio heading | – | pass: the tooltip text, by hover |
+| K9 where modified | p1, p2, p3, p4, p5 | pass: Jäähallit "(Lipaksessa)"; p2 and p5 after taking PTV's "(PTV:ssä)"; p3 and p4 after a write "(Lipaksessa)"; times now local (finding 3) |
+| K10 info texts | p1, p5, Liikuntaneuvonta | pass |
+| K11 only service locations | Liikuntaneuvonta, Kirjastopalvelut | pass: cell "2 · 1 Lipaksesta"; tooltip and open row list "Lipaksen liikuntapaikat (1)" and "PTV:ssä lisätyt (1)", no "Muut asiointikanavat"; heading tooltip; Kirjastopalvelut "Ei yhtään" (grey) |
+| K12 footer and heading | – | pass: "Organisaation muut palvelut (67) · Ei liitetty Lipaksen liikuntapaikkoihin" + "Näytä ne"; toggled, the same line with "Piilota ne" at the same x (522 px), the table heading row "Organisaation muut palvelut (67) / Ei liitetty Lipaksen liikuntapaikkoihin". The line moves down by the rows opened above it |
+| K13 no service locations | p5 | pass: "Palveluun ei ole liitetty yhtään palvelupaikkaa. Liitä palvelu liikuntapaikalle Liikuntapaikat-välilehdellä." |
+| K14 sv, en | – | pass: headings, Integraatio tooltip, footer, info texts, "(i PTV)" / "(in PTV)"; no raw keys |
+| Console | – | the two 409s of K7 (by design), and a React key warning from the shared filter bar (finding 4) |
+
+### Findings
+
+1. **Fixed: a refused sync kept a taken PTV text as the user's own.** After
+   "Ota PTV:n versio" and a change in PTV before the sync, the refusal
+   reloaded the services but the edit still held PTV's earlier text, so the
+   row read "Muutettu molemmissa" with PTV's old text on the Lipas card. A
+   refused sync now drops the edits that repeat PTV's version as loaded
+   (`events/::create-ptv-service-failure`, `ptv-services/drop-written-edits`,
+   as a successful write already did): PTV's new change is asked about
+   against Lipas's version. A text of the user's own stays.
+2. **Fixed: "Peru tallentamattomat muutokset" showed without edits.** With
+   PTV's change undecided the edit (Lipas's version) differs from PTV, which
+   counts as something to send; the button now shows only when the user
+   has unsaved edits.
+3. **Fixed: "Muokattu viimeksi" was 2 hours off.** PTV's `modified` (UTC
+   without a zone) was shown as local time; now converted, as the review's
+   dates are (`subs/::services`).
+4. **Open, not in this branch's Palvelut code: React key warning.** The
+   filter bar's new chip tooltips (`views/filter-bar`) write
+   `^{:key value} chip`, which tags the symbol, not the element; chips
+   without a tooltip (all of the Palvelut tab's) render without keys.
+   `(with-meta chip {:key value})` would fix it.
+5. **To decide: the Nimi column shows PTV's name.** While a name changed in
+   PTV is undecided, the table shows PTV's name (e.g. "Maauimalat ja
+   uimarannat (e2e PTV)") and the open row Lipas's.
+6. **Tooling:** the render patch must run each queued callback in a
+   try/catch: an OpenLayers frame callback threw in the batch and stalled
+   the renders (a row looked closed after a refetch; not reproducible with
+   the fixed patch).
+
+Environment left: p2, p4 and p5 written back to their baseline texts
+(markers stripped) and p3 holds Lipas's summary from K2, all "Ajan
+tasalla"; their mirrors have the run's revisions. Puistojumppa untouched.
+No browser session left open.

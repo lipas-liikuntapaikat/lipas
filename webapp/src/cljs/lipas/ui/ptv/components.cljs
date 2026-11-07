@@ -79,8 +79,10 @@
   "Shows PTV items as links with an edit button to switch to selector mode.
    When an item has no :url, renders as plain text instead of a link.
    Set :can-edit? false to hide the edit affordance (e.g. single-org case).
-   Props: :label, :items [{:id :name :url}], :editing?, :on-edit, :on-cancel,
-          :selector-component, :tooltip, :tr, :can-edit? (default true)"
+   An item's :caption is shown under it in small print.
+   Props: :label, :items [{:id :name :url :caption}], :editing?, :on-edit,
+          :on-cancel, :selector-component, :tooltip, :tr, :can-edit? (default
+          true)"
   [{:keys [label items editing? on-edit on-cancel selector-component tooltip tr can-edit?]
     :or {can-edit? true}}]
   (if (and (seq items) (not editing?))
@@ -92,10 +94,14 @@
          [:> IconButton {:size "small" :on-click on-edit
                          :sx #js {:p 0}}
           [:> Icon {:sx #js {:fontSize "1rem"}} "edit"]]])]
-     (for [{:keys [id name url]} items]
-       (if url
-         ^{:key id} [:> Link {:href url :target "_blank" :variant "body2"} (or name id)]
-         ^{:key id} [:> Typography {:variant "body2"} (or name id)]))]
+     (for [{:keys [id name url caption]} items]
+       ^{:key id}
+       [:div
+        (if url
+          [:> Link {:href url :target "_blank" :variant "body2"} (or name id)]
+          [:> Typography {:variant "body2"} (or name id)])
+        (when caption
+          [:> Typography {:variant "caption" :color "text.secondary" :component "div"} caption])])]
     [:> Stack {:spacing 0.5}
      selector-component
      (when (and editing? (seq items))

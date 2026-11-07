@@ -375,24 +375,33 @@
       (is (= ["svc-a"] (ptv-data/rebound-service-ids source-id->service site)) "type unchanged"))
     (testing "the review shows the connections the sync changes as Lipas's"
       (let [r (sut/sync-review swimming base (as-channel site) services langs)]
-        (is (= {[:services "svc-a"] [:lipas false] [:services "svc-u"] [:lipas true]}
-               (into {} (for [x (:rows r)] [(:key x) [(:origin x) (:lipas? x)]]))))
+        (is (= [{:key [:services] :origin :lipas :lipas #{"svc-u"} :ptv #{"svc-a"}}]
+               (map #(select-keys % [:key :origin :lipas :ptv]) (:rows r))))
+        (is (= {[:ptv :service-ids] ["svc-a"]} (:saved (first (:rows r))))
+            "keeping Lipas's version keeps the ids as the edit has them, before the swap")
         (testing "and the edit, projected the same way, holds them"
           (is (every? #(= :lipas (:current %)) (:rows (annotate r swimming)))))))))
 
 ;;; Properties ;;;
 
-(def ^:private value-change-gen
+(def ^:private value-changes
   "A change to one field, made in Lipas (the site) or in PTV (the channel)."
-  (gen/elements
-    [[:phone :site #(assoc % :phone-number "040 555 1234")]
-     [:phone :ptv #(with-phones % [["+358" "405551234" "fi"]])]
-     [:email :site #(assoc % :email "toinen@kunta.fi")]
-     [:email :ptv #(assoc % :emails [{:value "toinen@kunta.fi" :language "fi"}])]
-     [:www :site #(assoc % :www "https://kunta.fi/uusi")]
-     [:www :ptv #(update % :webPages (fn [ps] (mapv (fn [p] (assoc p :url "https://kunta.fi/uusi")) ps)))]
-     [:address :site #(assoc-in % [:location :address] "Kirkkotie 1")]
-     [:address :ptv #(set-street % "Kirkkotie 1")]]))
+  [[:phone :site #(assoc % :phone-number "040 555 1234")]
+   [:phone :ptv #(with-phones % [["+358" "405551234" "fi"]])]
+   [:email :site #(assoc % :email "toinen@kunta.fi")]
+   [:email :ptv #(assoc % :emails [{:value "toinen@kunta.fi" :language "fi"}])]
+   [:www :site #(assoc % :www "https://kunta.fi/uusi")]
+   [:www :ptv #(update % :webPages (fn [ps] (mapv (fn [p] (assoc p :url "https://kunta.fi/uusi")) ps)))]
+   [:address :site #(assoc-in % [:location :address] "Kirkkotie 1")]
+   [:address :ptv #(set-street % "Kirkkotie 1")]])
+
+(def ^:private value-change-gen
+  (gen/elements value-changes))
+
+(def ^:private ptv-value-change-gen
+  ;; drawn from PTV's changes only: such-that over a 50/50 pick gives up
+  ;; after 10 misses, failing about one run in ten
+  (gen/elements (filterv #(= :ptv (second %)) value-changes)))
 
 (defspec origin-follows-who-changed-it 200
   (prop/for-all [[field side change] value-change-gen
@@ -419,7 +428,7 @@
                   (empty? (filter sut/takeable-in-bulk? (:rows (review taken channel)))))))
 
 (defspec keeping-a-choice-counts-until-ptv-changes 100
-  (prop/for-all [[field _ change] (gen/such-that #(= :ptv (second %)) value-change-gen)]
+  (prop/for-all [[field _ change] ptv-value-change-gen]
                 (let [r (review (change (as-channel site :modified days-later)))
                       x (row r [field])
                       choices {[field] {:choice :lipas :seen (sut/review-choice-seen x)}}
@@ -545,31 +554,64 @@
 (deftest service-review-test
   (let [ptv {:name {:fi "Uimahallit"} :summary {:fi "PTV:n tiivistelmä"}
              :description {:fi "Kuvaus"} :user-instruction {:fi "Ohje"}}
-        base (assoc ptv :summary {:fi "Lipaksen viimeksi viemä"})
-        review (fn [edit base] (sut/service-review {:edit edit :ptv ptv :base base :locales [:fi]}))
+        lipas (assoc ptv :summary {:fi "Lipaksen viimeksi viemä"})
+        ;; `base` Lipas's version, its last write where PTV has changed the
+        ;; service since (service-lipas-texts)
+        review (fn [edit base]
+                 (sut/service-review {:edit edit :ptv ptv :base base :base? true
+                                      :changed-in-ptv? true :locales [:fi]}))
         keys-of (fn [r] (into {} (map (juxt :key :origin)) (:rows r)))]
-    (testing "nothing edited: no rows, whatever PTV did"
-      (is (= [] (:rows (review ptv base))))
-      (testing "but PTV's change since Lipas's last write is listed as kept"
-        (is (= [{:field :summary :language "fi"}] (:ptv-changes (review ptv base))))))
+    (testing "a text changed only in PTV is a row to decide, the edit holding Lipas's"
+      (let [r (review lipas lipas)
+            row (first (:rows r))]
+        (is (= {[:summary "fi"] :ptv} (keys-of r)))
+        (is (sut/review-choice-required? row))
+        (is (= [:lipas "Lipaksen viimeksi viemä"] [(:current row) (:lipas row)]))
+        (is (= 1 (count (sut/open-review-rows (:rows r) {}))))))
     (testing "an edit of a field PTV didn't change is Lipas's"
-      (is (= {[:description "fi"] :lipas}
-             (keys-of (review (assoc-in ptv [:description :fi] "Uusi kuvaus") base)))))
+      (is (= {[:summary "fi"] :ptv [:description "fi"] :lipas}
+             (keys-of (review (assoc-in lipas [:description :fi] "Uusi kuvaus") lipas)))))
     (testing "an edit of a field PTV changed too is a conflict to decide"
-      (let [r (review (assoc-in ptv [:summary :fi] "Oma tiivistelmä") base)
+      (let [r (review (assoc-in lipas [:summary :fi] "Oma tiivistelmä") lipas)
             row (first (:rows r))]
         (is (= {[:summary "fi"] :both} (keys-of r)))
         (is (sut/review-choice-required? row))
         (is (= :lipas (:current row)) "the edit holds the user's text")
         (is (empty? (sut/open-review-rows (:rows r) {[:summary "fi"] (sut/service-kept-choice row)})))
         (testing "keeping it holds only for the text kept: an edit after it asks again"
-          (let [r2 (review (assoc-in ptv [:summary :fi] "Oma tiivistelmä, tekoälyn jatkama") base)]
+          (let [r2 (review (assoc-in lipas [:summary :fi] "Oma tiivistelmä, tekoälyn jatkama") lipas)]
             (is (= [[:summary "fi"]]
                    (map :key (sut/open-review-rows (:rows r2) {[:summary "fi"] (sut/service-kept-choice row)}))))))))
-    (testing "without a base (Lipas hasn't written the service) every edit is Lipas's"
+    (testing "PTV's version taken: the row stays, decided, with Lipas's version beside it"
+      (let [row (first (:rows (review ptv lipas)))]
+        (is (= [:ptv :ptv "Lipaksen viimeksi viemä"] [(:origin row) (:current row) (:lipas row)]))
+        (is (sut/review-decided? {} row))))
+    (testing "without a change in PTV (Lipas's version is PTV's) every edit is Lipas's"
       (is (= {[:summary "fi"] :lipas}
-             (keys-of (review (assoc-in ptv [:summary :fi] "Oma tiivistelmä") nil)))))
-    (testing "taking PTV's text leaves no row"
-      (is (= [] (:rows (review (assoc-in ptv [:summary :fi] (get-in ptv [:summary :fi])) base)))))
+             (keys-of (review (assoc-in ptv [:summary :fi] "Oma tiivistelmä") ptv)))))
     (testing "whitespace PTV collapses is no difference"
-      (is (= [] (:rows (review (assoc-in ptv [:summary :fi] "PTV:n  tiivistelmä ") base)))))))
+      (is (= [] (:rows (review (assoc-in ptv [:summary :fi] "PTV:n  tiivistelmä ") ptv)))))))
+
+(deftest service-changed-since-write-test
+  (let [base {:ptv-modified "2026-10-01T10:00:00.123456" :last-sync "2026-10-01T10:00:02.000Z"}]
+    (is (not (sut/service-changed-since-write? nil "2026-10-02T10:00:00")) "no base, no tracking")
+    (is (not (sut/service-changed-since-write? base "2026-10-01T10:00:00.123456")))
+    (is (sut/service-changed-since-write? base "2026-10-01T10:00:00.999999"))
+    (is (sut/service-changed-since-write? base nil) "can't be told: asked")
+    (testing "a mirror without PTV's :modified: over 2 minutes after the write"
+      (let [old (dissoc base :ptv-modified)]
+        (is (not (sut/service-changed-since-write? old "2026-10-01T10:01:30")))
+        (is (sut/service-changed-since-write? old "2026-10-01T10:05:00"))
+        (is (sut/service-changed-since-write? (dissoc old :last-sync) "2026-10-01T10:01:30"))))))
+
+(deftest service-lipas-texts-test
+  (let [base {:name {:fi "Uimahallit"} :summary {:fi "Lipaksen"}}
+        ptv {:name {:fi "Uimahallit" :en "Swimming halls"} :summary {:fi "PTV:n" :en "PTV's"}}]
+    (is (= ptv (sut/service-lipas-texts base ptv false)) "PTV unchanged: its texts are Lipas's")
+    (is (= ptv (sut/service-lipas-texts nil ptv true)) "never written: PTV's")
+    (testing "changed in PTV: the write's texts, and PTV's in a language the write didn't have"
+      (is (= {:name {:fi "Uimahallit" :en "Swimming halls"}
+              :summary {:fi "Lipaksen" :en "PTV's"}
+              :description {}
+              :user-instruction {}}
+             (sut/service-lipas-texts base ptv true))))))

@@ -248,6 +248,10 @@
           syncing? (<== [::subs/syncing-service-location? (:lipas-id site)])
           service-ids (set (:service-ids site))
           linked-services (filter #(contains? service-ids (:service-id %)) services)
+          ;; the site's services the org's list lacks: one archived in PTV,
+          ;; or another organisation's, named instead of shown as an id
+          unlisted (<== [::subs/unlisted-services org-id])
+          unlisted-ids (remove (set (map :service-id linked-services)) (:service-ids site))
           channel-id (first (:service-channel-ids site))
           ;; An archived (PTV "Deleted") channel is gone from /list/organization,
           ;; so its name can't be resolved — label it instead of showing the
@@ -266,10 +270,12 @@
        [ptv-link-field
         {:tr tr
          :label (tr :ptv/in-ptv (tr :ptv/services))
-         :items (for [s linked-services]
-                  {:id (:service-id s)
-                   :name (:label s)
-                   :url (str ptv-base "/service/" (:service-id s))})
+         :items (concat (for [s linked-services]
+                          {:id (:service-id s)
+                           :name (:label s)
+                           :url (str ptv-base "/service/" (:service-id s))})
+                        (review-data/unlisted-link-items tr unlisted unlisted-ids
+                                                         #(str ptv-base "/service/" %)))
          :editing? @editing-services?
          :on-edit #(reset! editing-services? true)
          :on-cancel #(reset! editing-services? false)
@@ -277,6 +283,7 @@
          :selector-component
          [controls/services-selector
           {:options services
+           :value-labels (review-data/unlisted-labels tr unlisted unlisted-ids)
            :value (:service-ids site)
            :on-change (fn [ids]
                         (rf/dispatch [::events/select-services site ids])
@@ -630,20 +637,24 @@
 
 (defn- filter-bar
   "Collapsible filter bar of the PTV tool's tables: a search, and a row of
-   status chips (`chips`, [value label] pairs, the first :all) of which one
-   is selected."
+   status chips (`chips`, [value label tooltip] with an optional tooltip
+   that says what the chip lists, the first :all) of which one is
+   selected."
   [{:keys [tr expanded? on-toggle-expanded
            search-text on-search-change chips status-filter on-status-change
            total-count filtered-count extra-chip]}]
   (let [filtering? (or (seq search-text) (not= :all status-filter))
-        status-chip (fn [[value label]]
-                      ^{:key value}
-                      [:> Chip
-                       {:label (str label (when (= value status-filter) (str " (" filtered-count ")")))
-                        :size "small"
-                        :variant (if (= value status-filter) "filled" "outlined")
-                        :color (if (= value status-filter) "primary" "default")
-                        :on-click #(on-status-change (if (= value status-filter) :all value))}])]
+        status-chip (fn [[value label tooltip]]
+                      (let [chip [:> Chip
+                                  {:label (str label (when (= value status-filter) (str " (" filtered-count ")")))
+                                   :size "small"
+                                   :variant (if (= value status-filter) "filled" "outlined")
+                                   :color (if (= value status-filter) "primary" "default")
+                                   :on-click #(on-status-change (if (= value status-filter) :all value))}]]
+                        (if tooltip
+                          ^{:key value} [:> Tooltip {:title tooltip} chip]
+                          ;; reader metadata on a symbol never reaches the element
+                          (with-meta chip {:key value}))))]
     [:> Stack {:sx #js {:px 2 :py 1}}
      ;; Toggle row: always visible
      [:> Stack {:direction "row" :align-items "center" :spacing 1}
@@ -678,10 +689,13 @@
         (map status-chip chips)]]]]))
 
 (defn- site-filter-chips
+  "The Liikuntapaikat tab's filters, each with a sentence on what it lists."
   [tr]
   (for [k [:all :sync-enabled :not-synced :awaiting-choice :ready :blocked :ok
            :missing-descriptions :sync-disabled]]
-    [k (tr (keyword "ptv" (str "filter-" (name k))))]))
+    [k
+     (tr (keyword "ptv" (str "filter-" (name k))))
+     (tr (keyword "ptv" (str "filter-" (name k) "-tooltip")))]))
 
 (defn- filter-sites
   "Apply search text and status filter to sites list."
@@ -1645,6 +1659,9 @@
 (r/defc service-location-details
   [{:keys [org-id tr site lipas-id sync-enabled name-conflict service-ids selected-tab set-selected-tab service-channel-ids valid]}]
   (let [services @(rf/subscribe [::subs/services org-id])
+        ;; the site's services the org's list lacks, named (an archived one
+        ;; as such) instead of shown as ids
+        unlisted @(rf/subscribe [::subs/unlisted-services org-id])
         org-languages (<== [::subs/org-languages org-id])
         [selected-tab2 set-selected-tab2] (hooks/use-state "descriptions")
         [link-expanded? set-link-expanded] (hooks/use-state false)]
@@ -1731,6 +1748,7 @@
            [controls/services-selector
             {:options services
              :value service-ids
+             :value-labels (review-data/unlisted-labels tr unlisted service-ids)
              :value-fn :service-id
              :on-change (fn [v]
                           (rf/dispatch [::events/select-services site v]))
@@ -2107,21 +2125,11 @@
             (tr :actions/show-less)
             (str (tr :actions/show-all) " (" total ")"))])])))
 
-(defn- channel-type-label
-  [tr type]
-  (tr (case type
-        "EChannel" :ptv.service/channel-type-echannel
-        "WebPage" :ptv.service/channel-type-webpage
-        "Phone" :ptv.service/channel-type-phone
-        "PrintableForm" :ptv.service/channel-type-printable-form
-        "ServiceLocation" :ptv.service/channel-type-service-location
-        :ptv.service/channel-type-unknown)))
-
 (defn- service-locations-list
   "The service's service locations in PTV, those of Lipas sites apart from
-   those added in PTV, and its other channels."
+   those added in PTV."
   [{:keys [tr service ptv-base]}]
-  (let [{:keys [locations other-channels]} service
+  (let [{:keys [locations]} service
         {from-lipas true from-ptv false} (group-by (comp boolean seq :lipas-ids) locations)
         location-link (fn [{:keys [id name]}]
                         [:> Link {:href (str ptv-base "/channels/serviceLocation/" id)
@@ -2141,15 +2149,7 @@
      (when (seq from-ptv)
        [truncated-list {:tr tr
                         :title (tr :ptv.service/locations-from-ptv (count from-ptv))
-                        :items (map location-link from-ptv)}])
-     (when (seq other-channels)
-       [truncated-list {:tr tr
-                        :title (tr :ptv.service/other-channels-title (count other-channels))
-                        :items (for [{:keys [name type]} other-channels]
-                                 [:> Typography {:variant "body2" :fontWeight 400}
-                                  name
-                                  [:> Typography {:component "span" :variant "caption" :color "text.secondary"}
-                                   (str " · " (channel-type-label tr type))]])}])]))
+                        :items (map location-link from-ptv)}])]))
 
 (defn- linked-sites-list
   "The Lipas sites saved as linked to the service."
@@ -2216,6 +2216,7 @@
        [:ul {:style {:margin 0 :padding-left "1.5em"}}
         (for [k [:ptv.service/first-save-texts
                  :ptv.service/first-save-kept
+                 :ptv.service/first-save-tracking
                  :ptv.service/first-save-audit]]
           ^{:key k} [:li [:> Typography {:variant "body2"} (tr k)]])]]]
      [:> DialogActions
@@ -2225,25 +2226,33 @@
        (tr :ptv.service/first-save-confirm)]]]))
 
 (defn service-panel-left
-  [{:keys [tr org-id service data ptv-base has-local-edits? org-languages selected-tab edited-name
+  [{:keys [tr org-id service data ptv-base has-local-edits? org-languages selected-tab
            edit-key native? other-system? text-errors versions-to-drop edit-languages name-data
-           open-rows]}]
+           open-rows take-ptv-version? last-modified-in descriptions]}]
   (r/with-let [confirm-first-save? (r/atom false)]
     (let [service-id (:service-id service)
           source-id (:source-id service)
-          display-name (or edited-name (:label service))
+          ;; what the edit holds: Lipas's version until PTV's is taken
+          display-name (or (not-empty (get name-data :fi)) (:label service))
           has-lipas-data? (= :lipas (:management service))
           generating? (<== [::subs/generating-service-descriptions? edit-key])
           write! #(rf/dispatch [::events/create-ptv-service org-id edit-key data [] []])
-          ;; through the review: an edit over a change made in PTV since
-          ;; Lipas's last write is asked about first
-          sync! #(if (seq open-rows)
+          ;; through the review: a change made in PTV since Lipas's last
+          ;; write is asked about first. With nothing to send but every
+          ;; change PTV made taken, PTV's version is recorded as Lipas's.
+          sync! #(cond
+                   (seq open-rows)
                    (==> [:lipas.ui.events/confirm-with
                          (review-data/overwrite-confirmation
                            tr {:open open-rows
                                :on-overwrite write!
                                :on-review (fn [] (rf/dispatch [::events/show-review edit-key]))})])
-                   (write!))]
+
+                   take-ptv-version?
+                   (rf/dispatch [::events/take-ptv-service-version org-id edit-key service-id
+                                 (:service-modified service)])
+
+                   :else (write!))]
       [:> Stack {:spacing 2}
 
      ;; 1. PTV service name. A native service has one per language: the
@@ -2311,7 +2320,9 @@
                                (tr :ptv/open-in-ptv)]))}
         (tr (case (:management service)
               :lipas :ptv.service/lipas-info
-              :native :ptv.service/native-info
+              :native (if (str/blank? source-id)
+                        :ptv.service/native-info-not-written
+                        :ptv.service/native-info)
               :ptv.service/other-system-read-only))]
 
      ;; AI generate + translate buttons
@@ -2375,7 +2386,9 @@
            [:> Button
             {:variant "contained"
              :color "secondary"
-             :disabled (or syncing? modified? (not has-local-edits?) (seq text-errors))
+             :disabled (or syncing? modified?
+                           (not (or has-local-edits? take-ptv-version?))
+                           (and has-local-edits? (seq text-errors)))
              :size "small"
              :sx #js {:textTransform "none"}
              :startIcon (r/as-element
@@ -2390,7 +2403,9 @@
                            (sync!)))}
             (tr :ptv.actions/sync-now)]))
 
-       (when (and has-local-edits? (not other-system?))
+       ;; the user's own unsaved edits: Lipas's version differing from
+       ;; PTV's (a change made in PTV, to decide) is none
+       (when (and (some (comp seq val) descriptions) (not other-system?))
          [:> Button {:size "small" :variant "text"
                      :sx #js {:textTransform "none" :alignSelf "flex-start"}
                      :startIcon (r/as-element [:> Icon "undo"])
@@ -2404,9 +2419,12 @@
                                          (reset! confirm-first-save? false)
                                          (sync!))}]
 
-     ;; Last modified
+     ;; Last modified, and where
        [:> Typography {:variant "caption" :color "text.secondary"}
-        (str (tr :general/last-modified) " " (:last-modified-human service))]])))
+        (str (tr :general/last-modified) " " (:last-modified-human service) " "
+             (tr (if (= :lipas last-modified-in)
+                   :ptv.service/modified-in-lipas
+                   :ptv.service/modified-in-ptv)))]])))
 
 (defn native-language-controls
   "Language-version removal for the selected language of a service made in
@@ -2439,7 +2457,7 @@
         (tr :ptv.service/remove-language-version lang-label)])]))
 
 (defn service-panel-right
-  [{:keys [tr source-id edit-key service descriptions org-languages selected-tab native? other-system?
+  [{:keys [tr source-id edit-key service texts org-languages selected-tab native? other-system?
            edit-languages removals]}]
   ;; A language version removed by the last sync takes its tab with it.
   (when-not (contains? (set (or edit-languages org-languages)) (name @selected-tab))
@@ -2451,9 +2469,11 @@
         read-only-props (when (or other-system? removed?)
                           {:on-change (fn [_])
                            :InputProps {:readOnly true}})
-        summary-data (merge (:summary service) (:summary descriptions))
-        description-data (merge (:description service) (:description descriptions))
-        user-instruction-data (merge (:user-instruction service) (:user-instruction descriptions))
+        ;; the edit: Lipas's version until PTV's is taken, with the
+        ;; user's edits over it (ptv-services/service-state)
+        summary-data (:summary texts)
+        description-data (:description texts)
+        user-instruction-data (:user-instruction texts)
         sub-category-id (ptv-data/parse-service-source-id source-id)]
     [:> Stack {:spacing 2}
 
@@ -2543,8 +2563,8 @@
           org-languages (<== [::subs/org-languages org-id])
           ptv-base (ptv-base-url)
           {:keys [edit-key review open-rows modified? native? other-system? edit-languages
-                  name-data text-errors versions-to-drop data has-local-edits? edited-name
-                  removals descriptions]} service
+                  name-data text-errors versions-to-drop data has-local-edits? texts removals
+                  take-ptv-version? last-modified-in descriptions]} service
           choices (<== [::subs/review-choices edit-key])]
       [:> Stack {:spacing 2 :sx #js {:py 2}}
        (when review
@@ -2582,7 +2602,9 @@
                               :versions-to-drop versions-to-drop
                               :data data :ptv-base ptv-base
                               :has-local-edits? has-local-edits?
-                              :edited-name edited-name
+                              :take-ptv-version? take-ptv-version?
+                              :last-modified-in last-modified-in
+                              :descriptions descriptions
                               :org-languages org-languages :selected-tab selected-tab}]]
         [:> Box {:sx #js {:flex "7 1 0" :minWidth 0 :width "100%"}}
          [service-panel-right {:tr tr :source-id (:source-id service) :service service
@@ -2591,7 +2613,7 @@
                                :edit-key edit-key
                                :edit-languages edit-languages
                                :removals removals
-                               :descriptions descriptions
+                               :texts texts
                                :org-languages org-languages
                                :selected-tab selected-tab}]]]])))
 
@@ -2657,8 +2679,9 @@
                      props)]]))
 
 (defn- channels-tooltip
-  "The names of the service's channels, in the groups of its panel."
-  [tr {:keys [locations other-channels]}]
+  "The names of the service's service locations, in the groups of its
+   panel."
+  [tr {:keys [locations]}]
   (let [{from-lipas true from-ptv false} (group-by (comp boolean seq :lipas-ids) locations)
         group (fn [title items]
                 (let [shown (take 7 items)
@@ -2674,27 +2697,15 @@
      (when (seq from-lipas)
        (group (tr :ptv.service/locations-from-lipas (count from-lipas)) (map :name from-lipas)))
      (when (seq from-ptv)
-       (group (tr :ptv.service/locations-from-ptv (count from-ptv)) (map :name from-ptv)))
-     (when (seq other-channels)
-       (group (tr :ptv.service/other-channels-title (count other-channels))
-              (for [{:keys [name type]} other-channels]
-                (str name " · " (channel-type-label tr type)))))]))
+       (group (tr :ptv.service/locations-from-ptv (count from-ptv)) (map :name from-ptv)))]))
 
 (defn- service-locations-cell
-  "How many service locations the service has in PTV, how many of them are
-   Lipas sites, and how many other channels; a service with none stands
-   out."
-  [tr {:keys [locations other-channels concerns-lipas?] :as service}]
+  "How many service locations the service has in PTV and how many of them
+   are Lipas sites; a service with none stands out."
+  [tr {:keys [locations concerns-lipas?] :as service}]
   (let [n (count locations)
         from-lipas (count (filter (comp seq :lipas-ids) locations))
-        others (count other-channels)
-        caption (->> [(when (pos? from-lipas) (tr :ptv.service/from-lipas from-lipas))
-                      (when (pos? others)
-                        (if (= 1 others)
-                          (tr :ptv.service/other-channels-one)
-                          (tr :ptv.service/other-channels others)))]
-                     (remove nil?)
-                     (str/join " · "))
+        caption (when (pos? from-lipas) (tr :ptv.service/from-lipas from-lipas))
         content [:> Stack {:alignItems "center" :spacing 0.25}
                  (if (zero? n)
                    [:> Chip {:label (tr :ptv.service/no-locations)
@@ -2703,10 +2714,10 @@
                              :color (if concerns-lipas? "warning" "default")
                              :icon (r/as-element [:> Icon {:fontSize "small"} "location_off"])}]
                    [:> Typography {:fontWeight 700} n])
-                 (when (seq caption)
+                 (when caption
                    [:> Typography {:variant "caption" :color "text.secondary" :sx #js {:whiteSpace "nowrap"}}
                     caption])]]
-    (if (pos? (+ n others))
+    (if (pos? n)
       ;; not interactive: a click in it would reach the row and toggle it
       [:> Tooltip {:title (r/as-element [channels-tooltip tr service])
                    :disableInteractive true}
@@ -2816,7 +2827,8 @@
       [:> TableHead
        [:> TableRow
         [:> TableCell {:padding "checkbox"}]
-        [:> TableCell {:sx #js {:textAlign "center"}} (tr :ptv/integration)]
+        [header-with-tooltip {:label (tr :ptv/integration)
+                              :tooltip (tr :ptv.service/col-integration-tooltip)}]
         [:> TableCell {:sx #js {:textAlign "center"}} (tr :ptv.audit/tab-label)]
         [:> TableCell (tr :general/name)]
         [header-with-tooltip {:label (tr :ptv.service/col-origin)
@@ -2842,32 +2854,33 @@
            (map row others)))]]]))
 
 (defn- other-services-footer
-  "Below the table: how many of the org's PTV services don't concern
-   Lipas, and a button to list them. A search looks into them too, so a
+  "Below the table: the org's PTV services that don't concern Lipas, under
+   the heading their rows have when shown, and a button to show or hide
+   them that stays in its place. A search looks into them too, so a
    service kept there never reads as missing."
   [{:keys [tr others show-others? search-hits on-toggle]}]
   (when (seq others)
-    (let [n (count others)]
-      [:> Stack {:direction "row" :spacing 1 :alignItems "center" :flexWrap "wrap" :useFlexGap true
-                 :sx #js {:mx 2}}
-       (when-not show-others?
-         [:<>
-          [:> Icon {:sx #js {:fontSize "1.2rem" :color (if (pos? search-hits) "info.main" "text.secondary")}}
-           (if (pos? search-hits) "search" "info_outline")]
-          [:> Tooltip {:title (tr :ptv.service/others-tooltip)}
-           [:> Typography {:variant "body2" :fontWeight 400 :color "text.secondary" :tabIndex 0
-                           :sx #js {:cursor "help" :textDecoration "underline dotted" :textUnderlineOffset "4px"}}
-            (if (= 1 n) (tr :ptv.service/others-hidden-one) (tr :ptv.service/others-hidden n))]]
-          (when (pos? search-hits)
-            [:> Typography {:variant "body2"}
-             (if (= 1 search-hits)
-               (tr :ptv.service/others-search-hit-one)
-               (tr :ptv.service/others-search-hits search-hits))])])
-       [:> Button {:size "small" :variant "text"
-                   :sx #js {:textTransform "none"}
-                   :startIcon (r/as-element [:> Icon (if show-others? "expand_less" "expand_more")])
-                   :on-click on-toggle}
-        (tr (if show-others? :ptv.service/hide-others :ptv.service/show-others))]])))
+    [:> Stack {:direction "row" :spacing 1 :alignItems "center" :flexWrap "wrap" :useFlexGap true
+               :sx #js {:mx 2}}
+     [:> Icon {:sx #js {:fontSize "1.2rem" :color (if (pos? search-hits) "info.main" "text.secondary")}}
+      (if (pos? search-hits) "search" "info_outline")]
+     [:> Tooltip {:title (tr :ptv.service/others-tooltip)}
+      [:> Typography {:variant "body2" :fontWeight 400 :color "text.secondary" :tabIndex 0
+                      :sx #js {:cursor "help" :textDecoration "underline dotted" :textUnderlineOffset "4px"}}
+       (str (tr :ptv.service/others-divider (count others))
+            " · "
+            (tr :ptv.service/others-divider-caption))]]
+     [:> Button {:size "small" :variant "text"
+                 :aria-expanded (boolean show-others?)
+                 :sx #js {:textTransform "none"}
+                 :startIcon (r/as-element [:> Icon (if show-others? "expand_less" "expand_more")])
+                 :on-click on-toggle}
+      (tr (if show-others? :ptv.service/hide-others :ptv.service/show-others))]
+     (when (pos? search-hits)
+       [:> Typography {:variant "body2"}
+        (if (= 1 search-hits)
+          (tr :ptv.service/others-search-hit-one)
+          (tr :ptv.service/others-search-hits search-hits))])]))
 
 (defn- service-filter-chips
   [tr]

@@ -88,11 +88,11 @@
       (tr (k "other") (str/upper-case (str lang))))))
 
 (defn field-label
-  "\"Tiivistelmä (SV)\", \"Puhelinnumero\", \"Liitetty palvelu Uimahallit\",
+  "\"Tiivistelmä (SV)\", \"Puhelinnumero\", \"Liitetyt palvelut\",
    \"Ruotsi (SV)\"."
-  [tr {:keys [field language name]}]
+  [tr {:keys [field language]}]
   (case field
-    :services (tr :ptv.review/service name)
+    :services (tr :ptv.review/field-services)
     :marketing-name (tr :ptv.review/field-marketing-name)
     :phone (tr :ptv.review/field-phone)
     :email (tr :ptv.review/field-email)
@@ -138,39 +138,179 @@
   [row]
   (contains? #{:short :one-slot :extra :address :info} (:kind row)))
 
+(defn service-names
+  "The names of the services `ids` (by the connections `row`'s :names), in
+   alphabetical order."
+  [row ids]
+  (sort-by str/lower-case (map #(get-in row [:names %] %) ids)))
+
+(defn ptv-day
+  "PTV's time `s` (UTC, no zone, microseconds) as the user's local date:
+   \"16.5.2026\". nil when it can't be read."
+  [s]
+  (when-not (str/blank? s)
+    (let [d (js/Date. (cond-> (str/replace s #"(\.\d{3})\d+" "$1")
+                        (not (re-find #"(Z|[+-]\d{2}:?\d{2})$" s)) (str "Z")))]
+      (when-not (js/isNaN (.getTime d))
+        (str (.getDate d) "." (inc (.getMonth d)) "." (.getFullYear d))))))
+
+(defn gone-service-label
+  "How a service PTV no longer has (ptv-review/gone-service) is named where
+   the service would be: \"Uimahallit (arkistoitu PTV:ssä)\", or
+   \"Tuntematon palvelu (ei löydy PTV:stä)\" for one nobody can name."
+  [tr {:keys [name gone]}]
+  (cond
+    (= :archived gone) (tr :ptv.review/gone-archived-label (or name (tr :ptv.review/gone-unnamed)))
+    name (tr :ptv.review/gone-unknown-label name)
+    :else (tr :ptv.review/gone-unknown-unnamed)))
+
+(defn gone-notice-line
+  "The review's line about a service PTV no longer has: what happened in
+   PTV and what the next sync does."
+  [tr {:keys [name gone archived-at] :as service}]
+  (let [day (ptv-day archived-at)
+        n (or name (tr :ptv.review/gone-unnamed))]
+    (str (cond
+           (and (= :archived gone) day) (tr :ptv.review/gone-archived-on n day)
+           (= :archived gone) (tr :ptv.review/gone-archived n)
+           :else (str (gone-service-label tr service) "."))
+         " "
+         (tr :ptv.review/gone-dropped-on-sync))))
+
+(defn gone-labels
+  "id -> label (gone-service-label) of each service `services`
+   (services-by-id) marks as gone among `ids`, for naming them in place of
+   their id."
+  [tr services ids]
+  (into {} (for [id ids
+                 :when (ptv-review/gone-service? services id)]
+             [id (gone-service-label tr (ptv-review/gone-service services id))])))
+
+(defn unlisted-labels
+  "id -> label of each of `ids` that `known` (services-by-id entries: the
+   PTV tool's unlisted services, or the site form's review fetch) has: one
+   PTV no longer has as gone-service-label, another organisation's by its
+   name. For a services selector's chips (:value-labels)."
+  [tr known ids]
+  (into {} (keep (fn [id]
+                   (if (ptv-review/gone-service? known id)
+                     [id (gone-service-label tr (ptv-review/gone-service known id))]
+                     (when-let [n (ptv-data/select-service-name (get-in known [id :serviceNames]))]
+                       [id n]))))
+        ids))
+
+(defn unlisted-link-items
+  "Link-field items ({:id :name :url :caption}) for `ids`, services the
+   org's own list lacks, by `known` (unlisted-labels): one PTV no longer has
+   without a link (PTV has none for it), with its id as the caption when
+   nobody can name it. `url-fn` gives a service's link. Ids `known` lacks
+   are left out."
+  [tr known ids url-fn]
+  (let [labels (unlisted-labels tr known ids)]
+    (for [id ids
+          :let [label (get labels id)]
+          :when label]
+      (if (ptv-review/gone-service? known id)
+        (cond-> {:id id :name label}
+          (nil? (:name (ptv-review/gone-service known id))) (assoc :caption id))
+        {:id id :name label :url (url-fn id)}))))
+
+(defn dropped-line
+  "What a sync did about a service PTV no longer has: dropped its
+   connection from Lipas."
+  [tr {:keys [id name gone]}]
+  (if (= :archived gone)
+    (tr :ptv.review/dropped-archived (or name id))
+    (tr :ptv.review/dropped-unknown (or name id))))
+
+(defn dropped-notification
+  "The notification after a sync that dropped `dropped`, connections to
+   services PTV no longer has, from Lipas: the save's success, and what was
+   dropped. nil when nothing was."
+  [tr dropped]
+  (when (seq dropped)
+    {:message (str/join " " (cons (str (tr :notifications/save-success) ".")
+                                  (map #(dropped-line tr %) dropped)))
+     :success? true}))
+
+(defn site-form-dropped
+  "The services PTV no longer has that a site-form save dropped: those of
+   `gone` (the review's :gone-services when the save was made) that the
+   saved site `result` no longer connects, when the save synced: a sync
+   dates the revision it writes with its :last-sync. The save response
+   carries no such list; the review knew."
+  [gone result]
+  (when (and (seq gone)
+             (some? (:event-date result))
+             (= (:event-date result) (-> result :ptv :last-sync))
+             (nil? (-> result :ptv :error)))
+    (let [kept (set (-> result :ptv :service-ids))]
+      (vec (remove #(contains? kept (:id %)) gone)))))
+
+(defn services-change
+  "What turning the connections `from` (a set of service ids) into `to`
+   does, by `row`'s names: \"lisätään Jäähallit; poistetaan Uimahallit\"."
+  [tr row from to]
+  (let [names #(str/join ", " (service-names row %))]
+    (str/join "; " (remove nil?
+                           [(when-let [ids (seq (remove (set from) to))]
+                              (tr :ptv.review/services-add (names ids)))
+                            (when-let [ids (seq (remove (set to) from))]
+                              (tr :ptv.review/services-remove (names ids)))]))))
+
 (defn overwritten-line
   "What a write that sends the edit's side of `row` (Lipas's, or the user's
-   own value) does to PTV, for the confirmation listing the PTV changes it
-   would overwrite."
-  [tr {:keys [field kind ptv? name lipas ptv current draft] :as row}]
-  (cond
-    (and (= :services field) ptv?) (tr :ptv.review/overwritten-connection-removed name)
-    (= :services field) (tr :ptv.review/overwritten-connection-restored name)
-    (= :languages kind) (tr :ptv.review/overwritten-language (language-adjective tr (:language row) true))
-    (short-row? row) (tr :ptv.review/overwritten-value (field-label tr row)
-                         (or (value-text field ptv) (tr :ptv.review/empty))
-                         (or (value-text field (if (= :edited current) draft lipas))
-                             (tr :ptv.review/empty)))
-    :else (tr :ptv.review/overwritten-text (field-label tr row))))
+   own value) does to PTV, for the confirmation listing the PTV values it
+   would overwrite: PTV's value is replaced by Lipas's, in so many words."
+  [tr {:keys [field kind ptv current draft] :as row}]
+  (let [edited? (= :edited current)
+        sent (if edited? draft (:lipas row))]
+    (cond
+      (= :set kind)
+      (tr (if edited? :ptv.review/overwritten-services-edited :ptv.review/overwritten-services)
+          (services-change tr row ptv sent))
+
+      (= :languages kind)
+      (tr :ptv.review/overwritten-language (language-adjective tr (:language row) true))
+
+      (short-row? row)
+      (let [label (field-label tr row)
+            from (value-text field ptv)
+            to (value-text field sent (when-not edited? (get-in row [:saved [:location :postal-office]])))]
+        (cond
+          (nil? to) (tr :ptv.review/overwritten-value-removed label from)
+          (nil? from) (tr :ptv.review/overwritten-value-added label to)
+          :else (tr (if edited? :ptv.review/overwritten-value-edited :ptv.review/overwritten-value)
+                    label from to)))
+
+      :else (tr :ptv.review/overwritten-text (field-label tr row)))))
 
 (defn overwrite-confirmation
-  "Options for :lipas.ui.events/confirm-with before a write overwrites the
-   changes made in PTV that `open` (rows without a choice) lists, and the
-   language versions in `languages` (rows) it removes. Reviewing them is
-   the main action; `on-overwrite` writes anyway."
-  [tr {:keys [open languages on-overwrite on-review]}]
-  {:title (tr :ptv.review/gate-title)
-   :message [:div
-             [:p {:style {:margin-top 0}} (tr :ptv.review/gate-intro)]
-             (into [:ul]
-                   (for [row (concat open languages)]
-                     [:li (overwritten-line tr row)]))
-             [:p {:style {:margin-bottom 0}} (tr :ptv.review/confirm-hint)]]
-   :confirm-label (tr :ptv.review/review)
-   :confirm-primary? true
-   :on-confirm on-review
-   :decline-label (tr :ptv.review/overwrite)
-   :on-decline on-overwrite})
+  "Options for :lipas.ui.events/confirm-with before a write overwrites what
+   PTV has in the rows `open` (rows without a choice), and the language
+   versions in `languages` (rows) it removes. Reviewing them is the main
+   action; `on-overwrite` writes anyway, its button naming the write:
+   `action` :sync (the default) or :save. On a first link, or without what
+   the last sync sent (origin :first-link, :unknown), the rows are
+   differences, not changes made in PTV, and the dialog says so."
+  [tr {:keys [open languages on-overwrite on-review action]}]
+  (let [differences? (boolean (some #(#{:first-link :unknown} (:origin %)) open))
+        review-label (tr (if differences? :ptv.review/review-differences :ptv.review/review))]
+    {:title (tr (if differences? :ptv.review/gate-title-differences :ptv.review/gate-title))
+     :message [:div
+               [:p {:style {:margin-top 0}}
+                (tr (if differences? :ptv.review/gate-intro-differences :ptv.review/gate-intro))]
+               (into [:ul]
+                     (for [row (concat open languages)]
+                       [:li (overwritten-line tr row)]))
+               [:p {:style {:margin-bottom 0}}
+                (tr (if differences? :ptv.review/confirm-hint-differences :ptv.review/confirm-hint)
+                    review-label)]]
+     :confirm-label review-label
+     :confirm-primary? true
+     :on-confirm on-review
+     :decline-label (tr (if (= :save action) :ptv.review/save-and-overwrite :ptv.review/sync-and-overwrite))
+     :on-decline on-overwrite}))
 
 (defn language-removals
   "The rows of `rows` (annotated) that are a language version the sync

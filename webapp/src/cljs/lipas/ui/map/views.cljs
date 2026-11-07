@@ -1190,6 +1190,9 @@
 
         ;; Same rule as the backend gate; non-empty blocks Save.
         ptv-save-blockers (<== [::subs/ptv-save-blockers lipas-id])
+        ;; the edit's PTV review is on its way: Save waits for the question
+        ;; it may ask (::events/save-edits)
+        ptv-review-pending? (<== [::subs/ptv-review-pending? lipas-id])
         ;; changes made in PTV that a save would overwrite unasked; viewing
         ;; the site shows them too, to be decided in an edit
         ptv-review-open (when view-ptv? (<== [::subs/ptv-review-open-rows lipas-id]))
@@ -1710,6 +1713,7 @@
                   :edit-activities? edit-activities?
                   :edit-floorball? edit-floorball?
                   :save-in-progress? save-in-progress?
+                  :save-busy? ptv-review-pending?
                   :valid? (and edits-valid? (empty? ptv-save-blockers))
                   :logged-in? logged-in?
                   :user-can-publish? can-publish?
@@ -1720,6 +1724,9 @@
                   :on-publish #(==> [::events/save-edits lipas-id])
                   :publish-tooltip (tr :actions/save)
                   :invalid-message (cond
+                                     ptv-review-pending?
+                                     (tr :ptv/save-waits-for-review)
+
                                      (= #{:ptv/missing-texts} ptv-save-blockers)
                                      (tr :ptv/save-needs-texts)
 

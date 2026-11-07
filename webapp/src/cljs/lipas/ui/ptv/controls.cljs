@@ -38,7 +38,9 @@
   (sort-by #(or (:label %) "") #(.compare label-collator %1 %2) options))
 
 (r/defc services-selector
-  [{:keys [disabled options value on-change label value-fn multiple sx]
+  "`value-labels` {id label} names the chosen services that aren't among the
+   options, e.g. one archived in PTV, instead of showing their bare ids."
+  [{:keys [disabled options value on-change label value-fn multiple sx value-labels]
     :or   {value-fn identity
            label    ""
            multiple true}}]
@@ -63,7 +65,8 @@
                                                      x))
                                                  v)))
                             (on-change (if (map? v) (:value v) v))))}
-       sx (assoc :sx sx))]))
+       sx (assoc :sx sx)
+       (seq value-labels) (assoc :value-labels value-labels))]))
 
 (r/defc lang-selector [{:keys [value on-change enabled-languages]}]
   [:> Tabs
