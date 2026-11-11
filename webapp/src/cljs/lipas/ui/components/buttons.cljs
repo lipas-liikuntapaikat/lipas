@@ -1,5 +1,6 @@
 (ns lipas.ui.components.buttons
   (:require ["@mui/material/Button$default" :as Button]
+            ["@mui/material/CircularProgress$default" :as CircularProgress]
             ["@mui/material/Fab$default" :as Fab]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/IconButton$default" :as IconButton]
@@ -48,19 +49,24 @@
       [:> Fab btn-props
        [:> Icon "edit_icon"]]]]))
 
-(defn save-button [{:keys [on-click tooltip disabled disabled-tooltip color]
-                    :or   {color "secondary"} :as props}]
+(defn save-button
+  "`busy?`: Save waits for something to load (say what in
+   `disabled-tooltip`), shown by a spinner in place of the icon."
+  [{:keys [on-click tooltip disabled disabled-tooltip color busy?]
+    :or   {color "secondary"} :as props}]
   [:> Tooltip {:title (if disabled disabled-tooltip "") :placement "top"}
    ;; Mui will complain if tooltip is bound to disabled button unless
    ;; there's a wrapper component. Therefore :span is here.
    [:span
     [:> Fab
      (merge
-       (dissoc props :disabled-tooltip :color)
+       (dissoc props :disabled-tooltip :color :busy?)
        {:disabled disabled :on-click on-click :variant "extended" :color color})
      tooltip
-     [:> Icon {:style {:margin-left "0.25em"}}
-      "save_icon"]]]])
+     (if busy?
+       [:> CircularProgress {:size 20 :color "inherit" :style {:margin-left "0.5em"}}]
+       [:> Icon {:style {:margin-left "0.25em"}}
+        "save_icon"])]]])
 
 (defn discard-button [{:keys [on-click tooltip] :as props}]
   [:> Tooltip {:title (or tooltip "") :placement "top"}
