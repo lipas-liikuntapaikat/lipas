@@ -234,6 +234,9 @@
 
 (defn- ascii ^bytes [^String s] (.getBytes s "US-ASCII"))
 
+;; Browsers send a non-ASCII filename as raw UTF-8 inside Content-Disposition.
+(defn- utf8 ^bytes [^String s] (.getBytes s "UTF-8"))
+
 (defn- signature ^bytes [bs] (byte-array (map unchecked-byte bs)))
 
 (defn- file-bytes
@@ -268,13 +271,13 @@
   [& {:keys [filename content-type kind token]
       :or {filename "test.png" content-type "image/png" kind :png}}]
   (let [out (ByteArrayOutputStream.)]
-    (.write out (ascii (str "--" multipart-boundary "\r\n"
-                            "Content-Disposition: form-data; name=\"lipas-id\"\r\n\r\n"
-                            "123456\r\n"
-                            "--" multipart-boundary "\r\n"
-                            "Content-Disposition: form-data; name=\"file\";"
-                            " filename=\"" filename "\"\r\n"
-                            "Content-Type: " content-type "\r\n\r\n")))
+    (.write out (utf8 (str "--" multipart-boundary "\r\n"
+                           "Content-Disposition: form-data; name=\"lipas-id\"\r\n\r\n"
+                           "123456\r\n"
+                           "--" multipart-boundary "\r\n"
+                           "Content-Disposition: form-data; name=\"file\";"
+                           " filename=\"" filename "\"\r\n"
+                           "Content-Type: " content-type "\r\n\r\n")))
     (.write out ^bytes (file-bytes kind))
     (.write out (ascii (str "\r\n--" multipart-boundary "--\r\n")))
     (cond-> (-> (mock/request :post "/api/actions/upload-utp-image")
@@ -378,6 +381,30 @@
                              :kind :jpeg)))
           (is (= 1 (count @cms-uploads))
               "the accepted upload must actually reach the CMS layer"))))))
+
+;; Ring's multipart parser (commons-fileupload2 DiskFileItem/checkFileName)
+;; builds a java.nio Path from the uploaded filename. In a JVM without a UTF-8
+;; locale (sun.jnu.encoding = ANSI_X3.4-1968, the default in the backend Docker
+;; image) that throws InvalidPathException for ä/ö/å, so "pändäö.jpg" answered
+;; 500 before upload-utp-image!, and the filename sanitizer in
+;; lipas.integration.utp.cms, ever ran. macOS JVMs are always UTF-8, so only the
+;; containerized run (CI, servers) can catch a regression here.
+(deftest upload-utp-image-non-ascii-filename-test
+  (is (= "UTF-8" (System/getProperty "sun.jnu.encoding"))
+      (str "the JVM cannot build file paths from non-ASCII names; set"
+           " LC_CTYPE=C.UTF-8 for the container (docker-compose.yml backend-base)"))
+  (with-cms-tripwire
+    (fn []
+      (let [resp (test-app (utp-image-request :token (privileged-token)
+                                              :filename "pändäö.jpg"
+                                              :content-type "image/jpeg"
+                                              :kind :jpeg))]
+        (is (= 200 (:status resp))
+            (str "a filename with ä/ö must upload, got " (:status resp)
+                 " " (pr-str (:body resp))))
+        (is (= ["pändäö.jpg"] @cms-uploads)
+            (str "the filename must reach the CMS layer intact (it sanitizes"
+                 " it there), got " @cms-uploads))))))
 
 (comment
   (clojure.test/run-tests *ns*))
