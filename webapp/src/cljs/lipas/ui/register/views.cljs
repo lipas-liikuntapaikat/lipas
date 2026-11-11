@@ -33,6 +33,17 @@
     :target "_blank"}
    (tr :help/privacy-policy)])
 
+(defn- privacy-and-terms
+  "Privacy policy link and the terms of use. Shown on both steps so the
+  terms are visible on /rekisteroidy before the user asks for a link."
+  [tr]
+  [:> Stack {:spacing 1}
+   [privacy-policy-link tr]
+   [:> Typography {:variant "body1" :sx {:mt 1 :mb 1}}
+    (tr :user/data-ownership)]
+   [:> Typography {:variant "body1" :style {:font-size "0.9em"}}
+    (tr :disclaimer/data-ownership)]])
+
 ;;; Step 1: ask for a link ;;;
 
 (r/defc request-link-form [{:keys [tr]}]
@@ -61,8 +72,7 @@
        :on-click #(==> [::events/submit-registration-request email])}
       (tr :register/send-link)]
 
-     [:> Stack {:spacing 1}
-      [privacy-policy-link tr]]
+     [privacy-and-terms tr]
 
      (when error
        [:> Typography {:color "error"} (tr :error/unknown)])]))
@@ -152,16 +162,7 @@
        :on-click #(==> [::events/submit-registration-form form-data])}
       (tr :register/headline)]
 
-     [:> Stack {:spacing 1}
-
-      [privacy-policy-link tr]
-
-      ;; Terms
-      [:> Typography {:variant "body1" :sx {:mt 1 :mb 1}}
-       (tr :user/data-ownership)]
-
-      [:> Typography {:variant "body1" :style {:font-size "0.9em"}}
-       (tr :disclaimer/data-ownership)]]
+     [privacy-and-terms tr]
 
      ;; Error messages
      (when error
