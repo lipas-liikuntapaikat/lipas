@@ -136,6 +136,7 @@
               [:phone-number {:optional true} #'phone-number]
               [:comment {:optional true} #'comment]
               [:construction-year {:optional true} #'construction-year]
+              [:decommission-year {:optional true} #'common/decommission-year]
               [:renovation-years {:optional true} #'renovation-years]
               [:renovations {:optional true} #'renovations]
               [:images {:optional true} #'images-schema/images]

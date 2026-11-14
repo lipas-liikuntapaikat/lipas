@@ -11,6 +11,7 @@
  :construction-year "Grundläggningsår",
  :construction-year-helper-text "Grundläggningsåret avser det år då idrottsverksamheten inleddes på denna plats.",
  :contact "Kontaktinformation",
+ :decommission-year "Togs ur bruk år",
  :contact-helper-text
  "Allmänt kontaktuppgifter för organisationen som ansvarar för anläggningen, tjänsterna eller strukturerna.",
  :creating-planning-site

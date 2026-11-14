@@ -28,6 +28,17 @@
      [:re -iso8601-pattern]]))
 
 (def status (m/schema (into [:enum] (keys status/statuses))))
+
+(def decommission-year
+  "Year a site or LOI was permanently closed. Present exactly when :status is
+  out-of-service-permanently (enforced on save, not here: older revisions
+  in the history don't carry it)."
+  (m/schema [:int {:description "Year the facility was permanently taken out of service. Present when status is out-of-service-permanently."
+                   :min 1800
+                   ;; +1: a long-running process must accept the new year
+                   ;; right after New Year.
+                   :max (inc #?(:clj (.getValue (java.time.Year/now))
+                                :cljs (.getFullYear (js/Date.))))}]))
 (def statuses (m/schema [:set status]))
 ;; https://github.com/metosin/malli/issues/670
 (def number

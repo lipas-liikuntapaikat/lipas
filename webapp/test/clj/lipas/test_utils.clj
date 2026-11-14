@@ -62,10 +62,15 @@
   ;; of the two (flaked upsert-sports-site-images-manager-test in CI with a
   ;; 403). A sequence id and a real timestamp make generated sites actually
   ;; independent; tests that care assoc explicit values.
+  ;; :decommission-year is generated independently of :status too, but a save
+  ;; requires it exactly on a permanent closure (core/check-decommission-year):
+  ;; keep the two consistent.
   (cond-> (-> site
-              (dissoc :renovation-years :renovations :owner-org-id :edit-grants)
+              (dissoc :renovation-years :renovations :owner-org-id :edit-grants
+                      :decommission-year)
               (assoc :lipas-id (swap! gen-lipas-id-seq inc))
               (assoc :event-date (current-timestamp)))
+    (= "out-of-service-permanently" (:status site)) (assoc :decommission-year 2020)
     (:reservations-link site) (update :reservations-link #(subs % 0 (min (count %) 200)))
     (:www site) (update :www #(subs % 0 (min (count %) 200)))
     (get-in site [:location :postal-office]) (update-in [:location :postal-office] #(subs % 0 (min (count %) 50)))))
@@ -954,6 +959,8 @@
 (defn gen-loi! []
   (-> (mg/generate loi-schema/loi)
       (assoc :status "active")
+      ;; generated independently of :status; an active LOI has no closure year
+      (dissoc :decommission-year)
       (assoc :id (str (java.util.UUID/randomUUID)))
       (assoc :geometries {:type "FeatureCollection"
                           :features [{:type "Feature"

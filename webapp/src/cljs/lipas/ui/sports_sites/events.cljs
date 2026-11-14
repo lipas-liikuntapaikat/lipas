@@ -300,11 +300,20 @@
 
 (rf/reg-event-fx ::delete
   (fn [_db [_ data status year draft?]]
-    (let [event-date (if (utils/this-year? year)
-                       (utils/timestamp)
-                       (utils/->end-of-year year))
+    (let [closure?   (= "out-of-service-permanently" status)
+          ;; Only a permanent closure takes the dialog's year: it's dated to
+          ;; the end of that year and carries it as :decommission-year (the
+          ;; backend carries a backdated closure over later revisions). The
+          ;; year picker is hidden for other reasons, but its value lingers
+          ;; when the user switches reason, so ignore it there.
+          event-date (if (and closure? (not (utils/this-year? year)))
+                       (utils/->end-of-year year)
+                       (utils/timestamp))
           data       (-> data
                          (assoc :event-date event-date :status status)
+                         (cond->
+                           closure? (assoc :decommission-year (js/parseInt year 10))
+                           (not closure?) (dissoc :decommission-year))
                          (utils/clean))
           on-success (fn [] [[:lipas.ui.map.events/show-sports-site nil]
                              [:lipas.ui.search.events/submit-search]
@@ -327,6 +336,8 @@
           rev   (-> (utils/make-revision site (utils/timestamp))
                     (utils/make-editable)
                     (assoc :status "active")
+                    ;; an active site has no closure year
+                    (dissoc :decommission-year)
                     (utils/make-saveable))
           draft false]
       {:dispatch [::commit-rev rev draft on-success on-failure]})))

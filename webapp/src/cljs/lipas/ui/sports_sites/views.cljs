@@ -178,6 +178,15 @@
                       :on-change #()
                       :disabled true}]})
 
+     ;; Year of permanent closure: set by the removal dialog, read-only here
+     (when-let [year (:decommission-year display-data)]
+       {:label (tr :lipas.sports-site/decommission-year)
+        :value year
+        :form-field [text-fields/text-field
+                     {:value year
+                      :on-change #()
+                      :disabled true}]})
+
      ;; Status
      (when (allow-editing-status? tr display-data)
        {:label (tr :lipas.sports-site/status)

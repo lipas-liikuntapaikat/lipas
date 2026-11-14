@@ -846,6 +846,19 @@
                              :lipas-id #{lipas-id}})]
         (db/update-user-permissions! db user)))))
 
+(defn- check-decommission-year
+  "`doc` (a site or a LOI) with :decommission-year only where it belongs.
+
+  A permanent closure must say which year the site was closed: 400 without
+  it. Any other status has no closure year, so a reactivated site drops it."
+  [doc]
+  (if (= db/closed-status (:status doc))
+    (if (some? (:decommission-year doc))
+      doc
+      (throw (ex-info "A permanent closure (out-of-service-permanently) requires :decommission-year"
+                      {:type :decommission-year-required})))
+    (dissoc doc :decommission-year)))
+
 (defn upsert-sports-site!
   ([db user sports-site]
    (upsert-sports-site! db user sports-site false))
@@ -902,7 +915,8 @@
      (when (and lipas-id creating?)
        (check-sports-site-exists! db lipas-id))
      (check-owner-lock! db sports-site)
-     (let [resp (upsert-sports-site!* db user sports-site draft?)]
+     ;; After authorization, so an unauthorized save gets its 403 first.
+     (let [resp (upsert-sports-site!* db user (check-decommission-year sports-site) draft?)]
        (when creating?
          (ensure-permission! db user resp))
        resp))))
@@ -1718,7 +1732,8 @@
   current one. A browser clock running ahead therefore made the user's own,
   pre-sync revision win over the sync's result (in prod: sites archived in
   PTV whose current revision still said Published, re-marked incorrect-data
-  by the backdating rule in db/upsert-sports-site!). Backdating is untouched."
+  by the since-removed invalidation rule of db/upsert-sports-site!).
+  Backdating is untouched."
   [sports-site]
   (let [event-date (:event-date sports-site)
         submitted (try (some-> event-date java.time.Instant/parse)
@@ -2149,7 +2164,11 @@
 (defn upsert-loi!
   [db search user loi]
   (jdbc/with-db-transaction [tx db]
-    (let [result (db/upsert-loi! tx user loi)]
+    (let [loi (check-decommission-year loi)
+          result (db/upsert-loi! tx user loi)
+          ;; A backdated closure makes a closed copy of a later revision the
+          ;; current one (db/upsert-loi!): index that, not the submitted loi.
+          current (or (first (db/get-lois-by-ids tx [(str (:id loi))])) loi)]
       (log/info "Saving LOI with background jobs"
                 {:loi-id (:id loi)
                  :user (:email user)})
@@ -2159,7 +2178,7 @@
                            {:loi-ids [(:id loi)]
                             :operation-type (if (nil? (:id loi)) "create" "update")
                             :initiated-by (:id user)})
-      (index-loi! search loi :sync)
+      (index-loi! search current :sync)
       result)))
 
 ;; Leading-byte signatures of the image formats the UTP image upload accepts.

@@ -49,3 +49,15 @@ FROM loi_current
 SELECT *
 FROM loi_current
 WHERE id IN (:v*:ids)
+
+-- :name get-loi-revisions-dated-after
+-- :command :query
+-- :result :many
+-- :doc Revisions of LOI :id dated after :event-date, one per event_date: the
+-- one that wins at that date (newest created_at), the same choice loi_current
+-- makes. Oldest event_date first.
+SELECT DISTINCT ON (event_date) *
+FROM public.loi
+WHERE id = :id ::uuid
+  AND event_date > :event_date ::timestamptz
+ORDER BY event_date ASC, created_at DESC
