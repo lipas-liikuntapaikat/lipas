@@ -1395,6 +1395,27 @@
       (is (= "2010,2015" (:renovation-years row))
           "legacy renovation-years column rendered as comma-separated list"))))
 
+(deftest sports-sites-report-decommission-year-test
+  (let [closed (-> (tu/make-point-site 110011 :type-code 1120 :status "out-of-service-permanently")
+                   (assoc :decommission-year 2018))
+        active (tu/make-point-site 110012 :type-code 1120 :status "active")
+        _ (doseq [s [closed active]]
+            (core/index! (test-search) s :sync))
+        resp (test-app (report-request "/api/actions/create-sports-sites-report"
+                                       {:query {:bool {:must   {:match_all {}}
+                                                       :filter [{:terms {:lipas-id [110011 110012]}}]}}}
+                                       ["lipas-id" "decommission-year"]
+                                       :fi :json))
+        rows (->> (excel/load-workbook (:body resp))
+                  (excel/select-sheet "lipas")
+                  (excel/select-columns {:A :lipas-id :B :decommission-year}))
+        by-id (into {} (map (juxt (comp long :lipas-id) :decommission-year)) (rest rows))]
+    (is (= 200 (:status resp)))
+    (is (= "Poistettu käytöstä vuonna" (:decommission-year (first rows))))
+    (is (= 2018 (some-> (by-id 110011) long)) "closed site carries its year")
+    (is (contains? by-id 110012))
+    (is (nil? (by-id 110012)) "the column stays empty for a site still in use")))
+
 (deftest finance-report-test
   (let [_ (seed/seed-city-data! (test-db) (test-search))
         path "/api/actions/create-finance-report"

@@ -31,6 +31,7 @@
    "admin"
    "owner"
    "renovation-years"
+   "decommission-year"
    "www"
    "phone-number"
    "email"

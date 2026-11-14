@@ -63,6 +63,8 @@
    {:fi "Perustamisvuosi" :en "Year of establishment" :se "Grundläggningsår"}
    "renovation-years"
    {:fi "Peruskorjausvuodet" :en "Renovation years" :se "Renoveringsår"}
+   "decommission-year"
+   {:fi "Poistettu käytöstä vuonna" :en "Decommissioned in" :se "Togs ur bruk år"}
    "renovations"
    {:fi "Toimenpiteet" :en "Renovations" :se "Åtgärder"}
    "phone-number"
