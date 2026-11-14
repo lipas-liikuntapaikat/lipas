@@ -44,7 +44,7 @@
   [tr]
   [{:label  (tr :lipas.sports-site/basic-data)
     :fields ["lipas-id" "name" "marketing-name" "comment"
-             "construction-year" "renovation-years"]}
+             "construction-year" "renovation-years" "status" "decommission-year"]}
    {:label  (tr :lipas.sports-site/ownership)
     :fields ["admin" "owner"]}
    {:label  (tr :lipas.sports-site/contact)

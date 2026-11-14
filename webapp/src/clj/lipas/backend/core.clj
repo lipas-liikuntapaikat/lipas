@@ -1864,6 +1864,9 @@
   (let [data (get-sports-sites-by-type-code db type-code {:revs year})]
     (reports/energy-report data)))
 
+(defn- localize-for-report [locale m]
+  (->> m (i18n/localize locale) (reports/localize-status locale)))
+
 (defn sports-sites-report-excel
   [{:keys [indices client]} params fields locale out]
   (let [idx-name (get-in indices [:sports-site :search])
@@ -1876,7 +1879,7 @@
                         (recur (-> page :body :hits :hits
                                    (->>
                                      (map (comp (partial reports/->row fields)
-                                                (partial i18n/localize locale)
+                                                (partial localize-for-report locale)
                                                 :_source))
                                      (into res))))
                         res)))]
@@ -1890,7 +1893,7 @@
         in-chan (search/scroll client idx-name (update params :_source dissoc :excludes))
         locale (or locale :fi)
         headers (mapv #(get-in reports/fields [% locale]) fields)
-        localize (partial i18n/localize locale)
+        localize (partial localize-for-report locale)
         ->row (partial reports/->row fields)]
     (with-open [writer (OutputStreamWriter. out)]
       (.write writer "{\"type\":\"FeatureCollection\",\"features\":[")
@@ -1924,7 +1927,7 @@
         locale (or locale :fi)
         headers (mapv #(get-in reports/fields [% locale]) fields)
         xform (comp (partial reports/->row fields)
-                    (partial i18n/localize locale)
+                    (partial localize-for-report locale)
                     :_source)]
     (with-open [writer (OutputStreamWriter. out)]
       (csv/write-csv writer [headers])

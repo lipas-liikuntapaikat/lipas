@@ -1,6 +1,7 @@
 (ns lipas.reports
   (:require [lipas.data.cities :as cities]
             [lipas.data.prop-types :as prop-types]
+            [lipas.data.status :as status]
             [lipas.utils :as utils]))
 
 (defn- all-energy-data-exists? [{:keys [energy-consumption]}]
@@ -34,6 +35,13 @@
                          (filter all-energy-data-exists?)
                          (map #(select-keys % [:lipas-id :name])))})
 
+(defn localize-status
+  "Report rows show the status by name. Kept out of i18n/localize, whose
+  other callers (site fetches with a locale) return the status code."
+  [locale m]
+  (cond-> m
+    (:status m) (update :status #(get-in status/statuses [% locale] %))))
+
 (defn ->row [fields m]
   (reduce
     (fn [res f]
@@ -63,6 +71,10 @@
    {:fi "Perustamisvuosi" :en "Year of establishment" :se "Grundläggningsår"}
    "renovation-years"
    {:fi "Peruskorjausvuodet" :en "Renovation years" :se "Renoveringsår"}
+   "status"
+   {:fi "Liikuntapaikan tila" :en "Status" :se "Status"}
+   "decommission-year"
+   {:fi "Poistettu käytöstä vuonna" :en "Decommissioned in" :se "Togs ur bruk år"}
    "renovations"
    {:fi "Toimenpiteet" :en "Renovations" :se "Åtgärder"}
    "phone-number"
