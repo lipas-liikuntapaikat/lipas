@@ -1,5 +1,6 @@
 (ns lipas.backend.handler-test
-  (:require [clojure.test :refer [deftest is testing use-fixtures] :as t]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing use-fixtures] :as t]
             [dk.ative.docjure.spreadsheet :as excel]
             [lipas.backend.core :as core]
             [lipas.backend.db.db :as db]
@@ -1240,19 +1241,20 @@
     ))
 
 (defn- report-request
-  "Build a report request. content-type can be :json or :transit."
-  [path query fields locale content-type]
-  (case content-type
-    :json (-> (mock/request :post path)
-              (mock/content-type "application/json")
-              (mock/body (->json {:search-query query
-                                  :fields       fields
-                                  :locale       locale})))
-    :transit (-> (mock/request :post path)
-                 (mock/content-type "application/transit+json")
-                 (mock/body (->transit {:search-query query
-                                        :fields       fields
-                                        :locale       locale})))))
+  "Build a report request. content-type can be :json or :transit; :fmt is
+  the report format (the endpoint defaults to xlsx)."
+  [path query fields locale content-type & {:keys [fmt]}]
+  (let [body (cond-> {:search-query query
+                      :fields       fields
+                      :locale       locale}
+               fmt (assoc :format fmt))]
+    (case content-type
+      :json (-> (mock/request :post path)
+                (mock/content-type "application/json")
+                (mock/body (->json body)))
+      :transit (-> (mock/request :post path)
+                   (mock/content-type "application/transit+json")
+                   (mock/body (->transit body))))))
 
 (defn- read-report-lipas-ids
   "Parse Excel report body and return set of lipas-id values from first column."
@@ -1415,6 +1417,38 @@
     (is (= 2018 (some-> (by-id 110011) long)) "closed site carries its year")
     (is (contains? by-id 110012))
     (is (nil? (by-id 110012)) "the column stays empty for a site still in use")))
+
+(deftest sports-sites-report-status-test
+  (let [closed (-> (tu/make-point-site 110021 :type-code 1120 :status "out-of-service-permanently")
+                   (assoc :decommission-year 2018))
+        active (tu/make-point-site 110022 :type-code 1120 :status "active")
+        _ (doseq [s [closed active]]
+            (core/index! (test-search) s :sync))
+        report (fn [locale fmt]
+                 (test-app (report-request "/api/actions/create-sports-sites-report"
+                                           ;; _source as the UI sends it
+                                           {:query   {:bool {:must   {:match_all {}}
+                                                             :filter [{:terms {:lipas-id [110021 110022]}}]}}
+                                            :_source {:includes ["*"] :excludes ["location.geometries"]}}
+                                           ["lipas-id" "status"]
+                                           locale :json :fmt fmt)))
+        xlsx-rows (fn [locale]
+                    (let [rows (->> (excel/load-workbook (:body (report locale "xlsx")))
+                                    (excel/select-sheet "lipas")
+                                    (excel/select-columns {:A :lipas-id :B :status}))]
+                      [(:status (first rows))
+                       (into {} (map (juxt (comp long :lipas-id) :status)) (rest rows))]))]
+    (testing "the status is shown by name in the report's language"
+      (is (= ["Liikuntapaikan tila" {110021 "Poistettu käytöstä pysyvästi" 110022 "Toiminnassa"}]
+             (xlsx-rows :fi)))
+      (is (= ["Status" {110021 "Out of service" 110022 "Active"}]
+             (xlsx-rows :en))))
+    (testing "CSV and GeoJSON localize the same way"
+      (is (str/includes? (slurp (:body (report :fi "csv"))) "Poistettu käytöstä pysyvästi"))
+      (is (str/includes? (slurp (:body (report :fi "geojson"))) "Poistettu käytöstä pysyvästi")))
+    (testing "the site API keeps returning the status code"
+      (is (= "out-of-service-permanently"
+             (:status (core/get-sports-site2 (test-search) 110021 :fi)))))))
 
 (deftest finance-report-test
   (let [_ (seed/seed-city-data! (test-db) (test-search))
