@@ -23,6 +23,7 @@
    "marketing-name"
    "name-localized"
    "construction-year"
+   "decommission-year"
    "renovation-years"
    "renovations"
    "owner"

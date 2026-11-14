@@ -118,6 +118,8 @@
    ;; e.g. archiving an already archived site note — conflict with its state
    :invalid-note-status (exception-handler 409 :invalid-note-status)
    :sports-site-not-found (exception-handler 404 :sports-site-not-found)
+   ;; permanent closure saved without its year — core/check-decommission-year
+   :decommission-year-required (exception-handler 400 :decommission-year-required)
 
    :qbits.spandex/response-exception (exception-handler 500 :internal-server-error :print-stack)
 

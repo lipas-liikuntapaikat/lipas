@@ -410,7 +410,9 @@
       (with-fake-ptv
         (fn []
           (let [site (seed-site! own-city integrated-ptv)
-                resp (save! (city-manager own-city) (assoc site :status status))
+                resp (save! (city-manager own-city)
+                            (cond-> (assoc site :status status)
+                              (= "out-of-service-permanently" status) (assoc :decommission-year 2026)))
                 stored (current (:lipas-id site))
                 writes (remove (comp #{:get} second) @ptv-requests)]
             (is (= 201 (:status resp)))
@@ -510,6 +512,7 @@
         (is (= 201 (:status (post "/api/sports-sites"
                                   (assoc site
                                          :status "out-of-service-permanently"
+                                         :decommission-year 2026
                                          :event-date ahead)
                                   (ptv-manager own-city))))))
       (let [stored (current (:lipas-id site))]

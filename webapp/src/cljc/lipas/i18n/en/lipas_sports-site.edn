@@ -8,6 +8,7 @@
  :construction-year "Year of establishment",
  :construction-year-helper-text "Year of establishment refers to the year when sports activities began at this facility.",
  :contact "Contact",
+ :decommission-year "Decommissioned in",
  :creating-planning-site
  "You are adding a site in draft mode for analysis tools.",
  :delete "Delete {1}",

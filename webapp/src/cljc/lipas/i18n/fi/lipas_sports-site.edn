@@ -11,6 +11,7 @@
  :construction-year "Perustamisvuosi",
  :construction-year-helper-text "Perustamisvuodella tarkoitetaan liikuntatoiminnan aloitusvuotta tässä kohteessa.",
  :contact "Yhteystiedot",
+ :decommission-year "Poistettu käytöstä vuonna",
  :contact-helper-text "Yleisesti kohteesta, palveluista tai rakenteista vastaavan organisaation yhteystiedot",
  :creating-planning-site "Olet lisäämässä paikkaa vedos-tilassa analyysityökaluja varten.",
  :delete "Poista {1}",

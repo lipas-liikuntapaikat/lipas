@@ -32,6 +32,7 @@
                                ("LineString") #'common/line-string-feature-collection
                                #'common/point-feature-collection)]
                 [:status common/status]
+                [:decommission-year {:optional true} #'common/decommission-year]
                 [:loi-category {:description "The category of the type of the Location of Interest"}
                  [:enum cat-k]]
                 [:loi-type {:description "The type of the Location of Interest"}

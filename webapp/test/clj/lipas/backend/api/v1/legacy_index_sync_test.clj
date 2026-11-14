@@ -158,7 +158,7 @@
           "Active site should exist in legacy index")
 
       ;; Change status to out-of-service-permanently
-      (let [inactive-site (assoc site :status "out-of-service-permanently")]
+      (let [inactive-site (assoc site :status "out-of-service-permanently" :decommission-year 2026)]
         (save-site! inactive-site)
         (Thread/sleep 200))
 
@@ -232,7 +232,7 @@
         (is (= 200 status)))
 
       ;; Make inactive
-      (let [inactive-site (assoc site :status "out-of-service-permanently")]
+      (let [inactive-site (assoc site :status "out-of-service-permanently" :decommission-year 2026)]
         (save-site! inactive-site)
         (Thread/sleep 200))
 

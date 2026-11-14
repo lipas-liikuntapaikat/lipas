@@ -1,7 +1,9 @@
 (ns lipas.migrations.fix-ptv-archived-stale-revisions-test
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [clojure.java.jdbc :as jdbc]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [lipas.backend.core :as core]
             [lipas.backend.db.db :as db]
+            [lipas.backend.db.sports-site :as sports-site-db]
             [lipas.migrations.fix-ptv-archived-stale-revisions :as sut]
             [lipas.test-utils :as tu]))
 
@@ -40,14 +42,24 @@
 (defn- close-with-fast-browser-clock!
   "Replays prod: the user's browser-dated revision (pre-archive :ptv) is
   saved first, then the sync's server-dated archive revision, which is
-  OLDER, so the backdating rule re-marks the user's revision incorrect-data."
+  OLDER, so the backdating rule of the time (invalidate-since!, since
+  removed) re-marks the user's revision incorrect-data. That rule is replayed
+  here by hand: today's save path rebases instead."
   [user lipas-id archived-at stale-at]
   (db/upsert-sports-site! (test-db) user (site lipas-id "2025-06-01T10:00:00.000Z" "active" published-ptv))
   (db/upsert-sports-site! (test-db) user (site lipas-id stale-at "out-of-service-permanently" published-ptv))
-  (db/upsert-sports-site! (test-db) user (site lipas-id archived-at "out-of-service-permanently"
-                                               (-> published-ptv
-                                                   (assoc :publishing-status "Deleted" :last-sync archived-at)
-                                                   (dissoc :source-id :service-channel-ids)))))
+  (jdbc/execute! (test-db)
+                 ["UPDATE sports_site
+                   SET document = jsonb_set(document, '{status}', '\"incorrect-data\"')
+                   WHERE lipas_id = ? AND event_date > ?::timestamptz"
+                  lipas-id archived-at])
+  (->> (sports-site-db/marshall
+         (site lipas-id archived-at "out-of-service-permanently"
+               (-> published-ptv
+                   (assoc :publishing-status "Deleted" :last-sync archived-at)
+                   (dissoc :source-id :service-channel-ids)))
+         user "published")
+       (sports-site-db/insert-sports-site-rev! (test-db))))
 
 (defn- current [lipas-id] (core/get-sports-site (test-db) lipas-id))
 

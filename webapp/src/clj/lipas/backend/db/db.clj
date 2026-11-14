@@ -141,14 +141,98 @@
 
 ;; Sports Site ;;
 
-(defn- invalidate-revs-since-this!
-  "Invalidate changes made since site hasn't been active."
-  [db-spec {:keys [lipas-id event-date]}]
-  (let [params (-> {:event-date event-date :lipas-id lipas-id}
-                   utils/->snake-case-keywords)]
-    (sports-site/invalidate-since! db-spec params)))
+(def closed-status
+  "Document status of a permanently closed (decommissioned) site or LOI."
+  "out-of-service-permanently")
+
+(defn- ->instant ^java.time.Instant [t]
+  (cond
+    (instance? java.time.Instant t) t
+    (instance? java.util.Date t) (.toInstant ^java.util.Date t)
+    (instance? java.time.OffsetDateTime t) (.toInstant ^java.time.OffsetDateTime t)
+    :else (java.time.Instant/parse (str t))))
+
+(defn event-date->decommission-year
+  "The closure year an `event-date` stands for, when nothing better is known.
+
+  The removal dialog dates a closure in a past year as Dec 31
+  23:59:59.999Z of that year: those count in UTC, where they are still in
+  the chosen year (in Helsinki time they're already the next one). Any
+  other timestamp is a real moment and counts in Finnish time."
+  [event-date]
+  (let [instant (->instant event-date)
+        utc (.atZone instant java.time.ZoneOffset/UTC)
+        year-end-marker? (and (= 12 (.getMonthValue utc))
+                              (= 31 (.getDayOfMonth utc))
+                              (= (java.time.LocalTime/of 23 59 59 999000000)
+                                 (.toLocalTime utc)))]
+    (if year-end-marker?
+      (.getYear utc)
+      (.getYear (.atZone instant (java.time.ZoneId/of "Europe/Helsinki"))))))
+
+(defn- row-event-date
+  "The event-date to give a copy of revision `row`: its event_date column.
+  The document's :event-date is used when it's the same instant (the normal
+  case), keeping its formatting; the UI keys history by that string. Some
+  revisions' documents disagree with their column (seen in prod), and a copy
+  must land on the column's date to outrank the original."
+  [row doc]
+  (let [column (->instant (:event_date row))
+        in-doc (:event-date doc)]
+    (if (and in-doc (= column (try (->instant in-doc) (catch Exception _ nil))))
+      in-doc
+      (str column))))
+
+(defn- closure-copy
+  "Revision `row` carried over to the closed status of `closure`: its
+  document with the closed status and the closure's year, at the row's own
+  event_date. Every other field stays as it was at that date."
+  [row unmarshall closure]
+  (let [doc (unmarshall row)
+        year (:decommission-year closure)]
+    (cond-> (assoc doc
+                   :status closed-status
+                   :event-date (row-event-date row doc))
+      year (assoc :decommission-year year)
+      (not year) (dissoc :decommission-year))))
+
+(defn rebase-onto-closure!
+  "Carries a backdated closure forward over the revisions dated after it.
+
+  Revisions are full snapshots ordered by event_date, so a closure dated
+  into the past (\"closed in 2018\", saved in 2025) is outranked by every
+  revision dated after it, and the site would keep looking active. Instead
+  of rewriting those revisions, append a corrected copy of each: same
+  event_date, newer created_at (so it wins at that date), closed status and
+  :decommission-year, every other field as recorded. Originals stay as they
+  are. Every later revision gets a copy, whatever its status: the closure is
+  the newest decision, and the closer saw what they were overriding.
+
+  One copy per event_date (the revision that wins there): rows inserted in
+  one transaction share created_at, so two copies at the same event_date
+  would tie in sports_site_current.
+
+  Returns the newest copy (the site's current revision now), or nil when
+  nothing is dated after the closure."
+  [tx user closure]
+  (let [params {:lipas_id (:lipas-id closure) :event_date (:event-date closure)}]
+    (->> (sports-site/get-revisions-dated-after tx params)
+         (reduce (fn [_ row]
+                   (-> (closure-copy row sports-site/unmarshall closure)
+                       ;; Written on behalf of whoever the closure was
+                       (assoc :acting-org-id (:acting-org-id closure))
+                       (sports-site/marshall user "published")
+                       (->> (sports-site/insert-sports-site-rev! tx))
+                       (sports-site/unmarshall)))
+                 nil))))
 
 (defn upsert-sports-site!
+  "Inserts `sports-site` as a new revision. A published permanent closure
+  dated before existing revisions is carried forward over them (see
+  `rebase-onto-closure!`).
+
+  Returns the site's current revision after the save: the inserted one, or
+  the newest closure copy when the closure was backdated."
   ([db-spec user sports-site]
    (upsert-sports-site! db-spec user sports-site false))
   ([db-spec user sports-site draft?]
@@ -156,18 +240,13 @@
      (let [status (if draft? "draft" "published")
            lipas-id (or (:lipas-id sports-site)
                         (:nextval (sports-site/next-lipas-id tx)))
-           sports-site (assoc sports-site :lipas-id lipas-id)]
-
-       ;; It's possible to posthumously say "this site was actually
-       ;; abolished in 2017". It's also possible that someone has made
-       ;; changes to site data since 2017 and therefore we have to
-       ;; invalidate those revisions.
-       (when (= "out-of-service-permanently" (:status sports-site))
-         (invalidate-revs-since-this! tx sports-site))
-
-       (->> (sports-site/marshall sports-site user status)
-            (sports-site/insert-sports-site-rev! tx)
-            (sports-site/unmarshall))))))
+           sports-site (assoc sports-site :lipas-id lipas-id)
+           inserted (->> (sports-site/marshall sports-site user status)
+                         (sports-site/insert-sports-site-rev! tx)
+                         (sports-site/unmarshall))]
+       (or (when (and (not draft?) (= closed-status (:status sports-site)))
+             (rebase-onto-closure! tx user sports-site))
+           inserted)))))
 
 (defn upsert-sports-sites! [db-spec user sports-sites]
   (jdbc/with-db-transaction [tx db-spec]
@@ -340,12 +419,31 @@
   (->> (loi/get-latest-by-ids db {:ids (map utils/->uuid ids)})
        (map loi/unmarshall)))
 
+(defn- rebase-loi-onto-closure!
+  "LOI twin of `rebase-onto-closure!`: appends a closed copy of each LOI
+  revision dated after the backdated `closure`, one per event_date."
+  [tx user closure]
+  (doseq [row (loi/get-loi-revisions-dated-after
+                tx {:id (:id closure) :event_date (:event-date closure)})]
+    (-> (closure-copy row loi/unmarshall closure)
+        (assoc :author-id (:id user))
+        (loi/marshall user)
+        (->> (loi/insert-loi-rev! tx)))))
+
 (defn upsert-loi!
+  "Inserts `loi` as a new revision and returns the inserted row. A backdated
+  permanent closure is carried forward over later revisions like a site's
+  (`rebase-onto-closure!`), so the current revision may then be a copy:
+  read it back from loi_current rather than using `loi`."
   [db user loi]
-  (-> loi
-      (assoc :author-id (:id user))
-      (loi/marshall user)
-      (->> (loi/insert-loi-rev! db))))
+  (jdbc/with-db-transaction [tx db]
+    (let [inserted (-> loi
+                       (assoc :author-id (:id user))
+                       (loi/marshall user)
+                       (->> (loi/insert-loi-rev! tx)))]
+      (when (= closed-status (:status loi))
+        (rebase-loi-onto-closure! tx user loi))
+      inserted)))
 
 ;; Versioned Data ;;
 
