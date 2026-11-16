@@ -79,8 +79,10 @@
   "Shows PTV items as links with an edit button to switch to selector mode.
    When an item has no :url, renders as plain text instead of a link.
    Set :can-edit? false to hide the edit affordance (e.g. single-org case).
-   Props: :label, :items [{:id :name :url}], :editing?, :on-edit, :on-cancel,
-          :selector-component, :tooltip, :tr, :can-edit? (default true)"
+   An item's :caption is shown under it in small print.
+   Props: :label, :items [{:id :name :url :caption}], :editing?, :on-edit,
+          :on-cancel, :selector-component, :tooltip, :tr, :can-edit? (default
+          true)"
   [{:keys [label items editing? on-edit on-cancel selector-component tooltip tr can-edit?]
     :or {can-edit? true}}]
   (if (and (seq items) (not editing?))
@@ -92,10 +94,14 @@
          [:> IconButton {:size "small" :on-click on-edit
                          :sx #js {:p 0}}
           [:> Icon {:sx #js {:fontSize "1rem"}} "edit"]]])]
-     (for [{:keys [id name url]} items]
-       (if url
-         ^{:key id} [:> Link {:href url :target "_blank" :variant "body2"} (or name id)]
-         ^{:key id} [:> Typography {:variant "body2"} (or name id)]))]
+     (for [{:keys [id name url caption]} items]
+       ^{:key id}
+       [:div
+        (if url
+          [:> Link {:href url :target "_blank" :variant "body2"} (or name id)]
+          [:> Typography {:variant "body2"} (or name id)])
+        (when caption
+          [:> Typography {:variant "caption" :color "text.secondary" :component "div"} caption])])]
     [:> Stack {:spacing 0.5}
      selector-component
      (when (and editing? (seq items))
@@ -442,27 +448,3 @@
                 :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
                 :helperText (controls/text-length-hint tr v ptv-data/max-user-instruction-length)
                 :error (controls/text-length-error? v ptv-data/max-user-instruction-length)}])]])]])))
-
-(defn add-service-panel
-  "Entry point for adding a PTV service: \"Create new\" switches to the
-   creation form. (A service already in PTV isn't added here: sites link to
-   it as is, and its panel offers to capture it.)
-   Props:
-   - :org-id (required)
-   - :locked-sub-category-id (optional) — passed to add-service-create-form
-   - :lipas-id (optional) — passed to the form for auto-attach"
-  [{:keys [org-id locked-sub-category-id lipas-id]}]
-  (r/with-let [mode (r/atom nil)]
-    (let [tr @(rf/subscribe [:lipas.ui.subs/translator])]
-      [:> Stack {:spacing 2 :sx #js {:p 2}}
-       (case @mode
-         :create [add-service-create-form {:org-id org-id
-                                           :locked-sub-category-id locked-sub-category-id
-                                           :lipas-id lipas-id
-                                           :on-cancel #(reset! mode nil)}]
-         [:> Stack {:direction "row" :spacing 1}
-          [:> Button
-           {:variant "outlined" :size "small" :sx #js {:textTransform "none"}
-            :startIcon (r/as-element [:> Icon "add"])
-            :on-click #(reset! mode :create)}
-           (tr :ptv.service/create-new)]])])))

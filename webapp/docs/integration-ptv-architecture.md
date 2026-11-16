@@ -209,7 +209,10 @@ LIPAS has no field for, which are re-sent as PTV has them.
    (`/actions/fetch-ptv-service-bases`).
 3. `sync-review` (cljc) compares each site three ways, the saved site, the
    channel and the base, and returns one row per difference with who changed
-   it (see "Sync review model").
+   it (see "Sync review model"). `with-edit-rows` adds the edit's own
+   changes where the saved site agrees with PTV, as Lipas's (no choice), and
+   `sync-removals` lists what a sync of the edit removes from PTV, which
+   "Synkronoi nyt" asks about first.
 
 PTV-side edits are read for the review. **They reach the LIPAS DB only when a
 user takes them**, as an edit of the site. This is what differentiates the

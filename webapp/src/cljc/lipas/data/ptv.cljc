@@ -907,11 +907,12 @@
   (->ptv-service-location nil (constantly [123 456]) nil uta-jh-with-ptv-meta))
 
 (defn parse-service-source-id [source-id]
-  ;; No source-id for example for non-Lipas services
+  ;; No source-id for example for non-Lipas services, and none of Lipas's
+  ;; for one another system maintains (parse-long throws on nil)
   (when source-id
-    (-> (re-find #"lipas-.*-(\d*)" source-id)
-        second
-        parse-long)))
+    (some-> (re-find #"lipas-.*-(\d*)" source-id)
+            second
+            parse-long)))
 
 (comment
   (parse-service-source-id "lipas-7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5-6100"))

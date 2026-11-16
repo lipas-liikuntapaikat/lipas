@@ -478,6 +478,10 @@
                        :sourceId (:sourceId stale-put-resp)
                        :services [{:service {:id old-service-id}}]}
                       fresh-get-resp))
+                  ptv-integ/get-service
+                  (fn [_ _ id]
+                    (record! :get-service)
+                    {:id id})
                   ptv-integ/update-service-location
                   (fn [_ _ _]
                     (record! :put)
@@ -494,8 +498,8 @@
                  (map (comp :id :service) (:services ptv-resp)))
               "ptv-resp must be the fresh GET response, not the stale PUT response"))
 
-        (testing "Call order: pre-PUT GET → PUT → update-connections → refetch GET"
-          (is (= [:get-channel :put :update-connections :update-connections :get-channel]
+        (testing "Call order: pre-PUT GETs (the service to connect too) → PUT → update-connections → refetch GET"
+          (is (= [:get-channel :get-service :put :update-connections :update-connections :get-channel]
                  @calls)
               "GET must happen AFTER update-service-connections so its :services is canonical"))
 
@@ -544,6 +548,7 @@
                       {:sourceId (:sourceId stale-put-resp)
                        :services [{:service {:id "service-old"}}]}
                       (throw (ex-info "PTV down" {:status 503}))))
+                  ptv-integ/get-service (fn [_ _ id] {:id id})
                   ptv-integ/update-service-location
                   (fn [_ _ _] stale-put-resp)
                   ptv-integ/update-service-connections
@@ -587,6 +592,7 @@
                                 ptv-integ/get-org-ptv-config-with-fallback
                                 (fn [_ _] {:supported-languages ["fi"]})
                                 ptv-integ/get-org-service-channel (fn [_ _ _] channel)
+                                ptv-integ/get-service (fn [_ _ id] {:id id})
                                 ptv-integ/update-service-location
                                 (fn [_ id data] (assoc data :id id))
                                 ptv-integ/update-service-connections

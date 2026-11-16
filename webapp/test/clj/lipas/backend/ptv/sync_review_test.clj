@@ -11,6 +11,7 @@
             [lipas.backend.org :as backend-org]
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.backend.ptv.integration :as ptv-integration]
+            [lipas.data.ptv-review :as ptv-review]
             [lipas.test-utils :as tu]
             [lipas.utils :as utils]
             [ring.mock.request :as mock]))
@@ -274,15 +275,31 @@
       (sync! admin :archive? true :site-patch {:name "Arkistoinnin nimi"})
       (is (= "PTV:n nimi" (:name (core/get-sports-site (test-db) lipas-id)))))))
 
+(def ^:private not-found
+  (ex-info "HTTP Error: 404" {:resp {:status 404 :body "{\"errorMessage\":\"Service not found.\"}"}}))
+
 (defn- stub-ptv
   "PTV for an upsert: the location's GET (before and after the write) is
-   `channel`; the write and connection changes are recorded in `calls`."
-  [calls channel & {:keys [services]}]
+   `channel`; the reads of services, the write and connection changes are
+   recorded in `calls`. PTV answers 404 for the services in `gone` (archived,
+   listed in `archived`, the org's archived list), and to a connection of one
+   in `gone-later` (archived while the location was written)."
+  [calls channel & {:keys [services gone gone-later archived]}]
   {#'ptv-integration/get-org-service-channel (fn [_ _ id] (assoc channel :id id))
+   #'ptv-integration/get-service (fn [_ _ id]
+                                   (swap! calls conj [:get-service id])
+                                   (if (contains? (set gone) id)
+                                     (throw not-found)
+                                     {:id id}))
+   #'ptv-integration/get-org-archived-services (fn [_ _]
+                                                 (swap! calls conj [:archived-list])
+                                                 (vec archived))
    #'ptv-integration/update-service-location (fn [_ id data]
                                                (swap! calls conj [:put data])
                                                {:id id :sourceId "lipas-source" :publishingStatus "Published"})
    #'ptv-integration/update-service-connections (fn [_ _ service-id f]
+                                                  (when (contains? (set gone-later) service-id)
+                                                    (throw not-found))
                                                   (swap! calls conj [:connect service-id (f #{})]))
    #'ptv-integration/get-org-services (fn [_ _] {:itemList services})
    #'ptv-integration/get-org-ptv-config-with-fallback (fn [_ _] {:supported-languages ["fi"]})})
@@ -439,6 +456,169 @@
                (get bases (keyword service-id))))))
     (testing "nobody else"
       (is (= 403 (:status (post* "/api/actions/fetch-ptv-service-bases" {:org-id ptv-org-id}
+                                 (jwt/create-token (user-with-role "ptv-manager" other-city)))))))))
+
+;;; A service archived in PTV ;;;
+;; PTV drops a location's connections to a service it archives, and every
+;; GET of the service answers 404 from then on. A sync used to fail on it
+;; after writing the location (connecting it read the service), and every
+;; retry again. Now the sync reads the services it connects first and drops
+;; the connections to those PTV no longer has from Lipas.
+
+(def ^:private archived-x
+  {:id "svc-x"
+   :archivingDate "2026-05-16T09:12:00.123456"
+   :serviceNames [{:type "Name" :language "fi" :value "Arkistointikoe"}]})
+
+(defn- synced-with-x!
+  "A site synced with svc-a and svc-x; its location as PTV has it after
+   svc-x was archived: connected to svc-a only, otherwise what the sync
+   sent."
+  [admin]
+  (let [ch-id (str (random-uuid))
+        lipas-id (:lipas-id (save! admin (-> (site nil "2026-02-01T10:00:00.000Z" "Synkattu" "2026-02-01T10:00:00.000Z")
+                                             (assoc-in [:ptv :service-ids] ["svc-a" "svc-x"])
+                                             (assoc-in [:ptv :service-channel-ids] [ch-id]))))
+        saved (core/get-sports-site (test-db) lipas-id)]
+    {:lipas-id lipas-id
+     :ptv {:service-ids ["svc-a" "svc-x"] :service-channel-ids [ch-id]}
+     :channel (-> (ptv-review/site->location saved ["fi"])
+                  (assoc :id ch-id
+                         :sourceId "lipas-source"
+                         :services [{:service {:id "svc-a"}}]))}))
+
+(deftest sync-drops-archived-service-test
+  (let [_org (seed-org!)
+        admin (tu/gen-admin-user :db-component (test-db))]
+    (testing "a sync after a review: the location is written, the connection dropped"
+      (let [{:keys [lipas-id channel ptv]} (synced-with-x! admin)
+            calls (atom [])
+            resp (with-redefs-fn (stub-ptv calls channel :gone ["svc-x"] :archived [archived-x])
+                   #(tool-sync! admin lipas-id ptv channel))
+            put-at (.indexOf (mapv first @calls) :put)]
+        (is (= ["svc-a"] (-> resp :ptv :service-ids)))
+        (is (= ["svc-a"] (get-in (core/get-sports-site (test-db) lipas-id) [:ptv :service-ids])))
+        (is (some? (get-in (core/get-sports-site (test-db) lipas-id) [:ptv :last-sync])))
+        (is (= [{:id "svc-x" :name "Arkistointikoe" :gone :archived
+                 :archived-at "2026-05-16T09:12:00.123456"}]
+               (:dropped-services resp))
+            "what the user is told")
+        (is (< (.indexOf @calls [:get-service "svc-x"]) put-at) "read before the location is written")
+        (is (= 1 (count (filter #{[:archived-list]} @calls))) "one listing names it")
+        (is (not-any? #(= [:connect "svc-x"] (take 2 %)) @calls))
+        (is (= ["svc-a"] (-> (some (fn [[k data]] (when (= :put k) data)) @calls) :services))
+            "nor sent with the location")))
+
+    (testing "a save without a review (the site form, a quick edit): nothing to decide"
+      (let [{:keys [lipas-id channel]} (synced-with-x! admin)
+            calls (atom [])
+            resp (with-redefs-fn (stub-ptv calls channel :gone ["svc-x"] :archived [archived-x])
+                   #(ptv-core/upsert-ptv-service-location!
+                      (test-db) (:lipas/ptv @test-system) (:lipas/search @test-system) admin
+                      {:lipas-id lipas-id
+                       :org-id ptv-org-id
+                       :ptv (:ptv (core/get-sports-site (test-db) lipas-id))}))]
+        (is (= ["svc-a"] (-> resp :ptv :service-ids)))
+        (is (= ["svc-x"] (map :id (:dropped-services resp))))))
+
+    (testing "one PTV doesn't have at all is dropped too, as unknown"
+      (let [{:keys [lipas-id channel ptv]} (synced-with-x! admin)
+            resp (with-redefs-fn (stub-ptv (atom []) channel :gone ["svc-x"] :archived [])
+                   #(tool-sync! admin lipas-id ptv channel))]
+        (is (= ["svc-a"] (-> resp :ptv :service-ids)))
+        (is (= [{:id "svc-x" :name nil :gone :unknown :archived-at nil}]
+               (:dropped-services resp)))))
+
+    (testing "PTV not answering for one: refused before anything is written"
+      (let [{:keys [lipas-id channel ptv]} (synced-with-x! admin)
+            calls (atom [])
+            before (core/get-sports-site (test-db) lipas-id)
+            e (try (with-redefs-fn (merge (stub-ptv calls channel)
+                                          {#'ptv-integration/get-service
+                                           (fn [_ _ _] (throw (ex-info "HTTP Error: 503" {:resp {:status 503}})))})
+                     #(tool-sync! admin lipas-id ptv channel))
+                   nil
+                   (catch clojure.lang.ExceptionInfo e e))]
+        (is (some? e))
+        (is (not-any? #(= :put (first %)) @calls))
+        (is (= before (core/get-sports-site (test-db) lipas-id)))))
+
+    (testing "archived while the location was written: its connection fails with 404, and is dropped"
+      (let [{:keys [lipas-id channel ptv]} (synced-with-x! admin)
+            calls (atom [])
+            resp (with-redefs-fn (stub-ptv calls channel :gone-later ["svc-x"] :archived [archived-x])
+                   #(tool-sync! admin lipas-id ptv channel))]
+        (is (= ["svc-a"] (-> resp :ptv :service-ids)))
+        (is (= ["svc-x"] (map :id (:dropped-services resp))))
+        (is (= "Arkistointikoe" (:name (first (:dropped-services resp)))))))))
+
+(deftest site-review-reports-archived-service-test
+  (let [_org (seed-org!)
+        admin (tu/gen-admin-user :db-component (test-db))
+        lipas-id (:lipas-id (save! admin (site nil "2026-02-01T10:00:00.000Z" "Synkattu" "2026-02-01T10:00:00.000Z")))]
+    (with-ptv-stub
+      (fn []
+        (testing "a service only Lipas connects, which PTV answers 404 for, is marked archived"
+          (with-redefs [ptv-integration/get-service (fn [_ _ _] (throw not-found))
+                        ptv-integration/get-org-archived-services
+                        (fn [_ _] [(assoc archived-x :id "svc-a")])]
+            (is (= {:gone :archived
+                    :archivingDate "2026-05-16T09:12:00.123456"
+                    :serviceNames [{:type "Name" :language "fi" :value "Arkistointikoe"}]}
+                   (get-in (ptv-core/get-ptv-site-review (test-db) nil lipas-id) [:services "svc-a"])))))
+
+        (testing "not in the archived list either: unknown"
+          (with-redefs [ptv-integration/get-service (fn [_ _ _] (throw not-found))
+                        ptv-integration/get-org-archived-services (fn [_ _] [])]
+            (is (= {:gone :unknown}
+                   (get-in (ptv-core/get-ptv-site-review (test-db) nil lipas-id) [:services "svc-a"])))))
+
+        (testing "PTV having it: just its name, and no listing"
+          (with-redefs [ptv-integration/get-org-archived-services
+                        (fn [_ _] (throw (ex-info "must not be called" {})))]
+            (is (= {:serviceNames [{:type "Name" :language "fi" :value "Jäähallit"}]}
+                   (get-in (ptv-core/get-ptv-site-review (test-db) nil lipas-id) [:services "svc-a"])))))))))
+
+(deftest unlisted-services-test
+  (let [org (seed-org!)
+        admin (tu/gen-admin-user :db-component (test-db))
+        mirrored (str (random-uuid))
+        listings (atom 0)
+        reads (atom [])]
+    ;; a LIPAS-made service PTV doesn't have any more, which Lipas's mirror names
+    (ptv-service-db/insert-service-rev!
+      (test-db)
+      {:org-id (:id org) :source-id (str "lipas-" ptv-org-id "-3100") :service-id mirrored
+       :status "active" :author-id (:id admin) :event-date "2026-10-01T10:00:00.000Z"
+       :document {:source-id (str "lipas-" ptv-org-id "-3100") :name {:fi "Uimahallit"}
+                  :summary {:fi "T"} :description {:fi "K"} :languages ["fi"]}})
+    (with-redefs [ptv-integration/get-org-archived-services (fn [_ _] (swap! listings inc) [archived-x])
+                  ptv-integration/get-service (fn [_ _ id]
+                                                (swap! reads conj id)
+                                                (if (= "svc-other" id)
+                                                  {:id id :serviceNames [{:type "Name" :language "fi" :value "Naapurin palvelu"}]}
+                                                  (throw not-found)))]
+      (let [resp (post* "/api/actions/fetch-ptv-unlisted-services"
+                        {:org-id ptv-org-id :service-ids ["svc-x" "svc-other" "svc-gone" mirrored]}
+                        (jwt/create-token (user-with-role "ptv-manager" own-city)))
+            body (tu/<-json (:body resp))]
+        (is (= 200 (:status resp)))
+        (testing "archived: from the org's archived list, one listing"
+          (is (= "archived" (get-in body [:svc-x :gone])))
+          (is (= "2026-05-16T09:12:00.123456" (get-in body [:svc-x :archivingDate])))
+          (is (= 1 @listings)))
+        (testing "of another organisation: named as PTV has it, not gone"
+          (is (= {:serviceNames [{:type "Name" :language "fi" :value "Naapurin palvelu"}]}
+                 (:svc-other body))))
+        (testing "not in PTV at all: unknown, named by the mirror when it can"
+          (is (= {:gone "unknown"} (:svc-gone body)))
+          (is (= "unknown" (get-in body [(keyword mirrored) :gone])))
+          (is (= "Uimahallit" (get-in body [(keyword mirrored) :serviceNames 0 :value]))))
+        (testing "only those the archived list doesn't have are read"
+          (is (= #{"svc-other" "svc-gone" mirrored} (set @reads))))))
+    (testing "nobody without PTV rights"
+      (is (= 403 (:status (post* "/api/actions/fetch-ptv-unlisted-services"
+                                 {:org-id ptv-org-id :service-ids ["svc-x"]}
                                  (jwt/create-token (user-with-role "ptv-manager" other-city)))))))))
 
 (comment

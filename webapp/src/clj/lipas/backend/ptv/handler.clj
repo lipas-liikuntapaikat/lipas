@@ -174,7 +174,8 @@
   [e]
   (let [{:keys [type] :as data} (ex-data e)]
     (case type
-      (:source-id-in-use :changed-in-ptv :incomplete-language-versions :texts-too-short)
+      (:source-id-in-use :changed-in-ptv :incomplete-language-versions :texts-too-short
+                         :not-written)
       {:status 409
        :body (select-keys data [:type :problems :modified])}
       nil)))
@@ -612,6 +613,28 @@
                    :body ptv-err})
                 (throw e))))))}}]
 
+   ["/actions/take-ptv-service-version"
+    ;; A service whose every change made in PTV the user took as it is:
+    ;; nothing to write, PTV's version is recorded as Lipas's
+    ;; (ptv-core/take-ptv-service-version!)
+    {:post
+     {:require-privilege (ptv-org-write-access? db)
+      :parameters {:body [:map {:closed true}
+                          [:org-id :string]
+                          [:service-id :string]
+                          [:expected-modified {:optional true} [:maybe :string]]]}
+      :handler
+      (fn [req]
+        (try
+          {:status 200
+           :body (ptv-core/take-ptv-service-version! db ptv (:identity req) (-> req :parameters :body))}
+          (catch clojure.lang.ExceptionInfo e
+            (if-let [resp (service-error-response e)]
+              resp
+              (if-let [ptv-err (ptv-core/parse-ptv-error e)]
+                {:status 409 :body ptv-err}
+                (throw e))))))}}]
+
    ["/actions/fetch-ptv-services"
     {:post
      {:require-privilege (ptv-org-read-access? db)
@@ -621,6 +644,21 @@
       (fn [req]
         {:status 200
          :body (ptv-core/fetch-ptv-services ptv (-> req :parameters :body :org-id))})}}]
+
+   ["/actions/fetch-ptv-unlisted-services"
+    ;; Names for the services the org's sites connect that the org's
+    ;; published services and its locations' connections don't have, those
+    ;; PTV no longer has marked (ptv-core/get-unlisted-services)
+    {:post
+     {:require-privilege (ptv-org-read-access? db)
+      :parameters {:body [:map
+                          [:org-id :string]
+                          [:service-ids [:vector {:max 500} :string]]]}
+      :handler
+      (fn [req]
+        (let [{:keys [org-id service-ids]} (-> req :parameters :body)]
+          {:status 200
+           :body (ptv-core/get-unlisted-services db ptv org-id service-ids)}))}}]
 
    ["/actions/fetch-ptv-service-channels"
     {:post

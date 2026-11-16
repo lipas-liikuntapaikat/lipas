@@ -5,7 +5,6 @@
  :loading-from-ptv "Haetaan tietoja PTV:stä...",
  :service "Palvelu",
  :service-channel "Palvelupaikka",
- :service-channels "Palveluun liitetyt asiointikanavat PTV:ssa",
  :services "Palvelut",
  :sports-sites "Liikuntapaikat",
  :sports-sites-count "liikuntapaikkaa",
@@ -75,17 +74,33 @@
  :finish-title "Viimeistele PTV-tiedot"
  :step-org "Organisaatio"
  :step-service "Palvelu"
- :step-service-none "Ei vielä valittu. Valitse tai luo palvelu alta."
+ :step-service-none "Ei vielä valittu. Valitse palvelu alta."
+ :step-service-missing "{1} kuuluu tyyppiluokkaan {2}, jolle ei vielä ole palvelua PTV:ssä. Palvelu luodaan PTV-työkalun {3}-välilehdellä."
  :step-texts "Tiivistelmä ja kuvaus suomeksi"
- :step-texts-hint "Kirjoita ne alle tai luo ne tekoälyllä."
+ :step-texts-hint "Kirjoita tiivistelmä ja kuvaus tai tee luonnokset tekoälyllä."
+ :step-texts-other-langs "Organisaatiollasi on käytössä myös kieliversiot {1}. Ne ovat valinnaisia, mutta muista täyttää nekin, jos haluat liikuntapaikan tiedot PTV:hen myös näillä kielillä."
+ :step-texts-other-lang "Organisaatiollasi on käytössä myös kieliversio {1}. Se on valinnainen, mutta muista täyttää sekin, jos haluat liikuntapaikan tiedot PTV:hen myös tällä kielellä."
  :finish-footer "Liikuntapaikka viedään PTV:hen, kun tallennat."
  :save-needs-texts "Täydennä PTV-välilehdeltä tiivistelmä ja kuvaus, tai kytke PTV-integraatio pois."
+ ;; Save waits while the site form fetches the PTV review; if it fails
+ :save-waits-for-review "Haetaan PTV:n tietoja… Voit tallentaa, kun ne on haettu."
+ :review-fetch-failed "PTV:n tietoja ei saatu haettua. Voit tallentaa, mutta jos PTV:ssä on muutoksia, joita ei ole käyty läpi, liikuntapaikkaa ei synkronoida."
  :blocker-texts-too-short "Tiivistelmässä ja kuvauksessa pitää olla vähintään 5 merkkiä jokaisella kielellä."
  :text-min-length "vähintään {1} merkkiä"
  :sync-failed-body-ptv-message "PTV hylkäsi tiedot: {1}"
  :filter-awaiting-choice "Ristiriita"
  :filter-ready "Valmis synkronoitavaksi"
  :filter-blocked "Estetty"
+ ;; What each filter of the Liikuntapaikat tab lists (its chip's tooltip)
+ :filter-all-tooltip "Kaikki liikuntapaikat suodattamatta."
+ :filter-sync-enabled-tooltip "Liikuntapaikat, joiden PTV-integraatio on päällä: ne viedään PTV:hen ja pidetään siellä ajan tasalla."
+ :filter-not-synced-tooltip "Integraatio on päällä, mutta liikuntapaikkaa ei ole vielä viety PTV:hen: sen palvelupaikka luodaan ensimmäisessä synkronoinnissa."
+ :filter-awaiting-choice-tooltip "Liikuntapaikka on PTV:ssä, mutta Lipaksen ja PTV:n tiedot ovat ristiriidassa: avaa rivi ja valitse, mitkä tiedot jäävät voimaan, niin sen voi synkronoida."
+ :filter-ready-tooltip "Liikuntapaikka on jo PTV:ssä, ja Lipaksessa on muutoksia, jotka seuraava synkronointi vie sinne."
+ :filter-blocked-tooltip "Synkronointi ei mene läpi ennen kuin asia korjataan: PTV:ssä on julkaisematon luonnos, joka pitää julkaista tai perua PTV:ssä, tai edellinen synkronointi epäonnistui."
+ :filter-ok-tooltip "Liikuntapaikan tiedot ovat PTV:ssä samat kuin Lipaksessa."
+ :filter-missing-descriptions-tooltip "Liikuntapaikalta puuttuu suomenkielinen tiivistelmä tai kuvaus, jota ilman sitä ei voi viedä PTV:hen – integraatio voi olla päällä tai pois."
+ :filter-sync-disabled-tooltip "Liikuntapaikat, joiden PTV-integraatio on pois päältä: niitä ei viedä PTV:hen, vaikka kuvaukset olisivat valmiina."
  :status-awaiting-choice "Lipaksen ja PTV:n tiedot ovat ristiriidassa: valitse ennen synkronointia, mitkä jäävät voimaan"
  :status-ready "Lipaksessa on muutoksia, jotka synkronointi vie PTV:hen"
  :status-blocked "Synkronointi ei mene läpi: PTV:ssä on julkaisematon luonnos tai edellinen synkronointi epäonnistui"

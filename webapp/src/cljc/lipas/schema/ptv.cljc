@@ -63,6 +63,10 @@
      [:languages {:optional true} [:vector :string]]
      [:publishing-status {:optional true} [:maybe :string]]
      [:sub-category-id {:optional true} [:maybe :int]]
+     ;; PTV's :modified of the service as mirrored
+     [:ptv-modified {:optional true} [:maybe :string]]
+     ;; mirrored from a read of PTV, not from a write by Lipas
+     [:read-from-ptv {:optional true} :boolean]
      [:audit {:optional true} #'ss-ptv/ptv-audit]]))
 
 (def adoption-status-counts

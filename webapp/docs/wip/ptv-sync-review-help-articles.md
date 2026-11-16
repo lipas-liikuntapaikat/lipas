@@ -45,15 +45,19 @@ PTV-välilehdellä.
 - Lipaksessa voi olla vain yksi puhelinnumero, sähköpostiosoite,
   verkkosivu, varauslinkki ja käyntiosoite. Jos PTV:ssä on useampia, valitse
   niistä yksi; muut poistuvat PTV:stä.
-- *Pidä liitos* / *Poista liitos* liitetyille palveluille.
+- Liitetyt palvelut valitaan kokonaisuutena kuten muutkin tiedot: Lipaksen
+  tai PTV:n liitetyt palvelut. Kortit korostavat palvelut, jotka on liitetty
+  vain toisessa. Kun liikuntapaikka liitetään ensimmäistä kertaa PTV:ssä
+  tehtyyn palvelupaikkaan, sen PTV:ssä liitetyt palvelut säilyvät ja
+  kopioidaan Lipakseen, eikä niistä tarvitse valita.
 - Tekstiä tai arvoa voi myös muokata lomakkeessa. Kun sitä on muutettu myös
   PTV:ssä, vahvista oma versiosi painikkeella *Vie muokattu versio PTV:hen*.
   Jos PTV:n tieto muuttuu vielä tämän jälkeen, Lipas kysyy uudelleen.
 
 Valinnat tulevat voimaan, kun synkronoit (tai liikuntapaikan lomakkeella
 tallennat). Jos yrität synkronoida ennen kuin olet valinnut, Lipas kysyy
-ensin. *Käy muutokset läpi* vie valintoihin; *Korvaa PTV:n muutokset*
-synkronoi Lipaksen tiedoilla.
+ensin. *Käy muutokset läpi* vie valintoihin; *Synkronoi ja korvaa* (lomakkeella
+*Tallenna ja korvaa*) synkronoi Lipaksen tiedoilla.
 
 **Tiedot, joista ei valita**
 
