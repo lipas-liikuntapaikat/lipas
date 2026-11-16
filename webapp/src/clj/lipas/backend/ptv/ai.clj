@@ -474,30 +474,37 @@ Source data:
                            :max-tokens 32768)]
     (gemini-complete config ptv-system-instruction-v5 prompt)))
 
+;; Translation is its own job, not generation: the user wrote the source
+;; text and the translation must say exactly that in the other languages.
+;; Under the generation instruction (ptv-system-instruction-v5) the model
+;; edited instead: a summary sentence the description didn't back was
+;; dropped as "information absent from the description", so a changed
+;; Finnish text came back as the old translation.
+
+(def translate-system-instruction
+  "You translate texts for the Finnish Service Information Repository (Palvelutietovaranto / PTV) between Finnish, Swedish and English.
+
+Translate faithfully. Every sentence and every fact of the source text must appear in the translation; add nothing, leave nothing out, do not reorder, correct, complete or improve the content, even when it looks odd or incomplete. The source text is the author's decision.
+
+Write natural, administrative language in the target language, not a word-for-word rendering. Keep the paragraph structure and paragraph breaks of the source.")
+
+(def ^:private language-names
+  ;; LIPAS's codes; never ask a model for "se", which is Northern Sámi.
+  {"fi" "Finnish" "se" "Swedish" "sv" "Swedish" "en" "English"})
+
+(defn- language-name [code]
+  (get language-names code code))
+
 (def translate-to-other-langs-prompt
-  "Translate the following Service Information Repository descriptions from %s to %s:
+  "Translate the texts below from %s to %s.
 
-1) Administrative summary (maximum 150 characters)
-2) Service description (2-3 paragraphs)
-3) User instruction (toimintaohje) - how to access the service (max 5000 characters)
+Character limits, which the translations must not exceed:
+- summary: %d characters
+- description: %d characters
+- user-instruction: %d characters
+If a faithful translation would not fit, choose more concise wording, but keep every fact.
 
-Requirements:
-- Maintain administrative tone in target languages
-- Keep the same information hierarchy
-- Preserve factual content without adding promotional elements
-- Use appropriate administrative language for each target language
-- Keep the same paragraph structure
-- Maintain character limits for summary
-
-Prohibited in all languages:
-- Welcome phrases and greetings
-- Marketing words (great, excellent, wonderful, etc.)
-- Exclamation marks
-- Opinion statements
-- Inviting phrases
-- Street addresses
-- Emotional language
-- Enjoyment references
+Return each text under its field, with the source language text unchanged.
 
 Source text:
 %s
@@ -506,10 +513,13 @@ Source text:
 (defn translate-to-other-langs
   [{:keys [from to summary description user-instruction]}]
   (gemini-complete llm/gemini-config
-                   ptv-system-instruction-v5
+                   translate-system-instruction
                    (format translate-to-other-langs-prompt
-                           from
-                           (str/join ", " to)
+                           (language-name from)
+                           (str/join ", " (map language-name (sort to)))
+                           ptv-data/max-summary-length
+                           ptv-data/max-description-length
+                           ptv-data/max-user-instruction-length
                            (json/encode (cond-> {:summary summary
                                                  :description description}
                                           user-instruction (assoc :user-instruction user-instruction))))))
@@ -747,16 +757,33 @@ Rewrite each summary to AT MOST %d characters:
 Items:
 %s")
 
+(def shorten-summaries-wording-prompt
+  "Each summary below is a translation that is too long for the Service Information Repository (Palvelutietovaranto), which has a hard limit of %d characters.
+
+Rewrite each summary to AT MOST %d characters by choosing more concise wording:
+- Keep the SAME language as the original.
+- Keep every fact: leave nothing out and add nothing.
+- Keep it a complete sentence (not a list).
+- Return every item with its key unchanged.
+
+Items:
+%s")
+
 (defn shorten-summaries
   "Asks the model to shorten `items` ({:key str :summary str}). Returns
-   {key shortened-summary}."
-  [items]
+   {key shortened-summary}. `mode` :condense (the default) may drop
+   secondary details; :wording may only tighten the wording, for
+   translations, which must keep every fact of the source."
+  [items & {:keys [mode] :or {mode :condense}}]
   (let [config (assoc llm/gemini-config
                       :response-schema ShortenSummariesGeminiResponse
-                      :fallback-message-format shorten-summaries-openai-format)]
+                      :fallback-message-format shorten-summaries-openai-format)
+        [instruction prompt] (case mode
+                               :condense [ptv-system-instruction-v5 shorten-summaries-prompt]
+                               :wording [translate-system-instruction shorten-summaries-wording-prompt])]
     (->> (gemini-complete config
-                          ptv-system-instruction-v5
-                          (format shorten-summaries-prompt
+                          instruction
+                          (format prompt
                                   ptv-data/max-summary-length
                                   shorten-target-length
                                   (json/encode items)))
@@ -774,9 +801,10 @@ Items:
    `results` as a vector. A rewrite is only taken if it is shorter than
    the original; summaries still over the limit are left for the UI to
    flag. Languages in `skip-langs` (user-authored source text, e.g. the
-   from-language of a translation) are never touched. A failing follow-up
-   call is logged and the originals are returned."
-  [results & {:keys [skip-langs]}]
+   from-language of a translation) are never touched. `mode` is
+   shorten-summaries'. A failing follow-up call is logged and the
+   originals are returned."
+  [results & {:keys [skip-langs mode] :or {mode :condense}}]
   (let [results (vec results)
         items (for [[i result] (map-indexed vector results)
                     [lang summary] (:summary result)
@@ -786,7 +814,8 @@ Items:
     (if (empty? items)
       results
       (let [shortened (try
-                        (shorten-summaries (map #(select-keys % [:key :summary]) items))
+                        (shorten-summaries (map #(select-keys % [:key :summary]) items)
+                                           :mode mode)
                         (catch Exception e
                           (log/warnf e "Shortening %d over-long PTV summaries failed" (count items))
                           {}))
