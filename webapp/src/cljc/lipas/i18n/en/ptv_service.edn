@@ -22,7 +22,6 @@
  :first-save-tracking "After saving, Lipas tracks the service's name and texts: if they are changed in PTV, Lipas shows the changes, and before the next sync you choose which version stays."
  :first-save-audit "From now on DVV audits the service's texts, as they come from Lipas."
  :first-save-confirm "Update in PTV"
- :discard-edits "Discard unsaved changes"
  :other-system-chip "Other system"
  :name-missing "Name missing – add it with the pencil"
  :sync-blocked-title "Fix before syncing"

@@ -22,7 +22,6 @@
  :first-save-tracking "Efter sparandet följer Lipas tjänstens namn och texter: om de ändras i PTV visar Lipas ändringarna, och före nästa synkronisering väljer du vilken version som ska gälla."
  :first-save-audit "I fortsättningen granskar DVV tjänstens texter, eftersom de kommer från Lipas."
  :first-save-confirm "Uppdatera i PTV"
- :discard-edits "Ångra osparade ändringar"
  :other-system-chip "Annat system"
  :name-missing "Namn saknas – lägg till det med pennan"
  :sync-blocked-title "Korrigera före synkroniseringen"

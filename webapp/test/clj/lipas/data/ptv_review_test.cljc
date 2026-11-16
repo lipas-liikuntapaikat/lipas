@@ -804,3 +804,33 @@
                                     site
                                     rows)]
                   (empty? (:rows (sut/sync-review taken base channel services ["fi" "en"]))))))
+
+(deftest discard-site-edits-test
+  ;; the PTV tool's copy of a site, as loaded or saved
+  (let [loaded (assoc synced-site
+                      :review-saved (sut/->review-base synced-site)
+                      :ptv-saved (select-keys (:ptv synced-site) ptv-data/synced-content-keys))]
+    (testing "as saved, nothing to discard"
+      (is (false? (sut/unsaved-site-edits? loaded)))
+      (is (= loaded (sut/discard-site-edits loaded))))
+
+    (testing "texts, services, the link, sync and the site's own data back as saved"
+      (let [edited (-> loaded
+                       (assoc :name "PTV:n nimi" :phone-number "040 123 4567")
+                       (assoc-in [:ptv :summary :fi] "Muokattu tiivistelmä")
+                       (update-in [:ptv :description] dissoc :en)
+                       (update-in [:ptv :service-ids] conj "other-service")
+                       (assoc-in [:ptv :service-channel-ids] [])
+                       (assoc-in [:ptv :sync-enabled] false))]
+        (is (true? (sut/unsaved-site-edits? edited)))
+        (is (= loaded (sut/discard-site-edits edited)))))
+
+    (testing "sync turned on for a site saved without it goes off again"
+      (let [saved (update loaded :ptv-saved dissoc :sync-enabled)
+            edited (assoc-in saved [:ptv :sync-enabled] true)]
+        (is (true? (sut/unsaved-site-edits? edited)))
+        (is (nil? (get-in (sut/discard-site-edits edited) [:ptv :sync-enabled])))))
+
+    (testing "a choice made in the review alone is something to discard"
+      (is (true? (sut/unsaved-site-edits?
+                   (assoc loaded :review-choices {[:summary "fi"] {:choice :lipas}})))))))

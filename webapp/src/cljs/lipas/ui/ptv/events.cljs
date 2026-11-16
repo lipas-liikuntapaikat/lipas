@@ -1439,13 +1439,6 @@
       ;; version of the text, so a missing key would bring that text back.
       (assoc-in db [:ptv :org org-id :data :service-candidates id :name locale] (or v "")))))
 
-(rf/reg-event-db ::discard-service-edits
-  ;; Drops a service's unsaved edits; the panel falls back to Lipas's
-  ;; version of its texts (ptv-review/service-lipas-texts).
-  (fn [db [_ id]]
-    (let [org-id (-get-ptv-org-id db)]
-      (update-in db [:ptv :org org-id :data :service-candidates] dissoc id))))
-
 (rf/reg-event-db ::toggle-service-language-removal
   ;; Marks a native service's language version to be removed from PTV on
   ;; the next sync (see lipas.data.ptv/patch-service-texts), or unmarks it.
@@ -2053,6 +2046,29 @@
 (rf/reg-event-db ::forget-review-choices
   (fn [db [_ id]]
     (forget-choices db id)))
+
+;; "Peru tallentamattomat muutokset": every edit not synced is dropped,
+;; the choices made in the review with them.
+
+(rf/reg-event-db ::discard-site-edits
+  ;; The PTV tool's copy of a site back to what is saved
+  ;; (ptv-review/discard-site-edits).
+  (fn [db [_ lipas-id]]
+    (let [org-id (-get-ptv-org-id db)
+          path [:ptv :org org-id :data :sports-sites lipas-id]]
+      (cond-> (-> db
+                  (update-in [:ptv :double-link-block] dissoc lipas-id)
+                  (forget-choices lipas-id))
+        (get-in db path) (update-in path ptv-review/discard-site-edits)))))
+
+(rf/reg-event-db ::discard-service-edits
+  ;; A service's edit dropped; the panel falls back to Lipas's version of
+  ;; its texts (ptv-review/service-lipas-texts).
+  (fn [db [_ id]]
+    (let [org-id (-get-ptv-org-id db)]
+      (-> db
+          (update-in [:ptv :org org-id :data :service-candidates] dissoc id)
+          (forget-choices id)))))
 
 (rf/reg-event-db ::set-review-open
   (fn [db [_ lipas-id open?]]

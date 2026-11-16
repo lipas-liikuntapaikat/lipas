@@ -676,7 +676,7 @@ Jäähallit has no user instruction, so use Retkeilyn palvelut (p11). Erase
 the fi user instruction. Expect the line "Toimintaohje (FI)" under
 "Päivittyy PTV:hen Lipaksesta" ("Näytä teksti" shows PTV's text struck
 through), and "Synkronoi nyt" asking first, naming "Toimintaohje (FI)".
-"Peruuta", "Peru tallentamattomat muutokset".
+"Peruuta", then "Peru tallentamattomat muutokset" and "Peru muutokset".
 
 **L3. A language the org hasn't enabled** (no write; setup untested)
 
@@ -700,6 +700,14 @@ written, then "Synkronoi nyt". Expect one dialog, "Päivitetäänkö PTV:ssä
 luotu palvelu Lipaksesta?", ending with "Lisäksi synkronointi poistaa
 PTV:stä nämä tiedot:" and the version; no second dialog after "Päivitä
 PTV:hen".
+
+**L6. Discarding the unsaved changes** (no write)
+
+Jäähallit: no "Peru tallentamattomat muutokset" while nothing is edited.
+Erase the English summary: the button appears. It asks "Perutaanko
+tallentamattomat muutokset?" first (it didn't before); "Peru muutokset"
+puts the summary back and the button goes. Choices made in the review,
+and versions marked for removal, are discarded with the edits.
 
 ## Results: run of 2026-10-30
 
@@ -896,6 +904,12 @@ Local Lipas against the PTV test env, Utajärvi only, as admin, in
 | B1 (button) | Jäähallit | pass: "Näytä muutokset" under "Synkronoi nyt" opened and scrolled to the panel |
 
 Not run in the browser: L2–L5, C2 and F2 with the new question.
+
+Added after the regression run:
+
+| Scenario | Service | Result |
+|---|---|---|
+| L6 | Jäähallit | pass: no button before the edit; erasing the English summary showed it; the dialog asked first, "Peru muutokset" put the summary back and hid the button |
 
 ## Results: regression run of 2026-11-16 (Palvelut)
 

@@ -204,4 +204,9 @@
  :show-change "Näytä muutos"
  :hide-change "Piilota muutos"
  :change-legend "Yliviivattu poistuu PTV:stä, alleviivattu tulee tilalle."
- :bulk-removals-title "Synkronointi poistaa PTV:stä nämä tiedot"}
+ :bulk-removals-title "Synkronointi poistaa PTV:stä nämä tiedot"
+
+ :discard-edits "Peru tallentamattomat muutokset"
+ :discard-title "Perutaanko tallentamattomat muutokset?"
+ :discard-message "Kaikki muutokset, joita et ole synkronoinut, perutaan, myös muutoksista tekemäsi valinnat. Tiedot palautuvat siihen, mitä Lipakseen on tallennettu. Tätä ei voi kumota."
+ :discard-confirm "Peru muutokset"}

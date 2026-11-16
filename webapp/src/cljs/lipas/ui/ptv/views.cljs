@@ -251,6 +251,21 @@
                 :on-click #(==> [::events/show-review id])}
      (tr :ptv.review/show)]))
 
+(defn- discard-edits-button
+  "\"Peru tallentamattomat muutokset\": asks, then dispatches `event`,
+   which drops the edits not synced."
+  [{:keys [tr event disabled?]}]
+  [:> Button {:size "small" :variant "text"
+              :disabled (boolean disabled?)
+              :sx #js {:textTransform "none" :alignSelf "flex-start"}
+              :startIcon (r/as-element [:> Icon "undo"])
+              :on-click #(==> [:lipas.ui.events/confirm-with
+                               {:title (tr :ptv.review/discard-title)
+                                :message (tr :ptv.review/discard-message)
+                                :confirm-label (tr :ptv.review/discard-confirm)
+                                :on-confirm (fn [] (==> event))}])}
+   (tr :ptv.review/discard-edits)])
+
 (defn form-left-column
   [{:keys [org-id tr site services ptv-base org-languages selected-tab]}]
   (r/with-let [editing-services? (r/atom false)
@@ -436,6 +451,9 @@
                (tr :ptv.actions/sync-now)
                (tr :ptv.wizard/export-service-locations-to-ptv))]]]
           [show-changes-button {:tr tr :id (:lipas-id site) :review (:review site)}]
+          (when (:unsaved-edits? site)
+            [discard-edits-button {:tr tr :disabled? syncing?
+                                   :event [::events/discard-site-edits (:lipas-id site)]}])
           (when (or hint (seq schema-errors))
             [:> Typography {:variant "caption" :color "text.secondary" :component "div"}
              reason-lines])
@@ -2372,11 +2390,8 @@
        ;; the user's own unsaved edits: Lipas's version differing from
        ;; PTV's (a change made in PTV, to decide) is none
        (when (and (some (comp seq val) descriptions) (not other-system?))
-         [:> Button {:size "small" :variant "text"
-                     :sx #js {:textTransform "none" :alignSelf "flex-start"}
-                     :startIcon (r/as-element [:> Icon "undo"])
-                     :on-click #(==> [::events/discard-service-edits edit-key])}
-          (tr :ptv.service/discard-edits)])
+         [discard-edits-button {:tr tr :disabled? (<== [::subs/syncing-service? edit-key])
+                                :event [::events/discard-service-edits edit-key]}])
 
        [first-save-dialog {:tr tr :service service
                            :open? @confirm-first-save?

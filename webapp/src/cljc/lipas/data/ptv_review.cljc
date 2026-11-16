@@ -1097,6 +1097,31 @@
             {}
             site-patch-paths)))
 
+(defn unsaved-site-edits?
+  "Whether the PTV tool's copy of `site` holds anything not saved: an edit
+   of its :ptv (ptv-data/unsaved-ptv-edits?), its own data a review choice
+   changed, or a choice made in its review (:review-choices, spent by a
+   sync)."
+  [site]
+  (boolean (or (ptv-data/unsaved-ptv-edits? site)
+               (review-site-patch (:review-saved site) site)
+               (seq (:review-choices site)))))
+
+(defn discard-site-edits
+  "The PTV tool's copy of `site` as it was saved: its own data from
+   :review-saved (->review-base) and the :ptv keys the tool edits from
+   :ptv-saved, a key the saved site lacks removed."
+  [site]
+  (let [saved-ptv (:ptv-saved site)]
+    (cond-> (review-saved-site site (:review-saved site))
+      saved-ptv (update :ptv (fn [ptv]
+                               (reduce (fn [ptv k]
+                                         (if (contains? saved-ptv k)
+                                           (assoc ptv k (get saved-ptv k))
+                                           (dissoc ptv k)))
+                                       ptv
+                                       ptv-data/synced-content-keys))))))
+
 (defn site-patch-path?
   "Whether `path` is one a site patch may write."
   [path]
@@ -1470,6 +1495,8 @@
                     :else :ready)
 
      :review review
+     ;; "Peru tallentamattomat muutokset" offered
+     :unsaved-edits? (unsaved-site-edits? site)
      ;; what "Synkronoi nyt" asks about before it sends the edit
      :sync-removals (sync-removals edit-rows :postal-addresses (:postal-addresses edit-review))
 

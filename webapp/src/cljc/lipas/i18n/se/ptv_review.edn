@@ -204,4 +204,9 @@
  :show-change "Visa ändringen"
  :hide-change "Dölj ändringen"
  :change-legend "Det överstrukna tas bort från PTV, det understrukna kommer i stället."
- :bulk-removals-title "Synkroniseringen tar bort följande uppgifter från PTV"}
+ :bulk-removals-title "Synkroniseringen tar bort följande uppgifter från PTV"
+
+ :discard-edits "Ångra osparade ändringar"
+ :discard-title "Ångra de osparade ändringarna?"
+ :discard-message "Alla ändringar som du inte har synkroniserat ångras, även de val du har gjort om ändringarna. Uppgifterna återställs till det som har sparats i Lipas. Detta kan inte göras ogjort."
+ :discard-confirm "Ångra ändringarna"}

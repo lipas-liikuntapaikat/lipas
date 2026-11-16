@@ -1334,6 +1334,18 @@ Expect:
 Saving the form doesn't ask about removals yet (open): the panel is where
 the site form says what goes.
 
+**P9. Discarding the unsaved changes** (no write)
+
+s1b, PTV tool row: no "Peru tallentamattomat muutokset" while nothing is
+edited. Edit the summary: the button appears under "Näytä muutokset". It
+asks "Perutaanko tallentamattomat muutokset?"; "Peruuta" keeps the edit,
+"Peru muutokset" puts the saved text back and the button goes.
+
+s2b: "Ota PTV:n versio" on one row ("1 / 2 valittu") shows the button too;
+discarding forgets the choice ("0 / 2 valittu"). The same discards a
+changed service, link, sync switch or a value taken from PTV. The site
+form has its own discard and gets no button.
+
 ---
 
 ## Results: event-level run (2026-10-26)
@@ -1602,6 +1614,12 @@ cancelled, every edit discarded with the session.
 
 Not run in the browser: P3's erasing and "Ota PTV:n tekstit" on a site (run
 on a service instead, Palvelut L1), P4, P6, P8.
+
+Added after the regression run:
+
+| Scenario | Site | Result |
+|---|---|---|
+| P9 | s1b (79801), s2b (523483) | pass: no button before the edit; the dialog's "Peruuta" kept the edited summary, "Peru muutokset" put the saved one back and hid the button; on s2b the button appeared after "Ota PTV:n versio" ("1 / 2 valittu") and discarding went back to "0 / 2 valittu" |
 
 ## Results: regression run of 2026-11-16 (sites)
 

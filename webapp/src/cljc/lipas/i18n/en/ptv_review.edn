@@ -204,4 +204,9 @@
  :show-change "Show change"
  :hide-change "Hide change"
  :change-legend "Struck-through text is removed from PTV; underlined text replaces it."
- :bulk-removals-title "Syncing removes these details from PTV"}
+ :bulk-removals-title "Syncing removes these details from PTV"
+
+ :discard-edits "Discard unsaved changes"
+ :discard-title "Discard the unsaved changes?"
+ :discard-message "Every change you haven't synced is discarded, including the choices you made about changes. The details go back to what is saved in Lipas. This can't be undone."
+ :discard-confirm "Discard changes"}
