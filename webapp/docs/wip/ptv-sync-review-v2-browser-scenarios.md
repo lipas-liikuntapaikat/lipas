@@ -24,8 +24,10 @@ site in Lipas and the location in PTV. Plan:
   outages (502/503); `run-all!` reports them per scenario.
 - **Known blocker:** test sites 615340 (s1) and 89913 (s2) have unpublished
   drafts in PTV, left by failed writes during the slow period. Their rows
-  read "Estetty" once opened (F2). Publish or discard the drafts in the PTV
-  test UI before using s1 or s2.
+  read "Estetty" once opened (F2), and only PTV's own UI can publish or
+  discard the drafts. Since 2026-11-16 the stand-ins s1b and s2b set the
+  same up on other sites, and `run-all!` uses them; read s1b and s2b
+  wherever a scenario says s1 or s2.
 - **Users:**
   - **PTV manager**: admin, or a user with the `ptv-manager` role for
     Utajärvi (889).
@@ -37,8 +39,10 @@ site in Lipas and the location in PTV. Plan:
 
 | Scenario | Site | What differs |
 |---|---|---|
-| s1 | 615340 Utajärven pallokenttä | nothing |
-| s2 | 89913 Utajärven jäähalli | fi summary and description changed in PTV |
+| s1 | 615340 Utajärven pallokenttä | nothing (stuck draft in PTV: use s1b) |
+| s1b | 79801 Sangin vanhan koulun liikuntasali | nothing; fi and en published |
+| s2 | 89913 Utajärven jäähalli | fi summary and description changed in PTV (stuck draft in PTV: use s2b) |
+| s2b | 523483 Utajärven kirkonkylän valaistu kuntorata | fi summary and description changed in PTV |
 | s3 | 506495 Utajärven koulun piha-alue | fi description changed in Lipas |
 | s4 | 509023 Nuoriso- ja liikuntatalon kuntosali | fi summary changed on both sides |
 | s5 | 507128 Utajärven urheilukenttä | connections changed in PTV |
@@ -75,8 +79,8 @@ Expect:
 **A2. Banner over the table** (phase 4)
 
 With the sites of A1 present:
-- Expect "{n} liikuntapaikassa on PTV:ssä tehtyjä muutoksia, jotka odottavat
-  valintaa. [Näytä ne]".
+- Expect "{n} liikuntapaikassa on ristiriitoja PTV:n kanssa – ratkaise ne
+  ennen synkronointia. [Näytä ne]" (the wording since "Ristiriita").
 - "Näytä ne" applies the same filter as A1.
 
 **A3. Status chips tell the states apart** (phase 4)
@@ -109,6 +113,7 @@ dialog.
 Open s1. Expect:
 - No review panel.
 - "Synkronoi nyt" disabled, with the hint "Ajan tasalla".
+- No "Näytä muutokset" under "Synkronoi nyt" (since 2026-11-16, P2).
 
 **B2. Changed in PTV: read and decide** (built; bar wording phase 4)
 1. Open s2. The bar is collapsed.
@@ -139,7 +144,10 @@ Verify:
 
 Open s3. Expect:
 - built: a row "Muutettu Lipaksessa" with no "Valitse ennen synkronointia";
-- phase 4: listed under "Päivittyy PTV:hen Lipaksesta" instead, as one line.
+- phase 4: listed under "Päivittyy PTV:hen Lipaksesta" instead, as one line;
+- since 2026-11-16: the line reads "Kuvaus (FI)" with "Näytä muutos", which
+  opens the word diff (struck through: goes from PTV; underlined: comes in)
+  and the legend "Yliviivattu poistuu PTV:stä, alleviivattu tulee tilalle."
 
 Click "Synkronoi nyt". Expect: no question. Verify: PTV got Lipas's
 description.
@@ -176,7 +184,7 @@ Lipas's set or PTV's, like every other row.
 
 **B6. Taking PTV's name renames the site** (built)
 
-Open s6. On the name card, read "Vaihtaa myös liikuntapaikan nimen
+Open s6. On the name card, read "Muuttaa myös liikuntapaikan nimen
 Lipaksessa".
 1. Take PTV's name and marketing name.
 2. Expect "Nimi vaihtuu" next to the site in the table, with the old name in
@@ -189,8 +197,8 @@ unchanged.
 **B7. Language added in Lipas** (built)
 
 Open s7. Expect:
-- one line "Lipas lisää kieliversion EN: nimi, tiivistelmä, kuvaus viedään
-  PTV:hen";
+- one line "Lipas lisää englanninkielisen kieliversion: nimi, tiivistelmä,
+  kuvaus.";
 - no choice.
 
 Sync. Verify: PTV has English.
@@ -386,7 +394,12 @@ Archive. Verify: PTV has the location archived, and the site leaves the list.
 After E1 and similar edits on two more sites, a PTV manager clicks
 "Synkronoi kaikki valmiit ({n})". Expect:
 - the sites without open choices sync;
-- a site with open choices (e.g. s2) is skipped and listed.
+- a site with open choices (e.g. s2) is skipped and listed;
+- since 2026-11-16: the confirmation names what each ready site's sync
+  removes from PTV, under "Synkronointi poistaa PTV:stä nämä tiedot", e.g.
+  "Utajärven kuntoportaat: Ruotsinkielinen kieliversio" (s14), and a
+  disconnected service as "Liitetyt palvelut (X)". No list when nothing
+  goes.
 
 ---
 
@@ -476,6 +489,11 @@ Keep Lipas's. Verify: PTV has one number. Repeat for the extra web page
 ("Muut verkkosivut"), which can also be taken as the web page or the
 booking link.
 
+Since 2026-11-16, with both kept as Lipas's, "Synkronoi nyt" asks first:
+"Synkronointi poistaa tietoja PTV:stä" naming "Puhelinnumero:" with PTV's
+second number struck through (not Lipas's own) and "Muut verkkosivut:"
+with the URL struck through.
+
 **G2b. What a sync keeps of the address and phone**
 
 In PTV's UI add an extra text ("2. krs.") to s16's visiting address, and
@@ -532,18 +550,29 @@ Expect:
 - the bar adds "Lisäksi synkronointi poistaa ruotsinkielisen kieliversion.";
 - no choice needed; the chip stays "Valmis synkronoitavaksi".
 
-"Kopioi" puts the text on the clipboard. Sync. Verify: PTV has fi+en only.
+"Kopioi" puts the text on the clipboard. Sync: since 2026-11-16 "Synkronoi
+nyt" asks first, "Synkronointi poistaa tietoja PTV:stä" with "Ruotsinkielinen
+kieliversio (nimi, tiivistelmä ja kuvaus)" and "Lipas julkaisee vain kielet,
+jotka ovat organisaatiolla käytössä ja joille on sekä tiivistelmä että
+kuvaus."; confirm with the dialog's "Synkronoi nyt". Verify: PTV has fi only (s14's
+location has no English version, and the site no English texts).
 
 **G10. Language enabled for the org, but no texts in Lipas**
 
-Enable sv for the test org and run s14 again. Expect "Ota PTV:n tekstit".
-Take them. Verify: Lipas has the sv texts and PTV keeps sv.
+Enable sv for the test org and run s14 again. Expect "Ota PTV:n tekstit",
+and since 2026-11-16 the reason in the row: "Synkronointi poistaa PTV:stä
+ruotsinkielisen kieliversion: nimen, tiivistelmän ja kuvauksen. Siltä
+puuttuu Lipaksessa tiivistelmä ja kuvaus, ja kieliversio julkaistaan vain,
+kun sillä on sekä tiivistelmä että kuvaus." (the enable hint only while the
+org hasn't enabled the language). Take them. Verify: Lipas has the sv texts
+and PTV keeps sv.
 
 **G11. Postal address is kept** (s16)
 
 s16 added a PO box (PL 1, 91601) in PTV, and Lipas changed the summary.
 Expect:
-- no postal-address row; the summary under "Päivittyy PTV:hen Lipaksesta";
+- no postal-address row; the summary under "Päivittyy PTV:hen Lipaksesta"
+  (since 2026-11-16 with "Näytä muutos", B3);
 - the panel line "Säilyvät PTV:ssä: aukioloajat, postiosoite." (or just
   "postiosoite" without opening hours).
 
@@ -553,7 +582,10 @@ Sync. Verify in PTV's UI: the postal address is unchanged.
 
 A postal street address with no number and no coordinates. Expect the
 information line "Postiosoite poistuu PTV:stä, koska PTV ei hyväksy sitä
-rajapinnan kautta – korjaa se PTV:ssä." The sync succeeds.
+rajapinnan kautta – korjaa se PTV:ssä." Since 2026-11-16 "Synkronoi nyt"
+asks first, naming "Postiosoite:" with the address struck through and "PTV
+ei hyväksy osoitetta rajapinnan kautta. Jos haluat säilyttää sen, korjaa se
+PTV:ssä." The sync succeeds.
 
 **G13. Opening hours are kept**
 
@@ -597,7 +629,9 @@ palvelupaikkaan" (F4); in the wizard, pick the location under "Löytyykö
 palvelupaikka jo PTV:stä?". On the first link, expect:
 - the fi texts as "Eroaa" rows, with no origin;
 - the English texts as a language row: the sync would remove the English
-  version unless English texts are written or taken (G10);
+  version unless English texts are written or taken (G10); since
+  2026-11-16 the row says why: "Siltä puuttuu Lipaksessa tiivistelmä ja
+  kuvaus…";
 - the postal address kept, if the location has one (G11).
 
 **H4. No "Lataa tekstit PTV:stä"** (built in the wizard; phase 4 in the tab)
@@ -687,8 +721,11 @@ tasalla" and no panel, even if PTV changed its texts: those are kept.
 **K2. An edit**
 
 Edit the summary. Expect the chip "Valmis synkronoitavaksi", and the panel
-with the summary under "Päivittyy PTV:hen Lipaksesta" and the footer
-"Valinnat tulevat voimaan, kun synkronoit palvelun (Synkronoi nyt)."
+with the summary under "Päivittyy PTV:hen Lipaksesta" (since 2026-11-16 with
+"Näytä muutos") and the footer "Valinnat tulevat voimaan, kun synkronoit
+palvelun (Synkronoi nyt)." The Palvelut tab's own plan
+([`ptv-services-table-browser-scenarios.md`](ptv-services-table-browser-scenarios.md))
+supersedes this section.
 
 **K3. An edit over a change made in PTV**
 
@@ -1171,6 +1208,134 @@ once, and Save waits exactly while an edit's fetch is out (generative).
 
 ---
 
+## P. What the user changes, and what a sync removes (2026-11-16)
+
+Final feedback: a user who erased a text wasn't told that the sync removes
+it from PTV. Now (2026-11-16):
+- the review panel also shows the edit's own changes, before they are
+  saved: a field where the saved site agrees with PTV but the form doesn't
+  is a "Muutettu Lipaksessa" row (Lipas's change, no choice), in the PTV
+  tool and in the site form;
+- a text's line under "Päivittyy PTV:hen Lipaksesta" opens a word diff
+  ("Näytä muutos");
+- "Näytä muutokset" under "Synkronoi nyt" opens the panel and scrolls to it;
+- "Synkronoi nyt" asks first when the sync removes something from PTV: a
+  language version, a value or text PTV has that the edit leaves empty, a
+  value only PTV has, a service the location is disconnected from. With
+  open choices, the gate names them ("Lisäksi synkronointi poistaa PTV:stä
+  nämä tiedot:"), one dialog either way;
+- a language row says why the version goes: a text Lipas lacks, or the
+  language not enabled for the org.
+
+The same on the Palvelut tab: its plan's section L.
+
+**P1. An edit shows in the panel at once** (no write)
+
+Open a site that reads "Ajan tasalla" (e.g. s1b), and change its fi
+description.
+
+Expect:
+- the panel appears: "Synkronointi päivittää PTV:hen 1 tietoa."; the chip
+  "Valmis synkronoitavaksi";
+- expanded: no "Valitse ennen synkronointia"; "Päivittyy PTV:hen
+  Lipaksesta (1)" with "Kuvaus (FI) · Näytä muutos", whose diff strikes
+  through what goes and underlines what comes, with the legend; "Ajan
+  tasalla:" no longer lists "kuvaus (fi)"; ⑤ "Viedään PTV:hen: Kuvaus (FI)";
+- "Synkronoi nyt" asks nothing (nothing is removed).
+
+Undo the typing: the panel goes and the chip is "Ajan tasalla" again.
+
+**P2. "Näytä muutokset"** (no write)
+
+From P1, with the panel collapsed and out of sight: "Näytä muutokset" under
+"Synkronoi nyt". Expect the panel open and scrolled into view. A site
+without anything to show has no such button (B1).
+
+**P3. Erasing one English text removes the English version** (no write
+unless confirmed)
+
+On a site whose English version Lipas has synced (s1b, or s7 after B7),
+erase the English summary. (A site whose English is only PTV's, such as Kylätalo
+Katajiston liikuntasali, shows the same row without an edit, its reason
+"…puuttuu Lipaksessa tiivistelmä ja kuvaus…".)
+
+Expect:
+- the bar "Synkronointi poistaa PTV:stä englanninkielisen kieliversion.";
+- the row "Englanti (EN) · Poistuu PTV:stä": "Synkronointi poistaa PTV:stä
+  englanninkielisen kieliversion: nimen, tiivistelmän ja kuvauksen. Siltä
+  puuttuu Lipaksessa tiivistelmä, ja kieliversio julkaistaan vain, kun
+  sillä on sekä tiivistelmä että kuvaus.", "Näytä poistuvat tekstit", "Ota
+  PTV:n tekstit";
+- "Ajan tasalla:" lists no English text.
+
+1. "Synkronoi nyt". Expect the dialog "Synkronointi poistaa tietoja
+   PTV:stä", "Jos synkronoit, nämä tiedot poistuvat PTV:stä:",
+   "Englanninkielinen kieliversio (nimi, tiivistelmä ja kuvaus)" with "Lipas
+   julkaisee vain kielet, jotka ovat organisaatiolla käytössä ja joille on
+   sekä tiivistelmä että kuvaus.", and the buttons "Peruuta", "Näytä
+   muutokset", "Synkronoi nyt".
+2. "Näytä muutokset": the dialog closes, the panel opens and scrolls into
+   view (at its top; the row may be further down), nothing is sent.
+3. "Ota PTV:n tekstit": PTV's English texts are back in the form, the row
+   goes (and the panel with it when nothing else differs).
+
+Optional write: erase again and confirm. Verify: PTV has fi only. Reset the
+site's scenario with `run-all!`.
+
+**P4. A value only PTV has** (s6; no write unless confirmed)
+
+s6's marketing name was added in PTV. Choose "Pidä Lipaksen versio" on it,
+then "Synkronoi nyt". Expect the removal dialog naming "Markkinointinimi:"
+with PTV's name struck through. "Peruuta".
+
+**P5. Disconnecting a service** (no write unless confirmed)
+
+On a site that reads "Ajan tasalla" with one service (e.g. s1b):
+1. "Muuta palvelua", add another service: the panel's line "Liitetyt
+   palvelut PTV:ssä: lisätään X". "Synkronoi nyt" would ask nothing:
+   nothing is removed.
+2. "Muuta palvelua", remove the original one: "…lisätään X; poistetaan
+   Y".
+3. "Synkronoi nyt". Expect the removal dialog with "Liitetyt palvelut:" and
+   Y struck through. "Peruuta".
+
+A first link (M4) disconnects nothing: the first sync keeps PTV's
+connections, and no removal is named.
+
+PTV's other values of a one-slot field are named too, when PTV has more
+of them than the one Lipas sends (G2's second phone number). One value
+swapped for Lipas's is a change, not a removal, as an edited text is.
+
+**P6. Removals with open choices: one dialog** (no write)
+
+s10 (phone changed in PTV, undecided): disconnect a service as in P5, then
+"Synkronoi nyt". Expect one dialog, "PTV:ssä on muutoksia, joita et ole
+käynyt läpi", the phone line, then "Lisäksi synkronointi poistaa PTV:stä
+nämä tiedot:" with "Liitetyt palvelut:" and the service struck through, and
+the buttons "Käy muutokset läpi", "Synkronoi ja korvaa", "Peruuta". A
+language version the gate already lists isn't repeated. "Peruuta".
+
+**P7. Many sites at once** (no write)
+
+As E4: the confirmation of "Synkronoi kaikki valmiit" lists what each ready
+site's sync removes. "Peruuta".
+
+**P8. The site form shows the form's edits** (no write)
+
+Open a site that reads "Ajan tasalla" on the map, "Muokkaa", change its
+phone number in Perustiedot, then the PTV tab.
+
+Expect:
+- the panel "Synkronointi päivittää PTV:hen 1 tietoa.", with
+  "Puhelinnumero: vanha → uusi" under "Päivittyy PTV:hen Lipaksesta";
+- no amber dot on the tab (nothing to decide);
+- in view mode (no edit) no such row.
+
+Saving the form doesn't ask about removals yet (open): the panel is where
+the site form says what goes.
+
+---
+
 ## Results: event-level run (2026-10-26)
 
 Run in a Chrome tab the OS had hidden, so nothing painted: each step
@@ -1419,3 +1584,123 @@ Environment left behind: s12 unchanged, 23 revisions, last saved
 unchanged, 20 revisions. The backend function is unwrapped, the dev
 override reset, the REPL scratch namespace removed, the playwright session
 `save` closed.
+
+## Results: run of 2026-11-16 (during the build)
+
+Local Lipas against the PTV test env, Utajärvi only, as admin, in
+`playwright-cli` (headless Chrome with `.playwright/cli.config.json` and the
+MessageChannel render patch). Nothing was synced: every dialog was
+cancelled, every edit discarded with the session.
+
+| Scenario | Site | Result |
+|---|---|---|
+| P1 | 605450 | pass: the panel appeared on typing ("Synkronointi päivittää PTV:hen 1 tietoa."), the chip turned "Valmis synkronoitavaksi", "Kuvaus (FI) · Näytä muutos" opened the diff ("ja tasapainoa", "kesäisin" underlined, "ympäri vuoden" struck through, the legend), "Ajan tasalla:" without "kuvaus (fi)" |
+| P2 | 605450 | pass: the button opened the panel and scrolled to it; absent while the site read "Ajan tasalla" |
+| P3 (dialog) | Kylätalo Katajiston liikuntasali | pass: with no English texts in Lipas, the row read "…Siltä puuttuu Lipaksessa tiivistelmä ja kuvaus…"; "Synkronoi nyt" opened the removal dialog with the English version and its reason; the dialog's "Näytä muutokset" opened the panel at the row, nothing sent |
+| P5 | 605450 | pass: swapping "Lähiliikunta ja liikuntapuistot" for "Jäähallit": "Synkronointi päivittää PTV:hen 1 tietoa.", then the dialog "Liitetyt palvelut: ~~Lähiliikunta ja liikuntapuistot~~"; "Peruuta" |
+| P7 | – | pass: "Synkronoi kaikki valmiit (6)" listed "Kylätalo Katajiston liikuntasali: Englanninkielinen kieliversio" and "Utajärven kuntoportaat: Ruotsinkielinen kieliversio"; "Peruuta" |
+
+Not run in the browser: P3's erasing and "Ota PTV:n tekstit" on a site (run
+on a service instead, Palvelut L1), P4, P6, P8.
+
+## Results: regression run of 2026-11-16 (sites)
+
+Liikuntapaikat tab and site form after the day's changes (unsaved edits in
+the panel, "Näytä muutos", "Näytä muutokset", the removal question, the
+language row's reason). Local Lipas against the PTV test env, Utajärvi
+only, as admin, in `playwright-cli` (headless Chrome, session `sites`,
+`.playwright/cli.config.json`, the MessageChannel render patch). s1 and s2
+were replaced by s1b (79801) and s2b (523483), their drafts in PTV being
+stuck. 605450 was left alone (the Palvelut run used it). Where a scenario
+says "no write", "Synkronoi nyt" and Save were clicked with the browser set
+offline (Playwright `setOffline`), so a missing question would have shown as
+a failed request, not a write; every such case was checked with `state`.
+PTV writes took 2–6 s. Screenshots: `/private/tmp/claude-501/-Users-tipo-lipas-lipas/2c75db1c-416b-448b-8131-504617e00596/scratchpad/pw-sites/`.
+
+| Scenario | Site | Result |
+|---|---|---|
+| A1 | all | pass: "Ristiriita" listed exactly s2b, s4, s5, s6, s9, s10, s11, s12 (8), each with the amber chip |
+| A3 | all | pass: s1b "Ajan tasalla"; s3, s7, s13, s14, s16 "Valmis synkronoitavaksi"; s2b, s4, s5, s6, s9, s10, s11, s12 "Ristiriita"; s1 "Estetty"; s8, s15 faded "PTV"; s4 turned blue once its row was decided, without a sync. s2 (89913) read "Valmis synkronoitavaksi" unopened |
+| C1 | s2b | pass: bar collapsed, "Synkronoi nyt": "PTV:SSÄ ON MUUTOKSIA, JOITA ET OLE KÄYNYT LÄPI", "Tiivistelmä (FI)", "Kuvaus (FI)", buttons Peruuta / Synkronoi ja korvaa / Käy muutokset läpi (primary) |
+| C4 | s2b | pass: "Peruuta" closed it, the row unchanged, nothing sent |
+| C2 | s2b | pass: "Käy muutokset läpi" opened the panel scrolled into view, focus on "Pidä Lipaksen versio: Tiivistelmä (FI)" |
+| C3 | s2b | pass: "Synkronoi ja korvaa", "Tallennus onnistui", the row "Ajan tasalla" with no "Näytä muutokset". `(state 523483)`: PTV has Lipas's summary and description, `:review []`. Reset with `s2b-ptv-texts!` |
+| B2 | s2b | pass: bar "PTV:ssä on muutettu 2 tietoa – valitse, mitkä jäävät voimaan." and the dates line; rows Tiivistelmä (FI), Kuvaus (FI) "Muutettu PTV:ssä", "Valitse ennen synkronointia", marks only on PTV's words; "Ota PTV:n versio" on the summary: field holds PTV's text, the row collapsed, [Muuta] shows "Lomakkeessa" on the PTV card, "Kopioidaan Lipakseen: Tiivistelmä (FI)"; "Pidä Lipaksen versio" on the description: "Viedään PTV:hen: Kuvaus (FI)"; no "Muutettu Lipaksessa" row for the taken text; "Synkronoi nyt" asked nothing. `state`: both sides PTV's summary + Lipas's description, `:review []`; the row "Ajan tasalla" |
+| B1 | s1b | pass: no panel, "Synkronoi nyt" disabled with "Ajan tasalla", no "Näytä muutokset" |
+| B3 | s3 | pass: "Päivittyy PTV:hen Lipaksesta (1)", "Kuvaus (FI) · Näytä muutos", diff with the added words underlined and the legend "Yliviivattu poistuu PTV:stä, alleviivattu tulee tilalle."; "Synkronoi nyt" asked nothing; `state`: PTV has Lipas's description |
+| B4 | s4 | pass: "Muutettu molemmissa", the merge hint; typing a merged summary gave "Lomakkeessa on muokattu teksti" with the text and "Vie muokattu versio PTV:hen" (no separate "Muutettu Lipaksessa" row); confirmed, 1/1, chip blue, "Viedään PTV:hen muokattuna: Tiivistelmä (FI)"; sync asked nothing; `state`: merged text on both sides |
+| P4 | s6 | pass: "Pidä Lipaksen versio" on Markkinointinimi with the name still open: the gate, the name line, then "Lisäksi synkronointi poistaa PTV:stä nämä tiedot:" "Markkinointinimi: ~~Utajärven kuntolatu~~" (one dialog). With the name kept too: "Synkronointi poistaa tietoja PTV:stä", "Markkinointinimi: ~~Utajärven kuntolatu~~", Peruuta / Näytä muutokset / Synkronoi nyt. Peruuta. Run on the fresh s6 before B6 |
+| B6 | s6 | pass: caption "Muuttaa myös liikuntapaikan nimen Lipaksessa"; both taken: "Nimi vaihtuu" in the table, tooltip "Synkronointi vaihtaa liikuntapaikan nimen Lipaksessa. Nykyinen nimi: Utajärven kirkonkylän valaistu latu"; sync asked nothing; DB and search "Kirkonkylän valaistu latu" / "Utajärven kuntolatu", PTV unchanged. Reset with `s6-names!` |
+| B7 | s7 | pass: "Lipas lisää englanninkielisen kieliversion: nimi, tiivistelmä, kuvaus.", no choice; sync asked nothing; PTV languages en + fi |
+| B8 | s9 | pass: "Ota kaikki PTV:n muutokset" 3/3 (name, description, connections) and left the summary (Lipas's change) under "Päivittyy PTV:hen Lipaksesta"; "Kumoa valinnat" 0/3; "Pidä Lipaksen versio kaikissa" 3/3; rows collapsed "✓ … [Muuta]", [Muuta] reopened with "Lomakkeessa". Not synced |
+| D1 | s9 | pass: dot on "PTV" in view and edit mode; bar collapsed; stacked cards; footer "Valinnat tulevat voimaan, kun tallennat liikuntapaikan. Tallennus synkronoi lopputuloksen PTV:hen." |
+| D2 | s9 | pass: Perustamisvuosi 1988 → 1989, Save: "PTV:SSÄ ON MUUTOKSIA…", "Nimi (FI): PTV:n ”Utajärven liikuntasali” korvautuu…", "Kuvaus (FI)", "Liitetyt palvelut: PTV:n versio korvautuu Lipaksen versiolla (poistetaan Soveltava liikunta)", Peruuta / Tallenna ja korvaa / Käy muutokset läpi; "Käy muutokset läpi" opened the PTV tab, panel open, focus on "Pidä Lipaksen versio: Nimi (FI)" |
+| D3 | s9 | pass (s9 has no PTV summary to take, so: PTV's description, Lipas's name, PTV's connections): the description field held PTV's text at once; year put back to 1988; Save asked nothing, "Tallennetaan ja synkronoidaan PTV:hen…", "Tallennus onnistui". `state`: texts and services as chosen on both sides, `:review []`, year 1988. Reset with `s9-everything!` |
+| G2 | s11 | pass: "Puhelinnumero" needs a choice, PTV card lists both numbers with "Ota tämä", Lipas card "PTV:n muut arvot poistuvat.", "Ota tämä" on Lipas's number pressed "Pidä Lipaksen versio" too; "Muut verkkosivut" with "Ota verkkosivuksi" / "Ota varauslinkiksi". Both kept: "Synkronoi nyt" asked "Synkronointi poistaa tietoja PTV:stä", "Muut verkkosivut: ~~https://www.utajarvi.fi/liikunta~~", the second phone not named (as P5 notes); confirmed. `state`: one phone, one web page. Reset with `s11-second-phone-and-page!` |
+| G9 | s14 | pass: row "Ruotsi (SV) · Poistuu PTV:stä", "Näytä poistuvat tekstit" with name, summary, description, each with a copy button; the hint "Ruotsi ei ole käytössä organisaatiollanne Lipaksessa… (lipasinfo@jyu.fi)…"; bar "Synkronointi poistaa PTV:stä ruotsinkielisen kieliversion."; dialog "Ruotsinkielinen kieliversio (nimi, tiivistelmä ja kuvaus)" + "Lipas julkaisee vain kielet…"; confirmed. PTV has fi only: see finding 1. Reset with `s14-sv-added!` |
+| G11 | s16 | pass: no postal-address row, "Tiivistelmä (FI) · Näytä muutos" (" Utajärven keskustassa" underlined), "Säilyvät PTV:ssä: postiosoite."; sync asked nothing; PTV still has "PL 1, 91601". Reset with `s16-postal-address!` |
+| H3 | s15 | pass, no sync: "Liitä tähän palvelupaikkaan" gave "Palvelupaikan tiedot PTV:ssä eroavat Lipaksesta 2 kohdassa… Lisäksi synkronointi poistaa englanninkielisen kieliversion."; fi texts "Eroaa" with no origin; "Englanti (EN) · Poistuu PTV:stä" with "Siltä puuttuu Lipaksessa tiivistelmä ja kuvaus, ja kieliversio julkaistaan vain, kun sillä on sekä tiivistelmä että kuvaus.", "Ota PTV:n tekstit"; no "Säilyvät PTV:ssä" postal-address line (not checked whether the location has one). DB unchanged |
+| M1 | s5 | pass: as listed in M1 (one row, Pallokentät and Liikuntaneuvonta marked, the caption, no "Pidä liitos"/"Poista liitos"); "Ota PTV:n versio" collapsed it, chip blue, "Kopioidaan Lipakseen: Liitetyt palvelut", field Liikuntaneuvonta + Yleisurheilu; "Synkronoi nyt" asked nothing (no removal named for Pallokentät). `state`: yleisurheilu + liikuntaneuvonta on both sides. Reset with `s5-connections!` |
+| M3 | s5 | pass: own set "Lomakkeessa on muokattu palveluvalinta" (Yleisurheilukentät ja -paikat), "Vie muokattu versio PTV:hen"; Save: "Liitetyt palvelut: PTV:n versio korvautuu muokatulla versiolla (poistetaan Liikuntaneuvonta)", Peruuta / Tallenna ja korvaa / Käy muutokset läpi. Peruuta, edit discarded; `state` unchanged |
+| M4 | s8 | pass: link put PTV's two services in the field; "…eroavat Lipaksesta 2 kohdassa…"; no services row in ②; "PTV:ssä liitetyt palvelut säilyvät ja kopioidaan Lipakseen: Lähiliikunta ja liikuntapuistot, Puistojumppa" |
+| M6 | s8 | pass: own summary unconfirmed + PTV's description, integration switched on (the export button is disabled until then), "Vie palvelutietovarantoon": "LIPAS JA PTV EROAVAT", "Näitä Lipaksen ja PTV:n eroja…", "Tiivistelmä (FI)", Peruuta / Synkronoi ja korvaa / Käy erot läpi; no removal section (a first link disconnects nothing). Peruuta; DB unchanged |
+| M7 | s12, s10 | pass: site form (s12) "Käyntiosoite: PTV:n ”Kirkkotie 21, 91600 UTAJÄRVI” korvautuu Lipaksen tiedolla ”Kirkkotie 19, 91600 Utajärvi”", "Tallenna ja korvaa"; tool (s10) "Puhelinnumero: PTV:n ”+358 401234567” korvautuu Lipaksen tiedolla ”+358 858755700”", "Synkronoi ja korvaa". Both Peruuta, nothing saved |
+| P1 | s1b | pass: typing in the fi description: "Synkronointi päivittää PTV:hen 1 tietoa.", chip blue, "Päivittyy PTV:hen Lipaksesta (1)", "Kuvaus (FI) · Näytä muutos" (", salibandya" underlined, ". Vuorot varataan kyläyhdistykseltä" struck through, the legend), "Ajan tasalla:" without "kuvaus (fi)", "Viedään PTV:hen: Kuvaus (FI)", no "Valitse ennen synkronointia"; "Synkronoi nyt" asked nothing (offline: the request went out and failed). Typing back: panel gone, "Ajan tasalla" |
+| P2 | s1b | pass: with the bar under the sticky header, "Näytä muutokset" under "Synkronoi nyt" opened the panel and scrolled it into view; absent while "Ajan tasalla" |
+| P5 | s1b | pass: "Jäähallit" added: "Liitetyt palvelut PTV:ssä: lisätään Jäähallit", "Synkronoi nyt" asked nothing; original removed: "…lisätään Jäähallit; poistetaan Kuntoilukeskukset ja liikuntasalit"; dialog "Liitetyt palvelut: ~~Kuntoilukeskukset ja liikuntasalit~~", Peruuta |
+| P3 | s1b | pass: EN summary erased: bar "Synkronointi poistaa PTV:stä englanninkielisen kieliversion.", "Englanti (EN) · Poistuu PTV:stä" with "…Siltä puuttuu Lipaksessa tiivistelmä, ja kieliversio julkaistaan vain, kun sillä on sekä tiivistelmä että kuvaus.", "Näytä poistuvat tekstit", "Ota PTV:n tekstit"; "Ajan tasalla:" no English text. Dialog as P3 step 1 with all three buttons; its "Näytä muutokset" closed it and showed the panel, nothing sent (finding 2); "Ota PTV:n tekstit" put the text back, panel gone. Optional write: erased and confirmed, "Tallennus onnistui"; `state`: PTV languages fi only. Reset with `s1b-in-sync!` |
+| P6 | s10 | pass: phone open, service swapped (Jäähallit in, Lähiliikunta ja liikuntapuistot out): one dialog, "PTV:ssä on muutoksia, joita et ole käynyt läpi", the phone line, "Lisäksi synkronointi poistaa PTV:stä nämä tiedot:", "Liitetyt palvelut: ~~Lähiliikunta ja liikuntapuistot~~", Peruuta / Synkronoi ja korvaa / Käy muutokset läpi. Peruuta |
+| P7 | – | pass: after a reload, "Synkronoi kaikki valmiit (4)": "Synkronoidaanko 4 liikuntapaikkaa?", "Synkronointi poistaa PTV:stä nämä tiedot": "Kylätalo Katajiston liikuntasali: Englanninkielinen kieliversio", "Utajärven kuntoportaat: Ruotsinkielinen kieliversio", then the skipped sites with conflicts. Peruuta |
+| P8 | s1b | pass: view mode no row; edit, Perustiedot phone "08 5875 1234": PTV tab "Synkronointi päivittää PTV:hen 1 tietoa.", "Puhelinnumero: (ei arvoa) → +358 858751234" under "Päivittyy PTV:hen Lipaksesta", no dot on the tab; edit discarded |
+| L5 | – | pass for the review: no errors from the review, the panel or the dialogs. See finding 3 |
+
+Findings:
+1. **G9's "Verify: PTV has fi+en only" can't hold for s14.** s14 has no
+   English texts in Lipas, so the sync left PTV with fi only (`(state
+   606904)` before the reset: `:languages ["fi"]`). Correct behaviour;
+   the doc's expectation reads "the org's languages" as the site's. Not
+   related to today's changes. Screenshot: `/private/tmp/claude-501/-Users-tipo-lipas-lipas/2c75db1c-416b-448b-8131-504617e00596/scratchpad/pw-sites/g9-removal-dialog.png`.
+2. **P3's "Näytä muutokset" in the removal dialog** opened the panel and
+   scrolled to it, but the language row sat at the bottom edge of the
+   view (y 644–672 of 720) under the bar, and the focus went back to
+   "Synkronoi nyt" (the dialog's own focus restore). The gate's "Käy
+   muutokset läpi" puts the focus on the first open row (C2); a language
+   row has no choice button, so there's nothing to focus there. Expected
+   "the panel opens at the row"; seen: the panel's top. Minor, today's
+   change. Screenshot: `/private/tmp/claude-501/-Users-tipo-lipas-lipas/2c75db1c-416b-448b-8131-504617e00596/scratchpad/pw-sites/p3-shown.png`.
+3. **Console: MUI Autocomplete "getOptionLabel … returned object (null)"**,
+   12 times, whenever the services selector ("Muuta palvelua") listed its
+   options: three services of the Utajärvi test org have no name
+   (026ee5c3-fe81-401c-bf9b-3196868ac005,
+   11cc13d3-1a0e-4aeb-afe0-f12ffb4e5aec,
+   400bd064-7d3d-4430-871e-075c58b61249) and show as blank options at the
+   top of the list. Not in the local `ptv_service` mirror. Older than
+   today's changes. The other console lines: the two failed requests of the
+   offline checks (tooling), the MUI GridLegacy deprecation and
+   ":focus-visible" warnings. Log: `/private/tmp/claude-501/-Users-tipo-lipas-lipas/2c75db1c-416b-448b-8131-504617e00596/scratchpad/pw-sites/console-errors.log`.
+4. **"Synkronoi kaikki valmiit (n)" counts a site whose only change is an
+   unsaved edit in the tool**: during P1 it went from 6 to 7 while s1b's
+   description was being typed. Consistent with the chip turning blue;
+   the bulk sync would send that edit too. Not checked further.
+5. **Wording newer than the doc** (not bugs): A2's banner reads "8
+   liikuntapaikassa on ristiriitoja PTV:n kanssa – ratkaise ne ennen
+   synkronointia."; B6's caption "Muuttaa myös liikuntapaikan nimen
+   Lipaksessa"; B7's line "Lipas lisää englanninkielisen kieliversion:
+   nimi, tiivistelmä, kuvaus."; P5's line "lisätään X; poistetaan Y"; B4's
+   own text counts as decided only after "Vie muokattu versio PTV:hen" (as
+   in M3).
+
+Not run: the site form's save without a removal warning (known, open).
+
+Environment left behind:
+- Synced and reset: s2b (C3, B2) with `s2b-ptv-texts!`; s3 (B3)
+  `s3-lipas-texts!`; s4 (B4) `s4-conflict!`; s6 (B6) `s6-names!`; s7 (B7)
+  `s7-new-language!`; s11 (G2) `s11-second-phone-and-page!`; s14 (G9)
+  `s14-sv-added!`; s16 (G11) `s16-postal-address!`; s5 (M1)
+  `s5-connections!`; s9 (D3) `s9-everything!`; s1b (P3) `s1b-in-sync!`.
+  `(user.ptv-drift-scenarios/report)` afterwards matched the start for
+  every site above; each reset added PTV and Lipas revisions as usual.
+- Not written: s8, s10, s12, s15 (links and edits stayed in the browser);
+  `state` unchanged. 605450 untouched (it read `[]` at the end, from the
+  Palvelut run).
+- The playwright session `sites` was closed.
