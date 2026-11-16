@@ -537,7 +537,9 @@
    - :one-slot, :extra: sets of values; :address: an address-value;
    - :distance: [easting northing], and :distance-m between them;
    - :languages: a language version PTV has that the sync removes, with
-     :language, :locale and :texts, PTV's {field text} in it;
+     :language, :locale, :texts, PTV's {field text} in it, and :missing,
+     which of the summary and description that publishing it needs the
+     site lacks (none: the org hasn't enabled the language);
    - :set, the connections (key [:services]): the sets of the ids of the
      services each side connects the location to, and :names, id -> the
      service's name. One row for the whole set: the user keeps Lipas's set
@@ -631,6 +633,10 @@
                                                            :let [v (get ptv [f language])]
                                                            :when v]
                                                        [f v]))
+                                     ;; what the site lacks of what publishing
+                                     ;; the version needs
+                                     :missing (filterv #(str/blank? (get-in site [:ptv % locale]))
+                                                       [:summary :description])
                                      :origin (cond
                                                (not base) no-base
                                                (contains? (set (map ptv-data/lipas-lang->ptv-lang base-langs))
@@ -876,6 +882,76 @@
                  (not (review-decided? choices %)))
            rows))
 
+;;; What a sync changes ;;;
+
+(def ^:private field-order
+  (into {} (map-indexed (fn [i {:keys [field]}] [field i])) review-fields))
+
+(defn- row-order
+  [row]
+  [(field-order (:field row)) (language-sort-key (:language row))])
+
+(defn with-edit-rows
+  "`review`, a sync-review of the saved site, with the user's own changes
+   it doesn't show: the rows of `edit-review`, a sync-review of the edit
+   (what the sync sends), where the saved site agrees with PTV. The edit is
+   the only change there, so it is Lipas's (:origin :lipas, which needs no
+   choice), made in the form since the save (:edit? true); a field it
+   changes, or a text of a language version it removes, no longer reads
+   as up to date (:matching). Each row in its field's place."
+  [review edit-review]
+  (let [saved-keys (into #{} (map :key) (:rows review))
+        own (for [row (:rows edit-review)
+                  :when (not (contains? saved-keys (:key row)))]
+              (assoc row :origin :lipas :edit? true))
+        changed (into #{} (map #(select-keys % [:field :language])) own)
+        removed-langs (into #{} (comp (filter #(= :languages (:kind %))) (map :language)) own)
+        changed? (fn [m]
+                   (or (contains? changed (select-keys m [:field :language]))
+                       (contains? removed-langs (:language m))))]
+    (if (and review (seq own))
+      (-> review
+          (update :rows #(vec (sort-by row-order (concat % own))))
+          (update :matching #(filterv (complement changed?) %)))
+      review)))
+
+(declare dropped-values)
+
+(defn disconnected-services
+  "The services PTV connects the location to that a sync of the
+   connections `row` (a :set row) disconnects it from. None on a first
+   link: the location keeps PTV's connections (ptv-data/link-service-ids)."
+  [{:keys [kind origin lipas ptv]}]
+  (when (and (= :set kind) (not= :first-link origin))
+    (vec (remove (set lipas) ptv))))
+
+(defn sync-removals
+  "What a sync of the edit removes from PTV, which the user confirms before
+   it is sent: the rows of `rows`, a sync-review of the edit (what the
+   sync sends), where PTV has a value and the sync leaves PTV without it.
+   A language version PTV has that the sync doesn't publish always; the
+   connections when the sync disconnects the location from a service
+   (disconnected-services); a one-slot field when PTV loses values
+   (dropped-values). Not where the location is (its municipality and map
+   point). `postal-addresses` (sync-review's) adds the postal addresses
+   PTV's API rejects, which the sync removes: a row of kind
+   :postal-address, :ptv the addresses."
+  [rows & {:keys [postal-addresses]}]
+  (cond-> (filterv (fn [{:keys [field kind lipas ptv] :as row}]
+                     (case kind
+                       :languages true
+                       :set (boolean (seq (disconnected-services row)))
+                       :one-slot (boolean (seq (dropped-values row)))
+                       (:info :distance) false
+                       (and (nil? (comparable field lipas))
+                            (some? (comparable field ptv)))))
+                   rows)
+    (seq (:dropped postal-addresses))
+    (conj {:key [:postal-address]
+           :field :postal-address
+           :kind :postal-address
+           :ptv (:dropped postal-addresses)})))
+
 (defn- title-case
   "\"UTAJÄRVI\" -> \"Utajärvi\", word by word (also after a hyphen)."
   [s]
@@ -896,6 +972,18 @@
   "PTV's values of a one-slot or extra `row`, in a stable order."
   [row]
   (sort-by str (:ptv row)))
+
+(defn dropped-values
+  "PTV's values of a one-slot `row` that a sync leaves PTV without, when
+   PTV has more of them than the one Lipas sends: those Lipas's slot
+   doesn't hold. One value swapped for Lipas's is a change, not a
+   removal, as an edited text is."
+  [{:keys [field kind lipas] :as row}]
+  (when (= :one-slot kind)
+    (let [kept (or (comparable field lipas) #{})
+          values (ptv-values row)]
+      (when (> (count values) (count kept))
+        (filterv #(not (contains? kept (slot-key field %))) values)))))
 
 (defn takeable-in-bulk?
   "Whether \"take all of PTV's changes\" can take `row`: one value to take.
@@ -1178,34 +1266,65 @@
    (review-choice-required?) before a sync overwrites it. Rows are shaped
    as a location review's text rows (:service? true): :lipas is Lipas's
    side, the edit's text or, where the edit holds PTV's, Lipas's version;
-   :current which of the two the edit holds."
-  [{:keys [edit ptv base base? changed-in-ptv? locales last-sync ptv-modified]}]
-  (let [norm ptv-data/normalize-ws]
-    {:rows (vec (for [[field kind] service-review-fields
-                      locale locales
-                      :let [l (get-in edit [field locale])
-                            p (get-in ptv [field locale])
-                            b (get-in base [field locale])
-                            differs? (not= (norm l) (norm p))
-                            ptv-changed? (not= (norm p) (norm b))
-                            language (ptv-data/locale->lang locale)]
-                      :when (or differs? ptv-changed?)]
-                  {:key [field language]
-                   :field field
-                   :kind kind
-                   :group :texts
-                   :takeable-by :ptv-manager
-                   :service? true
-                   :language language
-                   :locale locale
-                   :lipas (if differs? l b)
-                   :ptv p
-                   :base b
-                   :origin (cond
-                             (not ptv-changed?) :lipas
-                             (or (not differs?) (= (norm l) (norm b))) :ptv
-                             :else :both)
-                   :current (if differs? :lipas :ptv)}))
+   :current which of the two the edit holds.
+
+   A language version the sync removes from PTV, in `dropped` (LIPAS
+   locales), is one row in place of its texts', shaped as a site's
+   (sync-review): :texts are PTV's, :missing what the edit lacks of the
+   summary and description that publishing it needs, and :marked? true
+   when the user marked it for removal (`marked`, a native service's).
+   :edited? says whether the edit differs from PTV in any text, those of
+   the dropped versions too: whether a sync has something to send."
+  [{:keys [edit ptv base base? changed-in-ptv? locales last-sync ptv-modified dropped marked]}]
+  (let [norm ptv-data/normalize-ws
+        lang (fn [locale] (or (ptv-data/locale->lang locale) (name locale)))
+        texts (for [[field kind] service-review-fields
+                    locale locales
+                    :let [l (get-in edit [field locale])
+                          p (get-in ptv [field locale])
+                          b (get-in base [field locale])
+                          differs? (not= (norm l) (norm p))
+                          ptv-changed? (not= (norm p) (norm b))
+                          language (lang locale)]
+                    :when (or differs? ptv-changed?)]
+                {:key [field language]
+                 :field field
+                 :kind kind
+                 :group :texts
+                 :takeable-by :ptv-manager
+                 :service? true
+                 :language language
+                 :locale locale
+                 :lipas (if differs? l b)
+                 :ptv p
+                 :base b
+                 :origin (cond
+                           (not ptv-changed?) :lipas
+                           (or (not differs?) (= (norm l) (norm b))) :ptv
+                           :else :both)
+                 :current (if differs? :lipas :ptv)})
+        dropped (set dropped)
+        languages (for [locale (sort-by (comp language-sort-key lang) dropped)
+                        :let [language (lang locale)
+                              marked? (contains? (set marked) locale)]]
+                    {:key [:languages language]
+                     :field :languages
+                     :kind :languages
+                     :group :languages
+                     :takeable-by (when-not marked? :ptv-manager)
+                     :service? true
+                     :language language
+                     :locale locale
+                     :texts (into {} (for [[field _] service-review-fields
+                                           :let [v (get-in ptv [field locale])]
+                                           :when (not (str/blank? v))]
+                                       [field v]))
+                     :missing (filterv #(str/blank? (get-in edit [% locale])) [:summary :description])
+                     :marked? marked?
+                     :origin (if (and base? (written-locale? base locale)) :lipas :ptv)
+                     :current :lipas})]
+    {:rows (vec (concat (remove #(contains? dropped (:locale %)) texts) languages))
+     :edited? (boolean (some #(= :lipas (:current %)) texts))
      :matching []
      :base? (boolean base?)
      :first-link? false
@@ -1257,8 +1376,17 @@
         ;; site (both ->review-base), joined in by the caller; without the
         ;; base nobody can be told and every difference needs a decision.
         saved (review-saved-site site (:review-saved site))
-        review (-> (sync-review saved (:ptv-base site) ptv-channel services
-                                (ptv-data/effective-languages saved org-langs))
+        saved-review (sync-review saved (:ptv-base site) ptv-channel services
+                                  (ptv-data/effective-languages saved org-langs))
+        ;; What the next sync changes in PTV: the edit, which it sends,
+        ;; against PTV now. The saved site's review while the edit holds
+        ;; nothing else.
+        edit-review (if (= saved site)
+                      saved-review
+                      (sync-review site (:ptv-base site) ptv-channel services langs))
+        edit-rows (:rows edit-review)
+        ;; the review also shows what the user has changed in the form
+        review (-> (with-edit-rows saved-review edit-review)
                    (annotate-review site langs))
         ;; a change made in PTV still waiting for the user's choice
         awaiting-choice? (boolean (seq (open-review-rows (:rows review) (:review-choices site))))
@@ -1267,9 +1395,7 @@
         ;; a sync drops from Lipas: the next sync has something to do.
         something-to-send? (boolean (or (seq (:rows review))
                                         (seq (:gone-services review))
-                                        (and (not= saved site)
-                                             (seq (:rows (sync-review site (:ptv-base site) ptv-channel
-                                                                      services langs))))))
+                                        (seq edit-rows)))
         ;; An edit made in the PTV tool but not saved that leaves no difference
         ;; to review, e.g. turning sync back on for a site saved with sync off.
         ;; Without this the site read :ok and its sync was disabled.
@@ -1344,6 +1470,8 @@
                     :else :ready)
 
      :review review
+     ;; what "Synkronoi nyt" asks about before it sends the edit
+     :sync-removals (sync-removals edit-rows :postal-addresses (:postal-addresses edit-review))
 
      :service-ids (-> site :ptv :service-ids)
      :service-name (-> services

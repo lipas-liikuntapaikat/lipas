@@ -59,11 +59,16 @@
                         edits over it, what the form shows and a sync sends
    - :data              the body a sync sends
    - :text-errors       the texts PTV would reject, which block the sync
-   - :versions-to-drop  the language versions the sync removes from PTV
-                        (a service Lipas created)
+   - :versions-to-drop  the language versions of a service Lipas created
+                        that the sync removes from PTV: the review has a
+                        row for each, as for those marked for removal of a
+                        native one
    - :has-local-edits?  whether a sync has anything to send
    - :invalid-texts?    whether it has, and :text-errors block it
    - :review, :open-rows the sync review, and its rows still to decide
+   - :sync-removals     what the sync removes from PTV, which \"Synkronoi
+                        nyt\" asks about first: shaped as a site's
+                        (ptv-review/sync-removals)
    - :take-ptv-version? nothing to send, every change PTV made taken as it
                         is: the sync records PTV's version as Lipas's,
                         else the review would come back
@@ -142,10 +147,14 @@
                            (ptv-data/service-versions-to-drop (:language-versions service)
                                                               texts
                                                               org-languages))
+        ;; the language versions the sync removes from PTV: those Lipas no
+        ;; longer publishes of its own service, those the user marked for
+        ;; removal of a native one
+        dropped (if native? removals versions-to-drop)
         ;; The edit against PTV and Lipas's version, in the languages a sync
         ;; publishes: a generated text in any other language (the generator
         ;; writes fi/se/en) never reaches PTV, and would read as a
-        ;; difference forever
+        ;; difference forever. A version the sync removes is one row.
         review (when-not other-system?
                  (ptv-review/service-review
                    {:edit texts
@@ -155,10 +164,20 @@
                     :changed-in-ptv? changed-in-ptv?
                     :locales (map keyword (or edit-languages org-languages))
                     :last-sync (:last-sync base)
-                    :ptv-modified (:service-modified service)}))
+                    :ptv-modified (:service-modified service)
+                    :dropped dropped
+                    :marked removals}))
         rows (:rows review)
-        has-local-edits? (boolean (or (some #(= :lipas (:current %)) rows)
-                                      (seq removals)))
+        has-local-edits? (boolean (or (:edited? review) (seq removals)))
+        ;; What the sync removes from PTV, which the user confirms first:
+        ;; the language versions it drops, and a text PTV has that the edit
+        ;; leaves empty
+        sync-removals (filterv (fn [{:keys [kind lipas ptv current]}]
+                                 (or (= :languages kind)
+                                     (and (= :lipas current)
+                                          (str/blank? lipas)
+                                          (not (str/blank? ptv)))))
+                               rows)
         state {:edit-key edit-key
                :native? native?
                :other-system? other-system?
@@ -178,7 +197,10 @@
                :invalid-texts? (boolean (and has-local-edits? (seq text-errors)))
                :review review
                :open-rows (ptv-review/open-review-rows rows choices)
-               :take-ptv-version? (boolean (and (seq rows) (not has-local-edits?)))
+               :sync-removals sync-removals
+               ;; a language version the sync removes isn't PTV's version
+               :take-ptv-version? (boolean (and (some #(not= :languages (:kind %)) rows)
+                                                (not has-local-edits?)))
                :last-modified-in (if (and base (not changed-in-ptv?) (not (:read-from-ptv base)))
                                    :lipas
                                    :ptv)
@@ -192,13 +214,17 @@
    version of each of `rows` (its service-review rows): {[field locale]
    text}, nil dropping the edit so that the field shows Lipas's version.
    Taking PTV's version writes PTV's text (\"\" for none, as a cleared
-   field). Keeping Lipas's drops the edit where it holds PTV's, and leaves
-   the user's own text be: it is Lipas's side."
+   field), of a language version the sync would remove all PTV's texts in
+   it, which keeps it. Keeping Lipas's drops the edit where it holds PTV's,
+   and leaves the user's own text be: it is Lipas's side."
   [rows side]
   (into {}
-        (for [{:keys [field locale ptv current]} rows
-              :when (or (= :ptv side) (= :ptv current))]
-          [[field locale] (when (= :ptv side) (or ptv ""))])))
+        (for [{:keys [field kind locale ptv current texts]} rows
+              :when (or (= :ptv side) (= :ptv current))
+              write (if (= :languages kind)
+                      (for [[f text] texts] [[f locale] text])
+                      [[[field locale] (when (= :ptv side) (or ptv ""))]])]
+          write)))
 
 (defn apply-review-writes
   "`descriptions`, a service's edits, with `writes` (review-writes) made."

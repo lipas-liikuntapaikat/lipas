@@ -245,6 +245,66 @@
             (is (str/blank? (get-in taken [:data :summary :en])))
             (is (:take-ptv-version? taken))))))))
 
+(deftest dropped-language-versions-test
+  ;; A language version the sync removes from PTV is one row of the review,
+  ;; which says why; what the sync removes "Synkronoi nyt" asks about first
+  (let [with-en (fn [service]
+                  (-> service
+                      (update :language-versions conj :en)
+                      (assoc-in [:name :en] "Swimming halls")
+                      (assoc-in [:summary :en] "Summary of swimming halls")
+                      (assoc-in [:description :en] "Description of swimming halls, long enough.")))
+        state (fn [m] (state (merge {:service (with-en lipas-service) :org-languages ["fi" "en"]} m)))
+        removals (fn [s] (mapv :key (:sync-removals s)))
+        row-keys (fn [s] (mapv :key (:rows (:review s))))]
+    (testing "nothing edited, nothing removed"
+      (let [s (state {})]
+        (is (= [] (row-keys s) (removals s)))
+        (is (= :ok (:sync-status s)))))
+
+    (testing "erasing one English text removes the English version: one row in place of its texts'"
+      (let [s (state {:descriptions {:summary {:en ""}}})
+            [row & more] (:rows (:review s))]
+        (is (nil? more))
+        (is (= {:key [:languages "en"] :kind :languages :locale :en :missing [:summary]
+                :marked? false :takeable-by :ptv-manager :current :lipas}
+               (select-keys row [:key :kind :locale :missing :marked? :takeable-by :current])))
+        (is (= {:name "Swimming halls"
+                :summary "Summary of swimming halls"
+                :description "Description of swimming halls, long enough."}
+               (:texts row)))
+        (is (= [[:languages "en"]] (removals s)))
+        (testing "the erasure is something to send"
+          (is (:has-local-edits? s))
+          (is (= :ready (:sync-status s)))
+          (is (not (:take-ptv-version? s))))
+        (testing "taking PTV's texts keeps the version"
+          (let [s (state (take-rows {:descriptions {:summary {:en ""}}} [row] :ptv))]
+            (is (= [] (row-keys s)))
+            (is (= [] (:versions-to-drop s)))))))
+
+    (testing "an erased text PTV has is removed"
+      (is (= [[:user-instruction "fi"]]
+             (removals (state {:descriptions {:user-instruction {:fi ""}}})))))
+
+    (testing "a version the org hasn't enabled: removed, with nothing missing to write"
+      (let [s (state {:org-languages ["fi"]})
+            [row] (:rows (:review s))]
+        (is (= [[:languages "en"]] (removals s)))
+        (is (= [] (:missing row)))
+        (testing "nothing to send, so no sync of PTV's version either"
+          (is (not (:has-local-edits? s)))
+          (is (not (:take-ptv-version? s)))
+          (is (= :ok (:sync-status s))))))
+
+    (testing "a native service's version marked for removal"
+      (let [s (state {:service (with-en native-service) :descriptions {:remove-languages [:en]}})
+            [row] (filter #(= :languages (:kind %)) (:rows (:review s)))]
+        (is (= [[:languages "en"]] (removals s)))
+        (is (:marked? row))
+        (is (nil? (:takeable-by row)) "unmarked where it was marked")
+        (is (not-any? #(= :en (:locale %)) (remove #{row} (:rows (:review s)))))))))
+
 (deftest last-modified-in-test
   (is (= :lipas (:last-modified-in (state {:service lipas-service :base written}))))
   (is (= :ptv (:last-modified-in (state {:service (assoc lipas-service :service-modified "2026-10-02T09:00:00")

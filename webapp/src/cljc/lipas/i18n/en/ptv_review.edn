@@ -73,9 +73,12 @@
  :point-not-takeable "The location can't be copied from PTV. If PTV's location is right, move the facility on the LIPAS map."
 
  :language-removed "The sync removes the {1} language version from PTV: its name, summary and description."
+ :language-removed-missing "The sync removes the {1} language version from PTV: its name, summary and description. In LIPAS it has no {2}, and a language version is published only when it has both a summary and a description."
+ :language-marked "You marked the {1} language version for removal, so the sync removes it from PTV. You can undo the removal on the language version's tab."
  :language-kept "{1} language version stays in PTV, and its texts are copied into LIPAS."
  :language-enable-hint "{1} isn't enabled for your organisation in LIPAS. To keep the language version, ask LIPAS support to enable the language (lipasinfo@jyu.fi) before syncing. You can also copy the texts from here."
  :show-removed-texts "Show the texts that are removed"
+ :hide-removed-texts "Hide the texts that are removed"
  :take-ptv-texts "Take the PTV texts"
  :take-ptv-texts-hint "Copies PTV's texts into LIPAS, so the language version stays."
  :language-added "LIPAS adds the {1} language version: {2}."
@@ -187,4 +190,18 @@
  :retry "Try again"
  :count-open "Unresolved: {1}"
  :help-link "Guide: reviewing the changes made in PTV"
- :field-user-instruction "User instruction"}
+ :field-user-instruction "User instruction"
+
+ :removals-title "Syncing removes details from PTV"
+ :removals-intro "If you sync, these details are removed from PTV:"
+ :removals-also "Syncing also removes these details from PTV:"
+ :removals-language "{1} language version"
+ :removals-language-why "Lipas publishes only languages the organisation has enabled and that have both a summary and a description."
+ :removals-postal-address "Postal address"
+ :removals-postal-address-why "PTV doesn't accept the address through its interface. Correct it in PTV if you want to keep it."
+ :show-text "Show text"
+ :hide-text "Hide text"
+ :show-change "Show change"
+ :hide-change "Hide change"
+ :change-legend "Struck-through text is removed from PTV; underlined text replaces it."
+ :bulk-removals-title "Syncing removes these details from PTV"}

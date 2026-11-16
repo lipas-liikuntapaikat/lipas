@@ -29,7 +29,6 @@
  :text-missing "{1} ({2}) is missing."
  :text-too-long "{1} ({2}) is too long (at most {3} characters)."
  :fix-or-remove-version "Fill in the missing texts or remove the language version."
- :versions-will-be-removed "The next sync removes these language versions from PTV: {1}. Lipas publishes only languages the organisation has enabled and that have both a summary and a description."
  :text-too-short "{1} ({2}) is too short (at least {3} characters)."
  :ptv-text-too-short "{1} ({2}) is too short in PTV (at least {3} characters). Lipas sends it to PTV as it is, so fix it in PTV."
  :texts-too-short "PTV requires texts of at least {1} characters: {2}"

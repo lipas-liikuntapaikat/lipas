@@ -32,7 +32,6 @@
  :text-missing "{1} ({2}) puuttuu."
  :text-too-long "{1} ({2}) on liian pitkä (enintään {3} merkkiä)."
  :fix-or-remove-version "Täydennä puuttuvat tekstit tai poista kieliversio."
- :versions-will-be-removed "Seuraava synkronointi poistaa PTV:stä kieliversiot: {1}. Lipas julkaisee vain kielet, jotka ovat organisaatiolla käytössä ja joille on sekä tiivistelmä että kuvaus."
  :text-too-short "{1} ({2}) on liian lyhyt (vähintään {3} merkkiä)."
  :ptv-text-too-short "{1} ({2}) on PTV:ssä liian lyhyt (vähintään {3} merkkiä). Lipas lähettää sen PTV:hen sellaisenaan, joten korjaa se PTV:ssä."
  :texts-too-short "PTV vaatii, että teksteissä on vähintään {1} merkkiä: {2}"

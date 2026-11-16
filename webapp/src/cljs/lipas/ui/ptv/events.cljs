@@ -8,6 +8,7 @@
             [lipas.roles :as roles]
             [lipas.schema.sports-sites.ptv :as ptv-schema]
             [lipas.ui.ptv.review-data :as review-data]
+            [lipas.ui.ptv.sync-summary :as sync-summary]
             [lipas.ui.utils :as utils]
             [malli.core :as m]
             [malli.transform :as mt]
@@ -2066,30 +2067,50 @@
           [:lipas.ui.effects/focus! (review-data/first-open-dom-id lipas-id)]]}))
 
 (rf/reg-event-fx ::sync-with-review
-  ;; "Synkronoi nyt" with the site's review `rows` (annotated, see
-  ;; ptv-review/annotate-review): while a change made in PTV is undecided,
-  ;; ask before overwriting it; otherwise sync the edit, which holds the
-  ;; decisions. `overwrite?` is the user's answer: undecided rows keep the
-  ;; saved Lipas version.
-  (fn [{:keys [db]} [_ lipas-id rows overwrite?]]
+  ;; "Synkronoi nyt" for `site`, the PTV tool's row (sports-site->ptv-input).
+  ;; What it changes the review panel shows; what it removes from PTV
+  ;; (:sync-removals) the user confirms first. While a change made in PTV
+  ;; is undecided, the dialog asks before overwriting it and names what
+  ;; else the sync removes: one dialog either way. `confirmed?` is the
+  ;; user's go-ahead: undecided rows keep the saved Lipas version.
+  (fn [{:keys [db]} [_ {:keys [lipas-id review sync-removals] :as site} & {:keys [confirmed?]}]]
     (let [tr (:translator db)
-          org-id (-get-ptv-org-id db)
-          site (get-in db [:ptv :org org-id :data :sports-sites lipas-id])
-          open (ptv-review/open-review-rows rows (get-in db (review-data/choices-path lipas-id)))]
-      (if (and (seq open) (not overwrite?))
+          rows (:rows review)
+          open (ptv-review/open-review-rows rows (get-in db (review-data/choices-path lipas-id)))
+          languages (review-data/language-removals rows)
+          confirm #(rf/dispatch [::sync-with-review site :confirmed? true])
+          show-review #(rf/dispatch [::show-review lipas-id])]
+      (cond
+        (and (seq open) (not confirmed?))
+        (let [listed (set (map :key (concat open languages)))
+              others (remove #(contains? listed (:key %)) sync-removals)]
+          {:fx [[:dispatch [:lipas.ui.events/confirm-with
+                            (review-data/overwrite-confirmation
+                              tr
+                              {:open open
+                               :languages languages
+                               :action :sync
+                               :also (when (seq others)
+                                       [sync-summary/removals
+                                        {:tr tr :rows others
+                                         :intro (tr :ptv.review/removals-also)}])
+                               :on-overwrite confirm
+                               :on-review show-review})]]]})
+
+        (and (seq sync-removals) (not confirmed?))
         {:fx [[:dispatch [:lipas.ui.events/confirm-with
-                          (review-data/overwrite-confirmation
-                            tr
-                            {:open open
-                             :languages (review-data/language-removals rows)
-                             :action :sync
-                             :on-overwrite #(rf/dispatch [::sync-with-review lipas-id rows true])
-                             :on-review #(rf/dispatch [::show-review lipas-id])})]]]}
+                          (sync-summary/confirmation tr {:rows sync-removals
+                                                         :on-sync confirm
+                                                         :on-review show-review})]]]}
+
         ;; The sync sends the saved site: what the review took from PTV
         ;; into the site's own data travels with it for the backend to write.
-        {:db (assoc-in db [:ptv :review :site-patch lipas-id]
-                       (ptv-review/review-site-patch (:review-saved site) site))
-         :fx [[:dispatch [::create-ptv-service-location lipas-id [] []]]]}))))
+        :else
+        (let [org-id (-get-ptv-org-id db)
+              edit (get-in db [:ptv :org org-id :data :sports-sites lipas-id])]
+          {:db (assoc-in db [:ptv :review :site-patch lipas-id]
+                         (ptv-review/review-site-patch (:review-saved edit) edit))
+           :fx [[:dispatch [::create-ptv-service-location lipas-id [] []]]]})))))
 
 ;;; Explicit archive (publishingStatus "Deleted") ;;;
 
@@ -2420,6 +2441,7 @@
   ;; PTV manager) without opening each row. Same gate as one site's sync:
   ;; a site with a change made in PTV still waiting for a choice is skipped,
   ;; and the confirmation names it.
+  ;; What a site's sync removes from PTV is named, as one site's sync shows.
   (fn [{:keys [db]} [_ ready awaiting]]
     (let [tr (:translator db)]
       {:fx [[:dispatch [:lipas.ui.events/confirm-with
@@ -2427,6 +2449,7 @@
                          :message [:div
                                    [:p {:style {:margin-top 0}}
                                     (tr :ptv/sync-all-ready-intro (count ready))]
+                                   (sync-summary/bulk-removals tr ready)
                                    (when (seq awaiting)
                                      [:<>
                                       [:p (tr :ptv/sync-all-ready-skipped)]
@@ -2503,7 +2526,7 @@
   ;; then the user's to start.
   (fn [_ [_ site]]
     (if (:sync-enabled site)
-      {:fx [[:dispatch [::sync-with-review (:lipas-id site) (-> site :review :rows)]]]}
+      {:fx [[:dispatch [::sync-with-review site]]]}
       {:fx [[:dispatch [::toggle-sync-enabled site true :persist? true]]]})))
 
 ;;; Double-link detection (single-site PTV tab) ;;;

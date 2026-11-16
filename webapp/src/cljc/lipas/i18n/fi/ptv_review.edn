@@ -73,9 +73,12 @@
  :point-not-takeable "Sijaintia ei voi kopioida PTV:stä. Jos PTV:n sijainti on oikea, siirrä liikuntapaikkaa Lipaksen kartalla."
 
  :language-removed "Synkronointi poistaa PTV:stä {1} kieliversion: nimen, tiivistelmän ja kuvauksen."
+ :language-removed-missing "Synkronointi poistaa PTV:stä {1} kieliversion: nimen, tiivistelmän ja kuvauksen. Siltä puuttuu Lipaksessa {2}, ja kieliversio julkaistaan vain, kun sillä on sekä tiivistelmä että kuvaus."
+ :language-marked "Merkitsit {1} kieliversion poistettavaksi, joten synkronointi poistaa sen PTV:stä. Voit perua poiston kieliversion välilehdellä."
  :language-kept "{1} kieliversio säilyy PTV:ssä, ja sen tekstit kopioidaan Lipakseen."
  :language-enable-hint "{1} ei ole käytössä organisaatiollanne Lipaksessa. Jos haluat säilyttää kieliversion, pyydä Lipaksen tukea ottamaan kieli käyttöön (lipasinfo@jyu.fi) ennen synkronointia. Voit myös kopioida tekstit talteen tästä."
  :show-removed-texts "Näytä poistuvat tekstit"
+ :hide-removed-texts "Piilota poistuvat tekstit"
  :take-ptv-texts "Ota PTV:n tekstit"
  :take-ptv-texts-hint "Kopioi PTV:n tekstit Lipakseen, jolloin kieliversio säilyy."
  :language-added "Lipas lisää {1} kieliversion: {2}."
@@ -187,4 +190,18 @@
  :retry "Yritä uudelleen"
  :count-open "Ratkaisematta: {1}"
  :help-link "Ohje: PTV-muutosten läpikäynti"
- :field-user-instruction "Toimintaohje"}
+ :field-user-instruction "Toimintaohje"
+
+ :removals-title "Synkronointi poistaa tietoja PTV:stä"
+ :removals-intro "Jos synkronoit, nämä tiedot poistuvat PTV:stä:"
+ :removals-also "Lisäksi synkronointi poistaa PTV:stä nämä tiedot:"
+ :removals-language "{1} kieliversio"
+ :removals-language-why "Lipas julkaisee vain kielet, jotka ovat organisaatiolla käytössä ja joille on sekä tiivistelmä että kuvaus."
+ :removals-postal-address "Postiosoite"
+ :removals-postal-address-why "PTV ei hyväksy osoitetta rajapinnan kautta. Jos haluat säilyttää sen, korjaa se PTV:ssä."
+ :show-text "Näytä teksti"
+ :hide-text "Piilota teksti"
+ :show-change "Näytä muutos"
+ :hide-change "Piilota muutos"
+ :change-legend "Yliviivattu poistuu PTV:stä, alleviivattu tulee tilalle."
+ :bulk-removals-title "Synkronointi poistaa PTV:stä nämä tiedot"}

@@ -69,6 +69,7 @@
             [lipas.ui.ptv.review :as review]
             [lipas.ui.ptv.review-data :as review-data]
             [lipas.ui.ptv.subs :as subs]
+            [lipas.ui.ptv.sync-summary :as sync-summary]
             [lipas.ui.utils :as utils :refer [<== ==>]]
             [re-frame.core :as rf]
             [reagent.core :as r]
@@ -237,6 +238,18 @@
                    :variant "outlined"
                    :size "small"
                    :on-change #(reset! draft-name %)}]}]))
+
+(defn- show-changes-button
+  "Beside \"Synkronoi nyt\": opens the review panel of `id` (a lipas-id, or
+   a service's edit key) and brings it into sight, where what the sync
+   changes in PTV is listed. Only while `review` has something to show."
+  [{:keys [tr id review]}]
+  (when (seq (:rows review))
+    [:> Button {:size "small" :variant "text"
+                :sx #js {:textTransform "none" :alignSelf "flex-start"}
+                :startIcon (r/as-element [:> Icon "compare_arrows"])
+                :on-click #(==> [::events/show-review id])}
+     (tr :ptv.review/show)]))
 
 (defn form-left-column
   [{:keys [org-id tr site services ptv-base org-languages selected-tab]}]
@@ -416,12 +429,13 @@
                            (if syncing?
                              [:> CircularProgress {:size 16 :color "inherit"}]
                              [:> Icon (if synced? "sync" "ios_share")]))
-              ;; through the review: asks before overwriting changes made in PTV
-              :on-click #(==> [::events/sync-with-review (:lipas-id site)
-                               (-> site :review :rows)])}
+              ;; asks before removing anything from PTV, and before
+              ;; overwriting changes made there
+              :on-click #(==> [::events/sync-with-review site])}
              (if synced?
                (tr :ptv.actions/sync-now)
                (tr :ptv.wizard/export-service-locations-to-ptv))]]]
+          [show-changes-button {:tr tr :id (:lipas-id site) :review (:review site)}]
           (when (or hint (seq schema-errors))
             [:> Typography {:variant "caption" :color "text.secondary" :component "div"}
              reason-lines])
@@ -2145,8 +2159,9 @@
       (tr :ptv.service/fix-or-remove-version)])])
 
 (defn first-save-dialog
-  "Confirmation before LIPAS first writes the texts of a service made in PTV."
-  [{:keys [tr service open? on-close on-confirm]}]
+  "Confirmation before LIPAS first writes the texts of a service made in
+   PTV, and what the write removes from PTV (`removals`, an element)."
+  [{:keys [tr service open? on-close on-confirm removals]}]
   (let [site-count (count (:site-ids service))]
     [:> Dialog {:open (boolean open?) :max-width "sm" :full-width true :on-close on-close}
      [:> DialogTitle (tr :ptv.service/first-save-title)]
@@ -2159,7 +2174,8 @@
                  :ptv.service/first-save-kept
                  :ptv.service/first-save-tracking
                  :ptv.service/first-save-audit]]
-          ^{:key k} [:li [:> Typography {:variant "body2"} (tr k)]])]]]
+          ^{:key k} [:li [:> Typography {:variant "body2"} (tr k)]])]
+       removals]]
      [:> DialogActions
       [:> Button {:on-click on-close :sx #js {:textTransform "none"}} (tr :actions/cancel)]
       [:> Button {:variant "contained" :color "secondary" :sx #js {:textTransform "none"}
@@ -2168,8 +2184,8 @@
 
 (defn service-panel-left
   [{:keys [tr org-id service data ptv-base has-local-edits? org-languages selected-tab
-           edit-key native? other-system? text-errors versions-to-drop edit-languages name-data
-           open-rows take-ptv-version? last-modified-in descriptions]}]
+           edit-key native? other-system? text-errors edit-languages name-data
+           open-rows take-ptv-version? last-modified-in descriptions review sync-removals]}]
   (r/with-let [confirm-first-save? (r/atom false)]
     (let [service-id (:service-id service)
           source-id (:source-id service)
@@ -2178,22 +2194,36 @@
           has-lipas-data? (= :lipas (:management service))
           generating? (<== [::subs/generating-service-descriptions? edit-key])
           write! #(rf/dispatch [::events/create-ptv-service org-id edit-key data [] []])
+          show-review #(rf/dispatch [::events/show-review edit-key])
           ;; through the review: a change made in PTV since Lipas's last
-          ;; write is asked about first. With nothing to send but every
-          ;; change PTV made taken, PTV's version is recorded as Lipas's.
-          sync! #(cond
-                   (seq open-rows)
-                   (==> [:lipas.ui.events/confirm-with
-                         (review-data/overwrite-confirmation
-                           tr {:open open-rows
-                               :on-overwrite write!
-                               :on-review (fn [] (rf/dispatch [::events/show-review edit-key]))})])
+          ;; write is asked about first, and what the sync removes from
+          ;; PTV, in the same dialog. With nothing to send but every change
+          ;; PTV made taken, PTV's version is recorded as Lipas's.
+          ;; `removals-shown?`: the first-save dialog named the removals.
+          sync! (fn [& {:keys [removals-shown?]}]
+                  (cond
+                    (seq open-rows)
+                    (==> [:lipas.ui.events/confirm-with
+                          (review-data/overwrite-confirmation
+                            tr {:open open-rows
+                                :also (when (seq sync-removals)
+                                        [sync-summary/removals
+                                         {:tr tr :rows sync-removals
+                                          :intro (tr :ptv.review/removals-also)}])
+                                :on-overwrite write!
+                                :on-review show-review})])
 
-                   take-ptv-version?
-                   (rf/dispatch [::events/take-ptv-service-version org-id edit-key service-id
-                                 (:service-modified service)])
+                    take-ptv-version?
+                    (rf/dispatch [::events/take-ptv-service-version org-id edit-key service-id
+                                  (:service-modified service)])
 
-                   :else (write!))]
+                    (and (seq sync-removals) (not removals-shown?))
+                    (==> [:lipas.ui.events/confirm-with
+                          (sync-summary/confirmation tr {:rows sync-removals
+                                                         :on-sync write!
+                                                         :on-review show-review})])
+
+                    :else (write!)))]
       [:> Stack {:spacing 2}
 
      ;; 1. PTV service name. A native service has one per language: the
@@ -2313,13 +2343,6 @@
        (when (seq text-errors)
          [service-text-errors-alert {:tr tr :errors text-errors :native? native?}])
 
-     ;; LIPAS is the master of a service it created: say before the sync
-     ;; which language versions it will remove from PTV
-       (when (seq versions-to-drop)
-         [:> Alert {:severity "info" :variant "outlined"}
-          (tr :ptv.service/versions-will-be-removed
-              (str/join ", " (map (comp str/upper-case name) versions-to-drop)))])
-
      ;; Sync button
        (when-not other-system?
          (let [syncing? (<== [::subs/syncing-service? edit-key])
@@ -2343,6 +2366,8 @@
                            (reset! confirm-first-save? true)
                            (sync!)))}
             (tr :ptv.actions/sync-now)]))
+       (when-not other-system?
+         [show-changes-button {:tr tr :id edit-key :review review}])
 
        ;; the user's own unsaved edits: Lipas's version differing from
        ;; PTV's (a change made in PTV, to decide) is none
@@ -2355,10 +2380,15 @@
 
        [first-save-dialog {:tr tr :service service
                            :open? @confirm-first-save?
+                           ;; one dialog: what the save removes from PTV in it
+                           :removals (when (seq sync-removals)
+                                       [sync-summary/removals
+                                        {:tr tr :rows sync-removals
+                                         :intro (tr :ptv.review/removals-also)}])
                            :on-close #(reset! confirm-first-save? false)
                            :on-confirm (fn []
                                          (reset! confirm-first-save? false)
-                                         (sync!))}]
+                                         (sync! :removals-shown? true))}]
 
      ;; Last modified, and where
        [:> Typography {:variant "caption" :color "text.secondary"}
@@ -2504,8 +2534,8 @@
           org-languages (<== [::subs/org-languages org-id])
           ptv-base (ptv-base-url)
           {:keys [edit-key review open-rows modified? native? other-system? edit-languages
-                  name-data text-errors versions-to-drop data has-local-edits? texts removals
-                  take-ptv-version? last-modified-in descriptions]} service
+                  name-data text-errors data has-local-edits? texts removals
+                  take-ptv-version? last-modified-in descriptions sync-removals]} service
           choices (<== [::subs/review-choices edit-key])]
       [:> Stack {:spacing 2 :sx #js {:py 2}}
        (when review
@@ -2540,7 +2570,8 @@
                               :edit-languages edit-languages
                               :name-data name-data
                               :text-errors text-errors
-                              :versions-to-drop versions-to-drop
+                              :review review
+                              :sync-removals sync-removals
                               :data data :ptv-base ptv-base
                               :has-local-edits? has-local-edits?
                               :take-ptv-version? take-ptv-version?

@@ -73,9 +73,12 @@
  :point-not-takeable "Läget kan inte kopieras från PTV. Om läget i PTV är rätt, flytta idrottsplatsen på kartan i LIPAS."
 
  :language-removed "Synkroniseringen tar bort den {1} språkversionen från PTV: namnet, sammanfattningen och beskrivningen."
+ :language-removed-missing "Synkroniseringen tar bort den {1} språkversionen från PTV: namnet, sammanfattningen och beskrivningen. I Lipas saknar den {2}, och en språkversion publiceras bara när den har både en sammanfattning och en beskrivning."
+ :language-marked "Du har markerat den {1} språkversionen för borttagning, så synkroniseringen tar bort den från PTV. Du kan ångra borttagningen på språkversionens flik."
  :language-kept "{1} språkversionen behålls i PTV, och dess texter kopieras till LIPAS."
  :language-enable-hint "{1} används inte av er organisation i LIPAS. Om du vill behålla språkversionen, be LIPAS-stödet att ta språket i bruk (lipasinfo@jyu.fi) före synkroniseringen. Du kan också kopiera texterna härifrån."
  :show-removed-texts "Visa texterna som tas bort"
+ :hide-removed-texts "Dölj texterna som tas bort"
  :take-ptv-texts "Ta PTV:s texter"
  :take-ptv-texts-hint "Kopierar PTV:s texter till LIPAS, så att språkversionen behålls."
  :language-added "LIPAS lägger till den {1} språkversionen: {2}."
@@ -187,4 +190,18 @@
  :retry "Försök igen"
  :count-open "Olösta: {1}"
  :help-link "Anvisning: gå igenom ändringarna i PTV"
- :field-user-instruction "Anvisning"}
+ :field-user-instruction "Anvisning"
+
+ :removals-title "Synkroniseringen tar bort uppgifter från PTV"
+ :removals-intro "Om du synkroniserar tas följande uppgifter bort från PTV:"
+ :removals-also "Synkroniseringen tar dessutom bort följande uppgifter från PTV:"
+ :removals-language "{1} språkversionen"
+ :removals-language-why "Lipas publicerar endast språk som organisationen använder och som har både sammanfattning och beskrivning."
+ :removals-postal-address "Postadress"
+ :removals-postal-address-why "PTV godkänner inte adressen via gränssnittet. Rätta den i PTV om du vill behålla den."
+ :show-text "Visa texten"
+ :hide-text "Dölj texten"
+ :show-change "Visa ändringen"
+ :hide-change "Dölj ändringen"
+ :change-legend "Det överstrukna tas bort från PTV, det understrukna kommer i stället."
+ :bulk-removals-title "Synkroniseringen tar bort följande uppgifter från PTV"}

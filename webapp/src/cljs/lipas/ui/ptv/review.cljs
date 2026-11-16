@@ -30,6 +30,7 @@
             [lipas.data.ptv-review :as ptv-review]
             [lipas.ui.ptv.diff :as ptv-diff]
             [lipas.ui.ptv.review-data :as review-data]
+            [lipas.ui.ptv.sync-summary :as sync-summary]
             [lipas.ui.utils :as utils :refer [==>]]
             [reagent.core :as r]))
 
@@ -433,21 +434,37 @@
                    :on-click #(==> [:lipas.ui.events/copy-to-clipboard! text])}
     [:> Icon {:fontSize "small"} "content_copy"]]])
 
+(defn- missing-texts
+  "\"tiivistelmä ja kuvaus\": the texts of `fields` (:summary,
+   :description)."
+  [tr fields]
+  (str/join (str " " (tr :ptv.review/and) " ")
+            (map #(str/lower-case (tr (case %
+                                        :summary :ptv.review/field-summary
+                                        :description :ptv.review/field-description)))
+                 fields)))
+
 (defn- language-row
-  "A language version PTV has that the sync removes (D6): what goes, with
-   each text copyable, and, when the org has the language, taking PTV's
-   texts into Lipas so it stays."
+  "A language version PTV has that the sync removes (D6): what goes, and
+   why: the user marked it for removal, Lipas lacks a text publishing it
+   needs (one erased, say), or the org hasn't enabled the language. Each
+   text copyable, and, when the org has the language, taking PTV's texts
+   into Lipas so it stays."
   [{:keys [tr row on-take can-take? org-langs read-only?]}]
   (r/with-let [texts-open? (r/atom false)]
-    (let [{:keys [language locale texts current]} row
+    (let [{:keys [language locale texts current missing marked?]} row
           kept? (= :ptv current)
           enabled? (and locale (contains? (set org-langs) (name locale)))
-          lang-name (review-data/language-name tr language)]
+          lang-name (review-data/language-name tr language)
+          adjective (review-data/language-adjective tr language false)]
       [:> Stack {:spacing 1}
        [:> Typography {:variant "body2" :sx body}
-        (if kept?
-          (tr :ptv.review/language-kept (review-data/language-adjective tr language true))
-          (tr :ptv.review/language-removed (review-data/language-adjective tr language false)))]
+        (cond
+          kept? (tr :ptv.review/language-kept (review-data/language-adjective tr language true))
+          marked? (tr :ptv.review/language-marked adjective)
+          (and enabled? (seq missing)) (tr :ptv.review/language-removed-missing
+                                           adjective (missing-texts tr missing))
+          :else (tr :ptv.review/language-removed adjective))]
        (when (and (seq texts) (not kept?))
          [:> Stack {:spacing 0.5}
           [:> Button {:size "small" :variant "text" :color "inherit"
@@ -455,7 +472,7 @@
                       :sx #js {:textTransform "none" :alignSelf "flex-start" :ml -0.5}
                       :startIcon (r/as-element [:> Icon (if @texts-open? "expand_less" "chevron_right")])
                       :on-click #(swap! texts-open? not)}
-           (tr :ptv.review/show-removed-texts)]
+           (tr (if @texts-open? :ptv.review/hide-removed-texts :ptv.review/show-removed-texts))]
           [:> Collapse {:in @texts-open? :unmountOnExit true}
            (into [:> Stack {:spacing 1 :sx #js {:pl 1}}]
                  (for [f [:name :summary :description]
@@ -468,6 +485,9 @@
                     [copy-button tr v]]))]])
        (cond
          read-only? nil
+
+         ;; unmarked where it was marked, beside its texts
+         marked? nil
 
          (and enabled? (can-take? row))
          [:> Stack {:spacing 0.5}
@@ -620,21 +640,30 @@
   [row]
   (contains? #{:short :one-slot :address} (:kind row)))
 
+(defn- sent-value
+  "What the sync sends of `row`: the user's own value when the edit holds
+   one, else Lipas's."
+  [{:keys [current draft lipas]}]
+  (if (= :edited current) draft lipas))
+
 (defn- lipas-change-line
-  "A line of ③: what the sync updates in PTV from Lipas."
+  "A line of ③: what the sync updates in PTV from Lipas. A text's change
+   is a word diff behind a toggle."
   [tr row]
-  (let [{:keys [field kind lipas ptv]} row]
+  (let [{:keys [field kind ptv]} row
+        sent (sent-value row)]
     (cond
       (= :set kind)
-      (tr :ptv.review/services-in-ptv (review-data/services-change tr row ptv lipas))
+      (tr :ptv.review/services-in-ptv (review-data/services-change tr row ptv sent))
 
       (short-row-text? row)
       (tr :ptv.review/lipas-change-value (review-data/field-label tr row)
           (or (review-data/value-text field ptv) (tr :ptv.review/empty))
-          (or (review-data/value-text field lipas) (tr :ptv.review/empty)))
+          (or (review-data/value-text field sent) (tr :ptv.review/empty)))
 
       (= :text kind)
-      (review-data/field-label tr row)
+      [sync-summary/text-change {:tr tr :label (review-data/field-label tr row)
+                                 :from ptv :to sent}]
 
       :else (review-data/field-label tr row))))
 
@@ -701,8 +730,9 @@
                                               (first-link-services-lines tr row)
                                               [(lipas-change-line tr row)]))]
            ^{:key (str (:key row) i)}
-           [:li [:> Typography {:variant "body2" :component "span" :sx body}
-                 line]])]]])))
+           [:li (if (string? line)
+                  [:> Typography {:variant "body2" :component "span" :sx body} line]
+                  line)])]]])))
 
 (defn- up-to-date-line
   [tr matching]
@@ -989,12 +1019,16 @@
                ;; ②
                (when (seq in-decisions)
                  [:> Stack {:spacing 1}
-                  [:> Stack {:direction "row" :alignItems "baseline" :spacing 1}
-                   [:> Typography {:variant "subtitle2" :sx #js {:flex 1}}
-                    (tr (if read-only? :ptv.review/decisions-read-only :ptv.review/decisions))]
-                   (when (and (seq required) (not read-only?))
-                     [:> Typography {:variant "body2" :color "text.secondary" :sx body}
-                      (tr :ptv.review/decided-count decided-count (count required))])]
+                  ;; headed only where there is something to choose (or,
+                  ;; read-only, changes made in PTV): information rows, such
+                  ;; as a language version that goes, offer no choice
+                  (when (seq required)
+                    [:> Stack {:direction "row" :alignItems "baseline" :spacing 1}
+                     [:> Typography {:variant "subtitle2" :sx #js {:flex 1}}
+                      (tr (if read-only? :ptv.review/decisions-read-only :ptv.review/decisions))]
+                     (when-not read-only?
+                       [:> Typography {:variant "body2" :color "text.secondary" :sx body}
+                        (tr :ptv.review/decided-count decided-count (count required))])])
                   (for [group ptv-review/review-groups
                         :let [group-rows (filter #(= group (:group %)) in-decisions)]
                         :when (seq group-rows)]

@@ -47,16 +47,22 @@
 
 (defn site-form-review
   "The sync review of the site form's site: the `saved` revision against
-   PTV, annotated with what the edit `draft` holds (the decisions), from
+   PTV, with the changes made in the form (ptv-review/with-edit-rows),
+   annotated with what the edit `draft` holds (the decisions), from
    `fetched`, what the site form fetched for it (at site-path). nil until
    fetched, for a location PTV no longer has, and for a site whose save
    won't sync."
   [fetched saved draft]
   (let [{:keys [base channel services org-langs]} fetched]
     (when (and channel saved (-> draft :ptv :sync-enabled))
-      (-> (ptv-review/sync-review saved base channel services
-                                  (ptv-data/effective-languages saved org-langs))
-          (ptv-review/annotate-review draft (ptv-data/effective-languages draft org-langs))))))
+      (let [langs (ptv-data/effective-languages draft org-langs)
+            saved-review (ptv-review/sync-review saved base channel services
+                                                 (ptv-data/effective-languages saved org-langs))
+            edit-review (if (= saved draft)
+                          saved-review
+                          (ptv-review/sync-review draft base channel services langs))]
+        (-> (ptv-review/with-edit-rows saved-review edit-review)
+            (ptv-review/annotate-review draft langs))))))
 
 (defn takeable?
   "Whether the user may take PTV's version of `row` into Lipas: `rights`
@@ -292,8 +298,10 @@
    action; `on-overwrite` writes anyway, its button naming the write:
    `action` :sync (the default) or :save. On a first link, or without what
    the last sync sent (origin :first-link, :unknown), the rows are
-   differences, not changes made in PTV, and the dialog says so."
-  [tr {:keys [open languages on-overwrite on-review action]}]
+   differences, not changes made in PTV, and the dialog says so. `also`,
+   an element, shows what else the write changes in PTV, so that one
+   dialog says all of it."
+  [tr {:keys [open languages on-overwrite on-review action also]}]
   (let [differences? (boolean (some #(#{:first-link :unknown} (:origin %)) open))
         review-label (tr (if differences? :ptv.review/review-differences :ptv.review/review))]
     {:title (tr (if differences? :ptv.review/gate-title-differences :ptv.review/gate-title))
@@ -303,6 +311,7 @@
                (into [:ul]
                      (for [row (concat open languages)]
                        [:li (overwritten-line tr row)]))
+               also
                [:p {:style {:margin-bottom 0}}
                 (tr (if differences? :ptv.review/confirm-hint-differences :ptv.review/confirm-hint)
                     review-label)]]

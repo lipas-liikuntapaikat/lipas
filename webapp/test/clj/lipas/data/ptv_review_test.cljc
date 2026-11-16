@@ -308,6 +308,106 @@
                                           (dissoc :ptv-base)
                                           (assoc-in [:ptv :summary :fi] "Lipaksen teksti"))))))))
 
+(deftest edit-rows-test
+  ;; The review shows the user's own changes before they are saved, as
+  ;; Lipas's, which need no choice; what the sync removes from PTV is
+  ;; asked about before it is sent.
+  (let [input (fn [edit & {:keys [channel] :or {channel synced-channel}}]
+                (sut/sports-site->ptv-input
+                  {:org-id "o" :types {} :org-defaults {} :org-langs ["fi" "en"]}
+                  {"C1" channel} services
+                  ;; the PTV tool's edit of the site as loaded
+                  (assoc edit :event-date "T1" :ptv-base base :review-saved base)))
+        rows (fn [input] (:rows (:review input)))
+        removals (fn [input] (mapv :key (:sync-removals input)))
+        matching? (fn [input m] (boolean (some #{m} (:matching (:review input)))))]
+    (testing "in sync, nothing to review or remove"
+      (let [in (input synced-site)]
+        (is (= [] (rows in)))
+        (is (= [] (removals in)))
+        (is (= :ok (:sync-status in)))))
+
+    (testing "a text edited and not saved is Lipas's change, which needs no choice"
+      (let [in (input (assoc-in synced-site [:ptv :description :fi] "Uusi kuvaus"))
+            [row & more] (rows in)]
+        (is (nil? more))
+        (is (= {:key [:description "fi"] :origin :lipas :edit? true :current :lipas
+                :lipas "Uusi kuvaus" :ptv "desc-fi"}
+               (select-keys row [:key :origin :edit? :current :lipas :ptv])))
+        (is (not (sut/review-choice-required? row)))
+        (is (= :ready (:sync-status in)))
+        (is (not (matching? in {:field :description :language "fi"})))
+        (is (matching? in {:field :summary :language "fi"}))
+        (is (= [] (removals in)))))
+
+    (testing "an erased text is removed from PTV"
+      (is (= [[:description "fi"]]
+             (removals (input (assoc-in synced-site [:ptv :description :fi] ""))))))
+
+    (testing "erasing one English text removes the English language version, its other texts with it"
+      (let [in (input (assoc-in synced-site [:ptv :summary :en] ""))
+            [row] (rows in)]
+        (is (= [[:languages "en"]] (removals in)))
+        (is (= {:name "Halli" :summary "summary-en" :description "desc-fi"}
+               (:texts (first (:sync-removals in)))))
+        (testing "and the review says so as the user types, and what's missing"
+          (is (= {:key [:languages "en"] :origin :lipas :current :lipas :missing [:summary]}
+                 (select-keys row [:key :origin :current :missing])))
+          (is (not-any? #(= "en" (:language %)) (:matching (:review in)))))))
+
+    (testing "a value PTV lacks is no removal"
+      (let [in (input (assoc synced-site :marketing-name "Hallikauppa"))]
+        (is (= [[:marketing-name "fi"]] (map :key (rows in))))
+        (is (= [] (removals in)))))
+
+    (testing "a change made in PTV stays as the saved site's review has it, the edit's own beside it in its field's place"
+      (let [channel (update synced-channel :serviceChannelNames conj
+                            {:type "AlternativeName" :language "fi" :value "PTV-markkinointi"})
+            in (input (assoc-in synced-site [:ptv :description :fi] "Uusi kuvaus") :channel channel)]
+        (is (= [[:marketing-name "fi"] [:description "fi"]] (map :key (rows in))))
+        (is (= [:ptv :lipas] (map :origin (rows in))))
+        (is (= [nil true] (map :edit? (rows in))))
+        (testing "a value only PTV has is removed, also while PTV's change is undecided"
+          (is (= [[:marketing-name "fi"]] (removals in))))))
+
+    (testing "disconnecting a service is a removal, connecting one isn't"
+      (let [in (input (assoc-in synced-site [:ptv :service-ids] ["svc-b"]))]
+        (is (= [[:services]] (removals in)))
+        (is (= ["svc-a"] (sut/disconnected-services (first (:sync-removals in))))))
+      (is (= [] (removals (input (assoc-in synced-site [:ptv :service-ids] ["svc-a" "svc-b"]))))))
+
+    (testing "a first link keeps PTV's connections: nothing is disconnected"
+      (is (nil? (sut/disconnected-services {:kind :set :origin :first-link
+                                            :lipas ["svc-b"] :ptv ["svc-a"]}))))
+
+    (testing "a one-slot field loses PTV's values beyond the one Lipas sends"
+      (let [dropped (fn [lipas ptv] (sut/dropped-values {:field :email :kind :one-slot
+                                                         :lipas lipas :ptv ptv}))]
+        (is (= ["b@x.fi"] (dropped #{"a@x.fi"} #{"a@x.fi" "b@x.fi"})))
+        (is (= ["b@x.fi"] (dropped #{"A@x.fi"} #{"a@x.fi" "b@x.fi"})) "emails regardless of case")
+        (is (nil? (dropped #{"z@x.fi"} #{"a@x.fi"})) "one swapped for Lipas's is a change")
+        (is (= ["a@x.fi" "b@x.fi"] (dropped #{"z@x.fi"} #{"a@x.fi" "b@x.fi"})))
+        (is (= ["a@x.fi"] (dropped nil #{"a@x.fi"})))
+        (is (nil? (dropped #{"a@x.fi"} #{"a@x.fi"})))
+        (is (= [:one-slot]
+               (map :kind (sut/sync-removals [{:field :email :kind :one-slot
+                                               :lipas #{"a@x.fi"} :ptv #{"a@x.fi" "b@x.fi"}}
+                                              {:field :phone :kind :one-slot
+                                               :lipas #{"1"} :ptv #{"2"}}]))))))
+
+    (testing "a postal address PTV's API rejects is removed"
+      (let [address {:type "Postal" :subType "PostOfficeBox"}]
+        (is (= [{:key [:postal-address] :field :postal-address :kind :postal-address
+                 :ptv [address]}]
+               (sut/sync-removals [] :postal-addresses {:kept [] :dropped [address]})))
+        (is (= [] (sut/sync-removals [] :postal-addresses {:kept [address] :dropped []})))))
+
+    (testing "where the location is is no removal"
+      (is (= [{:field :summary :kind :text :lipas nil :ptv "x"}]
+             (sut/sync-removals [{:field :municipality :kind :info}
+                                 {:field :point :kind :distance}
+                                 {:field :summary :kind :text :lipas nil :ptv "x"}]))))))
+
 (deftest sync-status-follows-decisions-test
   (let [channel (set-ptv-text synced-channel "Summary" "fi" "PTV:n teksti")
         status (fn [site & {:keys [choices channel] :or {channel channel}}]
