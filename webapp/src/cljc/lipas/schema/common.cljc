@@ -262,10 +262,18 @@
        [:fn {:error/message "Polygon coordinates must be valid linear rings (4+ positions, first = last)"}
         valid-polygon-coordinates?]]]]))
 
+(def feature-id
+  "Kept a plain string rather than a UUID: most ids are UUIDs, but older
+  features carry ids like \"74166-0\", and a stricter schema would fail
+  response validation for those sites."
+  (m/schema
+    [:string {:description "Identifier of the feature, unique within its FeatureCollection. Activity routes refer to the features they consist of by these ids (`fids`). Not every feature has one."}]))
+
 (def point-feature
   (m/schema
     [:map {:description "GeoJSON Feature with required Point geometry."}
      [:type [:enum "Feature"]]
+     [:id {:optional true} #'feature-id]
      [:geometry #'point-geometry]
      [:properties {:optional true} [:map]]]))
 
@@ -273,6 +281,7 @@
   (m/schema
     [:map {:description "GeoJSON Feature with required LineString geometry."}
      [:type [:enum "Feature"]]
+     [:id {:optional true} #'feature-id]
      [:geometry #'line-string-geometry]
      [:properties {:optional true} [:map]]]))
 
@@ -280,6 +289,7 @@
   (m/schema
     [:map {:description "GeoJSON Feature with required Polygon geometry."}
      [:type [:enum "Feature"]]
+     [:id {:optional true} #'feature-id]
      [:geometry #'polygon-geometry]
      [:properties {:optional true} [:map]]]))
 
