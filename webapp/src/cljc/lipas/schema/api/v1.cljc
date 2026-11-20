@@ -26,14 +26,22 @@
 (def legacy-feature-properties
   (m/schema [:map-of :keyword :any]))
 
+(defn- ->legacy-feature
+  "The legacy API never exposed feature ids, so `:id` is dropped here and
+  response coercion keeps stripping it from v1 output."
+  [feature-schema]
+  (m/schema (-> feature-schema
+                (mu/assoc :properties [:maybe legacy-feature-properties])
+                (mu/dissoc :id))))
+
 (def legacy-point-feature
-  (m/schema (mu/assoc common/point-feature :properties [:maybe legacy-feature-properties])))
+  (->legacy-feature common/point-feature))
 
 (def legacy-line-string-feature
-  (m/schema (mu/assoc common/line-string-feature :properties [:maybe legacy-feature-properties])))
+  (->legacy-feature common/line-string-feature))
 
 (def legacy-polygon-feature
-  (m/schema (mu/assoc common/polygon-feature :properties [:maybe legacy-feature-properties])))
+  (->legacy-feature common/polygon-feature))
 
 (def legacy-point-feature-collection
   (m/schema

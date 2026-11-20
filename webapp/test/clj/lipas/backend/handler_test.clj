@@ -1025,6 +1025,56 @@
       (is (not (contains? (set (:renovation-years body)) 2023))
           "other-maintenance year 2023 should NOT be in renovation-years"))))
 
+(deftest sports-site-feature-ids-test
+  ;; Activity routes refer to the features they consist of by id (:fids).
+  ;; The editor loads a site through GET /api/sports-sites/:lipas-id, saves
+  ;; what it got and gives features without an id a new one. While that GET
+  ;; dropped the ids (Nov 2025 - Nov 2026), every save broke the site's fids.
+  (let [admin (tu/gen-admin-user :db-component (test-db))
+        token (jwt/create-token admin)
+        lipas-id 9980001
+        fid "2b0e5f3c-6a51-4f0b-9d3e-0c3f6d1e7a10"
+        site (-> (tu/make-route-site lipas-id :type-code 4405)
+                 (assoc-in [:location :city :city-code] 91)
+                 (assoc-in [:location :geometries :features 0 :id] fid)
+                 (assoc :activities {:outdoor-recreation-routes
+                                     {:routes [{:id "6f1c1c7e-3c1b-4c55-9a43-5d1f7b3e2c01"
+                                                :fids [fid]}]}}))
+        post! (fn [s]
+                (test-app (-> (mock/request :post "/api/sports-sites")
+                              (mock/content-type "application/json")
+                              (mock/body (->json (assoc s :event-date (str (java.time.Instant/now)))))
+                              (tu/token-header token))))
+        get-transit (fn [path]
+                      (let [resp (test-app (-> (mock/request :get path)
+                                               (mock/header "Accept" "application/transit+json")))]
+                        [(:status resp) (<-transit (:body resp))]))]
+    ;; A revision from before migration uuid-feature-ids, with an old-style id
+    (core/upsert-sports-site!* (test-db) admin
+                               (-> site
+                                   (assoc :event-date "2019-05-01T10:00:00.000Z")
+                                   (assoc-in [:location :geometries :features 0 :id] "9980001-0")
+                                   (assoc-in [:activities :outdoor-recreation-routes :routes 0 :fids] ["9980001-0"])))
+    (core/upsert-sports-site!* (test-db) admin site)
+    (core/index! (test-search) site :sync)
+
+    (testing "the editor's GET returns the feature ids the route fids refer to"
+      (let [[status body] (get-transit (str "/api/sports-sites/" lipas-id))]
+        (is (= 200 status))
+        (is (= [fid] (map :id (-> body :location :geometries :features))))
+        (is (= [[fid]] (map :fids (-> body :activities :outdoor-recreation-routes :routes))))))
+
+    (testing "history still serves revisions with ids from before the migration"
+      (let [[status body] (get-transit (str "/api/sports-sites/history/" lipas-id))]
+        (is (= 200 status))
+        (is (= #{fid "9980001-0"}
+               (set (for [rev body f (-> rev :location :geometries :features)] (:id f)))))))
+
+    (testing "saves take UUID feature ids only"
+      (is (= 201 (:status (post! site))))
+      (is (= 400 (:status (post! (assoc-in site [:location :geometries :features 0 :id] "9980001-0")))))
+      (is (= 400 (:status (post! (assoc-in site [:location :geometries :features 0 :id] "temp16"))))))))
+
 (deftest renovation-years-backwards-compat-test
   (testing "renovation-years merges old values with major-renovation years"
     (let [user (tu/gen-admin-user :db-component (test-db))
