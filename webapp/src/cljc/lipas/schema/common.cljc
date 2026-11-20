@@ -263,11 +263,13 @@
         valid-polygon-coordinates?]]]]))
 
 (def feature-id
-  "Kept a plain string rather than a UUID: most ids are UUIDs, but older
-  features carry ids like \"74166-0\", and a stricter schema would fail
-  response validation for those sites."
+  "A string rather than a UUID for now: features saved before 2024-03 could
+  carry ids like \"74166-0\" or \"temp16\", and a UUID schema would fail
+  response validation for those sites. Migration uuid-feature-ids gives them
+  UUIDs; tighten this to `uuid` once it has run and the sites are reindexed
+  everywhere."
   (m/schema
-    [:string {:description "Identifier of the feature, unique within its FeatureCollection. Activity routes refer to the features they consist of by these ids (`fids`). Not every feature has one."}]))
+    [:string {:description "Identifier of the feature. Activity routes refer to the features they consist of by these ids (`fids`). Not every feature has one."}]))
 
 (def point-feature
   (m/schema
