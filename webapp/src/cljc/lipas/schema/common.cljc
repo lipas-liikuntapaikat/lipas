@@ -263,13 +263,20 @@
         valid-polygon-coordinates?]]]]))
 
 (def feature-id
-  "A string rather than a UUID for now: features saved before 2024-03 could
-  carry ids like \"74166-0\" or \"temp16\", and a UUID schema would fail
-  response validation for those sites. Migration uuid-feature-ids gives them
-  UUIDs; tighten this to `uuid` once it has run and the sites are reindexed
-  everywhere."
+  "Every feature id saved since the map editor rewrite (2024-03) is a UUID,
+  and migration uuid-feature-ids gave the older ones UUIDs too. Past
+  revisions still carry the old ids: see `legacy-feature-id`."
   (m/schema
-    [:string {:description "Identifier of the feature. Activity routes refer to the features they consist of by these ids (`fids`). Not every feature has one."}]))
+    [:re {:description "UUID (v4) of the feature. Activity routes refer to the features they consist of by these ids (`fids`). Not every feature has one."}
+     -uuid-pattern]))
+
+(def legacy-feature-id
+  "A feature id as past revisions of a site carry it. Before the map editor
+  rewrite (2024-03) saving could store ids like \"74166-0\" or \"temp16\";
+  migration uuid-feature-ids replaced them in the current revisions only.
+  For schemas that serve history (the compat location schemas)."
+  (m/schema
+    [:string {:description "Identifier of the feature. Revisions saved before 2024-03 may have ids that aren't UUIDs."}]))
 
 (def point-feature
   (m/schema

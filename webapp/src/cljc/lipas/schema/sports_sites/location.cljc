@@ -44,6 +44,13 @@
     [:set {:description (:description (m/properties city-code))}
      city-code]))
 
+(defn- compat-feature
+  "`feature-schema` with any string as its :id. The compat schemas serve the
+  internal API, whose history endpoints return past revisions too, and those
+  keep the ids features had before migration uuid-feature-ids."
+  [feature-schema]
+  (mu/assoc feature-schema :id #'common/legacy-feature-id))
+
 (defn make-location-schema
   ([feature-schema geom-type]
    (make-location-schema feature-schema geom-type false))
@@ -62,7 +69,7 @@
      [:map
       [:type [:enum "FeatureCollection"]]
       [:features
-       [:vector {:min 1} feature-schema]]]]]))
+       [:vector {:min 1} (if compat (compat-feature feature-schema) feature-schema)]]]]]))
 
 (def line-string-feature-props
   (m/schema

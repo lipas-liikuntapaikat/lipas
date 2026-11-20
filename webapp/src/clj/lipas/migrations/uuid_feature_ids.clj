@@ -24,8 +24,10 @@
 
   `compute-plan` is a pure-read dry run.
 
-  NOTE: the search index keeps the old ids until the repaired sites are
-  reindexed. Run a sites reindex after deploying."
+  NOTE: reindex the repaired sites right after deploying (the migration logs
+  their lipas-ids). Until then the search index serves their old ids, which
+  the UUID feature-id schema rejects: v2 answers 500 for them, and saving
+  one from the editor fails with 400."
   (:require [clojure.set :as set]
             [clojure.string :as str]
             [lipas.backend.db.db :as db]
@@ -261,7 +263,7 @@
       (throw (ex-info "Sites still have feature ids that aren't UUIDs"
                       {:lipas-ids (vec left)})))
     (when (seq sites)
-      (log/warn "The search index still has the old ids - reindex these sites:"
+      (log/warn "The search index still has the old ids, which v2 rejects - reindex these sites now:"
                 (pr-str (mapv :lipas-id sites))))
     (log/info "Migration complete: uuid-feature-ids")))
 
