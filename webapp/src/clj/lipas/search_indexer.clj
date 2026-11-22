@@ -1,6 +1,5 @@
 (ns lipas.search-indexer
-  (:require [clojure.string :as str]
-            [lipas.backend.analysis.diversity :as diversity]
+  (:require [lipas.backend.analysis.diversity :as diversity]
             [lipas.backend.api.v1.locations :as legacy-locations]
             [lipas.backend.api.v1.sports-place :as legacy-sports-place]
             [lipas.backend.api.v1.transform :as legacy-transform]
@@ -64,25 +63,43 @@
             (recur db client idx-name (rest types)))
        (print-results results)))))
 
+(defn- enrich-type
+  "Enriches the current sites of one type for the search index. A site
+  that can't be enriched is logged and left out (`:skipped`): one bad site
+  used to abort the whole reindex, which then never swapped the alias."
+  [db type-code]
+  ;; resolved once per type batch; denormalizes the owner org's name
+  ;; into :search-meta (F15)
+  (let [index-ctx (core/index-context db)]
+    (reduce (fn [acc site]
+              (try
+                (update acc :docs conj (core/enrich site index-ctx))
+                (catch Exception e
+                  (log/error "Left out lipas-id" (:lipas-id site) "-"
+                             (.getName (class e)) (ex-message e))
+                  (update acc :skipped conj (:lipas-id site)))))
+            {:docs [] :skipped []}
+            (core/get-sports-sites-by-type-code db type-code))))
+
 (defn index-search-sports-sites!
-  ([db client idx-name types]
-   (index-search-sports-sites! db client idx-name types []))
-  ([db client idx-name types results]
-   (let [type-code (first types)
-         ;; resolved once per type batch; denormalizes the owner org's name
-         ;; into :search-meta (F15)
-         index-ctx (when type-code (core/index-context db))]
-     (log/info "Starting to re-index type" type-code)
-     (if type-code
-       (->> type-code
-            (core/get-sports-sites-by-type-code db)
-            (map #(core/enrich % index-ctx))
-            (search/->bulk idx-name :lipas-id)
-            (search/bulk-index! client)
-            (wait-one)
-            (conj results)
-            (recur db client idx-name (rest types)))
-       (print-results results)))))
+  "Indexes the current revision of every site of `types` into `idx-name`.
+  Returns the lipas-ids of the sites left out because they can't be
+  enriched."
+  [db client idx-name types]
+  (let [{:keys [results skipped]}
+        (reduce (fn [acc type-code]
+                  (log/info "Starting to re-index type" type-code)
+                  (let [{:keys [docs skipped]} (enrich-type db type-code)]
+                    (-> acc
+                        (update :results conj (->> docs
+                                                   (search/->bulk idx-name :lipas-id)
+                                                   (search/bulk-index! client)
+                                                   (wait-one)))
+                        (update :skipped into skipped))))
+                {:results [] :skipped []}
+                types)]
+    (print-results results)
+    skipped))
 
 (defn enrich-for-analytics
   [users {:keys [id document author_id status created_at]}]
@@ -93,15 +110,14 @@
                :doc-status status
                :author (users author_id)
                :created-at created_at))
-    (catch IllegalArgumentException e
-      (if (str/starts-with? (.getMessage e) "Invalid number of points in LinearRing")
-        (do
-          (log/warn "Skipping broken revision" id
-                    "lipas-id" (:lipas-id document)
-                    "type-code" (:type-code document)
-                    ":" (.getMessage e))
-          nil)
-        (throw e)))))
+    (catch Exception e
+      ;; Like the search index (`enrich-type`): one revision that can't be
+      ;; enriched mustn't abort the whole reindex.
+      (log/warn "Skipping broken revision" id
+                "lipas-id" (:lipas-id document)
+                "type-code" (:type-code document)
+                ":" (.getName (class e)) (ex-message e))
+      nil)))
 
 (defn get-users [db]
   (->> (core/get-users db)
@@ -191,25 +207,34 @@
      (log/info "Created index" idx-name)
      (log/info "Starting to index data...")
 
-     (case mode
-       "search" (index-search-sports-sites! db client idx-name types)
-       "analytics" (let [users (get-users db)]
-                     (index-analytics2! db client idx-name types users))
-       "legacy" (index-legacy-search-sports-sites! db client idx-name types))
+     (let [skipped (case mode
+                     "search" (index-search-sports-sites! db client idx-name types)
+                     "analytics" (let [users (get-users db)]
+                                   (index-analytics2! db client idx-name types users)
+                                   [])
+                     "legacy" (do (index-legacy-search-sports-sites! db client idx-name types)
+                                  []))]
 
-     (log/info "Indexing data done!")
-     (log/info "Swapping alias" alias "to point to index" idx-name)
-     (search/swap-alias! client {:new-idx idx-name :alias alias})
-     ;; Delete every stale index for this mode, not just the one the alias
-     ;; previously pointed to. This also reclaims orphans left by earlier runs
-     ;; that failed after the alias swap. Deletes are guarded individually so a
-     ;; single failure can't strand the rest.
-     (let [{:keys [deleted failed]} (search/delete-stale-indices! client mode idx-name)]
-       (doseq [idx deleted]
-         (log/info "Deleted stale index" idx))
-       (when (seq failed)
-         (log/error "Failed to delete stale indices" failed)))
-     (log/info "All done!"))))
+       (log/info "Indexing data done!")
+       (log/info "Swapping alias" alias "to point to index" idx-name)
+       (search/swap-alias! client {:new-idx idx-name :alias alias})
+       ;; Delete every stale index for this mode, not just the one the alias
+       ;; previously pointed to. This also reclaims orphans left by earlier runs
+       ;; that failed after the alias swap. Deletes are guarded individually so a
+       ;; single failure can't strand the rest.
+       (let [{:keys [deleted failed]} (search/delete-stale-indices! client mode idx-name)]
+         (doseq [idx deleted]
+           (log/info "Deleted stale index" idx))
+         (when (seq failed)
+           (log/error "Failed to delete stale indices" failed)))
+       ;; Left-out sites don't fail the run: some can't ever be indexed (no
+       ;; polygon with any area), and failing would turn every deploy red.
+       ;; Repeated here so the deploy log ends with them.
+       (when (seq skipped)
+         (log/error "Indexed without" (count skipped) "sites that can't be indexed,"
+                    "see the errors above. lipas-ids:" skipped))
+       (log/info "All done!")
+       {:idx-name idx-name :skipped skipped}))))
 
 (defn -main [& args]
   (let [mode (case (first args)
@@ -221,19 +246,23 @@
                    (assoc-in [:lipas/search :create-indices] false))
         system (backend/start-system! config)
         db (:lipas/db system)
-        search (:lipas/search system)]
-    (try
-      (if (= "diversity" mode)
-        (diversity/seed-new-grid-from-csv! search (second args))
-        (main system db search mode))
-      (catch Exception ex
-        (log/error ex "Something terrible happened while indexing" mode "!"))
-      (finally
-        (log/info "Stopping system...")
-        (backend/stop-system! system)
-        (log/info "System stopped. Shutting down...")
-        (shutdown-agents)
-        (System/exit 0)))))
+        search (:lipas/search system)
+        ;; A failed run exits 1, so the deploy that ran it fails too. It used
+        ;; to exit 0, and a reindex that never swapped the alias went unnoticed.
+        exit-code (try
+                    (if (= "diversity" mode)
+                      (diversity/seed-new-grid-from-csv! search (second args))
+                      (main system db search mode))
+                    0
+                    (catch Exception ex
+                      (log/error ex "Something terrible happened while indexing" mode "!")
+                      1)
+                    (finally
+                      (log/info "Stopping system...")
+                      (backend/stop-system! system)
+                      (log/info "System stopped. Shutting down...")
+                      (shutdown-agents)))]
+    (System/exit exit-code)))
 
 (comment
   (-main)

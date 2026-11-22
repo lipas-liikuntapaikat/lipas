@@ -1083,9 +1083,15 @@
 (defmulti fix-geoms feature-type)
 (defmethod fix-geoms :default [sports-site] sports-site)
 (defmethod fix-geoms "Polygon" [sports-site]
-  (update-in sports-site [:location :geometries]
-             (comp gis/repair-self-intersecting-polygon
-                   gis/dedupe-polygon-coords)))
+  (let [fixed (update-in sports-site [:location :geometries]
+                         (comp gis/repair-self-intersecting-polygon
+                               gis/drop-degenerate-polygons
+                               gis/dedupe-polygon-coords))]
+    (when (empty? (get-in fixed [:location :geometries :features]))
+      (throw (ex-info (str "No polygon of lipas-id " (:lipas-id sports-site)
+                           " encloses any area, so it can't be indexed")
+                      {:lipas-id (:lipas-id sports-site)})))
+    fixed))
 
 (defn compute-renovations
   "Materializes :renovations from legacy :renovation-years entries. For

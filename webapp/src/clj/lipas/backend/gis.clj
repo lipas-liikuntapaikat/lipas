@@ -505,10 +505,40 @@
                 (update-in f [:geometry :coordinates] #(map dedupe %)))
               fs))))
 
+(defn- ring-with-area?
+  "A ring needs 3 distinct points to enclose any area."
+  [ring]
+  (>= (count (distinct ring)) 3))
+
+(defn drop-degenerate-polygons
+  "Removes the rings of Polygon features that can't enclose any area, and
+  the whole feature when its exterior ring is one of them.
+
+  The editor has saved such polygons from accidental clicks: the same point
+  four times, or two points. JTS can't even construct a ring of the former,
+  so they must go before `repair-self-intersecting-polygon`."
+  [fcoll]
+  (update fcoll :features
+          (fn [fs]
+            (into []
+                  (keep (fn [f]
+                          (if (= "Polygon" (get-in f [:geometry :type]))
+                            (let [[exterior & holes] (get-in f [:geometry :coordinates])]
+                              (when (ring-with-area? exterior)
+                                (assoc-in f [:geometry :coordinates]
+                                          (into [exterior] (filter ring-with-area?) holes))))
+                            f)))
+                  fs))))
+
 (defn repair-self-intersecting-polygon
   "Repairs a self-intersecting polygon using the buffer(0) technique.
    If the result is a MultiPolygon, decomposes it into multiple Polygon features.
-   Returns the input unchanged if the polygon is already valid or not a Polygon."
+   Returns the input unchanged if the polygon is already valid or not a Polygon.
+
+   A repaired feature keeps the keys of the original. Its :id stays absent
+   when the original had none (most older features don't), and a split
+   keeps it on the first part only: ids must stay UUIDs, which a suffix
+   would break. A polygon that repairs to nothing (zero area) is dropped."
   [fcoll]
   (let [features (:features fcoll)
         repaired-features
@@ -525,23 +555,20 @@
                           fixed-type (.getGeometryType fixed-jts)]
                       (log/info "Repaired self-intersecting polygon, result type:" fixed-type
                                 "lipas-id:" (:lipas-id (:properties feature)))
-                      (if (= "MultiPolygon" fixed-type)
-                       ;; Decompose MultiPolygon into multiple Polygon features
+                      (cond
+                        (.isEmpty fixed-jts)
+                        (do (log/warn "Dropped a polygon without area, feature id:" (:id feature))
+                            [])
+
+                        (= "MultiPolygon" fixed-type)
                         (for [i (range (.getNumGeometries fixed-jts))]
                           (let [poly (.getGeometryN fixed-jts i)
-                                _ (.setSRID poly geom-srid)
-                                poly-geom (jts->geom-map poly)]
-                            (cond-> {:type "Feature"
-                                     :id (str (:id feature) "-" i)
-                                     :geometry poly-geom}
-                              (contains? feature :properties)
-                              (assoc :properties (:properties feature)))))
-                       ;; Single Polygon result
-                        [(cond-> {:type "Feature"
-                                  :id (:id feature)
-                                  :geometry (jts->geom-map fixed-jts)}
-                           (contains? feature :properties)
-                           (assoc :properties (:properties feature)))]))))
+                                _ (.setSRID poly geom-srid)]
+                            (cond-> (assoc feature :geometry (jts->geom-map poly))
+                              (pos? i) (dissoc :id))))
+
+                        :else
+                        [(assoc feature :geometry (jts->geom-map fixed-jts))]))))
                 [feature])))  ; Not a Polygon, keep as-is
           features)]
     (assoc fcoll :features (vec repaired-features))))

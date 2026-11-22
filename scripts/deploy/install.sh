@@ -177,9 +177,14 @@ if $INSTALL_BACKEND; then
   fi
 fi
 
+# A failed reindex leaves the old index serving and fails the deploy, but only
+# after DEPLOYED records what was installed: the release itself went in.
+REINDEX_RESULT=$REINDEX
 if $REINDEX; then
   echo "Reindexing Elasticsearch..."
-  docker compose run --rm backend-index-search
+  if ! docker compose run --rm backend-index-search; then
+    REINDEX_RESULT=failed
+  fi
 fi
 
 {
@@ -191,8 +196,13 @@ fi
     echo "sha: (checkout untouched — artifacts only)"
   fi
   if [[ -n "$LABEL" ]]; then echo "label: $LABEL"; fi
-  echo "backend: $INSTALL_BACKEND frontend: $INSTALL_FRONTEND reindex: $REINDEX"
+  echo "backend: $INSTALL_BACKEND frontend: $INSTALL_FRONTEND reindex: $REINDEX_RESULT"
 } > "$LIPAS_DIR/DEPLOYED"
 
 echo "Deploy complete."
 cat "$LIPAS_DIR/DEPLOYED"
+
+if [[ "$REINDEX_RESULT" == failed ]]; then
+  echo "ERROR: the reindex failed, so the search index still serves the old data. See the indexer log above." >&2
+  exit 1
+fi
