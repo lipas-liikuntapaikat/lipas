@@ -343,6 +343,58 @@
         (is (= 200 (:status resp)))
         (is (= "Polygon" (-> body :location :geometries :features first :geometry :type)))))))
 
+;;; Feature ids ;;;
+
+(defn- with-feature-ids
+  "Gives the features of `site` the `ids`, in order."
+  [site ids]
+  (update-in site [:location :geometries :features]
+             (fn [features] (mapv #(assoc %1 :id %2) features ids))))
+
+(defn- get-site-from-list
+  "Fetches `lipas-id` through the list endpoint rather than the single-site one."
+  [type-code lipas-id]
+  (let [resp ((test-app) (mock/request :get (str "/v2/sports-sites?type-codes=" type-code)))]
+    (is (= 200 (:status resp)))
+    (->> (parse-json-body resp) :items (filter #(= lipas-id (:lipas-id %))) first)))
+
+(deftest feature-ids-test
+  (testing "Activity routes refer to features by id, so v2 must return the ids"
+    (let [fids ["2b0e5f3c-6a51-4f0b-9d3e-0c3f6d1e7a10" "8c2e7f1a-4b3d-4e5f-9a6b-1c2d3e4f5a6b"]
+          site (-> (test-utils/make-route-site 80101
+                                               :type-code 4405
+                                               :segments [[[25.0 60.2] [25.01 60.21]]
+                                                          [[25.01 60.21] [25.02 60.22]]])
+                   (with-feature-ids fids)
+                   (assoc :activities
+                          {:outdoor-recreation-routes
+                           {:routes [{:id "9f1c1c7e-3c1b-4c55-9a43-5d1f7b3e2c01"
+                                      :fids fids}]}}))
+          _ (create-sports-site! site)
+          single-resp ((test-app) (mock/request :get "/v2/sports-sites/80101"))]
+      (is (= 200 (:status single-resp)))
+      (doseq [[label body] [["GET /v2/sports-sites/:lipas-id" (parse-json-body single-resp)]
+                            ["GET /v2/sports-sites" (get-site-from-list 4405 80101)]]]
+        (testing label
+          (is (= fids (->> body :location :geometries :features (map :id))))
+          (is (= [fids] (->> body :activities :outdoor-recreation-routes :routes (map :fids))))))))
+
+  (testing "Point and Polygon features keep their id too"
+    (doseq [[lipas-id site] [[80102 (test-utils/make-point-site 80102)]
+                             [80103 (test-utils/make-area-site 80103)]]]
+      (let [fid (str (random-uuid))
+            _ (create-sports-site! (with-feature-ids site [fid]))
+            resp ((test-app) (mock/request :get (str "/v2/sports-sites/" lipas-id)))]
+        (is (= 200 (:status resp)))
+        (is (= [fid] (->> (parse-json-body resp) :location :geometries :features (map :id)))))))
+
+  (testing "Features without an id are still valid"
+    (let [_ (create-sports-site! (test-utils/make-route-site 80104 :type-code 4405))
+          resp ((test-app) (mock/request :get "/v2/sports-sites/80104"))]
+      (is (= 200 (:status resp)))
+      (is (not-any? #(contains? % :id)
+                    (-> (parse-json-body resp) :location :geometries :features))))))
+
 ;;; Tests for GET /v2/lois (list) ;;;
 
 (deftest list-lois-empty-test

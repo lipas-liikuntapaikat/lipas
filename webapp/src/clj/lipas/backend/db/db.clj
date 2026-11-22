@@ -170,7 +170,7 @@
       (.getYear utc)
       (.getYear (.atZone instant (java.time.ZoneId/of "Europe/Helsinki"))))))
 
-(defn- row-event-date
+(defn row-event-date
   "The event-date to give a copy of revision `row`: its event_date column.
   The document's :event-date is used when it's the same instant (the normal
   case), keeping its formatting; the UI keys history by that string. Some

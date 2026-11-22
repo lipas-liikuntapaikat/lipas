@@ -262,10 +262,27 @@
        [:fn {:error/message "Polygon coordinates must be valid linear rings (4+ positions, first = last)"}
         valid-polygon-coordinates?]]]]))
 
+(def feature-id
+  "Every feature id saved since the map editor rewrite (2024-03) is a UUID,
+  and migration uuid-feature-ids gave the older ones UUIDs too. Past
+  revisions still carry the old ids: see `legacy-feature-id`."
+  (m/schema
+    [:re {:description "UUID (v4) of the feature. Activity routes refer to the features they consist of by these ids (`fids`). Not every feature has one."}
+     -uuid-pattern]))
+
+(def legacy-feature-id
+  "A feature id as past revisions of a site carry it. Before the map editor
+  rewrite (2024-03) saving could store ids like \"74166-0\" or \"temp16\";
+  migration uuid-feature-ids replaced them in the current revisions only.
+  For schemas that serve history (the compat location schemas)."
+  (m/schema
+    [:string {:description "Identifier of the feature. Revisions saved before 2024-03 may have ids that aren't UUIDs."}]))
+
 (def point-feature
   (m/schema
     [:map {:description "GeoJSON Feature with required Point geometry."}
      [:type [:enum "Feature"]]
+     [:id {:optional true} #'feature-id]
      [:geometry #'point-geometry]
      [:properties {:optional true} [:map]]]))
 
@@ -273,6 +290,7 @@
   (m/schema
     [:map {:description "GeoJSON Feature with required LineString geometry."}
      [:type [:enum "Feature"]]
+     [:id {:optional true} #'feature-id]
      [:geometry #'line-string-geometry]
      [:properties {:optional true} [:map]]]))
 
@@ -280,6 +298,7 @@
   (m/schema
     [:map {:description "GeoJSON Feature with required Polygon geometry."}
      [:type [:enum "Feature"]]
+     [:id {:optional true} #'feature-id]
      [:geometry #'polygon-geometry]
      [:properties {:optional true} [:map]]]))
 

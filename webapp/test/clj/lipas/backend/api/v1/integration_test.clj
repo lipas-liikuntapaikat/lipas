@@ -182,6 +182,18 @@
           (is (every? #(= "LineString" (-> % :geometry :type)) features)
               "All segments should be LineString"))))))
 
+(deftest feature-ids-not-exposed-test
+  (testing "The legacy API never had feature ids, so v1 keeps leaving them out"
+    (let [site (-> (test-utils/make-route-site 200101 :type-code 4405)
+                   (assoc-in [:location :geometries :features 0 :id]
+                             "2b0e5f3c-6a51-4f0b-9d3e-0c3f6d1e7a10"))
+          _ (save-and-index! site)
+          {:keys [status body]} (query-legacy-api "/v1/sports-places/200101")
+          features (-> body :location :geometries :features)]
+      (is (= 200 status))
+      (is (= 1 (count features)))
+      (is (not-any? #(contains? % :id) features)))))
+
 (deftest area-geometry-pipeline-test
   (testing "Polygon geometry sites (areas)"
 
