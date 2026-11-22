@@ -50,7 +50,7 @@
  :integration-enabled "PTV integration is active"
  :integration-enabled-sync-off "PTV integration is active, but sync for this sports site is disabled."
  :will-be-archived-on-save "The sports site will be removed from PTV when you save"
- :will-be-archived-type-changed "The sports site was previously exported to PTV, but its data has changed so it no longer qualifies for export. The PTV service location will be archived when you save."
+ :will-be-archived-type-changed "The sports site was previously exported to PTV, but it has been removed or its owner or type has changed so it no longer qualifies for export. Saving does not archive the service location: it stays in PTV until you archive it on the Sports sites tab of the PTV tool (Waiting to be archived)."
  :new-service-location-will-be-created "The sports site has not been exported to PTV before. A new service location will be created when you save."
  :data-incomplete "PTV data is incomplete. Fill in the missing information and the sports site will be exported to PTV on save."
  :integration-error "PTV integration error, the latest data has not been exported to PTV."

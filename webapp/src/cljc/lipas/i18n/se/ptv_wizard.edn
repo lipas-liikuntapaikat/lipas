@@ -7,11 +7,11 @@
  :generate-descriptions-all "Skapa beskrivningar för alla",
  :regenerate-descriptions "Uppdatera beskrivningar",
  :generate-descriptions-helper1
- "Tjänster kan upprättas i PTV när de har minst en finsk beskrivning och sammanfattning. LIPAS kompletterar serviceklass, nyckelord och andra metadata automatiskt.",
+ "Tjänster kan upprättas i PTV när de har minst en finsk sammanfattning, beskrivning och handlingsanvisning. LIPAS kompletterar serviceklass, nyckelord och andra metadata automatiskt.",
  :generate-descriptions-helper2
- "Tryck på knappen 'Skapa beskrivningar' för att automatiskt skapa beskrivningar med hjälp av artificiell intelligens. Beskrivningarna skapas baserat på de idrottsanläggningar som är sparade i LIPAS.",
+ "Tryck på knappen 'Skapa beskrivningar för alla' för att automatiskt skapa beskrivningar med hjälp av artificiell intelligens. Beskrivningarna skapas baserat på de idrottsanläggningar som är sparade i LIPAS.",
  :generate-descriptions-helper3
- "Serviceställen kan upprättas i PTV när de har minst en finsk beskrivning och sammanfattning. LIPAS kompletterar serviceklass, nyckelord och andra metadata automatiskt.",
+ "Serviceställen kan upprättas i PTV när de har minst en finsk sammanfattning och beskrivning. LIPAS fyller i namn, adress, läge och kontaktuppgifter från idrottsanläggningens uppgifter.",
  :integrate-service-locations
  "Skapa serviceställen från idrottsanläggningar.",
  :services-to-add "Service att upprätta",
@@ -37,7 +37,7 @@
  :integrate-selected "Välj typklasser",
  :select-sub-categories "Välj typklasser",
  :unselect-helper
- "Om du inte vill exportera ett visst objekt kan du öppna det i panelen till höger och inaktivera reglaget."
+ "Endast idrottsanläggningar med reglaget påslaget exporteras till PTV. Reglaget kan slås på när anläggningen har en finsk sammanfattning och beskrivning."
  :step3-instruction "Öppna en idrottsanläggning från listan, skapa eller skriv beskrivningar och aktivera synkronisering med reglaget.",
  :select-sports-sites "Välj idrottsplatser",
  :linked-label "{1} (länkad)",

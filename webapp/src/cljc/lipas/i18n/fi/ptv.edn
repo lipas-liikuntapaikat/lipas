@@ -46,7 +46,7 @@
  :integration-enabled "PTV-integraatio on käytössä"
  :integration-enabled-sync-off "PTV-integraatio on käytössä, mutta liikuntapaikan synkronointi PTV:hen on kytketty pois päältä."
  :will-be-archived-on-save "Liikuntapaikka poistetaan PTV:stä tallennuksen yhteydessä"
- :will-be-archived-type-changed "Liikuntapaikka on viety aiemmin PTV:hen, mutta tietoja on muutettu siten, että tietoja ei enää viedä. PTV-palvelupaikka tullaan arkistoimaan tallennuksen yhteydessä."
+ :will-be-archived-type-changed "Liikuntapaikka on viety aiemmin PTV:hen, mutta se on poistettu tai sen omistaja tai tyyppi on muuttunut niin, ettei sitä enää viedä PTV:hen. Tallennus ei arkistoi palvelupaikkaa: se jää PTV:hen, kunnes arkistoit sen PTV-työkalun Liikuntapaikat-välilehdellä (Odottaa arkistointia)."
  :new-service-location-will-be-created "Liikuntapaikkaa ei ole aiemmin viety PTV:hen. Uusi palvelupaikka tullaan luomaan tallennuksen yhteydessä."
  :data-incomplete "PTV-tiedot ovat vielä puutteelliset. Täytä puuttuvat tiedot, niin liikuntapaikka viedään PTV:hen tallennuksen yhteydessä."
  :integration-error "Virhe PTV-integraatiossa, uusimpia tietoja ei ole viety PTV:hen."

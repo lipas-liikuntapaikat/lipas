@@ -46,7 +46,7 @@
  :integration-enabled "PTV-integrationen är aktiv"
  :integration-enabled-sync-off "PTV-integrationen är aktiv, men synkroniseringen av idrottsanläggningen till PTV är avstängd."
  :will-be-archived-on-save "Idrottsanläggningen arkiveras från PTV när du sparar"
- :will-be-archived-type-changed "Idrottsanläggningen har tidigare exporterats till PTV, men uppgifterna har ändrats så att de inte längre exporteras. PTV-servicestället arkiveras när du sparar."
+ :will-be-archived-type-changed "Idrottsanläggningen har tidigare exporterats till PTV, men den har tagits bort eller dess ägare eller typ har ändrats så att den inte längre exporteras till PTV. Servicestället arkiveras inte när du sparar: det finns kvar i PTV tills du arkiverar det på fliken Idrottsanläggningar i PTV-verktyget (Väntar på arkivering)."
  :new-service-location-will-be-created "Idrottsanläggningen har inte tidigare exporterats till PTV. Ett nytt serviceställe skapas när du sparar."
  :data-incomplete "PTV-uppgifterna är ofullständiga. Fyll i de uppgifter som saknas så exporteras idrottsanläggningen till PTV när du sparar."
  :integration-error "Fel i PTV-integrationen, de senaste uppgifterna har inte exporterats till PTV."
