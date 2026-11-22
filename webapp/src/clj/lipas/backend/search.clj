@@ -4,7 +4,8 @@
     [clojure.string :as str]
     [lipas.data.prop-types :as prop-types]
     [qbits.spandex :as es]
-    [qbits.spandex.utils :as es-utils]))
+    [qbits.spandex.utils :as es-utils]
+    [taoensso.timbre :as log]))
 
 (def es-type "_doc") ; See https://bit.ly/2wslBqY
 
@@ -501,11 +502,14 @@
                              {:status (when (instance? clojure.lang.IExceptionInfo resp)
                                         (-> resp ex-data :status))}
                              resp)))
-           (->> resp
-                :body
-                :items
-                (map (comp :result second first))
-                frequencies)))))))
+           ;; ES rejects documents one by one (an invalid geo_shape, say) and
+           ;; still answers 200, so name them: the counts only say `nil`.
+           (let [items (map (comp second first) (-> resp :body :items))]
+             (doseq [{:keys [_id _index error]} items
+                     :when error]
+               (log/error "Elasticsearch rejected document" _id "in" _index "-"
+                          (:type error) (:reason error)))
+             (frequencies (map :result items)))))))))
 
 (defn bulk-index-sync!
   ([client data]
