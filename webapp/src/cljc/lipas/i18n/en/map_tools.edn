@@ -1,7 +1,7 @@
 {:deleting-tooltip "Delete tool selected",
  :download-backup-tooltip "Download backup",
  :drawing-hole-tooltip "Hole drawing tool selected",
- :drawing-tooltip "Drawing tool selected",
+ :drawing-tooltip "Drawing tool selected. Finish by double-clicking the last point; Backspace removes the previous point and Esc cancels.",
  :edit-tool "Edit tool",
  :importing-tooltip "Import tool selected",
  :route-part-difficulty-tooltip

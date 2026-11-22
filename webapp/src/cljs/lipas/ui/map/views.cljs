@@ -931,6 +931,18 @@
        (keep identity)))
 
 ;; Works as both display and edit views
+(defn- geometry-problem-message
+  "What's wrong with a broken polygon (lipas.polygon-checks/problems)."
+  [tr {:keys [index problem]}]
+  (tr :map/polygon-invalid (inc index) (tr (events/polygon-problem-msg problem))))
+
+(defn- geometry-problems-alert [tr problems]
+  (when (seq problems)
+    [:> Alert {:severity "error"}
+     (for [p problems]
+       ^{:key (:index p)}
+       [:div (geometry-problem-message tr p)])]))
+
 (defn sports-site-view
   [{:keys [tr site-data width]}]
   (let [display-data (:display-data site-data)
@@ -999,6 +1011,9 @@
 
         ;; Same rule as the backend gate; non-empty blocks Save.
         ptv-save-blockers (<== [::subs/ptv-save-blockers lipas-id])
+
+        ;; Polygons broken while editing; non-empty blocks Save.
+        geometry-problems (<== [::subs/geometry-problems lipas-id])
 
         can-edit-map? can-publish?
 
@@ -1070,6 +1085,10 @@
             {:style {:margin-left "-0.25em"}
              :on-click #(==> [::events/show-sports-site nil])}
             [:> Icon "close"]])]]]
+
+      (when (seq geometry-problems)
+        [:> Grid {:item true :xs 12}
+         [geometry-problems-alert tr geometry-problems]])
 
       ;; Tabs
       [:> Grid {:item true :xs 12}
@@ -1507,7 +1526,9 @@
                   :edit-activities? edit-activities?
                   :edit-floorball? edit-floorball?
                   :save-in-progress? save-in-progress?
-                  :valid? (and edits-valid? (empty? ptv-save-blockers))
+                  :valid? (and edits-valid?
+                               (empty? ptv-save-blockers)
+                               (empty? geometry-problems))
                   :logged-in? logged-in?
                   :user-can-publish? can-publish?
                   :on-discard #(==> [::events/discard-edits lipas-id])
@@ -1517,6 +1538,9 @@
                   :on-publish #(==> [::events/save-edits lipas-id])
                   :publish-tooltip (tr :actions/save)
                   :invalid-message (cond
+                                     (seq geometry-problems)
+                                     (geometry-problem-message tr (first geometry-problems))
+
                                      (= #{:ptv/missing-texts} ptv-save-blockers)
                                      (tr :ptv/save-needs-texts)
 
@@ -1548,7 +1572,7 @@
           {:keys [type data is-planning? save-enabled? admins owners
                   problems? size-categories zoomed? geom active-step
                   sub-mode undo redo
-                  selected-tab]} (<== [::subs/add-sports-site-view])
+                  selected-tab geom-problems]} (<== [::subs/add-sports-site-view])
 
           geom-type (-> geom :features first :geometry :type)
           types (<== [::subs/new-site-types is-planning? geom-type])
@@ -1675,7 +1699,14 @@
                      :variant "contained"
                      :on-click #(==> [::events/start-adding-geom geom-type])}
                     [:> Icon "add_location"]
-                    (tr :map/add-to-map)]]])
+                    (tr :map/add-to-map)]]
+
+                  ;; How to finish or undo while drawing
+                  (when (and (= :drawing sub-mode)
+                             (#{"LineString" "Polygon"} geom-type))
+                    [:> Grid {:item true :xs 12}
+                     [:> Typography {:variant "caption"}
+                      (tr :map/drawing-hint)]])])
 
                ;; Enter coordinates
                (when (= "coords" @geom-tab)
@@ -1823,11 +1854,18 @@
                       :color "gray1"}
                      [:> Icon "auto_fix_high"]]]]])
 
-               ;; Delete vertices helper text
+               ;; Helper text: how to draw, or how to delete vertices
                (when (#{"LineString" "Polygon"} geom-type)
                  [:> Grid {:item true :xs 12}
                   [:> Typography {:variant "caption" :style {:margin-top "0.5em"}}
-                   (tr :map/delete-vertices-hint)]])
+                   (if (= :drawing sub-mode)
+                     (tr :map/drawing-hint)
+                     (tr :map/delete-vertices-hint))]])
+
+               ;; Broken polygons block Done; say which and why
+               (when (seq geom-problems)
+                 [:> Grid {:item true :xs 12}
+                  [geometry-problems-alert tr geom-problems]])
 
                ;; Done button and undo / redo
                [:> Grid {:item true :xs 12}
@@ -1842,7 +1880,8 @@
                   [:> Button
                    {:on-click #(==> [::events/finish-adding-geom geom type-code])
                     :variant "contained"
-                    :disabled (-> geom :features empty?)
+                    :disabled (or (-> geom :features empty?)
+                                  (seq geom-problems))
                     :color "secondary"}
                    (tr :general/done)]]
                  [:> Grid {:item true}
@@ -1995,7 +2034,9 @@
              [:> Grid {:item true}
               [buttons/save-button
                {:tooltip (tr :actions/save)
-                :disabled-tooltip (tr :actions/fill-required-fields)
+                :disabled-tooltip (if (seq geom-problems)
+                                    (geometry-problem-message tr (first geom-problems))
+                                    (tr :actions/fill-required-fields))
                 :disabled (not save-enabled?)
                 :on-click #(==> [::events/save-new-site data])}]])
 
