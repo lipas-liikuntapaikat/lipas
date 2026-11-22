@@ -1,7 +1,7 @@
 {:deleting-tooltip "Raderingsverktyg valt",
  :download-backup-tooltip "Ladda ner säkerhetskopia",
  :drawing-hole-tooltip "Hålteckningsverktyg valt",
- :drawing-tooltip "Ritverktyg valt",
+ :drawing-tooltip "Ritverktyg valt. Avsluta genom att dubbelklicka på den sista punkten, Backspace tar bort föregående punkt och Esc avbryter.",
  :edit-tool "Redigeringsverktyg",
  :importing-tooltip "Importverktyg valt",
  :restore-backup-tooltip "Återställ säkerhetskopia",

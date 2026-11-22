@@ -2,6 +2,7 @@
   (:require [clojure.string :as str]
             [goog.array :as garray]
             [lipas.data.ptv :as ptv-data]
+            [lipas.polygon-checks :as polygon-checks]
             [re-frame.core :as rf]
             [reagent.ratom :as ratom]))
 
@@ -252,6 +253,24 @@
     (when (= :adding (-> m :mode :name))
       (-> m :mode :geoms))))
 
+(rf/reg-sub ::new-geom-problems
+  ;; Broken polygons of the site being added (lipas.polygon-checks).
+  :<- [::new-geom]
+  (fn [geom _]
+    (polygon-checks/problems geom)))
+
+(rf/reg-sub ::geometry-problems
+  ;; Polygons broken while editing this site (lipas.polygon-checks). Ones
+  ;; already saved broken don't count: the checks are newer than the data.
+  (fn [[_ lipas-id]]
+    [(rf/subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])
+     (rf/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])])
+  (fn [[latest edit-data] _]
+    (if edit-data
+      (polygon-checks/new-problems (-> latest :location :geometries)
+                                   (-> edit-data :location :geometries))
+      [])))
+
 (rf/reg-sub ::undo
   :<- [::map]
   (fn [m [_ lipas-id]]
@@ -441,17 +460,20 @@
      (rf/subscribe [::mode])
      (rf/subscribe [::undo "new"])
      (rf/subscribe [::redo "new"])
-     (rf/subscribe [::selected-new-sports-site-tab])])
+     (rf/subscribe [::selected-new-sports-site-tab])
+     (rf/subscribe [::new-geom-problems])])
   (fn [[type data is-planning? valid? save-in-progress? admins owners
         prop-types size-categories zoomed? geom mode undo redo
-        selected-tab] _]
+        selected-tab geom-problems] _]
     (let [sub-mode  (mode :sub-mode)]
       {:type            type
        :type-code       (:type-code type)
        :geom-type       (:geometry-type type)
        :data            data
        :is-planning?    is-planning?
-       :save-enabled?   (and valid? (= :finished sub-mode) (not save-in-progress?))
+       :save-enabled?   (and valid? (= :finished sub-mode) (not save-in-progress?)
+                             (empty? geom-problems))
+       :geom-problems   geom-problems
        :admins          admins
        :owners          owners
        :types-props     (reduce (fn [res [k v]]
