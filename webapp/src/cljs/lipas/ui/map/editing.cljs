@@ -192,35 +192,55 @@
   "Distinct points a feature needs before a double-click may finish it."
   {"Polygon" 3 "LineString" 2})
 
+(def ^:private same-spot-px
+  "Clicks this close to each other, in pixels, are on the same spot."
+  5)
+
+(defn- on-spot? [^js lmap ^js px coord]
+  (let [^js p (.getPixelFromCoordinate lmap (clj->js coord))]
+    (<= (Math/hypot (- (aget p 0) (aget px 0)) (- (aget p 1) (aget px 1)))
+        same-spot-px)))
+
 (defn- double-click-zoom
-  "An interaction that makes a double-click zoom in while drawing, as it does
-  elsewhere on the map, when the feature drawn so far has too few distinct
-  points to be finished. Otherwise Draw takes the double-click and finishes
-  the feature, as before. Draw swallows double-clicks, so people trying to
-  zoom kept adding points on the same spot, until the fourth one finished
-  a polygon without area (2026-11, lipas-ids 621743-621746).
+  "An interaction that makes a double-click on one spot zoom in while
+  drawing, as it does elsewhere on the map, when the feature drawn so far
+  would have too few distinct points to be finished. Otherwise Draw takes the
+  double-click and finishes the feature, as before. Draw swallows
+  double-clicks, so people trying to zoom kept adding points on the same
+  spot, until the fourth one finished a polygon without area (2026-11,
+  lipas-ids 621743-621746).
+
+  OpenLayers calls any two clicks within 250 ms a double-click, wherever
+  they are: two quick clicks on different spots place two points, as before.
 
   Must be added after `draw`, so that it sees the event first."
   [^js draw sketch geom-type]
   (Interaction.
     #js {:handleEvent
          (fn [^js e]
-           (let [^js s @sketch
-                 clicks (when (and s (= "dblclick" (.-type e)))
-                          (sketch-clicks s))]
-             (if (and (seq clicks)
-                      (< (count (distinct clicks)) (finishable-points geom-type 2)))
-               (let [^js view (.getView (.-map e))
-                     last-click (last clicks)]
-                 ;; The double-click's own clicks added points: drop them.
-                 ;; Draw aborts the sketch when no point is left.
-                 (dotimes [_ (count (take-while #(= last-click %) (reverse clicks)))]
-                   (.removeLastPoint draw))
-                 (.animate view #js {:zoom (inc (.getZoom view))
-                                     :anchor (.-coordinate e)
-                                     :duration 250})
-                 false)
-               true)))}))
+           (let [^js s @sketch]
+             (if-not (and s (= "dblclick" (.-type e)))
+               true
+               (let [^js lmap (.-map e)
+                     clicks (vec (sketch-clicks s))
+                     ;; the double-click's own clicks: the last ones, on its spot
+                     own (count (take-while #(on-spot? lmap (.-pixel e) %) (reverse clicks)))
+                     before (subvec clicks 0 (- (count clicks) own))]
+                 (if (and (>= own 2)
+                          (< (inc (count (distinct before)))
+                             (finishable-points geom-type 2)))
+                   (let [^js view (.getView lmap)]
+                     ;; Drop the points the double-click added; Draw aborts
+                     ;; the sketch when no point is left.
+                     (dotimes [_ own]
+                       (.removeLastPoint draw))
+                     ;; At the maximum zoom, animating would only pan.
+                     (when (< (.getZoom view) (.getMaxZoom view))
+                       (.animate view #js {:zoom (inc (.getZoom view))
+                                           :anchor (.-coordinate e)
+                                           :duration 250}))
+                     false)
+                   true)))))}))
 
 (defn- editable-target? [^js e]
   (let [^js t (.-target e)]
