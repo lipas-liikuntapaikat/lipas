@@ -167,6 +167,11 @@ Hover Liikunta- ja ulkoilureitit's "19": at most 7 names per group, then
 - Clicking the selected chip again goes back to "Kaikki".
 - Collapse the bar with the count button: the selected chip shows as a chip
   with ×, which clears it.
+- Hovering a chip says what it lists, in the services' terms, as on the
+  Liikuntapaikat tab (2026-11-26): "Ristiriita" texts changed in PTV,
+  "Estetty" a PTV draft or texts PTV would reject, "Ajan tasalla" only
+  services Lipas tracks, "Ei palvelupaikkoja" no service location in PTV.
+  Result 2026-11-26: pass, all six.
 
 **A5. Search, and the services below the table**
 1. Search "kirjasto". Expect "0/16", "Yksikään Lipakseen liittyvä palvelu ei

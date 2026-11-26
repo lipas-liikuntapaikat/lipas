@@ -2950,11 +2950,15 @@
           (tr :ptv.service/others-search-hits search-hits))])]))
 
 (defn- service-filter-chips
+  "The Palvelut tab's filters, each with a sentence on what it lists (the
+   services' own: their statuses mean other things than the sites')."
   [tr]
   (for [k ptv-services/status-filters]
-    [k (tr (if (= :no-locations k)
-             :ptv.service/filter-no-locations
-             (keyword "ptv" (str "filter-" (name k)))))]))
+    [k
+     (tr (if (= :no-locations k)
+           :ptv.service/filter-no-locations
+           (keyword "ptv" (str "filter-" (name k)))))
+     (tr (keyword "ptv.service" (str "filter-" (name k) "-tooltip")))]))
 
 (defn services
   []
