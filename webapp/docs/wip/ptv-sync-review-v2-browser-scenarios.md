@@ -104,6 +104,21 @@ complete and whose sync is on.
 Expect: the review shows the new PTV-side change without reopening the
 dialog.
 
+**A5. Sorting by a column** (no write; #258, merged 2026-11-26)
+
+Click "Nimi": A→Z, the arrow on the header; again: Z→A. "Integraatio":
+Estetty, Ristiriita, Valmis synkronoitavaksi, Ajan tasalla, not synced,
+sync off. "Katselmointi": changes requested, approved with a remark,
+approved, not audited. Ties go by name A→Z in either direction. Until a
+header is clicked: audit priority, then type.
+
+Sorted by Integraatio, open an "Ajan tasalla" site (s1b) and edit its
+summary: the chip turns "Valmis synkronoitavaksi" and the row stays
+where it is until closed. "Peru tallentamattomat muutokset".
+
+Result 2026-11-26: pass (Nimi both ways with aria-sort, Integraatio in that
+order; s1b stayed at row 16 when edited).
+
 ---
 
 ## B. Reviewing one site (PTV tool, expanded row)

@@ -197,6 +197,24 @@ Open Lipas capture -testi C: "Palvelupaikat PTV:ssä (0)" with the amber
 "Palveluun ei ole liitetty yhtään palvelupaikkaa…", FI/SE/EN tabs (org
 languages plus its versions), the AI button disabled with its tooltip.
 
+**A7. Sorting by a column** (as Liikuntapaikat, sites scenario A5)
+
+Every header sorts; a second click reverses. Integraatio: Estetty,
+Ristiriita, Valmis synkronoitavaksi, Ajan tasalla, "–". Katselmointi as
+on Liikuntapaikat. Nimi alphabetically, unnamed last. Luotu: Lipas, PTV,
+Muu järjestelmä. Palvelupaikat and Liikuntapaikat: fewest first ("Ei
+palvelupaikkoja" first). Ties by name A→Z. The tooltips of the underlined
+headers still open, on hover and on keyboard focus. Until a header is
+clicked: the default order (A1), what needs the user first.
+
+Sorted by Integraatio, open Jäähallit and edit a text: the chip turns
+"Valmis synkronoitavaksi", the row stays put. "Peru tallentamattomat
+muutokset".
+
+Result 2026-11-26: pass (Palvelupaikat ascending: the "Ei palvelupaikkoja"
+rows first, descending 19, 8, 4…; Luotu Lipas before PTV; Jäähallit stayed
+at row 4 when edited).
+
 ---
 
 ## B. A service created in Lipas (writes)

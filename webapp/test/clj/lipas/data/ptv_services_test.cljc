@@ -478,9 +478,7 @@
                 {:id :blocked :management :lipas :sync-status :blocked}
                 {:id :conflict :management :native :sync-status :awaiting-choice}]]
       (is (= [:conflict :blocked :change-request :ready :plain-lipas :plain-native]
-             (mapv :id (sort-by sut/sort-key rows))))))
-  (testing "an open row keeps the rank it was opened with"
-    (is (= [4 0] (sut/sort-key {:management :lipas :sync-status :ready} 4)))))
+             (mapv :id (sort-by sut/sort-key rows)))))))
 
 (deftest matches-test
   (let [row {:label "Uimahallit" :sync-status :ok :locations []}]

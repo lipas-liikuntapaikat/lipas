@@ -55,6 +55,7 @@
             [lipas.data.ptv-review :as ptv-review]
             [lipas.data.ptv-service-guidance :as service-guidance]
             [lipas.data.ptv-services :as ptv-services]
+            [lipas.data.ptv-table-sort :as table-sort]
             [lipas.data.status :as status]
             [lipas.data.types :as types]
             [lipas.ui.components.autocompletes :refer [autocomplete2]]
@@ -909,63 +910,70 @@
   (into [:> Box {:sx #js {:position "sticky" :left "16px" :width "calc(100cqw - 32px)"}}]
         children))
 
-(def ^:private name-collator (js/Intl.Collator. "fi" #js {:sensitivity "base" :numeric true}))
+(defn- compare-text
+  "Finnish alphabetical order (controls/label-collator)."
+  [a b]
+  (.compare controls/label-collator a b))
 
-(defn- audit-rank
-  "Most critical first: changes requested, approved with a remark to read,
-   approved, no verdict on the current text."
-  [{:keys [audit-status]}]
-  (case audit-status
-    :changes-requested 1
-    :approved-with-feedback 2
-    :approved 3
-    :none 4
-    5))
+(defn- sort-header
+  "A column heading that sorts its table by `col`: `sort-state` is the
+   table's atom ({:col :dir}, lipas.data.ptv-table-sort). With `tooltip`,
+   the heading is explained in a tooltip, which opens on keyboard focus
+   too."
+  [{:keys [col label tooltip align sort-state]}]
+  (let [{sorted :col dir :dir} @sort-state
+        active? (= col sorted)
+        sort-label [:> TableSortLabel
+                    {:active active?
+                     :direction (if active? (name dir) "asc")
+                     :on-click #(swap! sort-state table-sort/next-sort col)}
+                    (if tooltip
+                      [:span {:style {:textDecoration "underline dotted"
+                                      :textUnderlineOffset "4px"}}
+                       label]
+                      label)]]
+    [:> TableCell {:sx #js {:textAlign (or align "left")}
+                   :sortDirection (if active? (name dir) false)}
+     (if tooltip
+       [:> Tooltip {:title tooltip} sort-label]
+       sort-label)]))
 
-(defn- integration-rank
-  "Most critical first (ptv-review/sync-statuses): blocked (red), awaiting
-   a choice (orange), ready to sync, up to date, not yet synced,
-   integration off."
-  [{:keys [sync-enabled sync-status]}]
-  (if-not sync-enabled
-    6
-    (case sync-status
-      :blocked 1
-      :awaiting-choice 2
-      :ready 3
-      :ok 4
-      :not-synced 5
-      6)))
+(def ^:private site-columns
+  "What the Liikuntapaikat table sorts by, column by column."
+  {:event-data #(table-sort/sync-rank (:sync-status %) (not (:sync-enabled %)))
+   :audit #(table-sort/audit-rank (:audit-status %))
+   :name :name
+   :type :type
+   :owner :owner})
+
+(defn- default-site-key
+  "The order until a column is chosen: the sites needing attention first
+   (audit priority), then by type."
+  [site]
+  [(case (:audit-status site)
+     :changes-requested 1 ; Most critical
+     :none 3 ; No verdict on the current text
+     (:approved :approved-with-feedback) 4 ; All good
+     5) ; Default/unknown
+   (:type site)])
 
 (defn- sort-sites
-  "Default order (no column chosen) puts the sites needing attention first:
-   audit priority, then type. A chosen column sorts on it — text columns
-   alphabetically, status columns most critical first — with the name
-   (always A→Z) as tie-breaker."
-  [sites {:keys [col dir]}]
-  (if-not col
-    (sort-by (fn [site]
-               [(case (:audit-status site)
-                  :changes-requested 1 ; Most critical
-                  :none 3 ; No verdict on the current text
-                  (:approved :approved-with-feedback) 4 ; All good
-                  5) ; Default/unknown
-                (:type site)])
-             sites)
-    (let [sign (if (= dir :desc) -1 1)
-          cmp-col (case col
-                    :audit #(compare (audit-rank %1) (audit-rank %2))
-                    :event-data #(compare (integration-rank %1) (integration-rank %2))
-                    #(.compare name-collator (str (col %1)) (str (col %2))))]
-      (sort (fn [a b]
-              (let [c (* sign (cmp-col a b))]
-                (if (zero? c)
-                  (.compare name-collator (str (:name a)) (str (:name b)))
-                  c)))
-            sites))))
+  "`sites` in the table's order, `sort-state` the column chosen (if any).
+   An open row sorts as it was when opened (`pinned`, lipas-id -> row), so
+   an edit doesn't move it away from under the cursor."
+  [sites sort-state pinned]
+  (let [as-opened #(get pinned (:lipas-id %) %)
+        cmp (if (:col sort-state)
+              (table-sort/row-comparator sort-state {:columns site-columns
+                                                     :name-fn :name
+                                                     :compare-text compare-text})
+              #(compare (default-site-key %1) (default-site-key %2)))]
+    (sort #(cmp (as-opened %1) (as-opened %2)) sites)))
 
 (defn table []
   (r/with-let [expanded-rows (r/atom {})
+               ;; lipas-id -> the row as it was when opened, to sort it by
+               pinned (r/atom {})
                sort-state (r/atom {:col nil :dir :asc})
                search-text (r/atom "")
                status-filter (r/atom :all)
@@ -986,7 +994,8 @@
           ;; one stay open only if they match the new filter too.
           refilter! (fn [search status]
                       (let [ids (into #{} (map :lipas-id) (filter-sites scoped search status))]
-                        (swap! expanded-rows #(into {} (filter (comp ids key)) %))))
+                        (swap! expanded-rows #(into {} (filter (comp ids key)) %))
+                        (swap! pinned select-keys ids)))
           double-linked-ids (<== [::subs/double-linked-lipas-ids org-id])
 
           ;; Audit status component
@@ -1095,27 +1104,18 @@
            [:> TableHead
             [:> TableRow
              (doall
-               (for [{:keys [key label action-component padding sx sortable?]} headers
-                     :let [active? (= key (:col @sort-state))]]
-                 [:> TableCell {:key (name key) :padding padding :sx (clj->js sx)
-                                :sortDirection (if active? (name (:dir @sort-state)) false)}
-                  action-component
-                  (if sortable?
-                    [:> TableSortLabel
-                     {:active active?
-                      :direction (if active? (name (:dir @sort-state)) "asc")
-                      :onClick #(swap! sort-state
-                                       (fn [{:keys [col dir]}]
-                                         (if (= col key)
-                                           {:col key :dir (if (= dir :asc) :desc :asc)}
-                                           {:col key :dir :asc})))}
-                     label]
-                    label)]))]]
+               (for [{:keys [key label action-component padding sx sortable?]} headers]
+                 (if sortable?
+                   ^{:key (name key)}
+                   [sort-header {:col key :label label :align (:textAlign sx) :sort-state sort-state}]
+                   [:> TableCell {:key (name key) :padding padding :sx (clj->js sx)}
+                    action-component
+                    label])))]]
 
           ;; Body
            [:> TableBody
             (doall
-              (for [{:keys [lipas-id] :as site} (sort-sites shown @sort-state)]
+              (for [{:keys [lipas-id] :as site} (sort-sites shown @sort-state @pinned)]
 
                 [:<> {:key lipas-id}
 
@@ -1131,9 +1131,11 @@
                      :on-click (fn []
                                  ;; opening the row refetches its location, so
                                  ;; its review isn't as old as the dialog
-                                 (when-not (get @expanded-rows lipas-id)
-                                   (==> [::events/refresh-service-channel org-id
-                                         (:service-channel-id site)]))
+                                 (if (get @expanded-rows lipas-id)
+                                   (swap! pinned dissoc lipas-id)
+                                   (do (==> [::events/refresh-service-channel org-id
+                                             (:service-channel-id site)])
+                                       (swap! pinned assoc lipas-id site)))
                                  (swap! expanded-rows update lipas-id not))}
                     [:> Icon
                      (if (get @expanded-rows lipas-id false)
@@ -2827,19 +2829,6 @@
         [open-row-content
          [service-details {:org-id org-id :service service}]]]]]]))
 
-(defn- header-with-tooltip
-  "A column heading explained in a tooltip, which opens on keyboard focus
-   too: the explanations shown on hover in the cells below are here as
-   well."
-  [{:keys [label tooltip align]}]
-  [:> TableCell {:sx #js {:textAlign (or align "center")}}
-   [:> Tooltip {:title tooltip}
-    [:span {:tabIndex 0
-            :style {:cursor "help"
-                    :textDecoration "underline dotted"
-                    :textUnderlineOffset "4px"}}
-     label]]])
-
 (defn- origin-header-tooltip
   "What the Luotu column means, and each of its values, as the chips
    below explain theirs."
@@ -2853,10 +2842,32 @@
      [:div {:style {:marginTop "6px"}}
       [:b label] ": " explanation])])
 
+(def ^:private service-columns
+  "What the Palvelut table sorts by, column by column."
+  {:event-data #(table-sort/sync-rank (:sync-status %) false)
+   :audit #(table-sort/audit-rank (:audit-status %))
+   :name ptv-services/display-name
+   :origin ptv-services/origin-rank
+   :locations #(count (:locations %))
+   :sites #(count (:site-ids %))})
+
+(defn- compare-services-default
+  "The order until a column is chosen (ptv-services/sort-key), then by
+   name, the unnamed last."
+  [a b]
+  (let [na (ptv-services/display-name a)
+        nb (ptv-services/display-name b)
+        c (compare (conj (ptv-services/sort-key a) (nil? na))
+                   (conj (ptv-services/sort-key b) (nil? nb)))]
+    (if (zero? c)
+      (compare-text (or na "") (or nb ""))
+      c)))
+
 (defn- services-table
   "The services that concern Lipas, then (when shown) the org's others
-   under a heading of their own."
-  [{:keys [tr org-id main others open-ids matching-ids on-toggle]}]
+   under a heading of their own. `sort-state` is the atom of the column
+   it is sorted by (sort-header)."
+  [{:keys [tr org-id main others open-ids matching-ids on-toggle sort-state]}]
   (let [row (fn [service]
               (let [id (:service-id service)]
                 ^{:key id}
@@ -2873,17 +2884,22 @@
       [:> TableHead
        [:> TableRow
         [:> TableCell {:padding "checkbox"}]
-        [header-with-tooltip {:label (tr :ptv/integration)
-                              :tooltip (tr :ptv.service/col-integration-tooltip)}]
-        [:> TableCell {:sx #js {:textAlign "center"}} (tr :ptv.audit/tab-label)]
-        [:> TableCell (tr :general/name)]
-        [header-with-tooltip {:label (tr :ptv.service/col-origin)
-                              :tooltip (r/as-element [origin-header-tooltip tr])
-                              :align "left"}]
-        [header-with-tooltip {:label (tr :ptv.service/col-locations)
-                              :tooltip (tr :ptv.service/col-locations-tooltip)}]
-        [header-with-tooltip {:label (tr :ptv.service/col-sites)
-                              :tooltip (tr :ptv.service/col-sites-tooltip)}]]]
+        [sort-header {:col :event-data :sort-state sort-state :align "center"
+                      :label (tr :ptv/integration)
+                      :tooltip (tr :ptv.service/col-integration-tooltip)}]
+        [sort-header {:col :audit :sort-state sort-state :align "center"
+                      :label (tr :ptv.audit/tab-label)}]
+        [sort-header {:col :name :sort-state sort-state
+                      :label (tr :general/name)}]
+        [sort-header {:col :origin :sort-state sort-state
+                      :label (tr :ptv.service/col-origin)
+                      :tooltip (r/as-element [origin-header-tooltip tr])}]
+        [sort-header {:col :locations :sort-state sort-state :align "center"
+                      :label (tr :ptv.service/col-locations)
+                      :tooltip (tr :ptv.service/col-locations-tooltip)}]
+        [sort-header {:col :sites :sort-state sort-state :align "center"
+                      :label (tr :ptv.service/col-sites)
+                      :tooltip (tr :ptv.service/col-sites-tooltip)}]]]
       ;; One keyed seq: a row moving across the heading stays mounted
       [:> TableBody
        (doall
@@ -2938,12 +2954,12 @@
 (defn services
   []
   (r/with-let [expanded-rows (r/atom {})
-               ;; service-id -> the place an open row had when opened, its
-               ;; :rank (ptv-services/sort-key) and its group (:concerns?):
-               ;; an edit changes its status, a first save makes it Lipas's,
-               ;; and a row that jumps away from under the cursor is hard to
-               ;; follow
-               ranks (r/atom {})
+               ;; service-id -> the row as it was when opened, which it sorts
+               ;; and is grouped (:concerns-lipas?) by: an edit changes its
+               ;; status, a first save makes it Lipas's, and a row that jumps
+               ;; away from under the cursor is hard to follow
+               pinned (r/atom {})
+               sort-state (r/atom {:col nil :dir :asc})
                search-text (r/atom "")
                status-filter (r/atom :all)
                filter-expanded? (r/atom true)
@@ -2953,10 +2969,9 @@
                toggle-row! (fn [{:keys [service-id] :as row}]
                              (if (get @expanded-rows service-id)
                                (do (swap! expanded-rows dissoc service-id)
-                                   (swap! ranks dissoc service-id))
+                                   (swap! pinned dissoc service-id))
                                (do (swap! expanded-rows assoc service-id true)
-                                   (swap! ranks assoc service-id {:rank (first (ptv-services/sort-key row))
-                                                                  :concerns? (:concerns-lipas? row)}))))]
+                                   (swap! pinned assoc service-id row))))]
     (let [tr (<== [:lipas.ui.subs/translator])
           org-id (<== [::subs/selected-ptv-org-id])
           show-others? (= "all" (<== [::subs/services-filter]))
@@ -2973,18 +2988,15 @@
           ;; from, so without the pin an open row would vanish mid-edit the
           ;; moment it stops matching (as the sites' table does)
           shown? #(or (matching-ids (:service-id %)) (open-ids (:service-id %)))
-          compare-rows (fn [a b]
-                         (let [na (ptv-services/display-name a)
-                               nb (ptv-services/display-name b)
-                               c (compare (conj (ptv-services/sort-key a (:rank (get @ranks (:service-id a)))) (nil? na))
-                                          (conj (ptv-services/sort-key b (:rank (get @ranks (:service-id b)))) (nil? nb)))]
-                           (if (zero? c)
-                             (.compare controls/label-collator (or na "") (or nb ""))
-                             c)))
-          concerns? (fn [{:keys [service-id concerns-lipas?]}]
-                      (boolean (if-let [pinned (get @ranks service-id)]
-                                 (:concerns? pinned)
-                                 concerns-lipas?)))
+          as-opened #(get @pinned (:service-id %) %)
+          compare-rows (let [cmp (if (:col @sort-state)
+                                   (table-sort/row-comparator @sort-state
+                                                              {:columns service-columns
+                                                               :name-fn ptv-services/display-name
+                                                               :compare-text compare-text})
+                                   compare-services-default)]
+                         #(cmp (as-opened %1) (as-opened %2)))
+          concerns? (comp boolean :concerns-lipas? as-opened)
           {main true others false} (group-by concerns? (filter shown? rows))
           other-rows (remove :concerns-lipas? rows)
           ;; A filter change starts a new lookup: rows open from the
@@ -2992,7 +3004,7 @@
           refilter! (fn [search status others?]
                       (let [ids (matching search status others?)]
                         (swap! expanded-rows #(into {} (filter (comp ids key)) %))
-                        (swap! ranks select-keys ids)))
+                        (swap! pinned select-keys ids)))
           awaiting (count (filter #(and (:concerns-lipas? %) (= :awaiting-choice (:sync-status %))) rows))]
       [:<>
        [:> Stack {:direction "row" :sx #js {:mx 2 :mt 1}}
@@ -3040,7 +3052,8 @@
                           :others (when show-others? (sort compare-rows others))
                           :open-ids open-ids
                           :matching-ids matching-ids
-                          :on-toggle toggle-row!}]
+                          :on-toggle toggle-row!
+                          :sort-state sort-state}]
          (let [filtering? (or (not (str/blank? @search-text)) (not= :all @status-filter))]
            [:> Paper {:sx #js {:mx 2 :p 3}}
             [:> Stack {:spacing 1.5 :alignItems "center"}

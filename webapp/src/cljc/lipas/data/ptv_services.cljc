@@ -328,21 +328,24 @@
 
 (def ^:private management-rank {:lipas 0 :native 1 :other-system 2})
 
+(defn origin-rank
+  "The order of the Luotu column: created in Lipas, in PTV, in another
+   system."
+  [{:keys [management]}]
+  (get management-rank management 3))
+
 (defn sort-key
-  "Where a row sorts in the table, before its name: what needs the user
-   first (a choice to make, a blocked sync, a change request, edits to
-   send), then the services Lipas created. `rank` overrides the first, for
-   a row that keeps the place it had when opened."
-  ([row] (sort-key row nil))
-  ([{:keys [sync-status audit-status management]} rank]
-   [(or rank
-        (cond
-          (= :awaiting-choice sync-status) 0
-          (= :blocked sync-status) 1
-          (= :changes-requested audit-status) 2
-          (= :ready sync-status) 3
-          :else 4))
-    (get management-rank management 3)]))
+  "Where a row sorts in the table until a column is chosen, before its
+   name: what needs the user first (a choice to make, a blocked sync, a
+   change request, edits to send), then the services Lipas created."
+  [{:keys [sync-status audit-status] :as row}]
+  [(cond
+     (= :awaiting-choice sync-status) 0
+     (= :blocked sync-status) 1
+     (= :changes-requested audit-status) 2
+     (= :ready sync-status) 3
+     :else 4)
+   (origin-rank row)])
 
 (def status-filters
   "The status chips of the table: a sync status, or :no-locations for a
