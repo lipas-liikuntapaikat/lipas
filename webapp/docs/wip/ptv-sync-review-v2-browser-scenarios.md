@@ -1369,7 +1369,8 @@ Tester feedback: "Ota kaikki PTV:n muutokset" left a web page PTV keeps
 under its own name unchosen, though the site had none. Now
 (ptv-review/bulk-take-rows):
 - the obvious choices are made: PTV's only web page goes in as the web page
-  while PTV names none the web page and the edit has none;
+  while PTV names none the web page, in place of a web page Lipas or the
+  edit has (taking all of PTV's means PTV's page);
 - a language version PTV has that the sync would remove is kept (its texts
   copied into Lipas) when the org has the language enabled, and goes when
   it hasn't, as the org's languages say; not one the user marked to go;
@@ -1416,6 +1417,11 @@ the English summary back, and the English row goes. Discard.
 
 Map, s18 → "Muokkaa" → PTV. As Q1, the values going into the form's edit.
 "Peruuta" → "Kyllä": nothing saved.
+
+**Q4b. Over Lipas's web page** (no write)
+
+As Q4, with a web page typed in Perustiedot first: taking all puts PTV's
+page in its place.
 
 **Q5. A language the org hasn't enabled** (s14, no write)
 

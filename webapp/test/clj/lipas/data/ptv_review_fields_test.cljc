@@ -232,10 +232,11 @@
         (let [bulk (sut/bulk-take-rows (:rows r) langs)
               taken (reduce #(sut/apply-review-writes %1 (sut/review-writes %1 %2 :ptv)) site bulk)]
           (is (= [[:www] [:other-web-pages]] (map :key bulk)))
-          (is (= "https://skeittiparkit.fi" (:www taken)) "the web page row emptied the slot first")
+          (is (= "https://skeittiparkit.fi" (:www taken)) "in place of Lipas's web page")
           (is (= [] (sut/open-review-rows (:rows (annotate r taken)) {})))))
-      (testing "not over a web page the edit has"
-        (is (= {} (sut/review-writes (assoc site :www "https://oma.kunta.fi") other :ptv))))
+      (testing "over a web page the edit has, too: taking all of PTV's means PTV's page"
+        (is (= {[:www] "https://skeittiparkit.fi"}
+               (sut/review-writes (assoc site :www "https://oma.kunta.fi") other :ptv))))
       (testing "taken as the site's web page"
         (let [taken (sut/apply-review-writes site (sut/review-value-writes
                                                     other {:slot :www :url "https://skeittiparkit.fi"}))

@@ -1032,9 +1032,9 @@
    `row` (:ptv, or :lipas for the saved one): {path value}, a nil value
    removing the key. A one-slot row takes PTV's only value (several:
    review-value-writes); PTV's other web pages, its only page into the
-   :bulk-slot while the edit has none there (the web page row, taken
-   before it, may have emptied it), else nothing; the connections, PTV's
-   set, in the edit's order with PTV's others after."
+   :bulk-slot, over a web page the edit has there (taking all of PTV's
+   means PTV's page), else nothing; the connections, PTV's set, in the
+   edit's order with PTV's others after."
   [draft row side]
   (if (= :lipas side)
     (:saved row)
@@ -1044,7 +1044,7 @@
         :one-slot {(first (row-site-paths row)) (some->> (first (ptv-values row)) (slot-text field))}
         :extra (let [slot (:bulk-slot row)
                      url (first (ptv-values row))]
-                 (if (and slot url (str/blank? (get draft slot)))
+                 (if (and slot url)
                    {[slot] url}
                    {}))
         :address (cond-> {}
