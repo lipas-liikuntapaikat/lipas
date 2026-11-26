@@ -103,6 +103,7 @@
 
  :take-all-ptv "Take all the PTV changes"
  :keep-all-lipas "Keep the LIPAS version everywhere"
+ :bulk-picks-left "Not everything can be taken at once, as PTV has several options. Choose these yourself: {1}."
  :clear-choices "Undo choices"
 
  :to-ptv "Sent to PTV: {1}"

@@ -103,6 +103,7 @@
 
  :take-all-ptv "Ota kaikki PTV:n muutokset"
  :keep-all-lipas "Pidä Lipaksen versio kaikissa"
+ :bulk-picks-left "Kaikkea ei voi ottaa kerralla, koska PTV:ssä on useampi vaihtoehto. Valitse itse: {1}."
  :clear-choices "Kumoa valinnat"
 
  :to-ptv "Viedään PTV:hen: {1}"

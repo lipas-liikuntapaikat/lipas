@@ -1929,12 +1929,16 @@
         ;; ...and every change made in PTV in them must have a choice
         all-choices (<== [::subs/all-review-choices])
         editable (<== [::subs/editable-site-ids org-id])
+        org-langs (<== [::subs/org-languages org-id])
         open-review (for [{:keys [lipas-id review sync-enabled] :as site} sports-sites
                           :when sync-enabled
                           :let [open (ptv-review/open-review-rows (:rows review)
                                                                   (get all-choices lipas-id))]
                           :when (seq open)]
-                      {:lipas-id lipas-id :name (:name site) :rows open})
+                      {:lipas-id lipas-id :name (:name site) :rows open
+                       ;; what "take all" takes besides: the language
+                       ;; versions the sync would remove
+                       :languages (review-data/language-removals (:rows review))})
 
         [selected-tab set-selected-tab] (hooks/use-state :fi)
 
@@ -2026,13 +2030,14 @@
                  [:li (str name ": " (str/join ", " (map #(review-data/field-label tr %) rows)))])]
               [:> Stack {:direction "row" :spacing 1 :flexWrap "wrap" :useFlexGap true :sx #js {:mt 1}}
                ;; the site's own data only where the user may edit the site,
-               ;; and only rows with one value to take
-               (let [takeable (keep (fn [{:keys [lipas-id rows] :as site}]
+               ;; and only rows with one value to take, as in a site's
+               ;; review (ptv-review/bulk-take-rows)
+               (let [takeable (keep (fn [{:keys [lipas-id rows languages] :as site}]
                                       (let [rights {:ptv-manager? true
                                                     :site-editor? (contains? editable lipas-id)}]
-                                        (when-let [rows (seq (filter #(and (review-data/takeable? rights %)
-                                                                           (ptv-review/takeable-in-bulk? %))
-                                                                     rows))]
+                                        (when-let [rows (seq (filter #(review-data/takeable? rights %)
+                                                                     (ptv-review/bulk-take-rows
+                                                                       (concat rows languages) org-langs)))]
                                           (assoc site :rows rows))))
                                     open-review)]
                  (when (seq takeable)

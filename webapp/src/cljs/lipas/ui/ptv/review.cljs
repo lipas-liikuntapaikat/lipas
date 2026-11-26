@@ -961,7 +961,12 @@
               ;; read here: props are made in lazy seqs, where a deref isn't tracked
               expanded-keys @expanded
               decided-count (- (count required) (count open))
-              takeable (filter #(and (can-take? %) (ptv-review/takeable-in-bulk? %)) required)
+              ;; "take all": the rows with one value to take, and the
+              ;; language versions the org has; the rest are the user's picks
+              takeable (filter can-take? (ptv-review/bulk-take-rows rows org-langs))
+              picks (filter can-take? (ptv-review/bulk-pick-rows open org-langs))
+              ;; "keep all": a language version kept is Lipas's no longer
+              kept-languages (filter #(and (= :languages (:kind %)) (= :ptv (:current %))) rows)
               ;; a choice to take back: recorded (one made against a PTV
               ;; value that has since changed no longer counts), or a
               ;; version taken into the edit. Not PTV's version that the
@@ -982,12 +987,22 @@
                      ;; "Kumoa valinnat" goes with the choices: the focus
                      ;; goes to the first row to choose again, or the first
                      ;; choice, once they are gone
+                     ;; "take all" asks for the picks it leaves: the focus
+                     ;; goes to the first row still open, once the review
+                     ;; shows the take (a new review)
                      :ref (fn [el]
-                            (when (and el (= :first-open @focus-row) (not touched?))
-                              (when-let [b (or (some-> first-open-id js/document.getElementById)
-                                               (.querySelector el "button[aria-pressed]"))]
-                                (reset! focus-row nil)
-                                (.focus b))))}
+                            (let [f @focus-row]
+                              (cond
+                                (and el (= :first-open f) (not touched?))
+                                (when-let [b (or (some-> first-open-id js/document.getElementById)
+                                                 (.querySelector el "button[aria-pressed]"))]
+                                  (reset! focus-row nil)
+                                  (.focus b))
+
+                                (and el (vector? f) (= :after-bulk (first f))
+                                     (not (identical? review (second f))))
+                                (do (reset! focus-row nil)
+                                    (some-> first-open-id js/document.getElementById .focus)))))}
            (when (and (seq rows) (not draft?))
              [bar {:tr tr :review review :rows rows :required required :open open
                    :languages languages :open? open? :on-toggle on-toggle
@@ -1049,19 +1064,22 @@
 
                ;; bulk, after the rows: decided once they've been read, and
                ;; only where it saves clicks
+               (when (and (not read-only?) (next takeable) (seq picks))
+                 [:> Typography {:variant "body2" :color "text.secondary" :sx body}
+                  (tr :ptv.review/bulk-picks-left (str/lower-case (labels tr picks)))])
                (when (and (not read-only?) (or (next takeable) (next required) touched?))
                  [:> Stack {:direction "row" :spacing 1 :flexWrap "wrap" :useFlexGap true}
                   (when (next takeable)
                     [:> Button {:size "small" :variant "outlined"
                                 :sx #js {:textTransform "none"}
-                                :on-click #(do (reset! focus-row nil)
+                                :on-click #(do (reset! focus-row [:after-bulk review])
                                                (on-take takeable :ptv))}
                      (tr :ptv.review/take-all-ptv)])
                   (when (next required)
                     [:> Button {:size "small" :variant "outlined"
                                 :sx #js {:textTransform "none"}
                                 :on-click #(do (reset! focus-row nil)
-                                               (on-take required :lipas))}
+                                               (on-take (concat required kept-languages) :lipas))}
                      (tr :ptv.review/keep-all-lipas)])
                   (when touched?
                     [:> Button {:size "small" :variant "text"

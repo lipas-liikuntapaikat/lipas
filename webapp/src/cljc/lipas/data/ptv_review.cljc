@@ -621,6 +621,11 @@
                    (let [row {:key k :field field :lipas l :ptv p :base b :origin o}]
                      (merge (assoc row :saved (site-values site (row-site-paths row)))
                             (when (= :distance kind) {:distance-m (Math/round (double (distance-m l p)))})
+                            ;; PTV's only page, while PTV names none the
+                            ;; web page: what taking all of PTV's takes
+                            ;; as the web page (review-writes)
+                            (when (and (= :extra kind) (= 1 (count p)) (empty? (get ptv [:www])))
+                              {:bulk-slot :www})
                             (row-spec row))))
           removed-langs (sort-by language-sort-key (set/difference ptv-langs published))
           languages (for [language removed-langs
@@ -987,20 +992,49 @@
 
 (defn takeable-in-bulk?
   "Whether \"take all of PTV's changes\" can take `row`: one value to take.
-   A one-slot row with several PTV values, an extra row (which slot?) and
-   information rows need a pick of their own."
-  [row]
+   A one-slot row with several PTV values needs the user's pick, as do PTV's
+   other web pages unless the slot is obvious (:bulk-slot: PTV's only page,
+   while PTV names none the web page). A language version PTV has that the
+   sync would remove is kept when the org has the language (`org-langs`,
+   LIPAS codes) and the user hasn't marked it for removal; one the org
+   hasn't enabled goes, as the org's languages say. Information rows have
+   nothing to take."
+  [row org-langs]
   (case (:kind row)
     :one-slot (<= (count (:ptv row)) 1)
-    (:extra :info :distance :languages) false
+    :extra (some? (:bulk-slot row))
+    :languages (boolean (and (:locale row)
+                             (contains? (set org-langs) (name (:locale row)))
+                             (not (:marked? row))
+                             (seq (:texts row))
+                             (not= :ptv (:current row))))
+    (:info :distance) false
     true))
+
+(defn bulk-take-rows
+  "The rows of `rows` (annotated) that \"take all of PTV's changes\" takes
+   (takeable-in-bulk?): those that need a decision, and the language
+   versions the sync would remove that the org has enabled (`org-langs`)."
+  [rows org-langs]
+  (filterv #(and (or (review-choice-required? %) (= :languages (:kind %)))
+                 (takeable-in-bulk? % org-langs))
+           rows))
+
+(defn bulk-pick-rows
+  "The rows of `open` (open-review-rows) that \"take all of PTV's changes\"
+   leaves for the user to pick: several values in PTV, or PTV's other web
+   pages without an obvious slot."
+  [open org-langs]
+  (filterv #(not (takeable-in-bulk? % org-langs)) open))
 
 (defn review-writes
   "What to write into the edit `draft` to make it hold `side`'s version of
    `row` (:ptv, or :lipas for the saved one): {path value}, a nil value
    removing the key. A one-slot row takes PTV's only value (several:
-   review-value-writes); the connections, PTV's set, in the edit's order
-   with PTV's others after."
+   review-value-writes); PTV's other web pages, its only page into the
+   :bulk-slot while the edit has none there (the web page row, taken
+   before it, may have emptied it), else nothing; the connections, PTV's
+   set, in the edit's order with PTV's others after."
   [draft row side]
   (if (= :lipas side)
     (:saved row)
@@ -1008,6 +1042,11 @@
       (case kind
         (:short :text) {(review-text-path row) (when-not (str/blank? ptv) ptv)}
         :one-slot {(first (row-site-paths row)) (some->> (first (ptv-values row)) (slot-text field))}
+        :extra (let [slot (:bulk-slot row)
+                     url (first (ptv-values row))]
+                 (if (and slot url (str/blank? (get draft slot)))
+                   {[slot] url}
+                   {}))
         :address (cond-> {}
                    (:street ptv) (assoc [:location :address] (:street ptv))
                    (:postal-code ptv) (assoc [:location :postal-code] (:postal-code ptv))

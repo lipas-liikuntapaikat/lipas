@@ -8,7 +8,8 @@
             [clojure.test.check.generators :as gen]
             [clojure.test.check.properties :as prop]
             [lipas.data.ptv :as ptv-data]
-            [lipas.data.ptv-review :as sut]))
+            [lipas.data.ptv-review :as sut]
+            [lipas.data.ptv-services :as ptv-services]))
 
 (defn- annotate
   "annotate-review for a draft that publishes the review's languages."
@@ -194,7 +195,8 @@
           phone (row r [:phone])
           new-number (some #(when (= "401234567" (:number %)) %) (sut/ptv-values phone))]
       (is (= 2 (count (:ptv phone))))
-      (is (not (sut/takeable-in-bulk? phone)) "which one is the user's pick")
+      (is (not (sut/takeable-in-bulk? phone langs)) "which one is the user's pick")
+      (is (= [phone] (sut/bulk-pick-rows [phone] langs)) "left for the user to pick")
       (testing "PTV keeping Lipas's number beside the new one decides nothing"
         (let [annotated (row (annotate r site) [:phone])]
           (is (= :lipas (:current annotated)))
@@ -225,7 +227,15 @@
           other (row r [:other-web-pages])]
       (is (= #{[:www] [:other-web-pages]} (keys-of r)))
       (is (= #{"https://skeittiparkit.fi"} (:ptv other)))
-      (is (not (sut/takeable-in-bulk? other)) "into which slot is the user's pick")
+      (testing "PTV's only page, while PTV names none the web page: taking all takes it as the web page"
+        (is (= :www (:bulk-slot other)))
+        (let [bulk (sut/bulk-take-rows (:rows r) langs)
+              taken (reduce #(sut/apply-review-writes %1 (sut/review-writes %1 %2 :ptv)) site bulk)]
+          (is (= [[:www] [:other-web-pages]] (map :key bulk)))
+          (is (= "https://skeittiparkit.fi" (:www taken)) "the web page row emptied the slot first")
+          (is (= [] (sut/open-review-rows (:rows (annotate r taken)) {})))))
+      (testing "not over a web page the edit has"
+        (is (= {} (sut/review-writes (assoc site :www "https://oma.kunta.fi") other :ptv))))
       (testing "taken as the site's web page"
         (let [taken (sut/apply-review-writes site (sut/review-value-writes
                                                     other {:slot :www :url "https://skeittiparkit.fi"}))
@@ -243,7 +253,20 @@
   (testing "a page under Lipas's name but in another language counts for its slot"
     (let [channel (update (as-channel site) :webPages
                           (fn [ps] (mapv #(assoc % :value "Sports facility website") ps)))]
-      (is (= [] (:rows (review channel)))))))
+      (is (= [] (:rows (review channel))))))
+
+  (testing "the user picks the slot while PTV names a web page, or has several pages"
+    (let [named (assoc (as-channel site :modified days-later)
+                       :webPages [{:url "https://uusi.kunta.fi" :value "Verkkosivu" :language "fi"}
+                                  {:url "https://skeittiparkit.fi" :value "Skeittiparkit" :language "fi"}])
+          several (assoc (as-channel site :modified days-later)
+                         :webPages [{:url "https://a.fi" :value "A" :language "fi"}
+                                    {:url "https://b.fi" :value "B" :language "fi"}])]
+      (doseq [channel [named several]
+              :let [other (row (review channel) [:other-web-pages])]]
+        (is (nil? (:bulk-slot other)))
+        (is (not (sut/takeable-in-bulk? other langs)))
+        (is (= {} (sut/review-writes (dissoc site :www) other :ptv)))))))
 
 ;;; Address, municipality, point ;;;
 
@@ -302,6 +325,13 @@
       (is (not (sut/review-choice-required? sv)))
       (is (= :ptv-manager (:takeable-by sv)) "a PTV manager may keep the language")
       (is (not-any? #(and (= "sv" (:language %)) (not= :languages (:field %))) (:rows r))))
+    (testing "taking all of PTV's keeps it when the org has the language, as the org's languages say"
+      (is (sut/takeable-in-bulk? sv ["fi" "se" "en"]))
+      (is (= [sv] (filter #(= :languages (:kind %)) (sut/bulk-take-rows (:rows r) ["fi" "se" "en"]))))
+      (is (not (sut/takeable-in-bulk? sv ["fi" "en"])) "the org hasn't enabled Swedish: it goes")
+      (is (empty? (filter #(= :languages (:kind %)) (sut/bulk-take-rows (:rows r) ["fi" "en"]))))
+      (is (not (sut/takeable-in-bulk? (assoc sv :marked? true) ["fi" "se" "en"])) "the user marked it to go")
+      (is (not (sut/takeable-in-bulk? (assoc sv :current :ptv) ["fi" "se" "en"])) "already kept"))
     (testing "taking PTV's texts writes the language into the site"
       (let [taken (sut/apply-review-writes site (sut/review-writes site sv :ptv))]
         (is (= "Hallen" (get-in taken [:name-localized :se])))
@@ -423,9 +453,9 @@
                                       (as-channel site :modified days-later)
                                       changes)
                       s (reduce (fn [s [_ side change]] (if (= :site side) (change s) s)) site changes)
-                      rows (filter sut/takeable-in-bulk? (:rows (review s channel)))
+                      rows (filter #(sut/takeable-in-bulk? % langs) (:rows (review s channel)))
                       taken (reduce #(sut/apply-review-writes %1 (sut/review-writes %1 %2 :ptv)) s rows)]
-                  (empty? (filter sut/takeable-in-bulk? (:rows (review taken channel)))))))
+                  (empty? (filter #(sut/takeable-in-bulk? % langs) (:rows (review taken channel)))))))
 
 (defspec keeping-a-choice-counts-until-ptv-changes 100
   (prop/for-all [[field _ change] ptv-value-change-gen]
@@ -590,7 +620,26 @@
       (is (= {[:summary "fi"] :lipas}
              (keys-of (review (assoc-in ptv [:summary :fi] "Oma tiivistelmä") ptv)))))
     (testing "whitespace PTV collapses is no difference"
-      (is (= [] (:rows (review (assoc-in ptv [:summary :fi] "PTV:n  tiivistelmä ") ptv)))))))
+      (is (= [] (:rows (review (assoc-in ptv [:summary :fi] "PTV:n  tiivistelmä ") ptv)))))
+    (testing "taking all of PTV's: its texts, and a Swedish version the sync would remove as the org has Swedish"
+      (let [ptv (assoc ptv :name {:fi "Uimahallit" :se "Simhallar"}
+                       :summary {:fi "PTV:n tiivistelmä" :se "Sammanfattning"}
+                       :description {:fi "Kuvaus" :se "Beskrivning"})
+            rows (:rows (sut/service-review {:edit lipas :ptv ptv :base lipas :base? true
+                                             :changed-in-ptv? true :locales [:fi] :dropped [:se]}))
+            sv (some #(when (= :languages (:kind %)) %) rows)]
+        (is (= [[:summary "fi"] [:languages "sv"]] (map :key (sut/bulk-take-rows rows ["fi" "se"]))))
+        (is (= [[:summary "fi"]] (map :key (sut/bulk-take-rows rows ["fi"]))) "the org hasn't enabled Swedish")
+        (is (= {[:summary :fi] "PTV:n tiivistelmä"
+                [:name :se] "Simhallar" [:summary :se] "Sammanfattning" [:description :se] "Beskrivning"}
+               (ptv-services/review-writes (sut/bulk-take-rows rows ["fi" "se"]) :ptv)))
+        (is (not (sut/takeable-in-bulk?
+                   (some #(when (= :languages (:kind %)) %)
+                         (:rows (sut/service-review {:edit lipas :ptv ptv :locales [:fi]
+                                                     :dropped [:se] :marked [:se]})))
+                   ["fi" "se"]))
+            "a version the user marked to go")
+        (is (some? sv))))))
 
 (deftest service-changed-since-write-test
   (let [base {:ptv-modified "2026-10-01T10:00:00.123456" :last-sync "2026-10-01T10:00:02.000Z"}]

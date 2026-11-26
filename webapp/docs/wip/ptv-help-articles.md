@@ -288,7 +288,8 @@ Muutokset näkyvät liikuntapaikan PTV-välilehdellä, PTV-työkalun Liikuntapai
 
 - **Pidä Lipaksen versio**: Lipaksen tieto viedään PTV:hen, ja PTV:n muutos korvautuu.
 - **Ota PTV:n versio**: PTV:n tieto kopioidaan Lipakseen ja säilyy PTV:ssä. Nimen, yhteystietojen tai osoitteen ottaminen muuttaa myös liikuntapaikan tiedot Lipaksessa, mikä vaatii oikeuden muokata liikuntapaikkaa.
-- **Ota kaikki PTV:n muutokset** ja **Pidä Lipaksen versio kaikissa** tekevät saman valinnan kaikille kohdille. **Kumoa valinnat** peruu tekemäsi valinnat.
+- **Ota kaikki PTV:n muutokset** ottaa PTV:n version kaikista kohdista, joissa on vain yksi vaihtoehto. Jos liikuntapaikalla ei ole verkkosivua ja PTV:ssä on yksi muu verkkosivu, siitä tulee liikuntapaikan verkkosivu. PTV:n kieliversio säilyy, jos kieli on organisaatiolla käytössä; muuten se poistuu PTV:stä synkronoinnissa. Kun PTV:ssä on useampi vaihtoehto, esimerkiksi kaksi puhelinnumeroa, valitset itse: Lipas kertoo nämä kohdat ennen painamista ja siirtää sen jälkeen kohdistuksen ensimmäiseen.
+- **Pidä Lipaksen versio kaikissa** pitää Lipaksen version kaikissa kohdissa. **Kumoa valinnat** peruu tekemäsi valinnat.
 - Lipaksessa voi olla vain yksi puhelinnumero, sähköpostiosoite, verkkosivu, varauslinkki ja käyntiosoite. Jos PTV:ssä on useampia, valitse niistä yksi. Muut poistuvat PTV:stä.
 - Palvelut valitaan kokonaisuutena: joko Lipaksen tai PTV:n liitetyt palvelut.
 - Voit myös muokata tekstiä tai arvoa itse. Jos samaa tietoa on muutettu PTV:ssä, vahvista oma versiosi painikkeella **Vie muokattu versio PTV:hen**. Jos PTV:n tieto muuttuu vielä tämän jälkeen, Lipas kysyy uudelleen.

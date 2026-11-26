@@ -57,8 +57,10 @@ site in Lipas and the location in PTV. Plan:
 | s14 | 606904 Utajärven kuntoportaat | Swedish version added in PTV (the org has fi+en) |
 | s15 | 527789 Utajärven skeittipuisto | not linked; a PTV location of the same name has fi+en texts |
 | s16 | 526137 Keisarintien päiväkodin leikkikenttä | postal address (PL 1, 91601) added in PTV; fi summary changed in Lipas |
+| s18 | 600099 Utajärven koirapuisto | phone, a web page under PTV's own name and English added in PTV; the site has none of them (Q1) |
+| s19 | 523489 Rokuan hiihtostadionin valaistu latu | fi summary and email changed in PTV; two phones in PTV, none in Lipas (Q2) |
 
-s12–s14 and s16 export the site to a new location first if it has none.
+s12–s14, s16, s18 and s19 export the site to a new location first if it has none.
 620077 "Lipas linkitystesti sali" is a removed site still published in PTV:
 it waits under "Odottaa arkistointia" (E3).
 
@@ -1361,6 +1363,65 @@ discarding forgets the choice ("0 / 2 valittu"). The same discards a
 changed service, link, sync switch or a value taken from PTV. The site
 form has its own discard and gets no button.
 
+## Q. Taking all of PTV's changes (2026-11-26)
+
+Tester feedback: "Ota kaikki PTV:n muutokset" left a web page PTV keeps
+under its own name unchosen, though the site had none. Now
+(ptv-review/bulk-take-rows):
+- the obvious choices are made: PTV's only web page goes in as the web page
+  while PTV names none the web page and the edit has none;
+- a language version PTV has that the sync would remove is kept (its texts
+  copied into Lipas) when the org has the language enabled, and goes when
+  it hasn't, as the org's languages say; not one the user marked to go;
+- what has several options (PTV has two phones; a web page while PTV names
+  another the web page) is left to the user: a line above the buttons says
+  so before the click ("Kaikkea ei voi ottaa kerralla, koska PTV:ssä on
+  useampi vaihtoehto. Valitse itse: puhelinnumero."), and after it the
+  focus goes to the first row still open;
+- "Pidä Lipaksen versio kaikissa" also lets go of a language version taken.
+
+The same panel serves the PTV tool's Liikuntapaikat and Palvelut tabs and
+the site form's PTV tab; the Käyttöönotto wizard's "Ota kaikki PTV:n
+muutokset" (export blocked) takes the same rows.
+
+**Q1. Nothing left to pick** (s18, no write)
+
+PTV tool, Liikuntapaikat, "Utajärven koirapuisto" → "Näytä muutokset".
+
+Expect: rows Puhelinnumero, Muut verkkosivut ("Ota verkkosivuksi", "Ota
+varauslinkiksi") and Englanti (EN) ("Ota PTV:n tekstit"); no "Kaikkea ei
+voi…" line. "Ota kaikki PTV:n muutokset": "2 / 2 valittu"; the edit holds
+the phone "+358 401234567", the web page https://www.utajarvi.fi/koirapuisto
+and the English name and texts; ⑤ "Kopioidaan Lipakseen: Puhelinnumero,
+Muut verkkosivut" and "… Englanti (EN)". Discard.
+
+**Q2. A pick left** (s19, no write)
+
+"Rokuan hiihtostadionin valaistu latu" → "Näytä muutokset".
+
+Expect: "0 / 3 valittu" and "Kaikkea ei voi ottaa kerralla, koska PTV:ssä
+on useampi vaihtoehto. Valitse itse: puhelinnumero." "Ota kaikki PTV:n
+muutokset": the summary and email are taken ("2 / 3 valittu"), Puhelinnumero
+stays "Valitse ennen synkronointia", and the focus is on its first button.
+Discard.
+
+**Q3. Palvelut** (no write)
+
+Palvelut, Pallokentät (p3: its fi summary changed in PTV), tab EN: empty
+the Tiivistelmä. Expect rows Tiivistelmä (FI) and Englanti (EN) (it lacks
+a summary); "Ota kaikki PTV:n muutokset" takes PTV's fi summary and puts
+the English summary back, and the English row goes. Discard.
+
+**Q4. Site form** (no write)
+
+Map, s18 → "Muokkaa" → PTV. As Q1, the values going into the form's edit.
+"Peruuta" → "Kyllä": nothing saved.
+
+**Q5. A language the org hasn't enabled** (s14, no write)
+
+s14's Swedish version (Utajärvi publishes fi+en): taking all leaves it,
+and the sync removes it, as before.
+
 ---
 
 ## Results: event-level run (2026-10-26)
@@ -1737,3 +1798,28 @@ Environment left behind:
   `state` unchanged. 605450 untouched (it read `[]` at the end, from the
   Palvelut run).
 - The playwright session `sites` was closed.
+
+## Results: take all, run of 2026-11-26
+
+Local, admin, Utajärvi, playwright (headless, MessageChannel render patch).
+Q1–Q4 pass as written:
+- Q1: before, no picks line; after, "2 / 2 valittu", the edit holding the
+  phone, the web page and the English texts; no focus move (nothing open).
+- Q2: the picks line before and after; the summary and email taken, the
+  phone open, the focus on its "Pidä Lipaksen versio" (the row's first
+  button).
+- Q3: before, Tiivistelmä (FI) and Englanti (EN); after, "1 / 1 valittu",
+  the English summary back in the form.
+- Q4: the same values in the form's edit; cancelled, nothing saved.
+Q5 is covered by the unit tests (ptv-review-fields-test), not run.
+
+Environment left behind:
+- s18 (600099) and s19 (523489) set up by their scenario functions; each
+  run's edits discarded. 523489's PTV location existed before (sourceId
+  without a timestamp) and the setup overwrote its texts and contacts.
+- 523480 Niskan latu (removed in Lipas) had its PTV location archived by a
+  setup run that picked it by mistake; it had been waiting to be archived.
+- 600983 Pälli Frisbeegolf (not a PTV type) got a location by mistake; it
+  was archived and the site unlinked again.
+- s8 (506497) was linked by mistake and reset with `s8-first-link!`
+  (phone and email put back first).

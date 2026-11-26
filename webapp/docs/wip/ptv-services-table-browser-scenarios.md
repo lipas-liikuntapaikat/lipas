@@ -727,6 +727,14 @@ tallentamattomat muutokset?" first (it didn't before); "Peru muutokset"
 puts the summary back and the button goes. Choices made in the review,
 and versions marked for removal, are discarded with the edits.
 
+**L7. Taking all of PTV's changes** (no write)
+
+As the sites' Q3 (ptv-sync-review-v2-browser-scenarios.md, section Q):
+Pallokentät, its fi summary changed in PTV; erase the English summary.
+"Ota kaikki PTV:n muutokset" takes PTV's fi summary and, Utajärvi having
+English, puts the English summary back, so the version stays. A language
+the org hasn't enabled goes. Discard.
+
 ## Results: run of 2026-10-30
 
 Local Lipas against the PTV test env, Utajärvi, admin. Real writes through
@@ -1018,3 +1026,9 @@ already says its versions are fi and en).
   Its PTV location has Lipas's coordinates now and two more revisions (F1,
   F2). "Ajan tasalla".
 - No browser session left open.
+
+## Results: take all, run of 2026-11-26
+
+L7 passes: before, rows Tiivistelmä (FI) and Englanti (EN) and the button;
+after, "1 / 1 valittu" and the English summary back in the form. Discarded;
+nothing written.

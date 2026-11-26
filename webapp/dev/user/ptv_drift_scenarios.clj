@@ -106,7 +106,10 @@
     (save-site! (cond-> (-> site
                             (assoc :name (or name (:name site)))
                             (dissoc :marketing-name)
-                            (merge site-fields))
+                            ;; a nil field is one the site goes without: a
+                            ;; nil value fails the API's response schema
+                            (as-> s (reduce-kv (fn [m k v] (if (nil? v) (dissoc m k) (assoc m k v)))
+                                               s site-fields)))
                   (:ptv site) (update :ptv dissoc :summary :description)
                   en (assoc-in [:name-localized :en] (:name en))
                   (and (not en) (:name-localized site)) (update :name-localized dissoc :en)))
@@ -358,6 +361,46 @@
                         (assoc-in [:ptv :summary :en] "The gym of Katajisto village hall is a small hall for the villagers' exercise.")
                         (assoc-in [:ptv :description :en] "The gym is in Katajisto village hall. You can play badminton and table tennis and take part in group exercise. Book a turn from the village committee."))))
 
+(defn s18-take-all-obvious! []
+  ;; "Ota kaikki PTV:n muutokset" with nothing to pick: PTV added a phone,
+  ;; a web page under its own name and an English version (Utajärvi
+  ;; publishes English); the site has no phone, web page or English texts.
+  ;; Taking all takes the phone, the page as the web page, and English.
+  (fresh! 600099
+          {:name "Utajärven koirapuisto"
+           :summary "Utajärven koirapuisto on aidattu alue, jossa koirat voivat liikkua vapaana."
+           :description "Koirapuisto sijaitsee keskustan tuntumassa. Alueella on erilliset aitaukset isoille ja pienille koirille sekä penkkejä. Koirapuisto on vapaasti käytettävissä ympäri vuoden."
+           :services [:lahiliikunta]
+           :site-fields {:phone-number nil :www nil :reservations-link nil}})
+  (ptv-edit! 600099
+             #(-> %
+                  (assoc :phone-number "040 123 4567")
+                  (assoc-in [:name-localized :en] "Utajärvi dog park")
+                  (assoc-in [:ptv :languages] ["fi" "en"])
+                  (assoc-in [:ptv :summary :en] "The Utajärvi dog park is a fenced area where dogs can run free.")
+                  (assoc-in [:ptv :description :en] "The dog park is near the centre. It has separate pens for large and small dogs, and benches. The dog park is free to use all year round."))
+             #(update % :webPages (fnil conj [])
+                      {:url "https://www.utajarvi.fi/koirapuisto" :value "Koirapuisto"
+                       :language "fi" :orderNumber 1})))
+
+(defn s19-take-all-leaves-picks! []
+  ;; "Ota kaikki PTV:n muutokset" with a pick left: PTV changed the summary
+  ;; and the email and has two phones for the site that has none. Taking
+  ;; all takes the summary and the email; which phone is the user's pick.
+  (fresh! 523489
+          {:name "Rokuan hiihtostadionin valaistu latu"
+           :summary "Rokuan hiihtostadionin valaistu latu on hiihtostadionilta lähtevä kuntolatu."
+           :description "Latu lähtee Rokuan hiihtostadionilta ja kulkee harjumaastossa. Latu on valaistu iltaisin ja ajetaan lumitilanteen mukaan."
+           :services [:reitit]
+           :site-fields {:phone-number nil :email "liikunta@utajarvi.fi"}})
+  (ptv-edit! 523489
+             #(-> %
+                  (assoc :email "latu@utajarvi.fi")
+                  (assoc-in [:ptv :summary :fi] "Rokuan hiihtostadionin valaistu latu on hiihtostadionilta lähtevä, iltaisin valaistu kuntolatu."))
+             #(-> %
+                  (add-phone "040 111 2222")
+                  (add-phone "040 333 4444"))))
+
 ;;; Stand-ins for s1 and s2 ;;;
 ;; 615340 (s1) and 89913 (s2) hold drafts in PTV that only PTV's own UI can
 ;; publish or discard (left by failed writes in October 2026): every write
@@ -459,7 +502,7 @@
           #'s6-names! #'s7-new-language! #'s8-first-link! #'s9-everything!
           #'s10-phone! #'s11-second-phone-and-page! #'s12-address! #'s13-point!
           #'s14-sv-added! #'s15-first-link-bilingual! #'s16-postal-address!
-          #'s17-en-added-in-ptv!])
+          #'s17-en-added-in-ptv! #'s18-take-all-obvious! #'s19-take-all-leaves-picks!])
 
 (defn run-all!
   ([] (run-all! all))

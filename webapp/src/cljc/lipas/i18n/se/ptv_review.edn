@@ -103,6 +103,7 @@
 
  :take-all-ptv "Ta alla PTV-ändringar"
  :keep-all-lipas "Behåll LIPAS-versionen överallt"
+ :bulk-picks-left "Allt kan inte tas på en gång, eftersom PTV har flera alternativ. Välj själv: {1}."
  :clear-choices "Ångra valen"
 
  :to-ptv "Förs till PTV: {1}"
