@@ -1,7 +1,7 @@
 {:deleting-tooltip "Poistotyökalu valittu",
  :download-backup-tooltip "Lataa varmuuskopio",
  :drawing-hole-tooltip "Reikäpiirtotyökalu valittu",
- :drawing-tooltip "Piirtotyökalu valittu",
+ :drawing-tooltip "Piirtotyökalu valittu. Lopeta kaksoisklikkaamalla viimeistä pistettä, Backspace poistaa edellisen pisteen ja Esc keskeyttää.",
  :edit-tool "Muokkaustyökalu",
  :importing-tooltip "Tuontityökalu valittu",
  :restore-backup-tooltip "Palauta varmuuskopio",

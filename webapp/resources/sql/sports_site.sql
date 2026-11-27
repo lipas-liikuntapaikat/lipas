@@ -214,13 +214,18 @@ JOIN sports_site_current c USING (lipas_id)
 LEFT JOIN first_published p USING (lipas_id)
 LEFT JOIN left_ptv l USING (lipas_id)
 
--- :name invalidate-since!
--- :command :execute
--- :result :affected
--- :doc Changes status to 'incorrect-data' for all revs of :lipas-id after :event-date
-UPDATE public.sports_site
-SET document = jsonb_set(document, '{status}', '"incorrect-data"')
-WHERE lipas_id = :lipas_id AND event_date > :event_date ::timestamptz
+-- :name get-revisions-dated-after
+-- :command :query
+-- :result :many
+-- :doc Non-draft revisions of :lipas-id dated after :event-date, one per
+-- event_date: the one that wins at that date (newest created_at), the same
+-- choice sports_site_current makes. Oldest event_date first.
+SELECT DISTINCT ON (event_date) *
+FROM public.sports_site
+WHERE lipas_id = :lipas_id
+  AND status <> 'draft'
+  AND event_date > :event_date ::timestamptz
+ORDER BY event_date ASC, created_at DESC
 
 -- :name get-latest-by-city-code
 -- :command :query

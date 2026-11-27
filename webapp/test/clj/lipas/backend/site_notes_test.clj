@@ -96,13 +96,33 @@
       (is (= 409 (:status (post member "set-site-note-status"
                                 {:note-id (:id note) :status "archived"})))))
 
-    (testing "there is no delete: the API rejects it"
-      (is (= 400 (:status (post member "set-site-note-status"
-                                {:note-id (:id note) :status "deleted"})))))
+    (testing "only an archived note can be deleted"
+      (is (= 200 (:status (post member "set-site-note-status"
+                                {:note-id (:id note) :status "active"}))))
+      (is (= 409 (:status (post member "set-site-note-status"
+                                {:note-id (:id note) :status "deleted"}))))
+      (is (= 403 (:status (post outsider "set-site-note-status"
+                                {:note-id (:id note) :status "deleted"}))))
+      (is (= 200 (:status (post member "set-site-note-status"
+                                {:note-id (:id note) :status "archived"}))))
+      (is (= "deleted" (:status (:json (post member "set-site-note-status"
+                                             {:note-id (:id note) :status "deleted"}))))))
 
-    (testing "every status change is kept as history"
+    (testing "a deleted note leaves every list and can't come back"
+      (is (= [] (:json (post member "get-site-notes" {:lipas-id lipas-id}))))
+      (is (= [] (:json (post admin "get-site-notes" {:lipas-id lipas-id}))))
+      (is (= [] (:json (post member "get-org-site-notes"
+                             {:org-id org-id :statuses ["active" "archived"]}))))
+      (is (= 400 (:status (post member "get-org-site-notes"
+                                {:org-id org-id :statuses ["deleted"]}))))
+      (is (= 409 (:status (post member "set-site-note-status"
+                                {:note-id (:id note) :status "active"}))))
+      (is (= 409 (:status (post member "set-site-note-status"
+                                {:note-id (:id note) :status "archived"})))))
+
+    (testing "every status change is kept as history, the deleted note too"
       (is (= 1 (:count (jdbc/execute-one! (test-db) ["SELECT count(*) FROM site_note"]))))
-      (is (= ["archived" "active" "archived"]
+      (is (= ["archived" "active" "archived" "active" "archived" "deleted"]
              (map :status (jdbc/execute! (test-db)
                                          ["SELECT status FROM site_note_status
                                            WHERE note_id = ? ORDER BY created_at"

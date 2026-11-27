@@ -1,5 +1,6 @@
 (ns lipas.backend.handler-test
-  (:require [clojure.test :refer [deftest is testing use-fixtures] :as t]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing use-fixtures] :as t]
             [dk.ative.docjure.spreadsheet :as excel]
             [lipas.backend.core :as core]
             [lipas.backend.db.db :as db]
@@ -1024,6 +1025,56 @@
       (is (not (contains? (set (:renovation-years body)) 2023))
           "other-maintenance year 2023 should NOT be in renovation-years"))))
 
+(deftest sports-site-feature-ids-test
+  ;; Activity routes refer to the features they consist of by id (:fids).
+  ;; The editor loads a site through GET /api/sports-sites/:lipas-id, saves
+  ;; what it got and gives features without an id a new one. While that GET
+  ;; dropped the ids (Nov 2025 - Nov 2026), every save broke the site's fids.
+  (let [admin (tu/gen-admin-user :db-component (test-db))
+        token (jwt/create-token admin)
+        lipas-id 9980001
+        fid "2b0e5f3c-6a51-4f0b-9d3e-0c3f6d1e7a10"
+        site (-> (tu/make-route-site lipas-id :type-code 4405)
+                 (assoc-in [:location :city :city-code] 91)
+                 (assoc-in [:location :geometries :features 0 :id] fid)
+                 (assoc :activities {:outdoor-recreation-routes
+                                     {:routes [{:id "6f1c1c7e-3c1b-4c55-9a43-5d1f7b3e2c01"
+                                                :fids [fid]}]}}))
+        post! (fn [s]
+                (test-app (-> (mock/request :post "/api/sports-sites")
+                              (mock/content-type "application/json")
+                              (mock/body (->json (assoc s :event-date (str (java.time.Instant/now)))))
+                              (tu/token-header token))))
+        get-transit (fn [path]
+                      (let [resp (test-app (-> (mock/request :get path)
+                                               (mock/header "Accept" "application/transit+json")))]
+                        [(:status resp) (<-transit (:body resp))]))]
+    ;; A revision from before migration uuid-feature-ids, with an old-style id
+    (core/upsert-sports-site!* (test-db) admin
+                               (-> site
+                                   (assoc :event-date "2019-05-01T10:00:00.000Z")
+                                   (assoc-in [:location :geometries :features 0 :id] "9980001-0")
+                                   (assoc-in [:activities :outdoor-recreation-routes :routes 0 :fids] ["9980001-0"])))
+    (core/upsert-sports-site!* (test-db) admin site)
+    (core/index! (test-search) site :sync)
+
+    (testing "the editor's GET returns the feature ids the route fids refer to"
+      (let [[status body] (get-transit (str "/api/sports-sites/" lipas-id))]
+        (is (= 200 status))
+        (is (= [fid] (map :id (-> body :location :geometries :features))))
+        (is (= [[fid]] (map :fids (-> body :activities :outdoor-recreation-routes :routes))))))
+
+    (testing "history still serves revisions with ids from before the migration"
+      (let [[status body] (get-transit (str "/api/sports-sites/history/" lipas-id))]
+        (is (= 200 status))
+        (is (= #{fid "9980001-0"}
+               (set (for [rev body f (-> rev :location :geometries :features)] (:id f)))))))
+
+    (testing "saves take UUID feature ids only"
+      (is (= 201 (:status (post! site))))
+      (is (= 400 (:status (post! (assoc-in site [:location :geometries :features 0 :id] "9980001-0")))))
+      (is (= 400 (:status (post! (assoc-in site [:location :geometries :features 0 :id] "temp16"))))))))
+
 (deftest renovation-years-backwards-compat-test
   (testing "renovation-years merges old values with major-renovation years"
     (let [user (tu/gen-admin-user :db-component (test-db))
@@ -1240,19 +1291,20 @@
     ))
 
 (defn- report-request
-  "Build a report request. content-type can be :json or :transit."
-  [path query fields locale content-type]
-  (case content-type
-    :json (-> (mock/request :post path)
-              (mock/content-type "application/json")
-              (mock/body (->json {:search-query query
-                                  :fields       fields
-                                  :locale       locale})))
-    :transit (-> (mock/request :post path)
-                 (mock/content-type "application/transit+json")
-                 (mock/body (->transit {:search-query query
-                                        :fields       fields
-                                        :locale       locale})))))
+  "Build a report request. content-type can be :json or :transit; :fmt is
+  the report format (the endpoint defaults to xlsx)."
+  [path query fields locale content-type & {:keys [fmt]}]
+  (let [body (cond-> {:search-query query
+                      :fields       fields
+                      :locale       locale}
+               fmt (assoc :format fmt))]
+    (case content-type
+      :json (-> (mock/request :post path)
+                (mock/content-type "application/json")
+                (mock/body (->json body)))
+      :transit (-> (mock/request :post path)
+                   (mock/content-type "application/transit+json")
+                   (mock/body (->transit body))))))
 
 (defn- read-report-lipas-ids
   "Parse Excel report body and return set of lipas-id values from first column."
@@ -1395,6 +1447,59 @@
       (is (= "2010,2015" (:renovation-years row))
           "legacy renovation-years column rendered as comma-separated list"))))
 
+(deftest sports-sites-report-decommission-year-test
+  (let [closed (-> (tu/make-point-site 110011 :type-code 1120 :status "out-of-service-permanently")
+                   (assoc :decommission-year 2018))
+        active (tu/make-point-site 110012 :type-code 1120 :status "active")
+        _ (doseq [s [closed active]]
+            (core/index! (test-search) s :sync))
+        resp (test-app (report-request "/api/actions/create-sports-sites-report"
+                                       {:query {:bool {:must   {:match_all {}}
+                                                       :filter [{:terms {:lipas-id [110011 110012]}}]}}}
+                                       ["lipas-id" "decommission-year"]
+                                       :fi :json))
+        rows (->> (excel/load-workbook (:body resp))
+                  (excel/select-sheet "lipas")
+                  (excel/select-columns {:A :lipas-id :B :decommission-year}))
+        by-id (into {} (map (juxt (comp long :lipas-id) :decommission-year)) (rest rows))]
+    (is (= 200 (:status resp)))
+    (is (= "Poistettu käytöstä vuonna" (:decommission-year (first rows))))
+    (is (= 2018 (some-> (by-id 110011) long)) "closed site carries its year")
+    (is (contains? by-id 110012))
+    (is (nil? (by-id 110012)) "the column stays empty for a site still in use")))
+
+(deftest sports-sites-report-status-test
+  (let [closed (-> (tu/make-point-site 110021 :type-code 1120 :status "out-of-service-permanently")
+                   (assoc :decommission-year 2018))
+        active (tu/make-point-site 110022 :type-code 1120 :status "active")
+        _ (doseq [s [closed active]]
+            (core/index! (test-search) s :sync))
+        report (fn [locale fmt]
+                 (test-app (report-request "/api/actions/create-sports-sites-report"
+                                           ;; _source as the UI sends it
+                                           {:query   {:bool {:must   {:match_all {}}
+                                                             :filter [{:terms {:lipas-id [110021 110022]}}]}}
+                                            :_source {:includes ["*"] :excludes ["location.geometries"]}}
+                                           ["lipas-id" "status"]
+                                           locale :json :fmt fmt)))
+        xlsx-rows (fn [locale]
+                    (let [rows (->> (excel/load-workbook (:body (report locale "xlsx")))
+                                    (excel/select-sheet "lipas")
+                                    (excel/select-columns {:A :lipas-id :B :status}))]
+                      [(:status (first rows))
+                       (into {} (map (juxt (comp long :lipas-id) :status)) (rest rows))]))]
+    (testing "the status is shown by name in the report's language"
+      (is (= ["Liikuntapaikan tila" {110021 "Poistettu käytöstä pysyvästi" 110022 "Toiminnassa"}]
+             (xlsx-rows :fi)))
+      (is (= ["Status" {110021 "Out of service" 110022 "Active"}]
+             (xlsx-rows :en))))
+    (testing "CSV and GeoJSON localize the same way"
+      (is (str/includes? (slurp (:body (report :fi "csv"))) "Poistettu käytöstä pysyvästi"))
+      (is (str/includes? (slurp (:body (report :fi "geojson"))) "Poistettu käytöstä pysyvästi")))
+    (testing "the site API keeps returning the status code"
+      (is (= "out-of-service-permanently"
+             (:status (core/get-sports-site2 (test-search) 110021 :fi)))))))
+
 (deftest finance-report-test
   (let [_ (seed/seed-city-data! (test-db) (test-search))
         path "/api/actions/create-finance-report"
@@ -1423,6 +1528,37 @@
         body (-> resp :body <-transit)]
     (is (= 200 (:status resp)))
     (is (number? (get-in body [275 :area-m2-pc])))))
+
+(deftest calculate-stats-by-region-test
+  ;; Seeded cities: 275 Konnevesi (province 13, AVI 4, pop 3000 in 2019)
+  ;; and 972 Yli-Ii (province 17, AVI 5). Only 275 gets a site.
+  (let [_ (seed/seed-city-data! (test-db) (test-search))
+        user (tu/gen-admin-user :db-component (test-db))
+        site (-> (tu/gen-sports-site)
+                 (dissoc :images)
+                 (assoc :status "active")
+                 (assoc-in [:location :city :city-code] 275)
+                 (assoc-in [:properties :area-m2] 100))
+        _ (core/upsert-sports-site!* (test-db) user site)
+        _ (core/index! (test-search) site :sync)
+        calc (fn [grouping]
+               (-> (test-app (-> (mock/request :post "/api/actions/calculate-stats")
+                                 (mock/content-type "application/transit+json")
+                                 (mock/header "Accept" "application/transit+json")
+                                 (mock/body (->transit {:city-codes [275 972]
+                                                        :year 2019
+                                                        :grouping grouping}))))
+                   (update :body <-transit)))]
+    (doseq [[grouping region-id] [["search-meta.location.province.id" 13]
+                                  ["search-meta.location.avi-area.id" 4]]]
+      (testing grouping
+        (let [{:keys [status body]} (calc grouping)]
+          (is (= 200 status))
+          (is (= #{region-id} (set (keys body))))
+          (is (= 3000 (get-in body [region-id :population])))
+          (is (= 1 (get-in body [region-id :sites-count])))
+          (is (== 100 (get-in body [region-id :area-m2-sum])))
+          (is (== (/ 100 3000) (get-in body [region-id :area-m2-pc]))))))))
 
 (deftest create-energy-report-test
   (let [resp (test-app (-> (mock/request :post "/api/actions/create-energy-report")

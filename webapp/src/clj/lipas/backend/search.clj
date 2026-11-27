@@ -4,7 +4,8 @@
     [clojure.string :as str]
     [lipas.data.prop-types :as prop-types]
     [qbits.spandex :as es]
-    [qbits.spandex.utils :as es-utils]))
+    [qbits.spandex.utils :as es-utils]
+    [taoensso.timbre :as log]))
 
 (def es-type "_doc") ; See https://bit.ly/2wslBqY
 
@@ -119,6 +120,7 @@
          :type.type-code {:type "integer"}  ; queried by V2 API filter
          :type.size-category {:type "keyword"}  ; ice halls have size category (small/competition/large)
          :construction-year {:type "integer"}  ; might be used for range queries
+         :decommission-year {:type "integer"}  ; decommissioned-sites stats
          :admin {:type "keyword"}  ; queried by V2 API filter
          :owner {:type "keyword"}  ; queried by V2 API filter
          ;; org-management ownership fields carried in the document (the
@@ -177,9 +179,11 @@
          :search-meta.location.city.name.fi (text-with-sort "fi")
          :search-meta.location.city.name.se (text-with-sort "sv")
          :search-meta.location.city.name.en (text-with-sort "en")
+         :search-meta.location.province.id {:type "integer"}
          :search-meta.location.province.name.fi text-with-keyword
          :search-meta.location.province.name.se text-with-keyword
          :search-meta.location.province.name.en text-with-keyword
+         :search-meta.location.avi-area.id {:type "integer"}
          :search-meta.location.avi-area.name.fi text-with-keyword
          :search-meta.location.avi-area.name.se text-with-keyword
          :search-meta.location.avi-area.name.en text-with-keyword
@@ -440,6 +444,22 @@
                       :url    (es-utils/url [index])
                       :body   mappings}))
 
+(def added-sports-site-fields
+  "Fields added to the strict :sports-site (and :analytics) mapping after the
+  live indices were created. A strict index rejects every document carrying
+  an unmapped field, so until the next full reindex each save of such a
+  document would fail after its DB commit. ES does accept new fields on an
+  existing mapping: startup puts these onto existing indices
+  (`put-added-fields!`). Keep them identical to `generate-explicit-mapping`."
+  {:decommission-year {:type "integer"}})
+
+(defn put-added-fields!
+  "Adds `added-sports-site-fields` to the mapping of existing `index`."
+  [client index]
+  (es/request client {:method :put
+                      :url    (es-utils/url [index "_mapping"])
+                      :body   {:properties added-sports-site-fields}}))
+
 (defn delete-index!
   [client index]
   (es/request client {:method :delete
@@ -482,11 +502,14 @@
                              {:status (when (instance? clojure.lang.IExceptionInfo resp)
                                         (-> resp ex-data :status))}
                              resp)))
-           (->> resp
-                :body
-                :items
-                (map (comp :result second first))
-                frequencies)))))))
+           ;; ES rejects documents one by one (an invalid geo_shape, say) and
+           ;; still answers 200, so name them: the counts only say `nil`.
+           (let [items (map (comp second first) (-> resp :body :items))]
+             (doseq [{:keys [_id _index error]} items
+                     :when error]
+               (log/error "Elasticsearch rejected document" _id "in" _index "-"
+                          (:type error) (:reason error)))
+             (frequencies (map :result items)))))))))
 
 (defn bulk-index-sync!
   ([client data]

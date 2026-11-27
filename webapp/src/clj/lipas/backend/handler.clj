@@ -7,6 +7,7 @@
             [lipas.backend.assistant :as assistant]
             [lipas.backend.auth :as auth]
             [lipas.backend.bulk-operations.core :as bulk-ops]
+            [lipas.backend.control-chars :as control-chars]
             [lipas.backend.core :as core]
             [lipas.backend.help :as help]
             [lipas.backend.jwt :as jwt]
@@ -82,6 +83,14 @@
    ;; Untrusted ES query body rejected by lipas.backend.search-guard —
    ;; client error, never a 500.
    :invalid-search-query (exception-handler 400 :invalid-search-query)
+   ;; NUL or ESC in user input, rejected by lipas.backend.control-chars —
+   ;; :paths tells the client where they are.
+   :control-characters (fn [^Exception e _request]
+                         (-> {:status 400
+                              :body {:message (.getMessage e)
+                                     :type :control-characters
+                                     :paths (:paths (ex-data e))}}
+                             mw/add-cors-headers))
    ;; Uploaded file whose magic bytes are not PNG/JPEG/WebP, rejected by
    ;; lipas.backend.core/upload-utp-image! — client error, never a 500.
    :invalid-image (exception-handler 400 :invalid-image)
@@ -109,6 +118,8 @@
    ;; e.g. archiving an already archived site note — conflict with its state
    :invalid-note-status (exception-handler 409 :invalid-note-status)
    :sports-site-not-found (exception-handler 404 :sports-site-not-found)
+   ;; permanent closure saved without its year — core/check-decommission-year
+   :decommission-year-required (exception-handler 400 :decommission-year-required)
 
    :qbits.spandex/response-exception (exception-handler 500 :internal-server-error :print-stack)
 
@@ -634,7 +645,7 @@
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
                                [:statuses {:optional true}
-                                [:vector (into [:enum] site-notes/all-statuses)]]]}
+                                [:vector (into [:enum] site-notes/listed-statuses)]]]}
            :handler (fn [req]
                       (let [{:keys [org-id statuses]} (-> req :parameters :body)]
                         {:status 200
@@ -807,8 +818,9 @@
                       {:status 200 :body {}})}}]
 
       ;; --- Site notes: any member of an org-management org may write a note
-      ;; on a site the org owns, and archive/restore its notes. Notes
-      ;; are append-only; status changes are logged, never overwritten. ---
+      ;; on a site the org owns, archive/restore its notes, and delete archived
+      ;; ones. Notes are append-only; status changes are logged, never
+      ;; overwritten, and a deleted note stays in the database. ---
         ["/actions/create-site-note"
          {:post
           {:no-doc true
@@ -1917,6 +1929,9 @@
                      exceptions-mw
                    ;; decoding request body
                      muuntaja/format-request-middleware
+                   ;; rejecting NUL and ESC in user input, once the body is
+                   ;; decoded and before coercion
+                     control-chars/middleware
                    ;; coercing response bodys
                      coercion/coerce-response-middleware
                    ;; coercing request parameters

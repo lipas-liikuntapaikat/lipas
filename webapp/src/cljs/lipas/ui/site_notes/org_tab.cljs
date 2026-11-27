@@ -58,5 +58,6 @@
                 (:body note)]
                [:> TableCell (:author-name note)]
                [:> TableCell {:sx {:white-space "nowrap"}} (components/when-str note)]
-               [:> TableCell [components/status-actions tr note]]])]]]
+               [:> TableCell {:sx {:white-space "nowrap"}}
+                [components/status-actions tr note]]])]]]
          [:> Typography {:color "text.secondary"} (tr :lipas.org/notes-empty)])])))

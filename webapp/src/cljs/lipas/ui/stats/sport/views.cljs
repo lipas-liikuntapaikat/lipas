@@ -124,9 +124,8 @@
 
      ;; Chart
      (when (= view "chart")
-       (let [on-click (fn [evt]
-                        (when-let [m (charts/->payload evt)]
-                          (==> [::events/select-filters m grouping])))]
+       (let [on-click (fn [m]
+                        (==> [::events/select-filters m grouping]))]
          [:> Grid {:item true
                    :xs 12
                     ;; Needed to make the flex item shrink when the content (chart) was larger

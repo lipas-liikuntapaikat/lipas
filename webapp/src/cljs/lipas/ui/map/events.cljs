@@ -6,6 +6,7 @@
             [goog.string.format]
             [lipas.data.ptv-review :as ptv-sync]
             [lipas.gpx :as gpx]
+            [lipas.polygon-checks :as polygon-checks]
             [lipas.ui.map.hooks :as hooks]
             [lipas.ui.map.utils :as map-utils]
             [lipas.ui.ptv.review-data :as ptv-review]
@@ -282,6 +283,7 @@
 
     (let [path [:sports-sites lipas-id :editing :location :geometries]
           old-geoms (-> db :map :mode :geoms)
+          geoms (polygon-checks/clean geoms)
           new-geoms (ensure-fids geoms)]
       {:db (-> db
                (update-in [:map :temp lipas-id :undo-stack] conj old-geoms)
@@ -293,7 +295,7 @@
 
 (rf/reg-event-fx ::new-geom-drawn
   (fn [{:keys [db]} [_ geoms]]
-    (let [geoms (ensure-fids geoms)
+    (let [geoms (ensure-fids (polygon-checks/clean geoms))
           curr-geoms (-> db :map :mode :geoms)]
       {:db (cond-> db
              curr-geoms (update-in [:map :temp "new" :undo-stack] conj curr-geoms)
@@ -306,13 +308,27 @@
 
 (rf/reg-event-fx ::update-new-geom
   (fn [{:keys [db]} [_ geoms]]
-    (let [geoms (ensure-fids geoms)
+    (let [geoms (ensure-fids (polygon-checks/clean geoms))
           curr-geoms (-> db :map :mode :geoms)]
       {:db (-> db
                (assoc-in [:map :mode :geoms] geoms)
                (assoc-in [:map :temp "new" :redo-stack] '())
                (update-in [:map :temp "new" :undo-stack] conj curr-geoms))
        :dispatch-n [[::show-problems (map-utils/find-problems geoms)]]})))
+
+(def polygon-problem-msg
+  "Translation key of each `lipas.polygon-checks/problem`."
+  {:too-few-points :map/polygon-too-few-points
+   :no-area :map/polygon-no-area})
+
+(rf/reg-event-fx ::polygon-not-added
+  ;; A polygon just drawn was broken (see lipas.polygon-checks), so
+  ;; editing/start-drawing! threw it away; say why.
+  (fn [{:keys [db]} [_ problem]]
+    (let [tr (:translator db)]
+      {:dispatch [:lipas.ui.events/set-active-notification
+                  {:message (tr :map/polygon-not-added (tr (polygon-problem-msg problem)))
+                   :success? false}]})))
 
 (rf/reg-event-fx ::confirm-remove-segment
   (fn [{:keys [db]} [_ callback]]

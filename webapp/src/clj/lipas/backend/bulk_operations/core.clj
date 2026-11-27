@@ -245,7 +245,17 @@
                                   :acting-org-id org-id)
                                 ;; let core's carry-forward keep the stored
                                 ;; (freshest) ownership fields authoritative
-                                (dissoc :owner-org-id :edit-grants))]
+                                (dissoc :owner-org-id :edit-grants)
+                                ;; Closing sites in bulk closes them now: the
+                                ;; closure year a closure must carry is this
+                                ;; revision's. An already closed site keeps its
+                                ;; year; core drops it from any other status.
+                                (as-> site
+                                      (cond-> site
+                                        (and (= db/closed-status (:status site))
+                                             (nil? (:decommission-year site)))
+                                        (assoc :decommission-year
+                                               (db/event-date->decommission-year (:event-date site))))))]
                         (log/debug "Updating site"
                                    {:lipas-id lipas-id :paths (map first update-pairs)})
                         (core/upsert-sports-site! tx user updated-site)))

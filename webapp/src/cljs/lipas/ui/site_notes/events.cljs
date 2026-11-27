@@ -1,7 +1,8 @@
 (ns lipas.ui.site-notes.events
   "Org-private site notes: fetched per site (sports-site panel) and per org (the
   org page's notes tab). Notes are append-only on the backend — the only
-  changes are new notes and status changes (archive / restore)."
+  changes are new notes and status changes (archive / restore, and delete for
+  archived notes)."
   (:require [ajax.core :as ajax]
             [re-frame.core :as rf]))
 

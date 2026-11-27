@@ -66,15 +66,29 @@
       (->> data
            (reduce
              (fn [res [k v]]
-               (if (= "location.city.city-code" grouping)
-                 (let [city-name (get-in cities [k :name locale])]
-                   (conj res (assoc v
-                                    :city-code k
-                                    :city-name city-name
-                                    :province-name (get-province k)
-                                    :avi-name (get-avi k))))
-                 (let [type-name (get-in types [k :name locale])]
-                   (conj res (assoc v :type-code k :type-name type-name)))))
+               (conj res
+                     (case grouping
+                       "location.city.city-code"
+                       (assoc v
+                              :city-code k
+                              :city-name (get-in cities [k :name locale])
+                              :province-name (get-province k)
+                              :avi-name (get-avi k))
+
+                       "search-meta.location.province.id"
+                       (assoc v
+                              :province-id k
+                              :province-name (get-in provinces [k :name locale]))
+
+                       "search-meta.location.avi-area.id"
+                       (assoc v
+                              :avi-id k
+                              :avi-name (get-in avis [k :name locale]))
+
+                       "type.type-code"
+                       (assoc v
+                              :type-code k
+                              :type-name (get-in types [k :name locale])))))
              [])
            (sort-by (keyword metric) utils/reverse-cmp)))))
 
@@ -111,9 +125,11 @@
              [:type-name (tr :lipas.sports-site/type)])
            (when (= "location.city.city-code" grouping)
              [:city-name (tr :lipas.location/city)])
-           (when (= "location.city.city-code" grouping)
+           (when (#{"location.city.city-code"
+                    "search-meta.location.province.id"} grouping)
              [:province-name (tr :lipas.location/province)])
-           (when (= "location.city.city-code" grouping)
+           (when (#{"location.city.city-code"
+                    "search-meta.location.avi-area.id"} grouping)
              [:avi-name (tr :lipas.location/avi-area)])
            [:population (str (tr :stats/population) " " pop-year)]
            [:area-m2-sum (tr :stats/area-m2-sum)]

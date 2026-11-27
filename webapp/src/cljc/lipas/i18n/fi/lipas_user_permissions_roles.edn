@@ -43,11 +43,13 @@
   :ptv-manager "PTV-tietojen hallinta",
   :org-editor "Tämän organisaation kohteiden muokkaus"},
  :privileges-label "Sisältää käyttöoikeudet:",
+ :org-scoped-note "Koskee vain organisaation hallinnassa olevia liikuntapaikkoja.",
  :privilege-descriptions
  {:site.save-api "Osittaisten muutosten tallentaminen (esim. aktiviteetit, salibandy, ITRS)",
   :site.create-edit "Liikuntapaikkojen lisäys ja muokkaus",
   :site.view "Liikuntapaikkojen tietojen katselu",
   :site.edit-any-status "Myös käytöstä poistettujen liikuntapaikkojen muokkaus",
+  :site.edit-images "Liikuntapaikkojen kuvalinkkien muokkaus",
   :activity.view "Ulkoilun ja retkeilyn (UTP) tietojen katselu",
   :activity.edit "Ulkoilun ja retkeilyn (UTP) tietojen muokkaus",
   :loi.create-edit "Muiden kohteiden luonti ja muokkaus",

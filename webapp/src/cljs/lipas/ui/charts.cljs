@@ -345,12 +345,25 @@
                                []))))]
     (tooltip payload-fn labels props)))
 
+(defn- on-item-click
+  "Chart onClick that calls `on-click` with the clicked item of `data`.
+  Recharts 3 click events carry only the active index, not the clicked
+  data (`activePayload` is gone since v3)."
+  [on-click data]
+  (when on-click
+    (fn [^js state]
+      (when-let [idx (some-> state .-activeIndex)]
+        (when-let [item (nth data (js/parseInt idx) nil)]
+          (on-click item))))))
+
 (defn sports-stats-chart
   [{:keys [data labels metric grouping on-click]}]
-  (let [margin     {:top 5 :right 100 :bottom 5 :left 100}
-        y-axis-key (if (= "location.city.city-code" grouping)
-                     :city-name
-                     :type-name)
+  (let [margin     {:top 5 :right 100 :bottom 5 :left 10}
+        y-axis-key (case grouping
+                     "location.city.city-code"          :city-name
+                     "search-meta.location.province.id" :province-name
+                     "search-meta.location.avi-area.id" :avi-name
+                     "type.type-code"                   :type-name)
         precision (if (= metric "length-km-pc") 8 2)
         formatter (when (ugly-keys (keyword metric)) #(utils/round-safe % precision))
         height    (+ 60 (* 30 (count data)))
@@ -363,11 +376,15 @@
       {:data     data
        :layout   "vertical"
        :margin   margin
-       :on-click on-click}
+       :on-click (on-item-click on-click data)}
       [:> Legend {:content (fn [^js props] (legend labels props))}]
       [:> Tooltip tooltip-props]
       [:> XAxis {:tick font-styles :type "number"}]
-      [:> YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
+      ;; interval 0: with only a few bars (e.g. two provinces) recharts
+      ;; would otherwise hide some of the category labels. Long names
+      ;; ("Länsi- ja Sisä-Suomen AVI") need the width to not overlap.
+      [:> YAxis {:dataKey y-axis-key :type "category" :tick font-styles
+                 :interval 0 :width 150}]
       [:> Bar {:dataKey (keyword metric) :fill "orange"}
        [:> LabelList {:position "right" :formatter formatter}]]]]))
 
@@ -387,7 +404,7 @@
   (let [x-interval (if (> (count data) 50) 5 0)]
     [:> ResponsiveContainer {:width "100%" :height 500}
      (->
-       [:> ComposedChart {:data data :on-click on-click :margin {:bottom 135}}
+       [:> ComposedChart {:data data :on-click (on-item-click on-click data) :margin {:bottom 135}}
         [:> Legend {:content (fn [^js props] (legend labels props)) :verticalAlign "top"}]
         [:> Tooltip {:content (fn [^js props] (finance-tooltip labels props))}]
         [:> YAxis {:tick font-styles}]
@@ -439,7 +456,7 @@
 (defn subsidies-chart
   [{:keys [data labels on-click]}]
   [:> ResponsiveContainer {:width "100%" :height 500}
-   [:> BarChart {:data data :on-click on-click}
+   [:> BarChart {:data data :on-click (on-item-click on-click data)}
     [:> Legend {:content (fn [^js props] (legend labels props))}]
     [:> Tooltip {:content (fn [^js props] (labeled-tooltip labels props))}]
     [:> YAxis {:tick font-styles :data-key :amount}]
@@ -452,7 +469,7 @@
         y-axis-key :group
         height     (+ 60 (* 48 (count data)))]
     [:> ResponsiveContainer {:width "100%" :height height}
-     [:> BarChart {:data data :layout "vertical" :margin margin :on-click on-click}
+     [:> BarChart {:data data :layout "vertical" :margin margin :on-click (on-item-click on-click data)}
       [:> Legend {:content (fn [^js props] (legend labels props))}]
       [:> Tooltip (merge {:content (fn [^js props] (labeled-tooltip labels props))}
                          (tooltip-flip-props height))]
@@ -460,11 +477,6 @@
       [:> YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
       [:> Bar {:dataKey :amount :fill "#0a9bff"}
        [:> LabelList {:position "right"}]]]]))
-
-(defn ->payload [evt]
-  (when-let [arr (aget evt "activePayload")]
-    (let [obj (aget arr 0 "payload")]
-      (js->clj obj :keywordize-keys true))))
 
 (def zone-colors
   {:zone1 "#008000"

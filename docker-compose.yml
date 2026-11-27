@@ -120,6 +120,19 @@ services:
         gelf-address: "udp://localhost:5000"
         tag: "backend"
     environment:
+      # The image sets no locale, so the JVM's sun.jnu.encoding falls back to
+      # ASCII (ANSI_X3.4-1968), and any java.nio Path containing ä/ö/å throws
+      # InvalidPathException. That broke UTP image uploads with non-ASCII
+      # filenames inside Ring's multipart parsing (commons-fileupload2 builds a
+      # Path from the filename), before LIPAS code ever ran. macOS dev JVMs are
+      # always UTF-8, so this only shows up in containers. Pinned by
+      # lipas.backend.admin-auth-test/upload-utp-image-non-ascii-filename-test.
+      #
+      # LC_CTYPE, not LANG: only the character-encoding category changes, so
+      # the JVM default Locale stays en_US as before (LANG=C.UTF-8 makes it
+      # plain "en"). Not en_US.UTF-8 either: that locale is not installed in
+      # the image, so the encoding would silently stay ASCII.
+      LC_CTYPE: C.UTF-8
       DB_HOST:
       DB_PORT:
       DB_NAME:

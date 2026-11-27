@@ -12,12 +12,22 @@
 (defn when-str [note]
   (utils/->human-date-time-at-user-tz (:created-at note)))
 
-(defn status-actions [tr note]
+(defn status-actions
+  "Archive an active note; restore or delete an archived one. Delete is only
+  offered once a note is archived, and asks first."
+  [tr note]
   (if (= "archived" (:status note))
-    [:> Tooltip {:title (tr :lipas.org/notes-restore)}
-     [:> IconButton {:size "small"
-                     :on-click #(rf/dispatch [::events/set-status note "active"])}
-      [:> Icon {:fontSize "small"} "unarchive"]]]
+    [:<>
+     [:> Tooltip {:title (tr :lipas.org/notes-restore)}
+      [:> IconButton {:size "small"
+                      :on-click #(rf/dispatch [::events/set-status note "active"])}
+       [:> Icon {:fontSize "small"} "unarchive"]]]
+     [:> Tooltip {:title (tr :lipas.org/notes-delete)}
+      [:> IconButton {:size "small"
+                      :on-click #(rf/dispatch [:lipas.ui.events/confirm
+                                               (tr :lipas.org/notes-delete-confirm)
+                                               (fn [] (rf/dispatch [::events/set-status note "deleted"]))])}
+       [:> Icon {:fontSize "small"} "delete"]]]]
     [:> Tooltip {:title (tr :lipas.org/notes-archive)}
      [:> IconButton {:size "small"
                      :on-click #(rf/dispatch [::events/set-status note "archived"])}

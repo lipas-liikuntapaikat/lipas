@@ -39,14 +39,17 @@ Then optionally blank `RUNNER_TOKEN` in `.env` — registration lives in the
 ## Operate
 
 - **Health:** the weekly `Runner heartbeat` workflow runs a trivial job on
-  every runner and fails on low disk. A heartbeat stuck in "queued" means the
-  runner is down.
+  every runner and fails on low disk or when the runner is two minor
+  releases behind GitHub's latest (it warns at one behind). A heartbeat stuck
+  in "queued" means the runner is down.
 - **Restart / recreate:** `docker compose restart runner` or
   `docker compose up -d --force-recreate runner` — registration survives in
   the `runner-state` volume.
 - **Upgrade:** bump `RUNNER_IMAGE_TAG` in `.env`, `docker compose pull &&
-  docker compose up -d`. GitHub refuses ancient runner versions, so do this
-  on a calendar cadence, not only when forced.
+  docker compose up -d`. GitHub refuses old runner versions, so bump when the
+  heartbeat warns rather than waiting for it to fail. Expect "A session for
+  this runner already exists" for a minute or two after recreating; it
+  reconnects on its own once GitHub drops the old session.
 - **Remove:** repo → Settings → Actions → Runners → remove; then
   `docker compose down -v` (the `-v` drops the registration state).
 - **While the runner is down:** deploys queue for up to 24 h and run when it

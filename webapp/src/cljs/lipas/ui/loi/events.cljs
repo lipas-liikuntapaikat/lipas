@@ -54,11 +54,14 @@
 
 (rf/reg-event-fx ::delete
   (fn [_ [_ loi status year]]
-    (let [event-date (when (= status "out-of-service-permanently")
-                       (if (utils/this-year? year)
-                         (utils/timestamp)
-                         (utils/->end-of-year year)))
-          loi        (assoc loi :status status)]
+    (let [closure?   (= status "out-of-service-permanently")
+          ;; Like a site's (lipas.ui.sports-sites.events/::delete): only a
+          ;; permanent closure is dated by the year and carries it.
+          event-date (when (and closure? (not (utils/this-year? year)))
+                       (utils/->end-of-year year))
+          loi        (cond-> (assoc loi :status status)
+                       closure? (assoc :decommission-year (js/parseInt year 10))
+                       (not closure?) (dissoc :decommission-year))]
       {:fx [[:dispatch [::save loi
                         (:geometries loi)
                         event-date]]]})))

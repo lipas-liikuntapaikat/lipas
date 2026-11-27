@@ -202,8 +202,13 @@
 
 (defn gen-loi []
   (try
-    (-> (mg/generate loi-schema/loi)
-        (assoc :id (java.util.UUID/randomUUID)))
+    (let [loi (mg/generate loi-schema/loi)]
+      ;; :decommission-year is generated independently of :status, but a save
+      ;; requires it exactly on a permanent closure.
+      (cond-> (-> loi
+                  (assoc :id (java.util.UUID/randomUUID))
+                  (dissoc :decommission-year))
+        (= "out-of-service-permanently" (:status loi)) (assoc :decommission-year 2020)))
     (catch Throwable _ (gen-loi))))
 
 (defn seed-lois! [db search user n]

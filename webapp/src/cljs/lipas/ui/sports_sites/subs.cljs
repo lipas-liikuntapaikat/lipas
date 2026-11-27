@@ -351,6 +351,7 @@
 
         (merge
           {:status            (-> status locale)
+           :decommission-year (-> latest :decommission-year)
            :event-date        (-> latest :event-date utils/->human-date-time-at-user-tz)
            :lipas-id          (-> latest :lipas-id)
            :name              (-> latest :name)

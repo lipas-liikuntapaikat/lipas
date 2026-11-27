@@ -846,6 +846,19 @@
                              :lipas-id #{lipas-id}})]
         (db/update-user-permissions! db user)))))
 
+(defn- check-decommission-year
+  "`doc` (a site or a LOI) with :decommission-year only where it belongs.
+
+  A permanent closure must say which year the site was closed: 400 without
+  it. Any other status has no closure year, so a reactivated site drops it."
+  [doc]
+  (if (= db/closed-status (:status doc))
+    (if (some? (:decommission-year doc))
+      doc
+      (throw (ex-info "A permanent closure (out-of-service-permanently) requires :decommission-year"
+                      {:type :decommission-year-required})))
+    (dissoc doc :decommission-year)))
+
 (defn upsert-sports-site!
   ([db user sports-site]
    (upsert-sports-site! db user sports-site false))
@@ -902,7 +915,8 @@
      (when (and lipas-id creating?)
        (check-sports-site-exists! db lipas-id))
      (check-owner-lock! db sports-site)
-     (let [resp (upsert-sports-site!* db user sports-site draft?)]
+     ;; After authorization, so an unauthorized save gets its 403 first.
+     (let [resp (upsert-sports-site!* db user (check-decommission-year sports-site) draft?)]
        (when creating?
          (ensure-permission! db user resp))
        resp))))
@@ -1069,9 +1083,15 @@
 (defmulti fix-geoms feature-type)
 (defmethod fix-geoms :default [sports-site] sports-site)
 (defmethod fix-geoms "Polygon" [sports-site]
-  (update-in sports-site [:location :geometries]
-             (comp gis/repair-self-intersecting-polygon
-                   gis/dedupe-polygon-coords)))
+  (let [fixed (update-in sports-site [:location :geometries]
+                         (comp gis/repair-self-intersecting-polygon
+                               gis/drop-degenerate-polygons
+                               gis/dedupe-polygon-coords))]
+    (when (empty? (get-in fixed [:location :geometries :features]))
+      (throw (ex-info (str "No polygon of lipas-id " (:lipas-id sports-site)
+                           " encloses any area, so it can't be indexed")
+                      {:lipas-id (:lipas-id sports-site)})))
+    fixed))
 
 (defn compute-renovations
   "Materializes :renovations from legacy :renovation-years entries. For
@@ -1156,8 +1176,10 @@
                       "Polygon" (-> geom2 :coordinates last last))
 
          city-code (-> sports-site :location :city :city-code)
-         province (-> city-code cities :province-id cities/provinces)
-         avi-area (-> city-code cities :avi-id cities/avi-areas)
+         province-id (-> city-code cities :province-id)
+         avi-id (-> city-code cities :avi-id)
+         province (cities/provinces province-id)
+         avi-area (cities/avi-areas avi-id)
 
          type-code (-> sports-site :type :type-code)
          main-category (-> type-code types :main-category types/main-categories)
@@ -1201,8 +1223,9 @@
                        :wgs84-end end-coords
                        :geometries (feature-coll->geom-coll (gis/strip-z-fcoll fcoll))
                        :city {:name (-> city-code cities :name)}
-                       :province {:name (:name province)}
-                       :avi-area {:name (:name avi-area)}
+                       ;; Ids are aggregated on by the sports stats grouping
+                       :province {:id province-id :name (:name province)}
+                       :avi-area {:id avi-id :name (:name avi-area)}
                        :simple-geoms (gis/simplify-safe fcoll)}
                       :type
                       {:name (-> type-code types :name)
@@ -1733,7 +1756,8 @@
   current one. A browser clock running ahead therefore made the user's own,
   pre-sync revision win over the sync's result (in prod: sites archived in
   PTV whose current revision still said Published, re-marked incorrect-data
-  by the backdating rule in db/upsert-sports-site!). Backdating is untouched."
+  by the since-removed invalidation rule of db/upsert-sports-site!).
+  Backdating is untouched."
   [sports-site]
   (let [event-date (:event-date sports-site)
         submitted (try (some-> event-date java.time.Instant/parse)
@@ -1868,6 +1892,9 @@
   (let [data (get-sports-sites-by-type-code db type-code {:revs year})]
     (reports/energy-report data)))
 
+(defn- localize-for-report [locale m]
+  (->> m (i18n/localize locale) (reports/localize-status locale)))
+
 (defn sports-sites-report-excel
   [{:keys [indices client]} params fields locale out]
   (let [idx-name (get-in indices [:sports-site :search])
@@ -1880,7 +1907,7 @@
                         (recur (-> page :body :hits :hits
                                    (->>
                                      (map (comp (partial reports/->row fields)
-                                                (partial i18n/localize locale)
+                                                (partial localize-for-report locale)
                                                 :_source))
                                      (into res))))
                         res)))]
@@ -1894,7 +1921,7 @@
         in-chan (search/scroll client idx-name (update params :_source dissoc :excludes))
         locale (or locale :fi)
         headers (mapv #(get-in reports/fields [% locale]) fields)
-        localize (partial i18n/localize locale)
+        localize (partial localize-for-report locale)
         ->row (partial reports/->row fields)]
     (with-open [writer (OutputStreamWriter. out)]
       (.write writer "{\"type\":\"FeatureCollection\",\"features\":[")
@@ -1928,7 +1955,7 @@
         locale (or locale :fi)
         headers (mapv #(get-in reports/fields [% locale]) fields)
         xform (comp (partial reports/->row fields)
-                    (partial i18n/localize locale)
+                    (partial localize-for-report locale)
                     :_source)]
     (with-open [writer (OutputStreamWriter. out)]
       (csv/write-csv writer [headers])
@@ -1969,9 +1996,13 @@
                  {:area_m2_stats {:stats {:field :properties.area-m2}}
                   :length_km_stats {:stats {:field :properties.route-length-km}}}}}}
         aggs-data (-> (search search* query) :body :aggregations :grouping :buckets)]
-    (if (= "location.city.city-code" grouping)
-      (reports/calculate-stats-by-city aggs-data pop-data)
-      (reports/calculate-stats-by-type aggs-data pop-data city-codes))))
+    (case grouping
+      "location.city.city-code" (reports/calculate-stats-by-city aggs-data pop-data)
+      "type.type-code" (reports/calculate-stats-by-type aggs-data pop-data city-codes)
+      "search-meta.location.province.id"
+      (reports/calculate-stats-by-region aggs-data pop-data city-codes :province-id)
+      "search-meta.location.avi-area.id"
+      (reports/calculate-stats-by-region aggs-data pop-data city-codes :avi-id))))
 
 (defn get-front-page-stats
   [db search*]
@@ -2164,7 +2195,11 @@
 (defn upsert-loi!
   [db search user loi]
   (jdbc/with-db-transaction [tx db]
-    (let [result (db/upsert-loi! tx user loi)]
+    (let [loi (check-decommission-year loi)
+          result (db/upsert-loi! tx user loi)
+          ;; A backdated closure makes a closed copy of a later revision the
+          ;; current one (db/upsert-loi!): index that, not the submitted loi.
+          current (or (first (db/get-lois-by-ids tx [(str (:id loi))])) loi)]
       (log/info "Saving LOI with background jobs"
                 {:loi-id (:id loi)
                  :user (:email user)})
@@ -2174,7 +2209,7 @@
                            {:loi-ids [(:id loi)]
                             :operation-type (if (nil? (:id loi)) "create" "update")
                             :initiated-by (:id user)})
-      (index-loi! search loi :sync)
+      (index-loi! search current :sync)
       result)))
 
 ;; Leading-byte signatures of the image formats the UTP image upload accepts.

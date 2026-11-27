@@ -2,10 +2,12 @@
   (:require ["ol-ext/interaction/DrawHole$default" :as DrawHole]
             ["ol/events/condition" :as events-condition]
             ["ol/interaction/Draw$default" :as Draw]
+            ["ol/interaction/Interaction$default" :as Interaction]
             ["ol/interaction/Modify$default" :as Modify]
             ["ol/interaction/Select$default" :as Select]
             ["ol/interaction/Snap$default" :as Snap]
             ["ol/proj" :as proj]
+            [lipas.polygon-checks :as polygon-checks]
             [lipas.ui.map.events :as events]
             [lipas.ui.map.styles :as styles]
             [lipas.ui.map.utils :as map-utils]
@@ -175,34 +177,142 @@
                 (.removeFeature source f)))
     (start-editing! map-ctx geoms on-modifyend)))
 
+(defn- sketch-clicks
+  "The positions clicked so far for the feature Draw is drawing. Its
+  geometry also has the pointer position, and a polygon's the closing one."
+  [^js sketch]
+  (let [geom (.getGeometry sketch)
+        coords (js->clj (.getCoordinates geom))]
+    (case (.getType geom)
+      "Polygon" (drop-last 2 (first coords))
+      "LineString" (drop-last 1 coords)
+      [])))
+
+(def ^:private finishable-points
+  "Distinct points a feature needs before a double-click may finish it."
+  {"Polygon" 3 "LineString" 2})
+
+(def ^:private same-spot-px
+  "Clicks this close to each other, in pixels, are on the same spot."
+  5)
+
+(defn- on-spot? [^js lmap ^js px coord]
+  (let [^js p (.getPixelFromCoordinate lmap (clj->js coord))]
+    (<= (Math/hypot (- (aget p 0) (aget px 0)) (- (aget p 1) (aget px 1)))
+        same-spot-px)))
+
+(defn- double-click-zoom
+  "An interaction that makes a double-click on one spot zoom in while
+  drawing, as it does elsewhere on the map, when the feature drawn so far
+  would have too few distinct points to be finished. Otherwise Draw takes the
+  double-click and finishes the feature, as before. Draw swallows
+  double-clicks, so people trying to zoom kept adding points on the same
+  spot, until the fourth one finished a polygon without area (2026-11,
+  lipas-ids 621743-621746).
+
+  OpenLayers calls any two clicks within 250 ms a double-click, wherever
+  they are: two quick clicks on different spots place two points, as before.
+
+  Must be added after `draw`, so that it sees the event first."
+  [^js draw sketch geom-type]
+  (Interaction.
+    #js {:handleEvent
+         (fn [^js e]
+           (let [^js s @sketch]
+             (if-not (and s (= "dblclick" (.-type e)))
+               true
+               (let [^js lmap (.-map e)
+                     clicks (vec (sketch-clicks s))
+                     ;; the double-click's own clicks: the last ones, on its spot
+                     own (count (take-while #(on-spot? lmap (.-pixel e) %) (reverse clicks)))
+                     before (subvec clicks 0 (- (count clicks) own))]
+                 (if (and (>= own 2)
+                          (< (inc (count (distinct before)))
+                             (finishable-points geom-type 2)))
+                   (let [^js view (.getView lmap)]
+                     ;; Drop the points the double-click added; Draw aborts
+                     ;; the sketch when no point is left.
+                     (dotimes [_ own]
+                       (.removeLastPoint draw))
+                     ;; At the maximum zoom, animating would only pan.
+                     (when (< (.getZoom view) (.getMaxZoom view))
+                       (.animate view #js {:zoom (inc (.getZoom view))
+                                           :anchor (.-coordinate e)
+                                           :duration 250}))
+                     false)
+                   true)))))}))
+
+(defn- editable-target? [^js e]
+  (let [^js t (.-target e)]
+    (or (contains? #{"INPUT" "TEXTAREA" "SELECT"} (.-tagName t))
+        (.-isContentEditable t))))
+
+(defn- drawing-keys
+  "Backspace removes the last point of the feature being drawn, Esc drops
+  the feature."
+  [^js draw]
+  (fn [^js e]
+    (when-not (editable-target? e)
+      (case (.-key e)
+        "Backspace" (do (.preventDefault e)
+                        (.removeLastPoint draw))
+        "Escape" (.abortDrawing draw)
+        nil))))
+
+(defn- polygon-problem
+  "Why the polygon `f` just drawn is broken, or nil (see lipas.polygon-checks)."
+  [^js f]
+  (-> (map-utils/->geoJSON-clj #js [f])
+      (get-in [:features 0 :geometry :coordinates])
+      polygon-checks/problem))
+
 (defn start-drawing!
   [{:keys [^js lmap layers]
     :as map-ctx} geom-type on-draw-end]
   (let [^js layer (-> layers :overlays :edits)
         source (.getSource layer)
+        ;; No :source, so that Draw doesn't add what it draws: drawend
+        ;; decides, and leaves out broken polygons.
         draw (Draw. #js {:snapTolerance 0
-                         :source source
-                         :type geom-type})]
+                         :type geom-type})
+        sketch (atom nil)
+        on-key (drawing-keys draw)
+        sketch-done! (fn [_]
+                       (reset! sketch nil)
+                       (.removeEventListener js/document "keydown" on-key))
+        double-click (double-click-zoom draw sketch geom-type)]
 
     (.addInteraction lmap draw)
+    (.addInteraction lmap double-click)
+    (.on draw "drawstart"
+         (fn [^js e]
+           (reset! sketch (.-feature e))
+           (.addEventListener js/document "keydown" on-key)))
+    ;; Also fires when the interaction is removed mid-sketch.
+    (.on draw "drawabort" sketch-done!)
     (.on draw "drawend"
          (fn [^js e]
-           (let [f (.-feature e)
-                 _ (.setId f (str (random-uuid)))
-                 fs (.getFeatures source)
-                 _ (.push fs f)
-                 fixed (map-utils/fix-features fs)]
+           (sketch-done! e)
+           (let [f (.-feature e)]
+             (if-let [problem (when (= "Polygon" geom-type) (polygon-problem f))]
+               ;; Clicks, not an area: say so, and keep drawing.
+               (==> [::events/polygon-not-added problem])
+               (let [_ (.setId f (str (random-uuid)))
+                     fs (.getFeatures source)
+                     _ (.push fs f)
+                     fixed (map-utils/fix-features fs)]
 
-             (.clear source)
-             (.addFeatures source fixed)
+                 (.clear source)
+                 (.addFeatures source fixed)
 
-             (-> source
-                 .getFeatures
-                 map-utils/->geoJSON-clj
-                 on-draw-end))))
+                 (-> source
+                     .getFeatures
+                     map-utils/->geoJSON-clj
+                     on-draw-end))))))
 
     (-> map-ctx
         (assoc-in [:interactions :draw] draw)
+        (assoc-in [:interactions :draw-double-click] double-click)
         map-utils/clear-markers!
         enable-snapping!)))
 

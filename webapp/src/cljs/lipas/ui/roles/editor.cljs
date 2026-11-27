@@ -7,7 +7,8 @@
   drive it with `:spec` + the `:on-role-change`/`:on-context-change` callbacks and
   supply the role vocabulary via `:roles`. The org case passes
   `:hide-context-keys #{:org-id}` because org-scoped roles get their org-id
-  injected at projection time, never typed by the admin."
+  injected at projection time, never typed by the admin, and `:org-catalog?
+  true`, which makes an org-scoped role's other required keys optional."
   (:require ["@mui/material/Autocomplete" :refer [createFilterOptions]]
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Typography$default" :as Typography]
@@ -128,11 +129,12 @@
       :onChange (fn [_e v] (on-change (mapv ac/safe-value v)))
       :multiple true}]))
 
-;; NOTE: no :org-id context editor here on purpose. Org-scoped roles
-;; (org-admin/org-user/org-editor) are never hand-assigned onto an account — they
-;; come only from org membership (projected at login). The catalog editor that
-;; builds org-editor templates passes `:hide-context-keys #{:org-id}` (the org-id
-;; is injected at projection), so no caller ever needs an org-id selector.
+;; NOTE: no :org-id context editor here on purpose. An :org-id only ever comes
+;; from org membership (injected at projection, see roles/org-scoped-roles), never
+;; from a hand-assigned account role: org-admin/org-user/org-editor are not
+;; assignable at all, and a direct images-manager grant is city-scoped. The
+;; catalog editor passes `:hide-context-keys #{:org-id}`, so no caller ever needs
+;; an org-id selector.
 (r/defc context-key-edit [{:keys [k] :as props}]
   (case k
     :lipas-id  [site-select props]
@@ -146,12 +148,17 @@
 ;; ---------------------------------------------------------------------------
 
 (r/defc role-spec-editor
-  [{:keys [spec roles hide-context-keys role-read-only? on-role-change on-context-change tr]}]
-  (let [hide    (or hide-context-keys #{})
-        role-kw (when-let [r (:role spec)] (keyword r))
-        rdef    (get roles/roles role-kw)
-        req     (remove hide (:required-context-keys rdef))
-        opt     (remove hide (:optional-context-keys rdef))]
+  [{:keys [spec roles hide-context-keys org-catalog? role-read-only? on-role-change on-context-change tr]}]
+  (let [hide        (or hide-context-keys #{})
+        role-kw     (when-let [r (:role spec)] (keyword r))
+        rdef        (get roles/roles role-kw)
+        ;; In an org catalog the org itself bounds an org-scoped role, so its
+        ;; other required keys become optional filters (mirrors the backend's
+        ;; org/validate-catalog!).
+        org-scoped? (and org-catalog? (contains? roles/org-scoped-roles role-kw))
+        req         (when-not org-scoped? (remove hide (:required-context-keys rdef)))
+        opt         (remove hide (concat (when org-scoped? (:required-context-keys rdef))
+                                         (:optional-context-keys rdef)))]
     [:> Stack {:direction "column" :sx #js {:gap 1}}
      [ac/autocomplete2
       {:options (for [r roles]
@@ -176,6 +183,10 @@
                 [:li {:key (str p)}
                  [:> Typography {:variant "caption" :color "text.secondary"}
                   (privilege-description tr p)]]))])
+
+     (when org-scoped?
+       [:> Typography {:variant "caption" :color "text.secondary"}
+        (tr :lipas.user.permissions.roles/org-scoped-note)])
 
      (for [k req]
        [context-key-edit

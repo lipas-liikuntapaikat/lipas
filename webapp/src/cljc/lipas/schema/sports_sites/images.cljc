@@ -2,20 +2,26 @@
   (:require [lipas.schema.common :as common]
             [malli.core :as m]))
 
+(def ^:private url-regex
+  "No whitespace or control characters: neither can appear unencoded in a URL,
+  and Postgres can't store NUL. Excluding them here also keeps the generator,
+  which derives from this regex, from producing them."
+  #"^https://[^\s\x00-\x1F\x7F]+$")
+
 (defn valid-url?
   "True when s is an https URL acceptable as an image link. Plain http is
   rejected on purpose: LIPAS is served over https and browsers block
   mixed-content images, so an http link would never render."
   [s]
   (and (string? s)
-       (boolean (re-matches #"^https://[^\s]+$" s))))
+       (boolean (re-matches url-regex s))))
 
 (def image-url
   (m/schema
     [:re {:description "URL of the image file hosted externally (e.g. city image bank). Must be https:// — plain http images are blocked as mixed content in browsers."
           :min 1
           :max 2048}
-     #"^https://[^\s]+$"]))
+     url-regex]))
 
 (def localized-string-required
   "Like lipas.schema.common/localized-string but at least one non-empty

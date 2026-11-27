@@ -8,20 +8,26 @@
   Append-only (enforced by triggers, see the site-note migration): a note's text
   is written once, and its lifecycle is a log of `site_note_status` rows. The
   `site_note_current` view gives each note with its latest status (no status row
-  = active). Archiving is the only way to retire a note; archived notes stay
-  visible under their own filter and can be restored."
+  = active). Archiving retires a note: it stays visible under its own filter
+  and can be restored. Only an archived note can be deleted, and that's final:
+  `deleted` is a soft delete — the note leaves every list but stays in the
+  database."
   (:require [clojure.string :as str]
             [lipas.backend.core :as core]
             [lipas.utils :as utils]
             [next.jdbc :as jdbc]
             [next.jdbc.result-set :as rs]))
 
-(def all-statuses #{"active" "archived"})
+;; The statuses the UI lists; deleted notes are never returned.
+(def listed-statuses #{"active" "archived"})
+
+(def all-statuses (conj listed-statuses "deleted"))
 
 (def ^:private transitions
-  "Allowed status changes: archive an active note, restore an archived one."
+  "Allowed status changes: archive an active note, restore or delete an
+  archived one. Deleted is final."
   {"active"   #{"archived"}
-   "archived" #{"active"}})
+   "archived" #{"active" "deleted"}})
 
 (def ^:private select-notes
   "SELECT n.id, n.lipas_id, n.org_id, n.body, n.created_at, n.status,
@@ -59,11 +65,12 @@
 
 (defn site-notes
   "Notes on `lipas-id` belonging to any of `org-ids` (active and archived),
-  newest first."
+  newest first. Deleted notes are left out."
   [db lipas-id org-ids]
   (if-let [org-ids (seq (keep utils/->uuid-safe org-ids))]
     (query db (into [(str select-notes
                           " WHERE n.lipas_id = ? AND " (in-clause "n.org_id" (count org-ids))
+                          " AND n.status <> 'deleted'"
                           " ORDER BY n.created_at DESC")
                      lipas-id]
                     org-ids))
@@ -84,7 +91,7 @@
   "All of the org's notes in `statuses` (default: active), newest first, each
   with the site's current name."
   [db search org-id {:keys [statuses] :or {statuses ["active"]}}]
-  (let [statuses (vec (distinct (filter all-statuses statuses)))
+  (let [statuses (vec (distinct (filter listed-statuses statuses)))
         notes    (if (empty? statuses)
                    []
                    (query db (into [(str select-notes

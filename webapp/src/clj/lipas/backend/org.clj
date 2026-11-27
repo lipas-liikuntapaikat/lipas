@@ -519,11 +519,14 @@
   ;; missing context key as "always active" (e.g. a `ptv-manager` spec with no
   ;; `:city-code` ⇒ PTV management everywhere). Require the key to be present
   ;; (an empty value is fine — it simply matches nothing). `:org-id` is excepted;
-  ;; it is injected at projection, never stored in the catalog.
+  ;; it is injected at projection, never stored in the catalog. An org-scoped
+  ;; role is exempt altogether: the injected org-id already bounds it to the
+  ;; org's own sites, so e.g. an `images-manager` spec needs no `:city-code`.
   (doseq [[tname {tmpl-roles :roles}] role-templates
           spec tmpl-roles
-          :let [req (remove #{:org-id}
-                            (:required-context-keys (get roles/roles (keyword (:role spec)))))]
+          :let [role-k (keyword (:role spec))
+                req    (when-not (roles/org-scoped-roles role-k)
+                         (remove #{:org-id} (:required-context-keys (get roles/roles role-k))))]
           :when (seq req)]
     (when-not (every? #(contains? spec %) req)
       (throw (ex-info "Role-template spec is missing a required context key"
@@ -592,10 +595,6 @@
 
 ;;; permission projection (member assignments × catalog -> role data) ;;;
 
-(def org-scoped-roles
-  "Roles whose context is the org itself (org-id injected at projection)."
-  #{:org-editor :org-admin})
-
 (def reserved-roles
   "Engine-level roles a member may hold that are NOT part of the per-org catalog.
   Reserved here (in code) so a catalog edit can never strip them. `:admin` (the
@@ -622,7 +621,7 @@
     (->> (cons baseline assigned)
          (map (fn [spec]
                 (cond-> spec
-                  (org-scoped-roles (keyword (:role spec))) (assoc :org-id org-id-vec)))))))
+                  (roles/org-scoped-roles (keyword (:role spec))) (assoc :org-id org-id-vec)))))))
 
 (defn derive-org-roles
   "Pure projection: for each org the user belongs to, expand that user's member

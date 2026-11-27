@@ -122,9 +122,14 @@
    ;; limited to the :images field. Enforced in backend/core/check-permissions!
    ;; Deliberately does NOT include :site/save-api, so it can't be used to
    ;; bypass edit permissions on other fields.
+   ;; Two scopes by source: a direct grant covers its :city-code, while an org
+   ;; catalog grant is :org-scoped — it covers only the org's own sites, and
+   ;; image links elsewhere need a direct grant from a LIPAS admin.
    :images-manager
    {:sort 15
     :assignable true
+    :catalog-assignable true
+    :org-scoped true
     :privileges #{:site/edit-images}
     :required-context-keys [:city-code]
     :optional-context-keys [:type-code]}
@@ -196,6 +201,7 @@
    :org-admin
    {:sort 60
     :assignable false
+    :org-scoped true
     :privileges #{:org/manage :org/member}
     :required-context-keys [:org-id]
     :optional-context-keys []}
@@ -216,6 +222,7 @@
    {:sort 62
     :assignable false
     :catalog-assignable true
+    :org-scoped true
     :privileges basic
     :required-context-keys [:org-id]
     :optional-context-keys []}
@@ -229,6 +236,14 @@
     :privileges #{:ai-assistant/use}
     :required-context-keys []
     :optional-context-keys []}})
+
+(def org-scoped-roles
+  "Roles that get the org's id as :org-id context when projected from an org
+  membership (lipas.backend.org/member->roles), so the grant covers only the
+  org's own sites (owner + edit-grants). In an org catalog the org-id already
+  bounds such a role, so its other required context keys are optional filters
+  there (lipas.backend.org/validate-catalog!)."
+  (into #{} (comp (filter (comp :org-scoped val)) (map key)) roles))
 
 (defn role-sort-fn
   [{:keys [role]}]

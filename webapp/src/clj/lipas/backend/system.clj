@@ -36,11 +36,18 @@
       (doseq [[group m] indices
               [_k index-name] m]
         (println "Ensuring index" index-name "exists")
-        (when-not (search/index-exists? client index-name)
+        (if-not (search/index-exists? client index-name)
           (let [mappings (get-in search/mappings [group] {})]
             (println "Creating index" index-name "with mappings:")
             (pprint mappings)
-            (search/create-index! client index-name mappings)))))
+            (search/create-index! client index-name mappings))
+          ;; An existing site index may predate fields added to its strict
+          ;; mapping since: add them so saves work before the next reindex.
+          (when (= :sports-site group)
+            (try
+              (search/put-added-fields! client index-name)
+              (catch Exception e
+                (log/warn e "Could not add new fields to the mapping of" index-name)))))))
 
     {:client client
      :indices indices
