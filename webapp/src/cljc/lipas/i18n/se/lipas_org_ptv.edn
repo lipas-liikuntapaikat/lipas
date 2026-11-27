@@ -25,4 +25,5 @@
  :test-password-label "Testlösenord"
  :test-password-placeholder "Ange testmiljöns lösenord"
  :test-username-label "Testanvändarnamn"
- :test-username-placeholder "t.ex. API15@testi.fi"}
+ :test-username-placeholder "t.ex. API15@testi.fi"
+ :language-removal-warning "Nästa synkronisering tar bort den {1} språkversionen från {2} serviceställen som är publicerade på det språket."}

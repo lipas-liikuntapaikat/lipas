@@ -183,6 +183,30 @@
     {:dispatch [:lipas.ui.bulk-operations.events/init {:org-id org-id}]}))
 
  ;; PTV configuration events
+(rf/reg-event-fx ::fetch-ptv-language-usage
+  ;; How many of the PTV org's published service locations each language
+  ;; version is in, for warning before a language is removed from the config.
+  ;; Fetched once per PTV org; a failure leaves it empty (no warning).
+  (fn [{:keys [db]} [_ ptv-org-id]]
+    (when (and ptv-org-id
+               (not (contains? (get-in db [:org :ptv-language-usage]) ptv-org-id)))
+      {:db (assoc-in db [:org :ptv-language-usage ptv-org-id] {})
+       :http-xhrio {:method :post
+                    :uri (str (:backend-url db) "/actions/get-ptv-language-usage")
+                    :headers {:Authorization (str "Token " (-> db :user :login :token))}
+                    :params {:ptv-org-id ptv-org-id}
+                    :format (ajax/transit-request-format)
+                    :response-format (ajax/transit-response-format)
+                    :on-success [::fetch-ptv-language-usage-success ptv-org-id]
+                    :on-failure [::fetch-ptv-language-usage-failure ptv-org-id]}})))
+
+(rf/reg-event-db ::fetch-ptv-language-usage-success
+  (fn [db [_ ptv-org-id resp]]
+    (assoc-in db [:org :ptv-language-usage ptv-org-id] resp)))
+
+(rf/reg-event-db ::fetch-ptv-language-usage-failure
+  (fn [db _] db))
+
 (rf/reg-event-fx ::save-ptv-config-success
   (fn [{:keys [db]} [_ org-id ptv-config _resp]]
     {:db (update-in db [:user :orgs]

@@ -1,21 +1,19 @@
 {:all-services-exist "Tjänster för de valda typklasserna finns redan i PTV. Du kan gå vidare till nästa steg.",
  :attach-to-conflicting-service-channel
- "Koppla till denna servicepunkt",
+ "Koppla till detta serviceställe",
  :export-service-locations-to-ptv "Skicka till PTV",
  :export-services-to-ptv "Skicka till PTV",
  :generate-descriptions "Skapa beskrivningar",
  :generate-descriptions-all "Skapa beskrivningar för alla",
  :regenerate-descriptions "Uppdatera beskrivningar",
  :generate-descriptions-helper1
- "Tjänster kan upprättas i PTV när de har minst en finsk beskrivning och sammanfattning. LIPAS kompletterar serviceklass, nyckelord och andra metadata automatiskt.",
+ "Tjänster kan upprättas i PTV när de har minst en finsk sammanfattning, beskrivning och handlingsanvisning. LIPAS kompletterar serviceklass, nyckelord och andra metadata automatiskt.",
  :generate-descriptions-helper2
- "Tryck på knappen 'Skapa beskrivningar' för att automatiskt skapa beskrivningar med hjälp av artificiell intelligens. Beskrivningarna skapas baserat på de idrottsanläggningar som är sparade i LIPAS.",
+ "Tryck på knappen 'Skapa beskrivningar för alla' för att automatiskt skapa beskrivningar med hjälp av artificiell intelligens. Beskrivningarna skapas baserat på de idrottsanläggningar som är sparade i LIPAS.",
  :generate-descriptions-helper3
- "Servicepunkter kan upprättas i PTV när de har minst en finsk beskrivning och sammanfattning. LIPAS kompletterar serviceklass, nyckelord och andra metadata automatiskt.",
+ "Serviceställen kan upprättas i PTV när de har minst en finsk sammanfattning och beskrivning. LIPAS fyller i namn, adress, läge och kontaktuppgifter från idrottsanläggningens uppgifter.",
  :integrate-service-locations
- "Skapa servicepunkter från idrottsanläggningar.",
- :service-channel-name-conflict
- "Det finns redan en servicepunkt med namnet {1} i PTV.",
+ "Skapa serviceställen från idrottsanläggningar.",
  :services-to-add "Service att upprätta",
  :export-blocked-invalid
  "Exporten är blockerad. Korrigera eller avmarkera följande idrottsanläggningar:",
@@ -26,9 +24,9 @@
  :link-to-existing-service "Finns tjänsten redan i PTV?",
  :select-existing-service "Välj befintlig tjänst",
  :linked-to-service "Kopplad till tjänst",
- :link-to-existing-service-channel "Finns servicepunkten redan i PTV?",
- :select-existing-service-channel "Välj befintlig servicepunkt",
- :linked-to-service-channel "Kopplad till servicepunkt",
+ :link-to-existing-service-channel "Finns servicestället redan i PTV?",
+ :select-existing-service-channel "Välj befintligt serviceställe",
+ :linked-to-service-channel "Kopplad till serviceställe",
  :unlink-service-channel "Ta bort koppling",
  :mapped-services "Kopplade tjänster",
  :translate-to-other-langs "Översätt till andra språk",
@@ -39,7 +37,7 @@
  :integrate-selected "Välj typklasser",
  :select-sub-categories "Välj typklasser",
  :unselect-helper
- "Om du inte vill exportera ett visst objekt kan du öppna det i panelen till höger och inaktivera reglaget."
+ "Endast idrottsanläggningar med reglaget påslaget exporteras till PTV. Reglaget kan slås på när anläggningen har en finsk sammanfattning och beskrivning."
  :step3-instruction "Öppna en idrottsanläggning från listan, skapa eller skriv beskrivningar och aktivera synkronisering med reglaget.",
  :select-sports-sites "Välj idrottsplatser",
  :linked-label "{1} (länkad)",
@@ -49,6 +47,14 @@
  :export-halted "Överföringen avbröts",
  :export-complete "Överföringen klar",
  :export-result "{1}/{2} idrottsplatser överförda till PTV.",
+ :export-failed-site "Överföringen av idrottsplatsen {1} till PTV misslyckades.",
+ :export-skipped "Överföringen stannade där, så {1} idrottsplatser fördes inte över.",
+ :export-skipped-one "Överföringen stannade där, så en idrottsplats fördes inte över.",
+ :export-resume-hint
+ "Fortsätt överföringen när orsaken är åtgärdad. Om PTV inte svarade, försök igen om en stund. Kontakta LIPAS-supporten (lipasinfo@jyu.fi) om problemet kvarstår.",
+ :export-resume "Fortsätt överföringen",
  :start-new-export "Börja en ny överföring",
  :go-to-sports-sites-tab "Gå till fliken Idrottsplatser",
- :go-to-services-tab "Gå till fliken Tjänster"}
+ :go-to-services-tab "Gå till fliken Tjänster"
+ :linked-services "Kopplade till befintliga PTV-tjänster"
+ :link-existing-helper "Typklassens idrottsanläggningar kopplas till den valda tjänsten och ingen ny tjänst skapas. Tjänstens texter kan uppdateras senare på fliken Tjänster."}

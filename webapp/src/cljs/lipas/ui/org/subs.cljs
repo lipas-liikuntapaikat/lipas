@@ -265,3 +265,8 @@
 (rf/reg-sub ::access-dialog
   (fn [db _]
     (get-in db [:org :access-dialog])))
+
+(rf/reg-sub ::ptv-language-usage
+  ;; LIPAS language code -> published service locations in it
+  (fn [db [_ ptv-org-id]]
+    (get-in db [:org :ptv-language-usage ptv-org-id])))

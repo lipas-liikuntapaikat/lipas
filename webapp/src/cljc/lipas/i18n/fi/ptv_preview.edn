@@ -77,21 +77,19 @@
  :tt-service-classes
  "PTV:n ohjeistuksen mukaiset palveluluokat on määritelty jokaiselle Lipaksen liikuntapaikkatyypin alaryhmälle ja ne tulevat palvelun tietoihin automaattisesti.",
  :target-groups "Kohderyhmät",
- :tt-target-groups "Palvelun kohderyhmä on aina \"Kansalaiset\"",
+ :tt-target-groups "Lipas asettaa palvelun kohderyhmäksi \"Kansalaiset\", kun se luo palvelun. Kohderyhmiä voi muuttaa PTV:ssä.",
  :ontology-terms "Ontologiatermit",
  :tt-ontology-terms
  "Ontologiatermit, eli PTV:n ohjeistuksen mukaiset avainsanat, on määritetty jokaiselle Lipaksen liikuntapaikkaluokittelun pää- ja alaryhmälle, ja ne lisätään palvelun tietoihin automaattisesti.",
  :funding "Rahoitus",
- :tt-funding "Rahoitustyyppi on aina \"Julkisesti rahoitettu\".",
+ :tt-funding "Lipas asettaa rahoitustyypiksi \"Julkisesti rahoitettu\", kun se luo palvelun. Sitä voi muuttaa PTV:ssä.",
  :service-producers "Palveluntuottajat",
- :tt-service-producers
- "Palveluntuottaja on se organisaatio (kunta), joka on ottanut integraation käyttöön.",
+ :tt-service-producers "Lipas asettaa palveluntuottajaksi integraation käyttöön ottaneen organisaation (kunnan), kun se luo palvelun. Tuottajia voi muuttaa PTV:ssä.",
  :provision-type "Tuotantotapa",
- :tt-provision-type "Palvelun tuotantotapa on aina \"Itse tuotettu\".",
+ :tt-provision-type "Lipas asettaa tuotantotavaksi \"Itse tuotettu\", kun se luo palvelun. Sitä voi muuttaa PTV:ssä.",
  :main-organization "Vastuuorganisaatio",
  :tt-main-organization "Organisaatio (kunta) joka käyttää integraatiota.",
  :area-type "Alueen tyyppi",
- :tt-area-type "Alueen tyyppi on aina \"Kunta\".",
+ :tt-area-type "Lipas asettaa alueen tyypiksi \"Kunta\", kun se luo palvelun. Aluetta voi muuttaa PTV:ssä.",
  :area-codes "Alueen koodit",
- :tt-area-codes
- "Alueen koodi on integraation käyttöön ottaneen organisaation (kunnan) kuntanumero."}
+ :tt-area-codes "Lipas asettaa alueeksi integraation käyttöön ottaneen organisaation (kunnan), kun se luo palvelun. Aluetta voi muuttaa PTV:ssä."}

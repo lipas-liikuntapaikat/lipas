@@ -2,7 +2,10 @@
   (:require [clojure.string :as str]
             [goog.array :as garray]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-review :as ptv-sync]
             [lipas.polygon-checks :as polygon-checks]
+            [lipas.ui.ptv.review-data :as ptv-review]
+            [lipas.ui.ptv.review-fetch :as review-fetch]
             [re-frame.core :as rf]
             [reagent.ratom :as ratom]))
 
@@ -588,6 +591,41 @@
   :<- [::restore-site-backup-dialog]
   (fn [m]
     (:error m)))
+
+(rf/reg-sub ::ptv-site-review-data
+  (fn [db [_ lipas-id]]
+    (get-in db (ptv-review/site-path lipas-id))))
+
+(rf/reg-sub ::ptv-review-pending?
+  ;; Lives here like ::ptv-save-blockers. Whether Save waits for the edit's
+  ;; PTV review, still on its way (lipas.ui.ptv.review-fetch): saving
+  ;; before it lands would skip the question about changes made in PTV.
+  (fn [db [_ lipas-id]]
+    (review-fetch/save-waits? db lipas-id)))
+
+(rf/reg-sub ::ptv-site-review
+  ;; Lives here like ::ptv-save-blockers: the site form's PTV sync review
+  ;; (lipas.ui.ptv.review-data/site-form-review) of the edit buffer, or of
+  ;; the latest revision when not editing.
+  (fn [[_ lipas-id]]
+    [(rf/subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])
+     (rf/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])
+     (rf/subscribe [::ptv-site-review-data lipas-id])])
+  (fn [[latest edit-data fetched] _]
+    (ptv-review/site-form-review fetched latest (or edit-data latest))))
+
+(rf/reg-sub ::ptv-review-open-rows
+  ;; The changes made in PTV that a save would overwrite without asking
+  ;; (no choice made in the review).
+  (fn [[_ lipas-id]]
+    [(rf/subscribe [::ptv-site-review lipas-id])
+     (rf/subscribe [::ptv-review-choices lipas-id])])
+  (fn [[review choices] _]
+    (ptv-sync/open-review-rows (:rows review) choices)))
+
+(rf/reg-sub ::ptv-review-choices
+  (fn [db [_ lipas-id]]
+    (get-in db (ptv-review/choices-path lipas-id))))
 
 (rf/reg-sub ::ptv-save-blockers
   ;; Lives here, not in lipas.ui.ptv.subs: the site form (:map module) needs it

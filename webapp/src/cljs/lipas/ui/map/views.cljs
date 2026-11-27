@@ -931,6 +931,15 @@
        (keep identity)))
 
 ;; Works as both display and edit views
+(r/defc ptv-review-fetcher
+  "Fetches the PTV sync review of a site being viewed, for the PTV tab's
+   dot and its read-only review. Editing fetches its own (::edit-site)."
+  [{:keys [lipas-id]}]
+  (hooks/use-effect (fn []
+                      (==> [::events/fetch-ptv-site-review lipas-id]))
+                    [lipas-id])
+  nil)
+
 (defn- geometry-problem-message
   "What's wrong with a broken polygon (lipas.polygon-checks/problems)."
   [tr {:keys [index problem]}]
@@ -988,11 +997,14 @@
         (<== [::subs/sports-site-view lipas-id type-code])
 
         ;; Show PTV tab in read-only mode only when sync is enabled.
-        ;; In edit mode show only when it's possible to sync.
+        ;; In edit mode show it when it's possible to sync, and when the
+        ;; save writes to PTV anyway (a synced site edited out of PTV's
+        ;; scope): its review is where the save dialog leads.
         ;; PTV rights for THIS site's municipality — the backend gate
         ;; (core/check-ptv-save!) rejects PTV edits without them.
         view-ptv? (and (if editing?
-                         (ptv-data/ptv-candidate? edit-data)
+                         (or (ptv-data/ptv-candidate? edit-data)
+                             (ptv-data/save-syncs? edit-data))
                          (:sync-enabled (:ptv display-data)))
                        (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :ptv/manage]))
 
@@ -1011,6 +1023,12 @@
 
         ;; Same rule as the backend gate; non-empty blocks Save.
         ptv-save-blockers (<== [::subs/ptv-save-blockers lipas-id])
+        ;; the edit's PTV review is on its way: Save waits for the question
+        ;; it may ask (::events/save-edits)
+        ptv-review-pending? (<== [::subs/ptv-review-pending? lipas-id])
+        ;; changes made in PTV that a save would overwrite unasked; viewing
+        ;; the site shows them too, to be decided in an edit
+        ptv-review-open (when view-ptv? (<== [::subs/ptv-review-open-rows lipas-id]))
 
         ;; Polygons broken while editing; non-empty blocks Save.
         geometry-problems (<== [::subs/geometry-problems lipas-id])
@@ -1086,6 +1104,8 @@
              :on-click #(==> [::events/show-sports-site nil])}
             [:> Icon "close"]])]]]
 
+      (when (and view-ptv? (not editing?))
+        ^{:key lipas-id} [ptv-review-fetcher {:lipas-id lipas-id}])
       (when (seq geometry-problems)
         [:> Grid {:item true :xs 12}
          [geometry-problems-alert tr geometry-problems]])
@@ -1145,13 +1165,19 @@
             ;; Flag the tab so a blocked Save can be traced from other tabs.
             ;; Missing texts are an unfinished step (warning); no org is a
             ;; real problem (error).
-            :label (if (seq ptv-save-blockers)
+            :label (cond
+                     (seq ptv-save-blockers)
                      (r/as-element [:> Badge {:color (if (= #{:ptv/missing-texts} ptv-save-blockers)
                                                        "warning"
                                                        "error")
                                               :variant "dot"}
                                     "PTV"])
-                     "PTV")}])
+
+                     ;; changes made in PTV wait for the user's choice
+                     (seq ptv-review-open)
+                     (r/as-element [:> Badge {:color "warning" :variant "dot"} "PTV"])
+
+                     :else "PTV")}])
 
         (when view-images?
           [:> Tab
@@ -1526,6 +1552,7 @@
                   :edit-activities? edit-activities?
                   :edit-floorball? edit-floorball?
                   :save-in-progress? save-in-progress?
+                  :save-busy? ptv-review-pending?
                   :valid? (and edits-valid?
                                (empty? ptv-save-blockers)
                                (empty? geometry-problems))
@@ -1540,6 +1567,9 @@
                   :invalid-message (cond
                                      (seq geometry-problems)
                                      (geometry-problem-message tr (first geometry-problems))
+
+                                     ptv-review-pending?
+                                     (tr :ptv/save-waits-for-review)
 
                                      (= #{:ptv/missing-texts} ptv-save-blockers)
                                      (tr :ptv/save-needs-texts)

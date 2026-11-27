@@ -264,6 +264,32 @@
     (-> (http ptv org-id params)
         :body)))
 
+(def ^:private archived-page-size
+  "PTV's most per page of its archived lists."
+  100)
+
+(defn get-org-archived-services
+  "The services of the org that PTV has archived, by hand or automatically
+  (ArchivingType 0 and 1), each {:id :archivingDate :serviceNames}. A
+  service archived in PTV answers 404 to every GET by its id; only these
+  lists still know it. Paged by Skip/Take, a request per 100 per type."
+  [ptv org-id]
+  (vec (for [archiving-type [0 1]
+             service (loop [skip 0
+                            acc []]
+                       (let [page (-> (http ptv org-id {:url (make-url ptv "/v11/Service/archived/list")
+                                                        :method :get
+                                                        :query-params {:OrganizationId org-id
+                                                                       :ArchivingType archiving-type
+                                                                       :Skip skip
+                                                                       :Take archived-page-size}})
+                                      :body)
+                             acc (into acc page)]
+                         (if (< (count page) archived-page-size)
+                           acc
+                           (recur (+ skip archived-page-size) acc))))]
+         service)))
+
 (defn update-service
   [ptv
    source-id
@@ -277,12 +303,13 @@
         :body)))
 
 (defn update-service-by-id
-  "Update PTV service by its PTV UUID (not source-id).
-   Used when adopting an existing service into LIPAS integration."
-  [ptv service-id data]
+  "Update PTV service by its PTV UUID (not source-id), as `org-id`. The org is
+   explicit, not the body's :mainResponsibleOrganization: a patch of a
+   service made in PTV doesn't send that, as the org writing may be only one
+   of its other responsible organisations."
+  [ptv org-id service-id data]
   (log/infof "Update PTV service by ID %s" service-id)
-  (let [org-id (:mainResponsibleOrganization data)
-        params {:url (make-url ptv "/v11/Service/" service-id)
+  (let [params {:url (make-url ptv "/v11/Service/" service-id)
                 :method :put
                 :form-params data}]
     (-> (http ptv org-id params)

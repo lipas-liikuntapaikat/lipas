@@ -127,7 +127,7 @@
     (assoc-in db (conj state-path :params k) v)))
 
 (rf/reg-event-db ::set-model
-  "Set model and reset params to provider defaults when provider changes."
+  ;; Set model and reset params to provider defaults when provider changes.
   (fn [db [_ new-model]]
     (let [current-model (get-in db (conj state-path :params :model))
           old-provider  (model->provider current-model)

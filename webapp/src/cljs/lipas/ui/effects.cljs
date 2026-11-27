@@ -32,6 +32,34 @@
   (fn  [_]
     (js/window.scrollTo 0 0)))
 
+(defn- with-element
+  "Calls `f` with the element of DOM id `id` once the render that may have
+   just shown it has run: the frame Reagent renders in, then past React's
+   effects, where a closing MUI dialog gives the focus back to the button
+   that opened it. An element not there yet (a lazy module still loading)
+   is waited for, up to 3 s."
+  [id f]
+  (js/requestAnimationFrame
+    (fn []
+      (letfn [(attempt [tries]
+                (if-let [el (js/document.getElementById id)]
+                  (f el)
+                  (when (pos? tries)
+                    (js/setTimeout #(attempt (dec tries)) 100))))]
+        (js/setTimeout #(attempt 30) 50)))))
+
+(rf/reg-fx ::scroll-into-view!
+  ;; The element with this DOM id to the top of its scroll container (timed
+  ;; as ::focus!, so a closing dialog's focus doesn't scroll back to the
+  ;; button it was opened from).
+  (fn [id]
+    (with-element id #(.scrollIntoView % #js {:block "start"}))))
+
+(rf/reg-fx ::focus!
+  ;; Moves the keyboard focus to the element with this DOM id.
+  (fn [id]
+    (with-element id #(.focus % #js {:preventScroll true}))))
+
 (rf/reg-fx ::copy-to-clipboard!
   (fn [text]
     (-> (js/navigator.clipboard.writeText text)

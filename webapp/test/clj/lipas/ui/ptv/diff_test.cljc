@@ -1,5 +1,9 @@
 (ns lipas.ui.ptv.diff-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
+            [clojure.test.check.clojure-test :refer [defspec]]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as prop]
             [lipas.ui.ptv.diff :as sut]))
 
 (defn- a-of
@@ -18,7 +22,34 @@
   (is (= [] (sut/tokenize "   ")))
   (is (= ["hello"] (sut/tokenize "hello")))
   (is (= ["hello" " " "world"] (sut/tokenize "hello world")))
-  (is (= ["a" "  " "b" "\n" "c"] (sut/tokenize "a  b\nc"))))
+  (is (= ["a" "  " "b" "\n" "c"] (sut/tokenize "a  b\nc")))
+  (testing "punctuation marks are tokens of their own"
+    (is (= ["jääkiekkoa" "."] (sut/tokenize "jääkiekkoa.")))
+    (is (= ["Linnukka" "-" "halli" "," " " "\"" "uusi" "\"" "…"]
+           (sut/tokenize "Linnukka-halli, \"uusi\"…")))))
+
+(deftest diff-punctuation
+  (testing "an added full stop marks only the stop"
+    (is (= [[:equal "Pelataan jääkiekkoa"] [:added "."]]
+           (sut/coalesce (sut/diff "Pelataan jääkiekkoa" "Pelataan jääkiekkoa.")))))
+  (testing "a changed comma leaves the words around it equal"
+    (is (= [[:equal "Kenttä"] [:removed ","] [:added ";"] [:equal " jossa"]]
+           (sut/coalesce (sut/diff "Kenttä, jossa" "Kenttä; jossa"))))))
+
+(def ^:private text-gen
+  ;; words, spaces, line breaks and punctuation, in any order
+  (gen/fmap str/join
+            (gen/vector (gen/elements ["a" "ä" "kenttä" " " "  " "\n" "." "," "-" "–" "\"" "(" ")" "…" "/"])
+                        0 30)))
+
+(defspec diff-reassembles-both-texts 200
+  (prop/for-all [a text-gen
+                 b text-gen]
+                (let [ops (sut/diff a b)
+                      blank->empty #(if (str/blank? %) "" %)]
+                  (and (= (blank->empty a) (a-of ops))
+                       (= (blank->empty b) (b-of ops))
+                       (= (apply str (sut/tokenize a)) (blank->empty a))))))
 
 (deftest diff-identical-inputs
   (testing "all-equal output for identical strings"
